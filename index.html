@@ -1818,15 +1818,9 @@ async function msalGetToken(){
 }
 
 async function msalLogin(){
-  if(!_msalApp){ toast('⚠️ MSAL chưa khởi tạo','bad'); return; }
-  try{
-    // Redirect flow: trang chuyển sang Microsoft login → sau đó redirect về đây
-    // handleRedirectPromise() trong msalInit() sẽ tự xử lý response khi quay lại
-    await _msalApp.loginRedirect({ scopes: MSAL_CONFIG.scopes });
-  }catch(e){
-    if(e.errorCode !== 'user_cancelled')
-      toast('❌ Đăng nhập thất bại: ' + e.message,'bad');
-  }
+  if(!_msalApp) throw new Error('MSAL chưa được khởi tạo. Vui lòng thử lại.');
+  // Redirect flow — trang sẽ chuyển sang Microsoft, không return về đây
+  await _msalApp.loginRedirect({ scopes: MSAL_CONFIG.scopes });
 }
 
 async function msalLogout(){
@@ -2134,46 +2128,71 @@ function hideLoginScreen(){
 }
 
 async function loginScreenSignIn(){
-  const btn     = document.getElementById('login-ms-btn');
-  const loading = document.getElementById('login-loading');
-  const errEl   = document.getElementById('login-error');
-  const warnEl  = document.getElementById('login-local-warn');
+  const btn    = document.getElementById('login-ms-btn');
+  const loadEl = document.getElementById('login-loading');
+  const errEl  = document.getElementById('login-error');
+  const warnEl = document.getElementById('login-local-warn');
+  const ldTxt  = document.getElementById('login-loading-text');
 
-  if(errEl) errEl.classList.remove('show');
+  // Reset trạng thái
+  if(errEl)  { errEl.classList.remove('show'); errEl.textContent=''; }
+  if(warnEl)   warnEl.style.display = 'none';
 
   // ── Detect file:// scheme — Azure AD không hỗ trợ ──────────────────────────
   if(window.location.protocol === 'file:'){
     if(warnEl) warnEl.style.display = 'block';
-    if(errEl){
-      errEl.textContent = '❌ Không thể đăng nhập qua file://. Hãy mở bằng GitHub Pages hoặc Live Server (https://).';
-      errEl.classList.add('show');
-    }
     return;
   }
 
-  if(btn)     btn.classList.add('loading');
-  if(loading){ loading.classList.add('show');
-    const ldTxt = document.getElementById('login-loading-text');
+  // Hiện loading
+  if(btn)   btn.classList.add('loading');
+  if(loadEl){ loadEl.classList.add('show');
     if(ldTxt) ldTxt.textContent = 'Đang kết nối Microsoft 365…'; }
 
-  // Nếu MSAL chưa init → thử lại
+  const showErr = (msg) => {
+    if(btn)   btn.classList.remove('loading');
+    if(loadEl) loadEl.classList.remove('show');
+    if(errEl){ errEl.textContent = msg; errEl.classList.add('show'); }
+  };
+
+  // Nếu MSAL chưa init → thử init
   if(!_msalApp){
+    if(ldTxt) ldTxt.textContent = 'Đang khởi tạo MSAL…';
     const ok = await msalInit();
     if(!ok){
-      if(btn)     btn.classList.remove('loading');
-      if(loading) loading.classList.remove('show');
-      if(errEl){  errEl.textContent = '⚠️ Không thể kết nối Azure. Kiểm tra cấu hình MSAL_CONFIG.';
-                  errEl.classList.add('show'); }
+      showErr('⚠️ Không thể kết nối Azure AD. Kiểm tra lại cấu hình Client ID / Tenant ID.');
+      return;
+    }
+    if(!_msalApp){
+      showErr('⚠️ Khởi tạo MSAL thất bại. Vui lòng tải lại trang.');
       return;
     }
   }
+
+  // Kiểm tra đã có session chưa (tránh login lại)
+  const existing = _msalApp.getAllAccounts();
+  if(existing.length){
+    if(ldTxt) ldTxt.textContent = 'Đang lấy dữ liệu…';
+    _msalAccount = existing[0];
+    msalSetBar('🔷 ' + (_msalAccount.name||_msalAccount.username),'s-busy');
+    hideLoginScreen();
+    await msalSpLoad();
+    return;
+  }
+
+  // Redirect sang Microsoft
+  if(ldTxt) ldTxt.textContent = 'Đang chuyển sang Microsoft…';
   try{
-    await msalLogin();
+    await msalLogin(); // loginRedirect → trang sẽ navigate, không return
   }catch(e){
-    if(btn)     btn.classList.remove('loading');
-    if(loading) loading.classList.remove('show');
-    if(errEl){  errEl.textContent = '❌ ' + (e.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
-                errEl.classList.add('show'); }
+    const msg = e?.message || '';
+    if(e?.errorCode === 'user_cancelled' || msg.includes('cancelled')){
+      showErr('ℹ️ Bạn đã huỷ đăng nhập.');
+    } else if(msg.includes('redirect_uri') || e?.errorCode?.includes('50011')){
+      showErr('❌ Redirect URI chưa được đăng ký trong Azure AD. Thêm URL này vào Azure Portal: ' + window.location.origin + window.location.pathname);
+    } else {
+      showErr('❌ ' + (msg || 'Đăng nhập thất bại. Vui lòng thử lại.'));
+    }
   }
 }
 
