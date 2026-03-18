@@ -523,7 +523,7 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 /* ═══════════════════════ LOGIN SCREEN ═══════════════════════ */
 #login-screen{
   position:fixed;inset:0;z-index:9999;
-  background:#F5F0E8;
+  background:transparent;
   display:flex;align-items:center;justify-content:center;
   flex-direction:column;
   transition:opacity .4s ease;
@@ -632,6 +632,7 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 /* ═══════════════════════ LOGOUT SCREEN ═══════════════════════ */
 #logout-screen{
   position:fixed;inset:0;z-index:9998;
+  background:transparent;
   display:none;align-items:center;justify-content:center;
   flex-direction:column;
   opacity:0;transition:opacity .35s ease;
@@ -1783,10 +1784,11 @@ async function msalInit(){
     if(resp){
       _msalAccount = resp.account;
       _msalToken   = resp.accessToken;
-      // Vừa redirect về sau login → tự load data SP
       _msalReady = true;
       msalSetBar('🔷 ' + (_msalAccount.name||_msalAccount.username),'s-busy');
-      await msalSpLoad();
+      // Ẩn login screen NGAY khi redirect về — không chờ load data
+      hideLoginScreen();
+      msalSpLoad();   // load nền, không await
       return true;
     }
     // Lấy account đã login trước đó (session còn)
@@ -2104,13 +2106,12 @@ async function msalAutoInit(){
   const ok = await msalInit();
   if(!ok) return;
   if(_msalAccount){
-    // Đã có session hoặc vừa redirect về → ẩn login screen
+    // Đã auth → ẩn login screen NGAY, không chờ load data
     msalSetBar('🔷 ' + (_msalAccount.name||_msalAccount.username),'s-busy');
-    hideLoginScreen();
-    await msalSpLoad();
+    hideLoginScreen();          // ← ẩn ngay lập tức
+    msalSpLoad();               // ← load data nền (không await)
   } else {
     msalSetBar('🔷 Đăng nhập M365…','s-warn');
-    // Không có session → giữ login screen
   }
 }
 
