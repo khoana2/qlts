@@ -3342,22 +3342,22 @@ function updateDashboard(){
     expired ? `${expired} đã hết · ${expiringSoon} sắp hết` : `${expiringSoon} sắp hết trong 90 ngày`;
 
   // Lọc thêm theo trạng thái cho biểu đồ loại tài sản
-  // normTT: xóa dấu tone, lowercase — dùng để so sánh không phân biệt dấu
-  const normTT = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'d').toLowerCase().trim();
+  // Dùng helper riêng để tránh xung đột tên với normTT ở trên
+  const normStrip = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').toLowerCase().trim();
   const dashStatus = document.getElementById('dash-status')?.value||'';
   let chartSrc = _assets;
   let chartTitle = '📊 Theo loại tài sản';
   if(dashStatus === 'active'){
-    chartSrc = _assets.filter(a=> normTT(a.tinhTrang).includes('dang dung') || normTT(a.tinhTrang).includes('dang su dung'));
+    chartSrc = _assets.filter(a=> normStrip(a.tinhTrang).includes('dang dung') || normStrip(a.tinhTrang).includes('dang su dung'));
     chartTitle = '📊 Loại tài sản — Đang sử dụng';
   } else if(dashStatus === 'stock'){
-    chartSrc = _assets.filter(a=> normTT(a.tinhTrang).includes('luu kho') || normTT(a.tinhTrang).includes('trong kho') || normTT(a.tinhTrang).includes('kho'));
+    chartSrc = _assets.filter(a=> normStrip(a.tinhTrang).includes('luu kho') || normStrip(a.tinhTrang).includes('trong kho'));
     chartTitle = '📊 Loại tài sản — Lưu kho';
   } else if(dashStatus === 'broken'){
-    chartSrc = _assets.filter(a=> normTT(a.tinhTrang).includes('hong') || normTT(a.tinhTrang).includes('sua chua') || normTT(a.tinhTrang).includes('bao hanh'));
+    chartSrc = _assets.filter(a=> normStrip(a.tinhTrang).includes('hong') || normStrip(a.tinhTrang).includes('sua chua') || normStrip(a.tinhTrang).includes('bao hanh'));
     chartTitle = '📊 Loại tài sản — Hỏng / Sửa chữa';
   } else if(dashStatus === 'retired'){
-    chartSrc = _assets.filter(a=> normTT(a.tinhTrang).includes('thanh ly'));
+    chartSrc = _assets.filter(a=> normStrip(a.tinhTrang).includes('thanh ly'));
     chartTitle = '📊 Loại tài sản — Thanh lý';
   }
 
