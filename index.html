@@ -3716,13 +3716,7 @@ function getXacNhan(assetId){
 }
 
 function xacNhanBadge(assetId){
-  const rec = getXacNhan(assetId);
-  if(!rec) return '';
-  if(rec.trangThai === 'Đã xác nhận'){
-    const d = rec.thoiGian ? new Date(rec.thoiGian).toLocaleDateString('vi-VN') : '';
-    return `<span class="warn-badge ok" title="✅ ${rec.nguoiNhan} đã xác nhận${d?' · '+d:''}">✅ XN</span>`;
-  }
-  return `<span class="warn-badge soon" title="⏳ Chờ xác nhận từ ${rec.nguoiNhan||'người nhận'}">⏳ Chờ</span>`;
+  return '';
 }
 
 function xacNhanDetailHTML(assetId){
