@@ -1860,16 +1860,12 @@ async function msalLogout(){
   if(!_msalApp) return;
   const name = _msalAccount ? (_msalAccount.name || _msalAccount.username) : '';
   _msalAccount = null; _msalToken = '';
-  // Local logout — xóa cache local, không redirect sang Microsoft
-  try{
-    const accounts = _msalApp.getAllAccounts();
-    for(const acc of accounts){
-      await _msalApp.clearCache();
-    }
-  }catch(e){
-    // Fallback: xóa sessionStorage thủ công
-    try{ sessionStorage.clear(); }catch(_){}
-  }
+  _msalReady   = false;
+  // Xóa toàn bộ session/cache local — không popup Microsoft
+  try{ sessionStorage.clear(); }catch(_){}
+  try{ localStorage.removeItem('msal.' + MSAL_CONFIG.clientId + '.active-account'); }catch(_){}
+  // Reset _msalApp để loginScreenSignIn() sẽ re-init fresh instance
+  _msalApp = null;
   msalSetBar('🔷 Đăng nhập M365…','s-warn');
   showLogoutScreen(name);
 }
@@ -1900,16 +1896,40 @@ function showLogoutScreen(username){
 }
 
 async function logoutScreenSignIn(){
-  // Ẩn logout screen, hiện login screen
+  // Ẩn logout screen
   const logoutEl = document.getElementById('logout-screen');
-  const loginEl  = document.getElementById('login-screen');
   if(logoutEl){ logoutEl.classList.remove('visible');
     setTimeout(()=>{ logoutEl.classList.remove('open'); }, 350); }
-  if(loginEl){ loginEl.style.display = 'flex';
-    requestAnimationFrame(()=> requestAnimationFrame(()=> loginEl.style.opacity = '1')); }
-  // Reset app opacity cho lần login sau
+
+  // Reset lại login screen hoàn toàn
+  const loginEl = document.getElementById('login-screen');
+  if(loginEl){
+    loginEl.classList.remove('hiding');   // xóa pointer-events:none
+    loginEl.style.display  = 'flex';
+    loginEl.style.opacity  = '1';
+  }
+
+  // Reset nút login về trạng thái ban đầu
+  const btn    = document.getElementById('login-ms-btn');
+  const loadEl = document.getElementById('login-loading');
+  const errEl  = document.getElementById('login-error');
+  const warnEl = document.getElementById('login-local-warn');
+  if(btn)    btn.classList.remove('loading');
+  if(loadEl) loadEl.classList.remove('show');
+  if(errEl)  { errEl.classList.remove('show'); errEl.textContent=''; }
+  if(warnEl) warnEl.style.display = 'none';
+
+  // Reset app
   const app = document.querySelector('.app');
-  if(app){ app.style.display=''; app.style.opacity=''; }
+  if(app){ app.style.display='none'; app.style.opacity=''; }
+
+  // Re-init MSAL nếu cần (clearCache có thể reset state)
+  if(_msalApp){
+    const accounts = _msalApp.getAllAccounts();
+    if(accounts.length === 0) {
+      // OK — sẵn sàng login mới
+    }
+  }
 }
 
 // ─── SP request với Bearer token ─────────────────────────────────────────────
