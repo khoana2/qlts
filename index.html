@@ -4736,12 +4736,18 @@ async function sendHandoverFormEmail(rec, asset){
   try {
     msalSetBar('📧 Đang gửi form xác nhận…','s-busy');
 
-    // Phải dùng Graph token riêng — _msalToken là SharePoint token (audience khác)
-    const graphResp = await _msalApp.acquireTokenSilent({
-      scopes:  ['https://graph.microsoft.com/Mail.Send'],
-      account: _msalAccount,
-    });
-    const graphToken = graphResp.accessToken;
+    // Lấy Graph token riêng (audience = graph.microsoft.com, khác với SharePoint token)
+    const GRAPH_SCOPES = ['https://graph.microsoft.com/Mail.Send'];
+    let graphToken;
+    try {
+      const r = await _msalApp.acquireTokenSilent({ scopes: GRAPH_SCOPES, account: _msalAccount });
+      graphToken = r.accessToken;
+    } catch(silentErr){
+      console.warn('[FORM-EMAIL] silent fail, popup:', silentErr.name);
+      // Lần đầu chưa có cache → popup xin quyền
+      const r = await _msalApp.acquireTokenPopup({ scopes: GRAPH_SCOPES, account: _msalAccount });
+      graphToken = r.accessToken;
+    }
 
     const resp = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
       method: 'POST',
