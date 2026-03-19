@@ -912,11 +912,18 @@ tbody tr.row-thanh-ly td{opacity:.5;}
   <!-- ══════════════ DASHBOARD VIEW ══════════════ -->
   <div class="view active" id="view-dashboard">
 
-    <!-- Dashboard company filter -->
+    <!-- Dashboard filters -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       <span style="font-size:12px;color:var(--muted);">📊 Đang xem:</span>
       <select class="fsel" id="dash-company" onchange="updateDashboard()" style="min-width:180px;">
         <option value="">🏬 Tất cả công ty</option>
+      </select>
+      <select class="fsel" id="dash-status" onchange="updateDashboard()" style="min-width:170px;">
+        <option value="">📋 Tất cả trạng thái</option>
+        <option value="active">✅ Đang sử dụng</option>
+        <option value="stock">📦 Lưu kho</option>
+        <option value="broken">🔧 Hỏng / Sửa chữa</option>
+        <option value="retired">🗑️ Thanh lý</option>
       </select>
       <span id="dash-company-label" style="font-size:11px;color:var(--accent2);"></span>
     </div>
@@ -3296,20 +3303,19 @@ function switchTab(t){
 
 // ═══════════════════════ DASHBOARD ═══════════════════════
 function updateDashboard(){
-  // Lọc theo công ty nếu có chọn
+  // Lọc theo công ty
   const dashCo = document.getElementById('dash-company')?.value||'';
   const _assets = dashCo ? assets.filter(a=>(a.congTy||'')===dashCo) : assets;
 
   const label = document.getElementById('dash-company-label');
   if(label) label.textContent = dashCo ? `(${_assets.length} tài sản)` : '';
 
-  const total = _assets.length;
-  // So sánh linh hoạt: normalize + lowercase để tránh lỗi encoding
   const normTT = a => (a.tinhTrang||'').normalize('NFC').toLowerCase().trim();
+  const total  = _assets.length;
   const active = _assets.filter(a=> normTT(a).includes('đang dùng') || normTT(a).includes('dang dung')).length;
   const stock  = _assets.filter(a=> normTT(a).includes('lưu kho') || normTT(a).includes('luu kho')).length;
   const broken = _assets.filter(a=> normTT(a).includes('hỏng') || normTT(a).includes('hong') || normTT(a).includes('sửa chữa') || normTT(a).includes('sua chua')).length;
-  const depts = new Set(_assets.filter(a=>a.boPhan).map(a=>a.boPhan)).size;
+  const depts  = new Set(_assets.filter(a=>a.boPhan).map(a=>a.boPhan)).size;
 
   // Warranty KPI
   const now = new Date();
@@ -3335,16 +3341,41 @@ function updateDashboard(){
   document.getElementById('kpi-warranty-sub').textContent =
     expired ? `${expired} đã hết · ${expiringSoon} sắp hết` : `${expiringSoon} sắp hết trong 90 ngày`;
 
-  buildCharts(_assets);
+  // Lọc thêm theo trạng thái cho biểu đồ loại tài sản
+  // normTT: xóa dấu tone, lowercase — dùng để so sánh không phân biệt dấu
+  const normTT = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'d').toLowerCase().trim();
+  const dashStatus = document.getElementById('dash-status')?.value||'';
+  let chartSrc = _assets;
+  let chartTitle = '📊 Theo loại tài sản';
+  if(dashStatus === 'active'){
+    chartSrc = _assets.filter(a=> normTT(a.tinhTrang).includes('dang dung') || normTT(a.tinhTrang).includes('dang su dung'));
+    chartTitle = '📊 Loại tài sản — Đang sử dụng';
+  } else if(dashStatus === 'stock'){
+    chartSrc = _assets.filter(a=> normTT(a.tinhTrang).includes('luu kho') || normTT(a.tinhTrang).includes('trong kho') || normTT(a.tinhTrang).includes('kho'));
+    chartTitle = '📊 Loại tài sản — Lưu kho';
+  } else if(dashStatus === 'broken'){
+    chartSrc = _assets.filter(a=> normTT(a.tinhTrang).includes('hong') || normTT(a.tinhTrang).includes('sua chua') || normTT(a.tinhTrang).includes('bao hanh'));
+    chartTitle = '📊 Loại tài sản — Hỏng / Sửa chữa';
+  } else if(dashStatus === 'retired'){
+    chartSrc = _assets.filter(a=> normTT(a.tinhTrang).includes('thanh ly'));
+    chartTitle = '📊 Loại tài sản — Thanh lý';
+  }
+
+  // Cập nhật title chart
+  const chartHead = document.querySelector('#view-dashboard .chart-head');
+  if(chartHead) chartHead.textContent = chartTitle + (chartSrc.length !== _assets.length ? ` (${chartSrc.length})` : '');
+
+  buildCharts(_assets, chartSrc);
   buildDeptChart(_assets);
   buildWarrantyTable(_assets);
 }
 
-function buildCharts(src){
-  const _src = src || assets;
-  // Type chart
+function buildCharts(src, typeSrc){
+  const _src = src || assets;               // full set — dùng cho status chart
+  const _typeSrc = typeSrc || _src;         // filtered set — dùng cho type doughnut chart
+  // Type chart (doughnut) — theo bộ lọc trạng thái
   const typeMap = {};
-  _src.forEach(a=>{
+  _typeSrc.forEach(a=>{
     const t = a.tenTaiSan||'Khác';
     typeMap[t] = (typeMap[t]||0)+1;
   });
@@ -3365,13 +3396,13 @@ function buildCharts(src){
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'right',labels:{color:'#64748B',font:{size:11},
         boxWidth:12,padding:8}},tooltip:{callbacks:{
-          label:ctx=>`${ctx.label}: ${ctx.parsed} (${_src.length?Math.round(ctx.parsed/_src.length*100):0}%)`
+          label:ctx=>`${ctx.label}: ${ctx.parsed} (${_typeSrc.length?Math.round(ctx.parsed/_typeSrc.length*100):0}%)`
         }}},
       cutout:'60%'
     }
   });
 
-  // Status chart
+  // Status chart (bar) — luôn dùng toàn bộ assets để so sánh tổng thể
   const statusOrder = ['Đang dùng','Lưu Kho','Sửa chữa','Hỏng','Thanh lý'];
   const statusColors = ['#10B981','#3B82F6','#F59E0B','#EF4444','#94A3B8'];
   // So sánh normalize để tránh lỗi encoding
