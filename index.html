@@ -7,7 +7,6 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 /* ═══════════════════════════ RESET & BASE ═══════════════════════════ */
 :root {
@@ -190,9 +189,6 @@ body{
 .warn-badge.expired{color:#DC2626;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);}
 .warn-badge.soon{color:#D97706;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);}
 .warn-badge.ok{color:#059669;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);}
-/* QR MODAL */
-#qr-canvas-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0;}
-#qr-canvas{border-radius:10px;}
 .chart-card{
   background:#FFFFFF;border:1px solid var(--border);
   border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;
@@ -1538,6 +1534,20 @@ tbody tr.row-thanh-ly td{opacity:.5;}
           <label>Ghi chú bàn giao</label>
           <textarea id="tr-notes" placeholder="VD: Bàn giao kèm sạc, túi đựng máy…" style="min-height:56px;"></textarea>
         </div>
+        <!-- MS Forms option — chỉ hiện khi MS_FORM_URL đã điền -->
+        <div class="field span2" id="tr-msform-row" style="display:none;">
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(14,165,233,.06);border:1px solid rgba(14,165,233,.25);border-radius:8px;">
+            <input type="checkbox" id="tr-send-form" checked style="width:15px;height:15px;cursor:pointer;accent-color:#0EA5E9;margin-top:2px;flex-shrink:0;">
+            <div>
+              <label for="tr-send-form" style="cursor:pointer;font-weight:600;margin:0;font-size:13px;">
+                📧 Gửi form xác nhận qua email cho người nhận
+              </label>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5;">
+                Hệ thống sẽ gửi email kèm link Microsoft Form đến địa chỉ email người nhận. Họ submit form → dữ liệu lưu vào SharePoint tự động.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -1564,34 +1574,6 @@ tbody tr.row-thanh-ly td{opacity:.5;}
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('modal-delete')">Hủy</button>
       <button class="btn danger" onclick="confirmDelete()">🗑️ Xóa</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════ MODAL: QR CODE ══════════════ -->
-<div class="modal-backdrop" id="modal-qr">
-  <div class="modal" style="max-width:380px;">
-    <div class="modal-head">
-      <div>
-        <h2>📱 Mã QR Tài Sản</h2>
-        <p id="qr-asset-name" style="font-size:11px;color:var(--accent2);margin-top:3px;"></p>
-      </div>
-      <button class="btn icon-only" onclick="closeModal('modal-qr')" style="border:none;font-size:18px;">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="qr-canvas-wrap">
-        <div id="qr-loading" style="color:var(--muted);font-size:13px;padding:20px;">⏳ Đang tạo QR…</div>
-        <img id="qr-img" src="" alt="QR Code"
-             style="display:none;width:256px;height:256px;border-radius:10px;background:#fff;"/>
-        <p style="font-size:11px;color:var(--muted);text-align:center;max-width:280px;line-height:1.5;">
-          Quét mã QR để xem thông tin tài sản. Dùng nút in bên dưới để in tem nhãn.
-        </p>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal('modal-qr')">Đóng</button>
-      <button class="btn success" onclick="downloadQR()">⬇️ Tải ảnh</button>
-      <button class="btn primary" onclick="printQR()">🖨️ In QR</button>
     </div>
   </div>
 </div>
@@ -1831,6 +1813,27 @@ const MSAL_CONFIG = {
   redirectUri: window.location.origin + window.location.pathname,  // tự động
   scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Write', 'Mail.Send', 'User.Read'],
 };
+// ════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════ CONFIRM FORM CONFIG ════════════════════════════════
+// Tự động build URL form xác nhận bàn giao (confirm.html) với params từ tài sản.
+// Không cần chỉnh — tự resolve đúng domain (GitHub Pages, localhost…)
+function buildConfirmUrl(rec, asset){
+  const base = window.location.href.replace(/\/[^\/]*(\?.*)?$/, '');
+  const q = new URLSearchParams({
+    id:    asset.id       || '',
+    ma:    asset.maTaiSan || '',
+    ts:    [asset.tenTaiSan, asset.model].filter(Boolean).join(' '),
+    sn:    asset.serial   || '',
+    to:    rec.to         || '',
+    email: rec.toEmail    || '',
+    date:  rec.date       || '',
+    cond:  rec.condition  || '',
+    from:  rec.from       || '',
+    notes: rec.notes      || '',
+  });
+  return `${base}/confirm.html?${q.toString()}`;
+}
 // ════════════════════════════════════════════════════════════════════════════
 
 let _msalApp     = null;
@@ -3566,7 +3569,6 @@ function renderTable(){
             <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')">👁</button>
             <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')">🔄</button>
             <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')">✏️</button>
-            <button class="action-btn" title="In mã QR" onclick="openQR('${a.id}')" style="font-size:13px;">📱</button>
             <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')">🗑</button>
           </div>
         </td>
@@ -4004,7 +4006,6 @@ function viewDetail(id){
       ${dc('Ngày sự kiện', a.ngaySuKien?new Date(a.ngaySuKien).toLocaleDateString('vi-VN'):'—')}
       ${dc('Ngày mua', a.ngayMua?new Date(a.ngayMua).toLocaleDateString('vi-VN'):'—')}
       ${dc('Hết bảo hành', bhDetailHtml)}
-      ${dc('QR Code', `<button class="btn" style="padding:4px 10px;font-size:11px;" onclick="openQR('${a.id}')">📱 Xem QR</button>`)}
     </div>
     ${specs?`<div class="detail-specs">${specs}</div>`:''}
     <div class="detail-grid" style="margin-top:10px;">
@@ -4460,6 +4461,9 @@ function openTransfer(id){
   setSelect('tr-new-dept','');
   setSelect('tr-condition','Hoạt động tốt');
   populateDeptSelects();
+  // Hiện option gửi form xác nhận
+  const msFormRow = document.getElementById('tr-msform-row');
+  if(msFormRow) msFormRow.style.display = _msalAccount ? '' : 'none'; // chỉ hiện khi đã login M365
   openModal('modal-transfer');
 }
 
@@ -4530,6 +4534,14 @@ async function confirmTransfer(){
   document.getElementById('tr-print-btn').style.display = 'inline-flex';
   applyFilters(true);
   toast(`✅ Đã bàn giao cho ${newUser}!`,'ok');
+
+  // Gửi email kèm link xác nhận (confirm.html) nếu đã bật
+  const sendForm = document.getElementById('tr-send-form')?.checked;
+  if(sendForm && newRec.toEmail){
+    sendHandoverFormEmail(newRec, a);
+  } else if(sendForm && !newRec.toEmail){
+    toast('⚠️ Chưa có email người nhận — không thể gửi form xác nhận','warn');
+  }
 
   // Đồng bộ lên SharePoint
   if(_msalAccount){
@@ -4660,97 +4672,98 @@ function updateWarrantyStatus(val){
   else { ws.textContent='✅ Còn '+diffD+' ngày'; ws.style.color='var(--green)'; }
 }
 
-// ═══════════════════════ QR CODE ═══════════════════════
-let _qrCurrentId = null;
-let _qrDataUrl   = null;
+// ═══════════════════════ GỬI EMAIL XÁC NHẬN BÀN GIAO (confirm.html) ═══════
+async function sendHandoverFormEmail(rec, asset){
+  if(!_msalToken){ toast('⚠️ Chưa đăng nhập M365 — không thể gửi email','bad'); return; }
+  if(!rec.toEmail){ toast('⚠️ Người nhận chưa có email','bad'); return; }
 
-async function openQR(id){
-  const a = assets.find(x=>x.id===id);
-  if(!a){ toast('⚠️ Không tìm thấy tài sản','bad'); return; }
-  _qrCurrentId = id; _qrDataUrl = null;
-  document.getElementById('qr-asset-name').textContent =
-    [a.tenTaiSan, a.model, a.maTaiSan ? `[${a.maTaiSan}]` : ''].filter(Boolean).join(' · ');
+  const assetLabel = [asset.tenTaiSan, asset.model, asset.maTaiSan ? `[${asset.maTaiSan}]` : ''].filter(Boolean).join(' ');
+  const dateStr    = rec.date ? new Date(rec.date).toLocaleDateString('vi-VN') : '';
+  const fromStr    = rec.from || '(Kho)';
+  const confirmUrl = buildConfirmUrl(rec, asset);
 
-  // Nội dung QR: thông tin tài sản dạng text (ASCII để QR nhỏ hơn)
-  const parts = [
-    'QLTS TTG',
-    a.maTaiSan  ? a.maTaiSan                                          : '',
-    a.tenTaiSan ? a.tenTaiSan                                         : '',
-    a.model     ? a.model                                             : '',
-    a.serial    ? 'SN:' + a.serial                                    : '',
-    a.nguoiDung ? a.nguoiDung                                         : '',
-    a.ngayHetBH ? 'BH:' + a.ngayHetBH                                : '',
-  ].filter(Boolean);
-  const qrText = parts.join(' | ');
+  const htmlBody = `
+<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;max-width:600px;">
+  <div style="background:#1D4ED8;padding:16px 24px;border-radius:8px 8px 0 0;">
+    <div style="color:#fff;font-size:18px;font-weight:700;">🔄 Bàn Giao Tài Sản CNTT</div>
+    <div style="color:#BFDBFE;font-size:12px;margin-top:4px;">Trung Thuy Group — Hệ thống QLTS</div>
+  </div>
+  <div style="background:#F8FAFC;padding:20px 24px;border:1px solid #E2E8F0;border-top:none;">
+    <p>Kính gửi <strong>${esc(rec.to)}</strong>,</p>
+    <p>Bạn vừa được bàn giao thiết bị CNTT từ Trung Thuy Group. Vui lòng kiểm tra thông tin và <strong>xác nhận bàn giao</strong> bằng nút bên dưới.</p>
 
-  const imgEl     = document.getElementById('qr-img');
-  const loadingEl = document.getElementById('qr-loading');
-  imgEl.style.display     = 'none';
-  loadingEl.style.display = 'block';
-  loadingEl.textContent   = '⏳ Đang tạo QR…';
-  openModal('modal-qr');
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      <tr style="background:#EFF6FF;">
+        <td style="padding:8px 12px;font-weight:600;border:1px solid #DBEAFE;width:40%;">📦 Thiết bị</td>
+        <td style="padding:8px 12px;border:1px solid #DBEAFE;">${esc(assetLabel)}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:600;border:1px solid #E2E8F0;">🔢 Serial</td>
+        <td style="padding:8px 12px;border:1px solid #E2E8F0;">${esc(asset.serial||'—')}</td>
+      </tr>
+      <tr style="background:#F8FAFC;">
+        <td style="padding:8px 12px;font-weight:600;border:1px solid #E2E8F0;">👤 Bàn giao từ</td>
+        <td style="padding:8px 12px;border:1px solid #E2E8F0;">${esc(fromStr)}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:600;border:1px solid #E2E8F0;">📅 Ngày bàn giao</td>
+        <td style="padding:8px 12px;border:1px solid #E2E8F0;">${esc(dateStr)}</td>
+      </tr>
+      <tr style="background:#F8FAFC;">
+        <td style="padding:8px 12px;font-weight:600;border:1px solid #E2E8F0;">🔧 Tình trạng máy</td>
+        <td style="padding:8px 12px;border:1px solid #E2E8F0;">${esc(rec.condition||'—')}</td>
+      </tr>
+      ${rec.notes ? `<tr><td style="padding:8px 12px;font-weight:600;border:1px solid #E2E8F0;">📝 Ghi chú</td><td style="padding:8px 12px;border:1px solid #E2E8F0;">${esc(rec.notes)}</td></tr>` : ''}
+    </table>
+
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${confirmUrl}" target="_blank"
+         style="background:#1D4ED8;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">
+        ✅ Xác nhận đã nhận thiết bị
+      </a>
+    </div>
+    <p style="font-size:12px;color:#94A3B8;text-align:center;margin-top:8px;">
+      Hoặc copy link: <a href="${confirmUrl}" style="color:#1D4ED8;word-break:break-all;">${confirmUrl}</a>
+    </p>
+
+    <p style="font-size:12px;color:#94A3B8;text-align:center;margin-top:16px;">
+      Nếu bạn không nhận được thiết bị này, vui lòng liên hệ phòng IT.<br>
+      Email này được gửi tự động từ hệ thống QLTS — Trung Thuy Group.
+    </p>
+  </div>
+</div>`;
 
   try {
-    // QRCode.toDataURL() chạy hoàn toàn trong JS — không cần DOM visible
-    const dataUrl = await QRCode.toDataURL(qrText, {
-      width: 256, margin: 2,
-      color: { dark: '#000000', light: '#ffffff' },
-      errorCorrectionLevel: 'M'
+    msalSetBar('📧 Đang gửi form xác nhận…','s-busy');
+    const resp = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + _msalToken,
+        'Content-Type':  'application/json'
+      },
+      body: JSON.stringify({
+        message: {
+          subject: `[QLTS] Xác nhận bàn giao thiết bị — ${assetLabel}`,
+          body:    { contentType: 'HTML', content: htmlBody },
+          toRecipients: [{ emailAddress: { address: rec.toEmail, name: rec.to } }]
+        },
+        saveToSentItems: true
+      })
     });
-    _qrDataUrl = dataUrl;
-    imgEl.src = dataUrl;
-    imgEl.style.display     = 'block';
-    loadingEl.style.display = 'none';
+    if(resp.ok || resp.status === 202){
+      toast(`📧 Đã gửi form xác nhận tới ${rec.toEmail}!`,'ok');
+      msalSetBar('🔷 ' + (_msalAccount?.name||_msalAccount?.username||''),'s-ok');
+    } else {
+      const err = await resp.json().catch(()=>({}));
+      console.warn('[FORM-EMAIL] error:', err);
+      toast('⚠️ Gửi email thất bại: ' + (err?.error?.message||resp.status),'bad');
+      msalSetBar('🔷 ' + (_msalAccount?.name||_msalAccount?.username||''),'s-ok');
+    }
   } catch(e){
-    loadingEl.textContent = '❌ Lỗi tạo QR: ' + e.message;
-    console.error('[QR] toDataURL error:', e);
+    console.error('[FORM-EMAIL]', e);
+    toast('⚠️ Lỗi gửi email: ' + e.message,'bad');
+    msalSetBar('🔷 ' + (_msalAccount?.name||_msalAccount?.username||''),'s-ok');
   }
-}
-
-function downloadQR(){
-  if(!_qrDataUrl){ toast('⚠️ Chưa có mã QR','bad'); return; }
-  const a = assets.find(x=>x.id===_qrCurrentId);
-  const name = a ? (a.maTaiSan||a.serial||a.model||'qr').replace(/[^a-zA-Z0-9]/g,'_') : 'qr';
-  const link = document.createElement('a');
-  link.download = 'QR_' + name + '.png';
-  link.href = _qrDataUrl;
-  link.click();
-  toast('⬇️ Đã tải ảnh QR!','ok');
-}
-
-function printQR(){
-  if(!_qrDataUrl){ toast('⚠️ Chưa có mã QR','bad'); return; }
-  const assetName = document.getElementById('qr-asset-name').textContent;
-  const a = assets.find(x=>x.id===_qrCurrentId);
-  const maTaiSan = a?.maTaiSan||'';
-  const serial   = a?.serial||'';
-  const boPhan   = a?.boPhan||'';
-  const win = window.open('','_blank','width=460,height=620');
-  win.document.write(`<!DOCTYPE html><html><head><title>QR — ${assetName}</title>
-  <style>
-    @page{size:A6 portrait;margin:8mm;}
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Times New Roman',serif;text-align:center;background:#fff;color:#000;padding:10px;}
-    .label-box{border:2px solid #000;padding:10px 14px;max-width:280px;margin:0 auto;border-radius:4px;}
-    h3{font-size:12px;margin:0 0 4px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #ccc;padding-bottom:5px;margin-bottom:6px;}
-    .asset-name{font-size:13px;font-weight:bold;margin-bottom:4px;}
-    .meta{font-size:10px;color:#444;margin:2px 0;}
-    img{width:200px;height:200px;margin:8px 0;display:block;margin-left:auto;margin-right:auto;}
-    .footer{font-size:8px;color:#999;margin-top:6px;border-top:1px solid #eee;padding-top:5px;}
-  </style>
-  </head><body>
-  <div class="label-box">
-    <h3>🏢 TTG — Tài Sản CNTT</h3>
-    <div class="asset-name">${assetName}</div>
-    ${maTaiSan?`<div class="meta">Mã TS: <strong>${maTaiSan}</strong></div>`:''}
-    ${serial?`<div class="meta">Serial: ${serial}</div>`:''}
-    ${boPhan?`<div class="meta">Bộ phận: ${boPhan}</div>`:''}
-    <img src="${_qrDataUrl}" alt="QR Code"/>
-    <div class="footer">Quét QR để xem thông tin · TTG Việt Nam</div>
-  </div>
-  <script>window.onload=function(){window.print();setTimeout(()=>window.close(),500);}<\/script>
-  </body></html>`);
-  win.document.close();
 }
 
 // ═══════════════════════ UTILS ═══════════════════════

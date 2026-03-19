@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Xác nhận bàn giao tài sản — QLTS TTG</title>
+  <style>
+    :root{
+      --accent:#1D4ED8;--accent2:#7C6BFF;--green:#10B981;--red:#EF4444;
+      --border:#E2E8F0;--muted:#94A3B8;--surface:#F8FAFC;--text:#1E293B;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      background:#F1F5F9;color:var(--text);min-height:100vh;
+      display:flex;flex-direction:column;align-items:center;
+      padding:24px 16px 48px;
+    }
+
+    /* ── Header ── */
+    .header{
+      width:100%;max-width:600px;
+      display:flex;align-items:center;gap:12px;
+      margin-bottom:20px;
+    }
+    .header-logo{
+      width:40px;height:40px;border-radius:10px;
+      background:var(--accent);
+      display:flex;align-items:center;justify-content:center;
+      font-size:20px;flex-shrink:0;
+    }
+    .header-title{font-size:15px;font-weight:700;color:var(--text);}
+    .header-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+    /* ── Card ── */
+    .card{
+      width:100%;max-width:600px;
+      background:#fff;border:1px solid var(--border);
+      border-radius:16px;overflow:hidden;
+      box-shadow:0 4px 24px rgba(0,0,0,.08);
+    }
+    .card-head{
+      background:linear-gradient(135deg,#1D4ED8 0%,#4F46E5 100%);
+      padding:20px 24px;color:#fff;
+    }
+    .card-head h1{font-size:17px;font-weight:700;}
+    .card-head p{font-size:12px;opacity:.8;margin-top:4px;}
+    .card-body{padding:24px;}
+
+    /* ── Asset info ── */
+    .asset-info{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:10px;padding:16px;margin-bottom:20px;
+    }
+    .asset-info-label{
+      font-size:10px;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;
+    }
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .info-item{}
+    .info-item .lbl{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px;}
+    .info-item .val{font-size:13px;font-weight:600;color:var(--text);}
+    .info-item.full{grid-column:1/-1;}
+
+    /* ── Divider ── */
+    .divider{
+      border:none;border-top:1px solid var(--border);
+      margin:20px 0;
+    }
+
+    /* ── Form ── */
+    .section-label{
+      font-size:12px;font-weight:700;color:var(--accent);
+      margin-bottom:12px;display:flex;align-items:center;gap:6px;
+    }
+    .field{margin-bottom:14px;}
+    .field label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;}
+    .field input,.field textarea,.field select{
+      width:100%;padding:9px 12px;border:1px solid var(--border);
+      border-radius:8px;font-size:13px;font-family:inherit;
+      background:#fff;color:var(--text);outline:none;
+      transition:border-color .2s;
+    }
+    .field input:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,78,216,.1);}
+    .field textarea{min-height:72px;resize:vertical;}
+
+    /* ── Confirm checkbox ── */
+    .confirm-box{
+      display:flex;align-items:flex-start;gap:12px;
+      background:#EFF6FF;border:1px solid #BFDBFE;
+      border-radius:10px;padding:14px;margin-bottom:20px;
+      cursor:pointer;
+    }
+    .confirm-box input[type=checkbox]{
+      width:18px;height:18px;cursor:pointer;
+      accent-color:var(--accent);flex-shrink:0;margin-top:1px;
+    }
+    .confirm-box .cb-text{font-size:13px;font-weight:600;line-height:1.5;color:var(--text);}
+    .confirm-box .cb-sub{font-size:11px;color:var(--muted);margin-top:3px;font-weight:400;}
+
+    /* ── Submit button ── */
+    .btn-submit{
+      width:100%;padding:13px;border:none;border-radius:10px;
+      background:var(--accent);color:#fff;
+      font-size:15px;font-weight:700;cursor:pointer;
+      transition:background .2s,transform .1s;
+    }
+    .btn-submit:hover{background:#1e40af;}
+    .btn-submit:active{transform:scale(.98);}
+    .btn-submit:disabled{background:#94A3B8;cursor:not-allowed;}
+
+    /* ── States ── */
+    #state-form{}
+    #state-loading{display:none;text-align:center;padding:32px 0;}
+    #state-success{display:none;text-align:center;padding:16px 0;}
+    #state-error{display:none;}
+
+    .spinner{
+      width:40px;height:40px;border:4px solid #E2E8F0;
+      border-top-color:var(--accent);border-radius:50%;
+      animation:spin .8s linear infinite;margin:0 auto 12px;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .success-icon{font-size:48px;margin-bottom:12px;}
+    .success-title{font-size:20px;font-weight:800;color:var(--green);margin-bottom:6px;}
+    .success-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+
+    .error-box{
+      background:#FEF2F2;border:1px solid #FECACA;
+      border-radius:10px;padding:14px 16px;
+      font-size:13px;color:var(--red);margin-bottom:16px;
+    }
+
+    /* ── Footer ── */
+    .footer{
+      margin-top:20px;text-align:center;
+      font-size:11px;color:var(--muted);
+    }
+
+    @media(max-width:480px){
+      .info-grid{grid-template-columns:1fr;}
+      .info-item.full{grid-column:1;}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-logo">🏢</div>
+    <div>
+      <div class="header-title">Trung Thuy Group — QLTS</div>
+      <div class="header-sub">Hệ thống Quản Lý Tài Sản CNTT</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h1>🔄 Xác nhận bàn giao tài sản</h1>
+      <p>Vui lòng kiểm tra thông tin và xác nhận đã nhận thiết bị bên dưới.</p>
+    </div>
+    <div class="card-body">
+
+      <!-- State: Form -->
+      <div id="state-form">
+
+        <!-- Thông tin thiết bị -->
+        <div class="asset-info">
+          <div class="asset-info-label">📦 Thông tin thiết bị bàn giao</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="lbl">Tên thiết bị</div>
+              <div class="val" id="info-ts">—</div>
+            </div>
+            <div class="info-item">
+              <div class="lbl">Mã tài sản</div>
+              <div class="val" id="info-ma">—</div>
+            </div>
+            <div class="info-item">
+              <div class="lbl">Serial</div>
+              <div class="val" id="info-sn">—</div>
+            </div>
+            <div class="info-item">
+              <div class="lbl">Tình trạng máy</div>
+              <div class="val" id="info-cond">—</div>
+            </div>
+            <div class="info-item">
+              <div class="lbl">Ngày bàn giao</div>
+              <div class="val" id="info-date">—</div>
+            </div>
+            <div class="info-item">
+              <div class="lbl">Người bàn giao từ</div>
+              <div class="val" id="info-from">—</div>
+            </div>
+            <div class="info-item full" id="info-notes-row" style="display:none;">
+              <div class="lbl">Ghi chú từ IT</div>
+              <div class="val" id="info-notes" style="font-weight:400;font-size:12px;color:var(--muted);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checkbox xác nhận -->
+        <label class="confirm-box" for="cb-confirm">
+          <input type="checkbox" id="cb-confirm" onchange="toggleSubmit()"/>
+          <div>
+            <div class="cb-text">Tôi xác nhận đã nhận thiết bị trên trong tình trạng như mô tả</div>
+            <div class="cb-sub">Tick vào ô này đồng nghĩa bạn đã kiểm tra và chấp nhận thiết bị.</div>
+          </div>
+        </label>
+
+        <hr class="divider"/>
+        <div class="section-label">✏️ Thông tin người nhận</div>
+
+        <div class="field">
+          <label for="inp-name">Họ và tên người nhận *</label>
+          <input type="text" id="inp-name" placeholder="Nhập họ tên đầy đủ"/>
+        </div>
+        <div class="field">
+          <label for="inp-notes">Ghi chú thêm (nếu có)</label>
+          <textarea id="inp-notes" placeholder="VD: Máy bị trầy nhẹ góc trái, không có sạc kèm…"></textarea>
+        </div>
+
+        <!-- Error -->
+        <div id="state-error">
+          <div class="error-box" id="error-msg"></div>
+        </div>
+
+        <button class="btn-submit" id="btn-submit" onclick="submitConfirm()" disabled>
+          ✅ Xác nhận bàn giao
+        </button>
+      </div>
+
+      <!-- State: Loading -->
+      <div id="state-loading">
+        <div class="spinner"></div>
+        <div style="font-size:14px;color:var(--muted);">Đang gửi xác nhận…</div>
+      </div>
+
+      <!-- State: Success -->
+      <div id="state-success">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Xác nhận thành công!</div>
+        <div class="success-sub">
+          Thông tin bàn giao đã được ghi nhận và lưu vào hệ thống.<br/>
+          Phòng IT sẽ nhận được thông báo ngay lập tức.<br/><br/>
+          <strong id="success-name"></strong>, cảm ơn bạn đã xác nhận!
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    © 2026 Trung Thuy Group · Hệ thống QLTS · Phòng IT
+  </div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────────────
+const POWER_AUTOMATE_URL = 'https://default801edb4c29ba4d0780b116a955dbf2.0d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7804b380573345c582231864a12b110c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=cKjODxSdTc-p9t9K7WOnGIxor3AlpdzvSWq2kasWgVU';
+
+// ── Đọc URL params ────────────────────────────────────────────────────────
+const p = new URLSearchParams(window.location.search);
+const params = {
+  id:    p.get('id')   || '',
+  ma:    p.get('ma')   || '',
+  ts:    p.get('ts')   || '',
+  sn:    p.get('sn')   || '',
+  to:    p.get('to')   || '',
+  email: p.get('email')|| '',
+  date:  p.get('date') || '',
+  cond:  p.get('cond') || '',
+  from:  p.get('from') || '',
+  notes: p.get('notes')|| '',
+};
+
+// ── Hiển thị thông tin thiết bị ──────────────────────────────────────────
+function setText(id, val){ const el=document.getElementById(id); if(el) el.textContent=val||'—'; }
+
+setText('info-ts',   params.ts);
+setText('info-ma',   params.ma);
+setText('info-sn',   params.sn);
+setText('info-cond', params.cond);
+setText('info-from', params.from || 'Phòng IT');
+
+if(params.date){
+  try{
+    const d = new Date(params.date);
+    setText('info-date', d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}));
+  } catch(_){ setText('info-date', params.date); }
+}
+if(params.notes){
+  document.getElementById('info-notes-row').style.display='';
+  setText('info-notes', params.notes);
+}
+
+// Pre-fill tên người nhận
+if(params.to){
+  const inp = document.getElementById('inp-name');
+  if(inp) inp.value = params.to;
+}
+
+// ── Toggle nút submit ─────────────────────────────────────────────────────
+function toggleSubmit(){
+  const checked = document.getElementById('cb-confirm').checked;
+  document.getElementById('btn-submit').disabled = !checked;
+}
+
+// ── Submit xác nhận ───────────────────────────────────────────────────────
+async function submitConfirm(){
+  const name  = document.getElementById('inp-name').value.trim();
+  const notes = document.getElementById('inp-notes').value.trim();
+
+  // Validate
+  if(!document.getElementById('cb-confirm').checked){
+    showError('Vui lòng tick xác nhận đã nhận thiết bị.'); return;
+  }
+  if(!name){
+    showError('Vui lòng nhập họ tên người nhận.'); return;
+  }
+
+  hideError();
+  setState('loading');
+
+  const payload = {
+    assetId:         params.id,
+    maTaiSan:        params.ma,
+    tenThietBi:      params.ts,
+    serial:          params.sn,
+    nguoiNhan:       name,
+    emailNguoiNhan:  params.email,
+    ngayBanGiao:     params.date,
+    tinhTrang:       params.cond,
+    ghiChuNguoiNhan: notes,
+    trangThai:       'Đã xác nhận',
+    thoiGianXacNhan: new Date().toISOString(),
+  };
+
+  try {
+    const resp = await fetch(POWER_AUTOMATE_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+
+    if(resp.ok || resp.status === 202){
+      document.getElementById('success-name').textContent = name;
+      setState('success');
+    } else {
+      throw new Error('HTTP ' + resp.status);
+    }
+  } catch(e){
+    setState('form');
+    showError('Gửi xác nhận thất bại: ' + e.message + '. Vui lòng thử lại hoặc liên hệ phòng IT.');
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function setState(s){
+  document.getElementById('state-form').style.display    = s==='form'    ? '' : 'none';
+  document.getElementById('state-loading').style.display = s==='loading' ? '' : 'none';
+  document.getElementById('state-success').style.display = s==='success' ? '' : 'none';
+}
+function showError(msg){
+  const el=document.getElementById('state-error');
+  const em=document.getElementById('error-msg');
+  if(el) el.style.display='';
+  if(em) em.textContent=msg;
+}
+function hideError(){
+  const el=document.getElementById('state-error');
+  if(el) el.style.display='none';
+}
+</script>
+</body>
+</html>
