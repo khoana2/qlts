@@ -30,47 +30,105 @@ body{
 ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px;}
 ::-webkit-scrollbar-thumb:hover{background:#94A3B8;}
 
-/* ═══════════════════════════ APP SHELL ═══════════════════════════ */
-.app{max-width:1600px;margin:0 auto;padding:14px 14px 40px;}
+/* ═══════════════════════════ APP SHELL — SIDEBAR LAYOUT ═══════════════════════════ */
+.app{max-width:1600px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
 
 /* TOP BAR */
 .topbar{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:12px 16px;
+  padding:10px 16px;
   background:#FFFFFF;
-  border:1px solid var(--border);border-radius:var(--radius);
-  box-shadow:0 1px 3px rgba(0,0,0,.08);position:sticky;top:10px;z-index:60;
+  border-bottom:1px solid var(--border);
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+  position:sticky;top:0;z-index:60;
+  flex-shrink:0;
 }
 .brand{display:flex;align-items:center;gap:10px;}
 .brand-icon{
-  width:36px;height:36px;border-radius:10px;
+  width:34px;height:34px;border-radius:10px;
   background:linear-gradient(135deg,var(--accent),var(--accent2));
-  display:flex;align-items:center;justify-content:center;font-size:18px;
+  display:flex;align-items:center;justify-content:center;font-size:17px;
   box-shadow:0 4px 14px rgba(37,99,235,.25);
 }
-.brand-text h1{font-size:14px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text);}
+.brand-text h1{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text);}
 .brand-text p{font-size:11px;color:var(--muted);}
-
 .top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 
-/* NAV TABS */
-.nav-tabs{
-  display:flex;align-items:center;gap:4px;
-  padding:4px;background:#F1F5F9;
-  border:1px solid var(--border);border-radius:var(--radius-sm);
+/* MAIN LAYOUT: sidebar + content */
+.main-layout{display:flex;flex:1;min-height:0;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:216px;min-width:216px;
+  background:#FFFFFF;
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:sticky;top:53px;
+  height:calc(100vh - 53px);
+  overflow-y:auto;
+  flex-shrink:0;
 }
+.sidebar-nav{
+  display:flex;flex-direction:column;gap:2px;
+  padding:12px 8px;flex:1;
+}
+.sidebar-section{
+  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:#94A3B8;padding:4px 10px 2px;margin-top:6px;
+}
+
+/* NAV TABS — now vertical in sidebar */
+.nav-tabs{ display:contents; } /* unwrap — children go directly into sidebar-nav */
 .nav-tab{
-  padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;
-  cursor:pointer;transition:all .18s;color:var(--muted);
-  display:flex;align-items:center;gap:6px;user-select:none;
-  border:none;background:transparent;
+  width:100%;padding:9px 12px;border-radius:10px;
+  font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s;color:var(--muted);
+  display:flex;align-items:center;gap:10px;
+  user-select:none;border:none;background:transparent;text-align:left;
 }
-.nav-tab:hover{color:var(--text);background:#E2E8F0;}
+.nav-tab:hover{color:var(--text);background:#F1F5F9;}
 .nav-tab.active{
-  color:#fff;
-  background:linear-gradient(135deg,#2563EB,#0EA5E9);
-  box-shadow:0 2px 8px rgba(37,99,235,.3);
+  color:var(--accent);background:#EFF6FF;font-weight:700;
 }
+.nav-tab .tab-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+
+/* Sidebar footer: user info */
+.sidebar-footer{
+  padding:10px 8px 12px;
+  border-top:1px solid var(--border);
+}
+.sidebar-user-card{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:10px;
+  background:#F8FAFC;border:1px solid var(--border);
+  margin-bottom:8px;
+}
+.sidebar-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#2563EB,#0EA5E9);
+  color:#fff;font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.sidebar-uname{font-size:12px;font-weight:700;color:var(--text);line-height:1.3;word-break:break-word;}
+.sidebar-role-badge{
+  display:inline-block;font-size:10px;font-weight:700;
+  padding:1px 7px;border-radius:999px;margin-top:2px;
+  background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;
+}
+.sidebar-role-badge.member{background:rgba(16,185,129,.1);color:#059669;border-color:rgba(16,185,129,.3);}
+.sidebar-role-badge.viewer{background:#F8FAFC;color:var(--muted);border-color:var(--border);}
+.btn-sidebar-logout{
+  width:100%;padding:8px 12px;border-radius:10px;
+  border:1px solid rgba(239,68,68,.3);
+  background:rgba(239,68,68,.05);color:#DC2626;
+  font-size:12px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .15s;
+}
+.btn-sidebar-logout:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5);}
+
+/* ── CONTENT AREA ── */
+.content{flex:1;padding:16px 16px 40px;min-width:0;overflow-x:auto;}
 
 /* BUTTONS */
 .btn{
@@ -691,30 +749,6 @@ tbody tr.row-thanh-ly td{opacity:.5;}
   pointer-events:none;
 }
 
-/* User info + logout btn trên topbar */
-#topbar-user{
-  display:none;align-items:center;gap:8px;
-}
-.user-avatar{
-  width:32px;height:32px;border-radius:50%;
-  background:linear-gradient(135deg,#2563EB,#0EA5E9);
-  color:#fff;font-size:12px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
-}
-.user-name{
-  font-size:12px;font-weight:600;color:var(--text);
-  max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.btn-logout{
-  border:1px solid rgba(239,68,68,.35);
-  background:rgba(239,68,68,.06);
-  color:#DC2626;border-radius:8px;
-  padding:6px 10px;font-size:12px;cursor:pointer;
-  display:flex;align-items:center;gap:5px;
-  transition:all .15s;white-space:nowrap;
-}
-.btn-logout:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.5);}
 </style>
 </head>
 <body>
@@ -812,40 +846,62 @@ tbody tr.row-thanh-ly td{opacity:.5;}
         <p id="topbar-sub">Loading…</p>
       </div>
     </div>
-
-    <div class="nav-tabs">
-      <button class="nav-tab active" onclick="switchTab('dashboard')" id="tab-dashboard">📊 Dashboard</button>
-      <button class="nav-tab" onclick="switchTab('assets')" id="tab-assets">📦 Tài Sản</button>
-      <button class="nav-tab" onclick="switchTab('events')" id="tab-events">📋 Lịch Sử</button>
-      <button class="nav-tab" onclick="switchTab('license')" id="tab-license">🔑 License</button>
-      <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">👥 Phân Quyền</button>
-    </div>
-
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div class="top-actions">
       <!-- MSAL SharePoint sync bar -->
-      <div class="sync-bar s-warn" id="msal-bar" onclick="msalBarClick()" title="Kết nối SharePoint qua Microsoft 365">
+      <div class="sync-bar s-warn" id="msal-bar" onclick="msalBarClick()" title="Kết nối SharePoint qua Microsoft 365" style="font-size:11px;">
         <span>🔷</span>
-        <span id="msal-bar-text">Đăng nhập M365…</span>
+        <span id="msal-bar-text">M365</span>
       </div>
-      <!-- File sync status (OneDrive file) -->
-      <div class="sync-bar s-info" id="file-sync-bar" onclick="fsbClick()" title="Hoặc dùng file JSON OneDrive" style="font-size:10.5px;">
+      <!-- File sync status -->
+      <div class="sync-bar s-info" id="file-sync-bar" onclick="fsbClick()" title="File JSON OneDrive" style="font-size:10.5px;display:none;">
         <span>📂</span>
         <span class="fsb-name" id="fsb-name">File JSON</span>
       </div>
-      <!-- User info + logout -->
-      <div id="topbar-user">
-        <div class="user-avatar" id="topbar-avatar">?</div>
-        <span class="user-name" id="topbar-uname"></span>
-        <button class="btn-logout" onclick="confirmLogout()">⏏ Đăng xuất</button>
-      </div>
-      <div class="top-actions">
-        <span id="role-badge" style="display:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;background:var(--surface2);">Viewer</span>
-        <button class="btn success" id="btn-import-asset" onclick="openImport()">⬆️ Import Excel</button>
-        <button class="btn warn" id="btn-export-asset" onclick="exportExcel()">⬇️ Export</button>
-        <button class="btn primary" id="btn-add-asset" onclick="openAdd()">＋ Thêm Tài Sản</button>
-      </div>
+      <button class="btn success" id="btn-import-asset" onclick="openImport()">⬆️ Import Excel</button>
+      <button class="btn warn" id="btn-export-asset" onclick="exportExcel()">⬇️ Export</button>
+      <button class="btn primary" id="btn-add-asset" onclick="openAdd()">＋ Thêm Tài Sản</button>
     </div>
   </div>
+
+  <!-- ══════════════ MAIN LAYOUT ══════════════ -->
+  <div class="main-layout">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <div class="sidebar-section">Menu</div>
+        <button class="nav-tab active" onclick="switchTab('dashboard')" id="tab-dashboard">
+          <span class="tab-icon">📊</span> Dashboard
+        </button>
+        <button class="nav-tab" onclick="switchTab('assets')" id="tab-assets">
+          <span class="tab-icon">📦</span> Tài Sản
+        </button>
+        <button class="nav-tab" onclick="switchTab('events')" id="tab-events">
+          <span class="tab-icon">📋</span> Lịch Sử
+        </button>
+        <button class="nav-tab" onclick="switchTab('license')" id="tab-license">
+          <span class="tab-icon">🔑</span> License
+        </button>
+        <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">
+          <span class="tab-icon">👥</span> Phân Quyền
+        </button>
+      </nav>
+
+      <!-- User info footer -->
+      <div class="sidebar-footer" id="sidebar-footer" style="display:none;">
+        <div class="sidebar-user-card">
+          <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+          <div>
+            <div class="sidebar-uname" id="sidebar-uname">—</div>
+            <span class="sidebar-role-badge" id="sidebar-role-badge">Viewer</span>
+          </div>
+        </div>
+        <button class="btn-sidebar-logout" onclick="confirmLogout()">⏏ Đăng xuất</button>
+      </div>
+    </aside>
+
+    <!-- ── CONTENT ── -->
+    <div class="content">
 
   <!-- File Sync Context Menu -->
   <div id="fsb-menu" style="display:none;position:fixed;z-index:200;
@@ -1716,7 +1772,11 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 </div>
 
 <!-- ══════════════ TOASTS ══════════════ -->
-<div class="toast-wrap" id="toast-wrap"></div>
+
+    </div><!-- /content -->
+  </div><!-- /main-layout -->
+
+  <div class="toast-wrap" id="toast-wrap"></div>
 
 <!-- SCROLL TO TOP -->
 <button class="scroll-top" id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">▲</button>
@@ -2145,20 +2205,27 @@ function msalSetBar(txt, cls){
   _updateTopbarUser();
 }
 function _updateTopbarUser(){
-  const userDiv = document.getElementById('topbar-user');
-  const avatar  = document.getElementById('topbar-avatar');
-  const uname   = document.getElementById('topbar-uname');
-  const msalBar = document.getElementById('msal-bar');
-  if(!userDiv) return;
+  const msalBar    = document.getElementById('msal-bar');
+  const footer     = document.getElementById('sidebar-footer');
+  const avatar     = document.getElementById('sidebar-avatar');
+  const uname      = document.getElementById('sidebar-uname');
+  const roleBadge  = document.getElementById('sidebar-role-badge');
   if(_msalAccount){
-    const name = _msalAccount.name || _msalAccount.username || 'User';
-    const initials = name.split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase() || '??';
-    if(avatar) avatar.textContent = initials;
-    if(uname)  uname.textContent  = name;
-    userDiv.style.display = 'flex';
+    const name     = _msalAccount.name || _msalAccount.username || 'User';
+    const initials = name.split(' ').map(w=>w[0]||'').slice(-2).join('').toUpperCase() || '??';
+    if(avatar)    avatar.textContent = initials;
+    if(uname)     uname.textContent  = name;
+    // Role badge
+    if(roleBadge){
+      const role = _userRole || 'viewer';
+      const roleLabel = role === 'admin' ? 'Admin' : role === 'member' ? 'Member' : 'Viewer';
+      roleBadge.textContent = roleLabel;
+      roleBadge.className = 'sidebar-role-badge ' + role;
+    }
+    if(footer)  footer.style.display = 'block';
     if(msalBar) msalBar.style.display = 'none';
   } else {
-    userDiv.style.display = 'none';
+    if(footer)  footer.style.display = 'none';
     if(msalBar) msalBar.style.display = '';
   }
 }
@@ -3160,6 +3227,8 @@ function applyRoleUI(){
     badge.style.color = r.color;
     badge.style.display = '';
   }
+  // Cập nhật sidebar role badge
+  _updateTopbarUser();
 }
 
 function populateCompanySelects(){
