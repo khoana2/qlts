@@ -1132,26 +1132,28 @@ tbody tr.row-thanh-ly td{opacity:.5;}
   <!-- ══════════════ LICENSE VIEW ══════════════ -->
   <div class="view" id="view-license">
 
-    <div class="kpi-grid" style="margin-top:14px;">
-      <div class="kpi blue">
-        <div class="kpi-icon">🔑</div>
-        <div class="kpi-val" id="lic-kpi-total">0</div>
-        <div class="kpi-label">Tổng license</div>
+    <!-- Stats bar gọn cho License -->
+    <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:6px 14px;">
+        <span style="font-size:14px;">🔑</span>
+        <span id="lic-kpi-total" style="font-size:20px;font-weight:800;color:#1D4ED8;line-height:1;">0</span>
+        <span style="font-size:11px;color:#3B82F6;font-weight:600;">Tổng</span>
       </div>
-      <div class="kpi green">
-        <div class="kpi-icon">✅</div>
-        <div class="kpi-val" id="lic-kpi-ok">0</div>
-        <div class="kpi-label">Còn hạn</div>
+      <div style="color:var(--border);font-size:18px;font-weight:300;">|</div>
+      <div style="display:flex;align-items:center;gap:5px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:6px 14px;">
+        <span style="font-size:13px;">✅</span>
+        <span id="lic-kpi-ok" style="font-size:20px;font-weight:800;color:#16A34A;line-height:1;">0</span>
+        <span style="font-size:11px;color:#22C55E;font-weight:600;">Còn hạn</span>
       </div>
-      <div class="kpi orange">
-        <div class="kpi-icon">⚠️</div>
-        <div class="kpi-val" id="lic-kpi-warn">0</div>
-        <div class="kpi-label">Sắp hết hạn (&lt;30 ngày)</div>
+      <div style="display:flex;align-items:center;gap:5px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:6px 14px;">
+        <span style="font-size:13px;">⚠️</span>
+        <span id="lic-kpi-warn" style="font-size:20px;font-weight:800;color:#D97706;line-height:1;">0</span>
+        <span style="font-size:11px;color:#F59E0B;font-weight:600;">Sắp hết (&lt;30 ngày)</span>
       </div>
-      <div class="kpi red">
-        <div class="kpi-icon">❌</div>
-        <div class="kpi-val" id="lic-kpi-exp">0</div>
-        <div class="kpi-label">Đã hết hạn</div>
+      <div style="display:flex;align-items:center;gap:5px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:6px 14px;">
+        <span style="font-size:13px;">❌</span>
+        <span id="lic-kpi-exp" style="font-size:20px;font-weight:800;color:#DC2626;line-height:1;">0</span>
+        <span style="font-size:11px;color:#EF4444;font-weight:600;">Đã hết hạn</span>
       </div>
     </div>
 
