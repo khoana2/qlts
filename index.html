@@ -3707,8 +3707,16 @@ function warrantyBadge(a){
   return `<span class="warn-badge ok" title="Hết BH ${new Date(a.ngayHetBH).toLocaleDateString('vi-VN')}">BH: ${diffD}d</span>`;
 }
 
+function getXacNhan(assetId){
+  if(_xacNhanMap[assetId]) return _xacNhanMap[assetId];
+  // Fallback: tìm theo maTaiSan
+  const a = assets.find(x=>x.id===assetId);
+  if(a?.maTaiSan && _xacNhanMap[a.maTaiSan]) return _xacNhanMap[a.maTaiSan];
+  return null;
+}
+
 function xacNhanBadge(assetId){
-  const rec = _xacNhanMap[assetId];
+  const rec = getXacNhan(assetId);
   if(!rec) return '';
   if(rec.trangThai === 'Đã xác nhận'){
     const d = rec.thoiGian ? new Date(rec.thoiGian).toLocaleDateString('vi-VN') : '';
@@ -3718,20 +3726,25 @@ function xacNhanBadge(assetId){
 }
 
 function xacNhanDetailHTML(assetId){
-  const rec = _xacNhanMap[assetId];
-  // Không có record → hiện trạng thái chờ nếu thiết bị đang được bàn giao
-  const a = assets.find(x=>x.id===assetId);
-  const daBanGiao = a && a.nguoiDung && a.trangThaiHienTai === 'Bàn giao';
+  const rec = getXacNhan(assetId);
+  const a   = assets.find(x=>x.id===assetId);
+  // Hiện "Chờ xác nhận" nếu: có lịch sử bàn giao HOẶC đang có người dùng
+  const hasTx = (transfers[assetId]||[]).length > 0;
+  const daBanGiao = a && (hasTx || a.nguoiDung);
 
   if(!rec){
-    if(!daBanGiao) return ''; // không cần hiện nếu chưa bàn giao
+    if(!daBanGiao) return ''; // chưa bàn giao lần nào → không hiện
     return `
-    <div style="margin-top:14px;padding:12px 14px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;display:flex;align-items:center;gap:10px;">
-      <span style="font-size:20px;">⏳</span>
-      <div>
-        <div style="font-size:12px;font-weight:700;color:#92400E;">Chưa có xác nhận bàn giao</div>
-        <div style="font-size:11px;color:#B45309;margin-top:2px;">Người nhận chưa submit form xác nhận.</div>
+    <div style="margin-top:14px;padding:12px 14px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">⏳</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#92400E;">Chưa có xác nhận bàn giao</div>
+          <div style="font-size:11px;color:#B45309;margin-top:2px;">Người nhận chưa submit form xác nhận.</div>
+        </div>
       </div>
+      <button class="btn" style="font-size:11px;padding:4px 10px;flex-shrink:0;"
+        onclick="msalSpLoadXacNhan().then(()=>viewDetail('${assetId}'))">🔄 Refresh</button>
     </div>`;
   }
 
@@ -4022,7 +4035,26 @@ function viewDetail(id){
         <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="closeModal('modal-detail');openTransfer('${a.id}')">🔄 Bàn giao mới</button>
       </div>
       <div class="transfer-log">
-        ${tLog.map((t,i)=>`
+        ${tLog.map((t,i)=>{
+          // Dòng mới nhất (i===0) → gắn trạng thái xác nhận nếu có
+          const xn = i===0 ? getXacNhan(a.id) : null;
+          const xnHtml = xn
+            ? (() => {
+                const d = xn.thoiGian ? new Date(xn.thoiGian).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+                return `<div style="margin-top:8px;padding:7px 10px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:7px;font-size:11px;">
+                  <span style="color:#059669;font-weight:700;">✅ Đã xác nhận</span>
+                  <span style="color:#065F46;margin-left:6px;">${esc(xn.nguoiNhan)}</span>
+                  ${d?`<span style="color:var(--muted);margin-left:6px;">· ${d}</span>`:''}
+                  ${xn.ghiChu?`<div style="color:#047857;margin-top:3px;font-style:italic;">"${esc(xn.ghiChu)}"</div>`:''}
+                </div>`;
+              })()
+            : (i===0
+                ? `<div style="margin-top:8px;padding:5px 10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <span style="color:#92400E;">⏳ Chờ xác nhận</span>
+                    <button class="btn" style="padding:1px 8px;font-size:10px;" onclick="msalSpLoadXacNhan().then(()=>viewDetail('${a.id}'))">🔄</button>
+                  </div>`
+                : '');
+          return `
           <div class="transfer-row">
             <div class="tr-arrow">🔄</div>
             <div class="tr-info">
@@ -4031,6 +4063,7 @@ function viewDetail(id){
               <div class="to-dept">${esc(t.toDept||'')} ${t.toEmail?`· <a class="mail-link" href="mailto:${esc(t.toEmail)}">${esc(t.toEmail)}</a>`:''}</div>
               ${t.notes?`<div style="font-size:11px;color:var(--muted);margin-top:3px;">📝 ${esc(t.notes)}</div>`:''}
               ${t.condition?`<div style="font-size:11px;margin-top:3px;"><span class="tag-chip">Tình trạng: ${esc(t.condition)}</span></div>`:''}
+              ${xnHtml}
             </div>
             <div class="tr-meta">
               <div class="date">${t.date?new Date(t.date).toLocaleDateString('vi-VN'):'—'}</div>
@@ -4039,7 +4072,8 @@ function viewDetail(id){
                 <button class="btn danger" style="padding:2px 8px;font-size:10px;" onclick="deleteTransfer('${a.id}',${(tLog.length-1-i)},this)">🗑 Xóa</button>
               </div>
             </div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
     </div>` : `
     <div style="margin-top:14px;padding:12px;background:rgba(124,107,255,.05);border:1px dashed rgba(124,107,255,.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between;">
@@ -4079,8 +4113,7 @@ function viewDetail(id){
       ${dc('Sửa chữa', esc(a.suaChua||'—'), 'span3')}
       ${dc('Ghi chú', esc(a.ghiChu||'—'), 'span3')}
     </div>
-    ${transferHTML}
-    ${xacNhanDetailHTML(a.id)}`;
+    ${transferHTML}`;
 
   openModal('modal-detail');
 }
@@ -5919,24 +5952,30 @@ async function msalSpPushTransfer(assetId, rec){
 async function msalSpLoadXacNhan(){
   if(!_msalAccount) return;
   const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_XacNhan_BanGiao')/items`
-    + `?$select=AssetId,NguoiNhan,ThoiGianXacNhan,GhiChuNguoiNhan,TrangThai,NgayBanGiao`
-    + `&$top=2000&$orderby=ThoiGianXacNhan desc`;
+    + `?$select=*&$top=2000&$orderby=Created desc`;
   try{
     const data = await msalSpReq(url);
     _xacNhanMap = {};
+    // Debug: log raw item đầu tiên để xem tên field thực tế
+    if(data.value?.length) console.log('[XACNHAN] Raw item sample:', JSON.stringify(data.value[0]));
+
     for(const item of (data.value||[])){
-      const aid = item.AssetId;
-      if(aid && !_xacNhanMap[aid]){ // giữ record mới nhất
-        _xacNhanMap[aid] = {
-          nguoiNhan:       item.NguoiNhan || '',
-          thoiGian:        item.ThoiGianXacNhan || '',
-          ghiChu:          item.GhiChuNguoiNhan || '',
-          trangThai:       item.TrangThai || 'Đã xác nhận',
-          ngayBanGiao:     item.NgayBanGiao || '',
-        };
-      }
+      const g = (names) => names.map(n=>item[n]).find(v => v != null && v !== '') ?? '';
+      const rec = {
+        nguoiNhan: g(['NguoiNhan','nguoiNhan','Nguoinhan','nguoi_nhan']),
+        thoiGian:  g(['ThoiGianXacNhan','thoiGianXacNhan','ThoiGian','Modified','Created']),
+        ghiChu:    g(['GhiChuNguoiNhan','ghiChuNguoiNhan','GhiChu','ghiChu']),
+        trangThai: g(['TrangThai','trangThai','trangthai']) || 'Đã xác nhận',
+      };
+      // Index theo AssetId (local id) — thử nhiều tên field
+      const aid = g(['AssetId','assetId','Assetid','asset_id']);
+      if(aid && !_xacNhanMap[aid]) _xacNhanMap[aid] = rec;
+
+      // Index thêm theo MaTaiSan — fallback khi PA map sang Title hoặc field khác
+      const ma = g(['MaTaiSan','maTaiSan','Title','mataisanfield']);
+      if(ma && !_xacNhanMap[ma]) _xacNhanMap[ma] = rec;
     }
-    console.log(`[XACNHAN] Loaded ${Object.keys(_xacNhanMap).length} confirmations`);
+    console.log(`[XACNHAN] Map keys (${Object.keys(_xacNhanMap).length}):`, Object.keys(_xacNhanMap));
     applyFilters(); // refresh badge trên bảng
   } catch(e){
     // List chưa tạo hoặc không có quyền — bỏ qua, không crash app
