@@ -1389,6 +1389,29 @@ tbody tr.row-thanh-ly td{opacity:.5;}
           <div id="f-warranty-status" style="padding:9px 11px;font-size:13px;border-radius:8px;background:#F8FAFC;border:1px solid var(--border);color:var(--muted);">—</div>
         </div>
 
+        <div class="section-divider span3"><span>🔍 Nguồn thiết bị</span><hr/></div>
+
+        <div class="field">
+          <label>Nguồn thiết bị</label>
+          <select id="f-nguonThietBi" onchange="onNguonChange()">
+            <option value="">-- Chọn nguồn --</option>
+            <option>🛒 Mua mới</option>
+            <option>🔄 Điều chuyển nội bộ</option>
+            <option>🎁 Tài trợ / Biếu tặng</option>
+            <option>🔧 Tái sử dụng</option>
+            <option>📦 Thuê / Leasing</option>
+            <option>🏢 Bàn giao dự án</option>
+          </select>
+        </div>
+        <div class="field" id="f-congTyNguon-wrap" style="display:none;">
+          <label>Công ty nguồn</label>
+          <input type="text" id="f-congTyNguon" placeholder="VD: TTG HCM → TTG HN"/>
+        </div>
+        <div class="field" id="f-soHoaDon-wrap" style="display:none;">
+          <label>Số hóa đơn / PO</label>
+          <input type="text" id="f-soHoaDon" placeholder="VD: PO-2026-001"/>
+        </div>
+
         <div class="section-divider span3"><span>📅 Sự kiện</span><hr/></div>
 
         <div class="field">
@@ -2800,7 +2823,10 @@ function spItemToAsset(item){
     noiDung:   get('Nội dung') || '',
     ketQua:    get('Kết quả') || '',
     suaChua,
-    congTy:    get('Công ty') || get('CongTy') || '',
+    congTy:      get('Công ty') || get('CongTy') || '',
+    nguonThietBi: get('NguonThietBi') || '',
+    congTyNguon:  get('CongTyNguon')  || '',
+    soHoaDon:     get('SoHoaDon')     || '',
     ghiChu:    '',
     updatedAt: item.Modified || new Date().toISOString(),
   };
@@ -2885,6 +2911,9 @@ function assetToSpItem(a){
     }).join('\n');
     set('Lịch sử bàn giao', summary);
   }
+  set('NguonThietBi', a.nguonThietBi || '');
+  set('CongTyNguon',  a.congTyNguon  || '');
+  set('SoHoaDon',     a.soHoaDon     || '');
   return body;
 }
 
@@ -3935,12 +3964,28 @@ function fillForm(a){
   setSelect('f-boPhan', a.boPhan);
   setSelect('f-tinhTrang', a.tinhTrang||'Đang dùng');
   setSelect('f-trangThaiHienTai', a.trangThaiHienTai);
+  setSelect('f-nguonThietBi', a.nguonThietBi);
+  const elCTN = document.getElementById('f-congTyNguon');
+  if(elCTN) elCTN.value = a.congTyNguon||'';
+  const elHD = document.getElementById('f-soHoaDon');
+  if(elHD) elHD.value = a.soHoaDon||'';
+  onNguonChange();
 }
 
 function setSelect(id, val){
   const el = document.getElementById(id);
   if(!el) return;
   for(let o of el.options){ if(o.value===val||o.text===val){ o.selected=true; return; } }
+}
+
+function onNguonChange(){
+  const v = document.getElementById('f-nguonThietBi')?.value||'';
+  const showCty   = v.includes('Điều chuyển');
+  const showHoaDon = v.includes('Mua mới') || v.includes('Thuê') || v.includes('Leasing');
+  const wCty = document.getElementById('f-congTyNguon-wrap');
+  const wHD  = document.getElementById('f-soHoaDon-wrap');
+  if(wCty) wCty.style.display = showCty ? '' : 'none';
+  if(wHD)  wHD.style.display  = showHoaDon ? '' : 'none';
 }
 
 async function saveAsset(){
@@ -3974,6 +4019,9 @@ async function saveAsset(){
     suaChua:document.getElementById('f-suaChua').value,
     ghiChu:document.getElementById('f-ghiChu').value,
     congTy:(document.getElementById('f-congTy')?.value||'').trim(),
+    nguonThietBi: document.getElementById('f-nguonThietBi')?.value||'',
+    congTyNguon:  (document.getElementById('f-congTyNguon')?.value||'').trim(),
+    soHoaDon:     (document.getElementById('f-soHoaDon')?.value||'').trim(),
     updatedAt: new Date().toISOString()
   };
 
@@ -4129,6 +4177,9 @@ function viewDetail(id){
       ${dc('Ngày sự kiện', a.ngaySuKien?new Date(a.ngaySuKien).toLocaleDateString('vi-VN'):'—')}
       ${dc('Ngày mua', a.ngayMua?new Date(a.ngayMua).toLocaleDateString('vi-VN'):'—')}
       ${dc('Hết bảo hành', bhDetailHtml)}
+      ${a.nguonThietBi ? dc('Nguồn thiết bị', `<span style="background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:600;">${esc(a.nguonThietBi)}</span>`) : ''}
+      ${a.congTyNguon  ? dc('Công ty nguồn', esc(a.congTyNguon)) : ''}
+      ${a.soHoaDon     ? dc('Số hóa đơn / PO', `<code style="color:var(--accent2)">${esc(a.soHoaDon)}</code>`) : ''}
     </div>
     ${specs?`<div class="detail-specs">${specs}</div>`:''}
     <div class="detail-grid" style="margin-top:10px;">
