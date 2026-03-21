@@ -1848,6 +1848,18 @@ const MSAL_CONFIG = {
   redirectUri: window.location.origin + window.location.pathname,  // tự động
   scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Write', 'Mail.Send', 'User.Read'],
 };
+// ─── Phân quyền theo Azure AD Group ─────────────────────────────────────────
+// Mỗi dòng: 'Tên Azure AD Group' → 'Tên SP List tương ứng'
+// Muốn thêm công ty con mới: chỉ cần thêm 1 dòng vào đây
+const COMPANY_GROUP_MAP = {
+  'LLM-member': 'Quan_Ly_Tai_San_LLM',
+  // 'FPT-member': 'Quan_Ly_Tai_San_FPT',  // ← ví dụ thêm sau
+};
+// Tên hiển thị thân thiện cho từng group
+const COMPANY_GROUP_LABEL = {
+  'LLM-member': 'Lancaster LLM',
+};
+const DEFAULT_SP_LIST = MSAL_CONFIG.spList; // TTG admin — list gốc
 // ════════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════ CONFIRM FORM CONFIG ════════════════════════════════
@@ -2068,10 +2080,63 @@ async function msalSpReq(url, opts={}){
 }
 
 // ─── Load tất cả items từ SP List qua MSAL ───────────────────────────────────
+// ─── Lấy Graph API token (tái sử dụng nhiều nơi) ──────────────────────────
+async function getGraphToken(scopes){
+  const s = scopes || ['https://graph.microsoft.com/User.Read'];
+  try {
+    const r = await _msalApp.acquireTokenSilent({ scopes: s, account: _msalAccount });
+    return r.accessToken;
+  } catch {
+    const r = await _msalApp.acquireTokenPopup({ scopes: s, account: _msalAccount });
+    return r.accessToken;
+  }
+}
+
+// ─── Detect group → chọn đúng SP list cho user ────────────────────────────
+// Gọi 1 lần sau login. Nếu user thuộc COMPANY_GROUP_MAP → dùng list riêng.
+// Nếu không thuộc group nào → dùng DEFAULT_SP_LIST (admin TTG).
+let _userCompanyGroup = null; // group name đang active, null = TTG admin
+// Helper: tạo status bar label kèm tên công ty
+function msalBarLabel(extra){
+  const name   = _msalAccount?.name || _msalAccount?.username || '';
+  const coTag  = _userCompanyGroup
+    ? ` 🏢 ${COMPANY_GROUP_LABEL[_userCompanyGroup] || _userCompanyGroup}`
+    : '';
+  return `🔷 ${name}${coTag}${extra ? ' — ' + extra : ''}`;
+}
+async function detectUserCompany(){
+  _userCompanyGroup = null;
+  MSAL_CONFIG.spList = DEFAULT_SP_LIST;
+  if(!Object.keys(COMPANY_GROUP_MAP).length) return;
+  try {
+    const token = await getGraphToken(['https://graph.microsoft.com/GroupMember.Read.All']);
+    const res   = await fetch(
+      'https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName&$top=200',
+      { headers: { Authorization: 'Bearer ' + token } }
+    );
+    const data  = await res.json();
+    const myGroups = (data.value || []).map(g => g.displayName);
+    for(const [groupName, listName] of Object.entries(COMPANY_GROUP_MAP)){
+      if(myGroups.includes(groupName)){
+        _userCompanyGroup = groupName;
+        MSAL_CONFIG.spList = listName;
+        console.log(`[QLTS] User thuộc group "${groupName}" → SP list: "${listName}"`);
+        return;
+      }
+    }
+    console.log('[QLTS] User không thuộc group nào → dùng list mặc định TTG');
+  } catch(e) {
+    console.warn('[QLTS] detectUserCompany failed (dùng list mặc định):', e.message);
+  }
+}
+
 async function msalSpLoad(){
   if(!_msalAccount){ toast('⚠️ Vui lòng đăng nhập M365 trước','bad'); return; }
-  // Set SP_MODE + SP_SITE ngay khi có account (không chờ cuối hàm)
+  // Set SP_MODE + SP_SITE ngay khi có account
   SP_MODE = true; SP_SITE = MSAL_CONFIG.spSite;
+  msalSetBar('⟳ Đang kiểm tra quyền truy cập…','s-busy');
+  // Detect group → set đúng SP list trước khi load
+  await detectUserCompany();
   msalSetBar('⟳ Đang tải từ SharePoint…','s-busy');
   const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')`;
   try{
@@ -2122,7 +2187,7 @@ async function msalSpLoad(){
     // Resolve role (ưu tiên SP, fallback ROLE_CONFIG)
     _userRole = resolveRole(_msalAccount.username);
     applyRoleUI();
-    msalSetBar('🔷 ' + (_msalAccount.name||_msalAccount.username) + ` — ${assets.length} TS`,'s-ok');
+    msalSetBar(msalBarLabel(assets.length + ' TS'),'s-ok');
     // Hiện nút Sync SP ở tab License + load licenses
     const licBtn = document.getElementById('lic-sync-btn');
     if(licBtn) licBtn.style.display = can('sync') ? 'inline-flex' : 'none';
@@ -4061,7 +4126,7 @@ async function saveAsset(){
   if(_msalAccount){
     msalSetBar('⟳ Đang lưu…','s-busy');
     await msalSpPushAsset(a.id);
-    msalSetBar('🔷 ' + (_msalAccount.name||_msalAccount.username) + ` — ${assets.length} TS`,'s-ok');
+    msalSetBar(msalBarLabel(assets.length + ' TS'),'s-ok');
   } else if(SP_MODE){
     spStatusBar('⟳ Đang đồng bộ…','busy');
     await spPushAsset(a.id);
@@ -4745,7 +4810,7 @@ async function confirmTransfer(){
     msalSetBar('⟳ Đang lưu bàn giao…','s-busy');
     await msalSpPushAsset(id);
     if(monitorId) await msalSpPushAsset(monitorId); // push màn hình mới lên SP
-    msalSetBar('🔷 ' + (_msalAccount.name||_msalAccount.username) + ` — ${assets.length} TS`,'s-ok');
+    msalSetBar(msalBarLabel(assets.length + ' TS'),'s-ok');
   } else if(SP_MODE){
     spStatusBar('⟳ Đang đồng bộ bàn giao…','busy');
     await spPushAsset(id);
