@@ -3941,7 +3941,8 @@ function resetFilters(){
   ['af-from','af-to'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const aw = document.getElementById('af-warranty'); if(aw) aw.value='';
   const btn = document.getElementById('btn-adv-toggle');
-  if(btn) btn.classList.remove('has-filter');
+  if(btn) btn.classList.remove('has-filter','open');        // reset caret về ▾
+  document.getElementById('adv-filter-row')?.classList.remove('open'); // đóng row
   applyFilters();
 }
 function clearSearch(){
@@ -6007,7 +6008,7 @@ async function autoSendLicenseAlert(){
   // Lấy Graph token
   let graphToken = '';
   try{
-    graphToken = await getGraphToken(['https://graph.microsoft.com/Mail.Send','https://graph.microsoft.com/User.Read']);
+    graphToken = await getGraphToken(['Mail.Send','User.Read']);
   }catch(e){
     console.warn('[QLTS] autoSendLicenseAlert: không lấy được token:', e.message);
     return;
