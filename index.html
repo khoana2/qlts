@@ -5572,6 +5572,8 @@ async function msalSpLoadLicenses(){
       toast(`🔑 Đã tải ${all.length} license từ SP!`, 'ok');
       // Kiểm tra cảnh báo hết hạn sau khi load xong
       setTimeout(checkLicenseExpiry, 800);
+      // Tự động gửi email nếu chưa gửi hôm nay
+      setTimeout(autoSendLicenseAlert, 4000);
     } else {
       toast('⚠️ Danh sách Quan_Ly_License đang trống', 'warn');
     }
@@ -5849,6 +5851,111 @@ async function sendExpiryMail(){
     toast('❌ Gửi mail thất bại: ' + e.message, 'bad');
   }finally{
     if(btn){ btn.disabled=false; btn.textContent='📧 Gửi mail cảnh báo'; }
+  }
+}
+
+// ─── Tự động gửi email cảnh báo license (1 lần / ngày) ───────────
+const LIC_ALERT_DATE_KEY = 'qlts_lic_alert_date';
+
+async function autoSendLicenseAlert(){
+  if(!_msalAccount) return;                          // chưa đăng nhập M365
+
+  // Chỉ gửi 1 lần mỗi ngày
+  const today = new Date().toISOString().slice(0,10);
+  if(localStorage.getItem(LIC_ALERT_DATE_KEY) === today) return;
+
+  const WARN_DAYS = 30;
+  const expiring = licenses.filter(l => {
+    const d = licDiff(l.ngayHetHan);
+    return d !== null && d >= 0 && d <= WARN_DAYS;
+  }).sort((a,b) => licDiff(a.ngayHetHan) - licDiff(b.ngayHetHan));
+
+  const expired = licenses.filter(l => {
+    const d = licDiff(l.ngayHetHan);
+    return d !== null && d < 0;
+  });
+
+  const allList = [...expired, ...expiring];
+  if(!allList.length) return;                        // không có gì cần cảnh báo
+
+  // Lấy Graph token
+  let graphToken = '';
+  try{
+    graphToken = await getGraphToken(['https://graph.microsoft.com/Mail.Send','https://graph.microsoft.com/User.Read']);
+  }catch(e){
+    console.warn('[QLTS] autoSendLicenseAlert: không lấy được token:', e.message);
+    return;
+  }
+
+  // Build bảng HTML
+  const tableRows = allList.map(l => {
+    const d = licDiff(l.ngayHetHan);
+    const status = d < 0
+      ? `<span style="color:#c0392b;font-weight:bold;">❌ Đã hết hạn</span>`
+      : `<span style="color:#e67e22;font-weight:bold;">⚠️ Còn ${d} ngày</span>`;
+    return `<tr>
+      <td style="padding:7px 12px;border:1px solid #ddd">${esc(l.ten)}</td>
+      <td style="padding:7px 12px;border:1px solid #ddd">${esc(l.congTy||'—')}</td>
+      <td style="padding:7px 12px;border:1px solid #ddd">${esc(l.goi||'—')}</td>
+      <td style="padding:7px 12px;border:1px solid #ddd">${l.ngayHetHan||'—'}</td>
+      <td style="padding:7px 12px;border:1px solid #ddd">${status}</td>
+    </tr>`;
+  }).join('');
+
+  const expiredNote  = expired.length  ? `<span style="color:#c0392b"><strong>${expired.length}</strong> đã hết hạn</span>` : '';
+  const expiringNote = expiring.length ? `<span style="color:#e67e22"><strong>${expiring.length}</strong> sắp hết hạn trong ${WARN_DAYS} ngày</span>` : '';
+  const noteLine = [expiredNote, expiringNote].filter(Boolean).join(' &nbsp;·&nbsp; ');
+
+  const emailBody = `
+    <div style="font-family:Arial,sans-serif;max-width:720px;">
+      <h2 style="color:#c0392b;margin-bottom:4px;">⚠️ Cảnh báo License sắp / đã hết hạn</h2>
+      <p style="color:#555;margin-bottom:14px;">
+        Hệ thống QLTS phát hiện <strong>${allList.length} license</strong> cần chú ý: ${noteLine}
+      </p>
+      <table style="border-collapse:collapse;width:100%;font-size:13px;">
+        <thead>
+          <tr style="background:#f5f5f5;">
+            <th style="padding:8px 12px;border:1px solid #ddd;text-align:left;">Tên phần mềm</th>
+            <th style="padding:8px 12px;border:1px solid #ddd;text-align:left;">Công ty</th>
+            <th style="padding:8px 12px;border:1px solid #ddd;text-align:left;">Gói</th>
+            <th style="padding:8px 12px;border:1px solid #ddd;text-align:left;">Ngày hết hạn</th>
+            <th style="padding:8px 12px;border:1px solid #ddd;text-align:left;">Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <p style="color:#999;font-size:11px;margin-top:18px;">
+        📅 Email tự động từ hệ thống QLTS · ${today} · Đăng nhập để xem chi tiết và gia hạn.
+      </p>
+    </div>`;
+
+  const subject = expired.length
+    ? `[QLTS] ❌ ${expired.length} license ĐÃ HẾT HẠN + ${expiring.length} sắp hết hạn`
+    : `[QLTS] ⚠️ ${expiring.length} license sắp hết hạn trong ${WARN_DAYS} ngày`;
+
+  const mailPayload = {
+    message: {
+      subject,
+      body: { contentType: 'HTML', content: emailBody },
+      toRecipients: [{ emailAddress: { address: _msalAccount.username } }],
+    },
+    saveToSentItems: true,
+  };
+
+  try{
+    const resp = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + graphToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(mailPayload),
+    });
+    if(resp.ok || resp.status === 202){
+      localStorage.setItem(LIC_ALERT_DATE_KEY, today);
+      toast(`📧 Đã tự động gửi cảnh báo ${allList.length} license tới ${_msalAccount.username}`, 'ok');
+    } else {
+      console.warn('[QLTS] autoSendLicenseAlert HTTP', resp.status);
+    }
+  }catch(e){
+    console.warn('[QLTS] autoSendLicenseAlert gửi mail thất bại:', e.message);
   }
 }
 
