@@ -288,6 +288,28 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 }
 .col-toggle-menu label:hover{background:#EFF6FF;}
 .col-toggle-menu input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;}
+/* BULK ACTION BAR */
+.bulk-bar{
+  display:none;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:9px 14px;
+  background:linear-gradient(135deg,#EFF6FF,#F0FDF4);
+  border:1.5px solid #BFDBFE;border-radius:var(--radius-sm);
+  margin-bottom:6px;animation:fadeSlideDown .15s ease;
+}
+.bulk-bar.visible{display:flex;}
+.bulk-count{
+  font-size:13px;font-weight:800;color:var(--accent);
+  white-space:nowrap;background:#DBEAFE;
+  padding:3px 10px;border-radius:999px;
+}
+.bulk-sep{width:1px;height:20px;background:var(--border);flex-shrink:0;margin:0 2px;}
+/* Checkbox column */
+.cb-col{width:38px;text-align:center;padding:0 8px!important;}
+input[type=checkbox].row-cb{
+  accent-color:var(--accent);width:14px;height:14px;
+  cursor:pointer;vertical-align:middle;
+}
+
 /* ADVANCED FILTER ROW */
 .adv-filter-row{
   display:none;
@@ -1087,6 +1109,22 @@ tbody tr.row-thanh-ly td{opacity:.5;}
       <button class="btn" onclick="resetAdvFilter()" style="margin-left:auto;font-size:11.5px;">✕ Xóa bộ lọc nâng cao</button>
     </div>
 
+    <!-- ══ BULK ACTION BAR ══ -->
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="bulk-count" id="bulk-count">0 đã chọn</span>
+      <div class="bulk-sep"></div>
+      <select class="fsel" id="bulk-status-sel" style="min-width:160px;">
+        <option value="">🏷️ Đổi trạng thái…</option>
+        <option>Đang dùng</option><option>Lưu Kho</option>
+        <option>Sửa chữa</option><option>Hỏng</option><option>Thanh lý</option>
+      </select>
+      <button class="btn primary" style="padding:7px 12px;" onclick="bulkApplyStatus()">✓ Áp dụng</button>
+      <div class="bulk-sep"></div>
+      <button class="btn success" onclick="bulkExportSelected()">📥 Xuất Excel</button>
+      <button class="btn danger" id="bulk-del-btn" onclick="bulkDeleteSelected()" style="display:none;">🗑️ Xóa</button>
+      <button class="btn" onclick="clearBulkSelect()" style="margin-left:auto;">✕ Bỏ chọn tất cả</button>
+    </div>
+
     <div class="table-card">
       <!-- Quick filter chips -->
       <div class="qf-chips" style="padding:10px 14px 0;">
@@ -1111,6 +1149,7 @@ tbody tr.row-thanh-ly td{opacity:.5;}
         <table id="assets-table">
           <thead>
             <tr>
+              <th class="cb-col"><input type="checkbox" class="row-cb" id="cb-all" title="Chọn tất cả" onchange="toggleSelectAll(this.checked)"/></th>
               <th style="width:36px;">#</th>
               <th class="sortable" onclick="sortBy('maTaiSan')">Mã TS <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tenTaiSan')">Loại <span class="sort-icon">↕</span></th>
@@ -3763,6 +3802,12 @@ function applyFilters(keepPage = false){
     filtered.length < assets.length ? `${filtered.length} / ${assets.length} kết quả` : `${assets.length} tài sản`;
 
   if(!keepPage) currentPage = 1;
+  // Giữ nguyên selection nếu ID vẫn còn trong filtered, bỏ nếu không còn
+  if(_selectedIds.size){
+    const filteredSet = new Set(filtered.map(a=>a.id));
+    for(const id of [..._selectedIds]) if(!filteredSet.has(id)) _selectedIds.delete(id);
+    _syncBulkBar();
+  }
   renderTable();
 }
 
@@ -3788,7 +3833,7 @@ function renderTable(){
   const pageData = filtered.slice(start, start+perPage);
 
   if(!pageData.length){
-    tbody.innerHTML = `<tr><td colspan="12">
+    tbody.innerHTML = `<tr><td colspan="13">
       <div class="empty-state">
         <div class="es-icon">🔍</div>
         <p>Không tìm thấy tài sản nào</p>
@@ -3797,12 +3842,14 @@ function renderTable(){
     </td></tr>`;
   } else {
     tbody.innerHTML = pageData.map((a,i)=>{
-      const rowClass = a.tinhTrang==='Hỏng'?'row-hong'
+      const isSel = _selectedIds.has(a.id);
+      const rowClass = (isSel ? 'selected ' : '') + (a.tinhTrang==='Hỏng'?'row-hong'
         : (a.tinhTrang==='Sửa chữa'?'row-sua'
         : (a.tinhTrang==='Thanh lý'?'row-thanh-ly'
-        : (['Lưu Kho','Trong kho'].includes(a.tinhTrang)||!a.nguoiDung)?'row-kho':''));
+        : (['Lưu Kho','Trong kho'].includes(a.tinhTrang)||!a.nguoiDung)?'row-kho':'')));
       return `
-      <tr class="${rowClass}">
+      <tr class="${rowClass}" data-id="${a.id}">
+        <td class="cb-col"><input type="checkbox" class="row-cb" ${isSel?'checked':''} onchange="toggleSelectRow('${a.id}',this.checked)"/></td>
         <td class="tbl-num">${start+i+1}</td>
         <td><code style="font-size:11px;color:var(--accent2);">${esc(a.maTaiSan||'—')}</code></td>
         <td><span class="type-badge">${esc(a.tenTaiSan||'—')}</span></td>
@@ -3837,6 +3884,146 @@ function renderTable(){
   const s = start+1, e = Math.min(start+perPage, filtered.length);
   document.getElementById('tbl-meta').textContent =
     filtered.length ? `Hiển thị ${s}–${e} trong ${filtered.length} tài sản` : 'Không có dữ liệu';
+
+  // Sync header checkbox (checked / indeterminate)
+  _syncSelectAllCb();
+}
+
+// ═══════════════════════ BULK SELECT & ACTIONS ═══════════════════════
+let _selectedIds = new Set();
+
+function _syncBulkBar(){
+  const n = _selectedIds.size;
+  const bar = document.getElementById('bulk-bar');
+  const cnt = document.getElementById('bulk-count');
+  if(bar) bar.classList.toggle('visible', n > 0);
+  if(cnt) cnt.textContent = `${n} đã chọn`;
+  // Nút xóa chỉ hiện với admin
+  const delBtn = document.getElementById('bulk-del-btn');
+  if(delBtn) delBtn.style.display = (_userRole==='admin' && n>0) ? '' : 'none';
+}
+
+function _syncSelectAllCb(){
+  const cb = document.getElementById('cb-all');
+  if(!cb) return;
+  const pageIds = _currentPageIds();
+  const selOnPage = pageIds.filter(id => _selectedIds.has(id));
+  if(selOnPage.length === 0){
+    cb.checked = false; cb.indeterminate = false;
+  } else if(selOnPage.length === pageIds.length){
+    cb.checked = true;  cb.indeterminate = false;
+  } else {
+    cb.checked = false; cb.indeterminate = true;
+  }
+}
+
+function _currentPageIds(){
+  const start = (currentPage-1)*perPage;
+  return filtered.slice(start, start+perPage).map(a=>a.id);
+}
+
+function toggleSelectRow(id, checked){
+  if(checked) _selectedIds.add(id); else _selectedIds.delete(id);
+  // Update row highlight in DOM trực tiếp (không re-render toàn bộ)
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  if(tr) tr.classList.toggle('selected', checked);
+  _syncSelectAllCb();
+  _syncBulkBar();
+}
+
+function toggleSelectAll(checked){
+  // Chọn/bỏ tất cả items trong filtered (không giới hạn trang)
+  filtered.forEach(a => { if(checked) _selectedIds.add(a.id); else _selectedIds.delete(a.id); });
+  _syncBulkBar();
+  renderTable(); // re-render để update checkboxes
+}
+
+function clearBulkSelect(){
+  _selectedIds.clear();
+  _syncBulkBar();
+  renderTable();
+}
+
+// ── Đổi trạng thái hàng loạt ─────────────────────────────────────
+async function bulkApplyStatus(){
+  const newStatus = document.getElementById('bulk-status-sel')?.value;
+  if(!newStatus){ toast('⚠️ Chọn trạng thái muốn đổi','warn'); return; }
+  if(!_selectedIds.size){ toast('⚠️ Chưa chọn tài sản nào','warn'); return; }
+
+  const ids = [..._selectedIds];
+  const confirmed = confirm(`Đổi trạng thái ${ids.length} tài sản sang "${newStatus}"?`);
+  if(!confirmed) return;
+
+  let successCount = 0;
+  for(const id of ids){
+    const idx = assets.findIndex(a=>a.id===id);
+    if(idx<0) continue;
+    assets[idx].tinhTrang = newStatus;
+    successCount++;
+    // Đẩy lên SP nếu có kết nối
+    if(_msalAccount && assets[idx]._spId){
+      try{ await spPushAsset(id); }catch(e){ console.warn('[BULK] SP push fail:', id); }
+    }
+  }
+
+  saveAssets();
+  document.getElementById('bulk-status-sel').value = '';
+  clearBulkSelect();
+  toast(`✅ Đã đổi trạng thái ${successCount} tài sản sang "${newStatus}"`, 'ok');
+}
+
+// ── Xuất Excel chỉ những tài sản đã chọn ─────────────────────────
+function bulkExportSelected(){
+  if(!_selectedIds.size){ toast('⚠️ Chưa chọn tài sản nào','warn'); return; }
+  const selected = assets.filter(a=>_selectedIds.has(a.id));
+  const rows = selected.map(a=>({
+    'Mã TS':         a.maTaiSan||'',
+    'Loại':          a.tenTaiSan||'',
+    'Model':         a.model||'',
+    'Serial':        a.serial||'',
+    'Người dùng':    a.nguoiDung||'',
+    'Email':         a.email||'',
+    'Bộ phận':       a.boPhan||'',
+    'Công ty':       a.congTy||'',
+    'CPU':           a.cpu||'',
+    'RAM':           a.ram||'',
+    'SSD':           a.ssd||'',
+    'Trạng thái':    a.tinhTrang||'',
+    'Ngày mua':      a.ngayMua||'',
+    'Ngày hết BH':   a.ngayHetBH||'',
+    'Nguồn TB':      a.nguonThietBi||'',
+    'Giá trị':       a.giaTri!=null?a.giaTri:'',
+    'Ghi chú':       a.ghiChu||'',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Tài sản đã chọn');
+  XLSX.writeFile(wb, `QLTS_ChonLoc_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast(`📥 Đã xuất ${selected.length} tài sản ra Excel`, 'ok');
+}
+
+// ── Xóa hàng loạt (admin only) ───────────────────────────────────
+async function bulkDeleteSelected(){
+  if(_userRole !== 'admin'){ toast('⛔ Chỉ Admin mới được xóa hàng loạt','bad'); return; }
+  if(!_selectedIds.size){ toast('⚠️ Chưa chọn tài sản nào','warn'); return; }
+  const ids = [..._selectedIds];
+  const confirmed = confirm(`⚠️ Xóa vĩnh viễn ${ids.length} tài sản đã chọn?\n\nHành động này không thể hoàn tác!`);
+  if(!confirmed) return;
+
+  let done = 0;
+  for(const id of ids){
+    const idx = assets.findIndex(a=>a.id===id);
+    if(idx<0) continue;
+    const spId = assets[idx]._spId;
+    assets.splice(idx,1);
+    done++;
+    if(_msalAccount && spId){
+      try{ await spDeleteAsset(spId); }catch(e){ console.warn('[BULK DEL] SP fail:', id); }
+    }
+  }
+  saveAssets();
+  clearBulkSelect();
+  toast(`🗑️ Đã xóa ${done} tài sản`, 'ok');
 }
 
 // ─── QUICK FILTER ────────────────────────────────────────────────────────────
