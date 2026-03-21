@@ -288,6 +288,41 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 }
 .col-toggle-menu label:hover{background:#EFF6FF;}
 .col-toggle-menu input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;}
+/* ADVANCED FILTER ROW */
+.adv-filter-row{
+  display:none;
+  align-items:center;gap:10px;flex-wrap:wrap;
+  margin-top:6px;padding:10px 12px;
+  background:#F8FAFC;border:1px solid #BFDBFE;
+  border-radius:var(--radius-sm);
+  animation:fadeSlideDown .18s ease;
+}
+.adv-filter-row.open{ display:flex; }
+@keyframes fadeSlideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.adv-group{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.adv-group label{font-size:11.5px;font-weight:600;color:var(--muted);white-space:nowrap;}
+.adv-date{
+  background:#FFFFFF;border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:12px;
+  padding:7px 9px;outline:none;cursor:pointer;
+}
+.adv-date:focus{border-color:var(--accent);}
+.adv-sep{font-size:11px;color:var(--muted);}
+.btn-adv-toggle{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:12px;padding:7px 11px;
+  border-radius:8px;border:1px solid var(--border);
+  background:#fff;cursor:pointer;transition:all .15s;color:var(--muted);
+  white-space:nowrap;
+}
+.btn-adv-toggle:hover{border-color:var(--accent);color:var(--accent);}
+.btn-adv-toggle.has-filter{
+  border-color:var(--accent);color:var(--accent);
+  background:#EFF6FF;font-weight:700;
+}
+.btn-adv-toggle .adv-caret{transition:transform .18s;}
+.btn-adv-toggle.open .adv-caret{transform:rotate(180deg);}
+
 /* QUICK FILTER CHIPS */
 .qf-chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 0 8px;}
 .qf-chip{
@@ -1024,7 +1059,32 @@ tbody tr.row-thanh-ly td{opacity:.5;}
         <option value="">🏬 Công ty</option>
       </select>
       <span class="filter-count" id="filter-count"></span>
+      <button id="btn-adv-toggle" class="btn-adv-toggle" onclick="toggleAdvFilter()" title="Bộ lọc nâng cao">
+        🔎 Nâng cao <span class="adv-caret">▾</span>
+      </button>
       <button class="btn" onclick="resetFilters()" style="margin-left:auto;">↺ Reset</button>
+    </div>
+
+    <!-- ══ ADVANCED FILTER ROW ══ -->
+    <div class="adv-filter-row" id="adv-filter-row">
+      <div class="adv-group">
+        <label>📅 Ngày mua</label>
+        <input type="date" class="adv-date" id="af-from" onchange="applyFilters()" title="Từ ngày"/>
+        <span class="adv-sep">→</span>
+        <input type="date" class="adv-date" id="af-to"   onchange="applyFilters()" title="Đến ngày"/>
+      </div>
+      <div class="adv-group" style="margin-left:16px;">
+        <label>🛡️ Bảo hành</label>
+        <select class="fsel" id="af-warranty" onchange="applyFilters()" style="min-width:200px;">
+          <option value="">Tất cả</option>
+          <option value="ok">✅ Còn bảo hành (&gt; 90 ngày)</option>
+          <option value="soon90">🟡 Sắp hết BH (≤ 90 ngày)</option>
+          <option value="soon30">🔴 Sắp hết BH (≤ 30 ngày)</option>
+          <option value="exp">❌ Đã hết bảo hành</option>
+          <option value="none">— Không có thông tin BH</option>
+        </select>
+      </div>
+      <button class="btn" onclick="resetAdvFilter()" style="margin-left:auto;font-size:11.5px;">✕ Xóa bộ lọc nâng cao</button>
     </div>
 
     <div class="table-card">
@@ -3609,19 +3669,80 @@ function buildWarrantyTable(src){
 
 }
 
+// ═══════════════════════ ADVANCED FILTER HELPERS ═══════════════════════
+function toggleAdvFilter(){
+  const row = document.getElementById('adv-filter-row');
+  const btn = document.getElementById('btn-adv-toggle');
+  const isOpen = row.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+}
+
+function resetAdvFilter(){
+  ['af-from','af-to'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const ws = document.getElementById('af-warranty'); if(ws) ws.value='';
+  _syncAdvToggleState();
+  applyFilters();
+}
+
+function _syncAdvToggleState(){
+  const from  = document.getElementById('af-from')?.value||'';
+  const to    = document.getElementById('af-to')?.value||'';
+  const warr  = document.getElementById('af-warranty')?.value||'';
+  const hasAny = !!(from||to||warr);
+  const btn = document.getElementById('btn-adv-toggle');
+  if(btn) btn.classList.toggle('has-filter', hasAny);
+  // Auto-open row if filters applied from outside
+  if(hasAny){
+    document.getElementById('adv-filter-row')?.classList.add('open');
+    btn?.classList.add('open');
+  }
+}
+
 // ═══════════════════════ FILTERS & TABLE ═══════════════════════
 function applyFilters(keepPage = false){
-  const q = document.getElementById('search-input').value.toLowerCase().trim();
-  const fType = document.getElementById('f-type').value;
+  const q       = document.getElementById('search-input').value.toLowerCase().trim();
+  const fType   = document.getElementById('f-type').value;
   const fStatus = document.getElementById('f-status').value;
-  const fDept = document.getElementById('f-dept').value;
-  const fCompany = document.getElementById('f-company')?.value||'';
+  const fDept   = document.getElementById('f-dept').value;
+  const fCompany= document.getElementById('f-company')?.value||'';
+
+  // Advanced filters
+  const afFrom  = document.getElementById('af-from')?.value||'';   // 'YYYY-MM-DD'
+  const afTo    = document.getElementById('af-to')?.value||'';
+  const afWarr  = document.getElementById('af-warranty')?.value||'';
+  _syncAdvToggleState();
+
+  const today = new Date(); today.setHours(0,0,0,0);
 
   filtered = assets.filter(a=>{
-    if(fType && a.tenTaiSan !== fType) return false;
-    if(fStatus && a.tinhTrang !== fStatus) return false;
-    if(fDept && a.boPhan !== fDept) return false;
-    if(fCompany && (a.congTy||'') !== fCompany) return false;
+    if(fType   && a.tenTaiSan !== fType)        return false;
+    if(fStatus && a.tinhTrang !== fStatus)       return false;
+    if(fDept   && a.boPhan   !== fDept)          return false;
+    if(fCompany && (a.congTy||'') !== fCompany)  return false;
+
+    // ── Lọc ngày mua ──────────────────────────────────
+    if(afFrom || afTo){
+      if(!a.ngayMua) return false;
+      const bought = new Date(a.ngayMua); bought.setHours(0,0,0,0);
+      if(afFrom && bought < new Date(afFrom)) return false;
+      if(afTo   && bought > new Date(afTo))   return false;
+    }
+
+    // ── Lọc bảo hành ──────────────────────────────────
+    if(afWarr){
+      if(afWarr === 'none'){
+        if(a.ngayHetBH) return false;
+      } else {
+        if(!a.ngayHetBH) return false;
+        const diffD = Math.round((new Date(a.ngayHetBH) - today) / 86400000);
+        if(afWarr === 'ok'    && !(diffD > 90))  return false;
+        if(afWarr === 'soon90'&& !(diffD >= 0 && diffD <= 90)) return false;
+        if(afWarr === 'soon30'&& !(diffD >= 0 && diffD <= 30)) return false;
+        if(afWarr === 'exp'   && !(diffD < 0))   return false;
+      }
+    }
+
+    // ── Text search ────────────────────────────────────
     if(q){
       const hay = [a.maTaiSan,a.tenTaiSan,a.model,a.serial,
                    a.nguoiDung,a.email,a.boPhan,a.congTy,a.cpu,a.ram,a.ssd].join(' ').toLowerCase();
@@ -3816,6 +3937,11 @@ function resetFilters(){
   document.getElementById('f-status').value='';
   document.getElementById('f-dept').value='';
   const fc = document.getElementById('f-company'); if(fc) fc.value='';
+  // Xóa luôn advanced filters
+  ['af-from','af-to'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const aw = document.getElementById('af-warranty'); if(aw) aw.value='';
+  const btn = document.getElementById('btn-adv-toggle');
+  if(btn) btn.classList.remove('has-filter');
   applyFilters();
 }
 function clearSearch(){
