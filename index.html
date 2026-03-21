@@ -2897,7 +2897,7 @@ function spItemToAsset(item){
     congTyNguon:  get('CongTyNguon')  || '',
     soHoaDon:     get('SoHoaDon')     || '',
     giaTri:       get('Giá trị') ?? '',
-    ghiChu:       get('GhiChu') || get('Ghi chú') || '',
+    ghiChu:       get('Ghichu') || get('GhiChu') || get('Ghi chú') || '',
     updatedAt: item.Modified || new Date().toISOString(),
   };
   if(transferList.length) transfers[id] = transferList;
@@ -2984,7 +2984,7 @@ function assetToSpItem(a){
   set('NguonThietBi', a.nguonThietBi || '');
   set('CongTyNguon',  a.congTyNguon  || '');
   set('SoHoaDon',     a.soHoaDon     || '');
-  set('GhiChu',       a.ghiChu       || '');
+  set('Ghichu',       a.ghiChu       || '');
   if(a.giaTri !== '' && a.giaTri !== undefined && a.giaTri !== null)
     set('Giá trị', Number(a.giaTri));
   return body;
