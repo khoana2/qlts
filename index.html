@@ -3508,10 +3508,11 @@ function _lockDashboardCompany(){
 }
 
 function populateCompanySelects(){
-  // Gộp từ COMPANIES constant + các công ty đã nhập thực tế trong data
   const assetCos  = assets.map(a=>a.congTy).filter(Boolean);
   const licCos    = licenses.map(l=>l.congTy).filter(Boolean);
-  const allCos    = [...new Set([...COMPANIES, ...assetCos, ...licCos])].sort();
+  // User công ty con → chỉ dùng data thực tế, không mix danh sách TTG
+  const baseCos   = _userCompanyGroup ? [] : COMPANIES;
+  const allCos    = [...new Set([...baseCos, ...assetCos, ...licCos])].sort();
 
   // Datalist (dùng cho input text trong form)
   const dl = document.getElementById('company-datalist');
@@ -4371,6 +4372,11 @@ function clearForm(){
   if(ws){ ws.textContent='—'; ws.style.color='var(--muted)'; }
   ['f-tenTaiSan','f-boPhan','f-tinhTrang','f-trangThaiHienTai']
     .forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
+  // Tự điền sẵn công ty nếu user thuộc company group
+  if(_userCompanyGroup && COMPANY_GROUP_LABEL[_userCompanyGroup]){
+    const ctEl = document.getElementById('f-congTy');
+    if(ctEl) ctEl.value = COMPANY_GROUP_LABEL[_userCompanyGroup];
+  }
 }
 
 function fillForm(a){
