@@ -114,6 +114,8 @@ body{
   padding:1px 7px;border-radius:999px;margin-top:2px;
   background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;
 }
+.sidebar-role-badge.global_admin{background:rgba(124,58,237,.12);color:#7C3AED;border-color:rgba(124,58,237,.35);}
+.sidebar-role-badge.company_admin{background:rgba(217,119,6,.12);color:#D97706;border-color:rgba(217,119,6,.35);}
 .sidebar-role-badge.member{background:rgba(16,185,129,.1);color:#059669;border-color:rgba(16,185,129,.3);}
 .sidebar-role-badge.viewer{background:#F8FAFC;color:var(--muted);border-color:var(--border);}
 .btn-sidebar-logout{
@@ -1386,9 +1388,14 @@ input[type=checkbox].row-cb{
       </div>
     </div>
 
-    <div style="margin-top:10px;font-size:11px;color:var(--muted);">
-      💡 <strong>Mặc định (_default):</strong> Người dùng không có trong danh sách sẽ có vai trò <strong>Viewer</strong>.
-      Để đổi mặc định, sửa <code>ROLE_CONFIG._default</code> trong file HTML.
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;">
+      💡 <strong>Phân cấp quyền:</strong>
+      <span style="color:#7C3AED;font-weight:600;">🌐 Global Admin</span> — toàn quyền mọi công ty (cross-company) ·
+      <span style="color:var(--green);font-weight:600;">🔑 Admin</span> — toàn quyền (legacy) ·
+      <span style="color:#D97706;font-weight:600;">🏢 Company Admin</span> — toàn quyền trong công ty của họ (full CRUD) ·
+      <span style="color:var(--accent2);font-weight:600;">✏️ Member</span> — xem + thêm + sửa (không xóa) ·
+      <span style="color:var(--muted);font-weight:600;">👁️ Viewer</span> — chỉ xem + export.
+      <br/>Mặc định cho user chưa có trong danh sách: <strong>Viewer</strong>.
     </div>
   </div>
 
@@ -1932,11 +1939,13 @@ let lastTransferId = null;  // for print after confirm
 const JUNK_SERIALS = new Set(['','none','default string','to be filled by o.e.m.','n/a','na','-','unknown']);
 
 // ═══════════════════════ PHÂN QUYỀN ════════════════════════════════════════
-// Roles: 'admin' | 'member' | 'viewer'
-// admin  — toàn quyền: xem, thêm, sửa, xóa, sync SP, export
-// member — xem, thêm, sửa, sync SP, export (KHÔNG xóa)
-// viewer — chỉ xem + export (KHÔNG thêm/sửa/xóa/sync)
-// _default — role mặc định cho email chưa có trong danh sách
+// Roles: 'global_admin' | 'admin' | 'company_admin' | 'member' | 'viewer'
+// global_admin — toàn quyền mọi công ty (cross-company, tương đương SP site owner)
+// admin        — toàn quyền (legacy, tương đương global_admin)
+// company_admin— toàn quyền TRONG công ty của họ (full CRUD, scoped theo company list)
+// member       — xem, thêm, sửa, sync SP, export (KHÔNG xóa)
+// viewer       — chỉ xem + export (KHÔNG thêm/sửa/xóa/sync)
+// _default     — role mặc định cho email chưa có trong danh sách
 const ROLE_CONFIG = {
   'khoa.na@ttgvn.com': 'admin',  // Admin mặc định — fallback khi SP list chưa có
   '_default': 'viewer',           // ai không có trong list → viewer
@@ -2027,8 +2036,10 @@ function resolveRole(email){
 }
 function can(action){
   // action: 'add' | 'edit' | 'delete' | 'sync' | 'export'
-  if(_userRole === 'admin')  return true;
-  if(_userRole === 'member') return action !== 'delete';
+  if(_userRole === 'global_admin') return true;
+  if(_userRole === 'admin')        return true;
+  if(_userRole === 'company_admin')return true; // full CRUD scoped to company lists
+  if(_userRole === 'member')       return action !== 'delete';
   // viewer
   return action === 'export';
 }
@@ -2464,8 +2475,11 @@ function _updateTopbarUser(){
     // Role badge
     if(roleBadge){
       const role = _userRole || 'viewer';
-      const roleLabel = role === 'admin' ? 'Admin' : role === 'member' ? 'Member' : 'Viewer';
-      roleBadge.textContent = roleLabel;
+      const _roleLabelMap = {
+        global_admin:'Global Admin', admin:'Admin',
+        company_admin:'Co. Admin', member:'Member', viewer:'Viewer'
+      };
+      roleBadge.textContent = _roleLabelMap[role] || 'Viewer';
       roleBadge.className = 'sidebar-role-badge ' + role;
     }
     if(footer)  footer.style.display = 'block';
@@ -2823,7 +2837,7 @@ const COMPANY_DEPTS_MAP = {
   'LLM-member': [
     'Front Office','Housekeeping','Kitchen','Engineering',
     'Finance','Food & Beverage','Human Resource',
-    'Reservation','Sales & Marketing','Security','Spa & Recreation'
+    'Reservation','Sales & Marketing','Security','Spa & Recreation','EO',
   ],
 };
 
@@ -3376,8 +3390,14 @@ function renderRolesTable(){
     return;
   }
 
-  const roleColor = { admin:'var(--green)', member:'var(--accent2)', viewer:'var(--muted)' };
-  const roleLabel = { admin:'Admin', member:'Member', viewer:'Viewer' };
+  const roleColor = {
+    global_admin:'#7C3AED', admin:'var(--green)',
+    company_admin:'#D97706', member:'var(--accent2)', viewer:'var(--muted)'
+  };
+  const roleLabel = {
+    global_admin:'🌐 Global Admin', admin:'🔑 Admin',
+    company_admin:'🏢 Co. Admin', member:'✏️ Member', viewer:'👁️ Viewer'
+  };
 
   tbody.innerHTML = rows.map((r,i) => {
     const badge = `<span style="font-size:11px;font-weight:700;color:${roleColor[r.role]||'var(--muted)'};">${roleLabel[r.role]||r.role}</span>`;
@@ -3453,8 +3473,12 @@ function applyRoleUI(){
     document.querySelectorAll('.'+cls).forEach(el => el.style.display = visible ? '' : 'none');
   };
 
-  const isAdmin  = _userRole === 'admin';
-  const isMember = _userRole === 'member';
+  // global_admin/admin = cross-company full access + role management
+  // company_admin      = full CRUD in their company, no role management
+  const isGlobalAdmin  = _userRole === 'global_admin' || _userRole === 'admin';
+  const isCompanyAdmin = _userRole === 'company_admin';
+  const isAdmin        = isGlobalAdmin || isCompanyAdmin;
+  const isMember       = _userRole === 'member';
   const canAdd   = can('add');
   const canEdit  = can('edit');
   const canDel   = can('delete');
@@ -3477,19 +3501,21 @@ function applyRoleUI(){
   show('btn-export-lic',  canExp);
   show('btn-export-asset',canExp);
 
-  // ── Tab Phân Quyền — chỉ admin thấy ──
-  show('tab-roles', isAdmin);
-  // ── Nút migrate transfer history — chỉ admin thấy ──
-  show('btn-migrate-transfer', isAdmin && !!_msalAccount);
-  show('btn-set-ttg',          isAdmin && !!_msalAccount);
+  // ── Tab Phân Quyền — chỉ global_admin / admin thấy ──
+  show('tab-roles', isGlobalAdmin);
+  // ── Nút migrate / set-ttg — chỉ global_admin / admin thấy ──
+  show('btn-migrate-transfer', isGlobalAdmin && !!_msalAccount);
+  show('btn-set-ttg',          isGlobalAdmin && !!_msalAccount);
 
   // ── Badge role ở topbar ──
   const badge = document.getElementById('role-badge');
   if(badge){
     const cfg = {
-      admin:  { label:'Admin',  color:'var(--green)' },
-      member: { label:'Member', color:'var(--accent2)' },
-      viewer: { label:'Viewer', color:'var(--muted)' },
+      global_admin:  { label:'Global Admin',  color:'#7C3AED' },
+      admin:         { label:'Admin',          color:'var(--green)' },
+      company_admin: { label:'Co. Admin',      color:'#D97706' },
+      member:        { label:'Member',         color:'var(--accent2)' },
+      viewer:        { label:'Viewer',         color:'var(--muted)' },
     };
     const r = cfg[_userRole] || cfg.viewer;
     badge.textContent = r.label;
@@ -3967,9 +3993,9 @@ function _syncBulkBar(){
   const cnt = document.getElementById('bulk-count');
   if(bar) bar.classList.toggle('visible', n > 0);
   if(cnt) cnt.textContent = `${n} đã chọn`;
-  // Nút xóa chỉ hiện với admin
+  // Nút xóa hiện khi có quyền delete (admin, global_admin, company_admin)
   const delBtn = document.getElementById('bulk-del-btn');
-  if(delBtn) delBtn.style.display = (_userRole==='admin' && n>0) ? '' : 'none';
+  if(delBtn) delBtn.style.display = (can('delete') && n>0) ? '' : 'none';
 }
 
 function _syncSelectAllCb(){
@@ -4071,9 +4097,9 @@ function bulkExportSelected(){
   toast(`📥 Đã xuất ${selected.length} tài sản ra Excel`, 'ok');
 }
 
-// ── Xóa hàng loạt (admin only) ───────────────────────────────────
+// ── Xóa hàng loạt (admin / global_admin / company_admin) ─────────
 async function bulkDeleteSelected(){
-  if(_userRole !== 'admin'){ toast('⛔ Chỉ Admin mới được xóa hàng loạt','bad'); return; }
+  if(!can('delete')){ toast('⛔ Bạn không có quyền xóa hàng loạt','bad'); return; }
   if(!_selectedIds.size){ toast('⚠️ Chưa chọn tài sản nào','warn'); return; }
   const ids = [..._selectedIds];
   const confirmed = confirm(`⚠️ Xóa vĩnh viễn ${ids.length} tài sản đã chọn?\n\nHành động này không thể hoàn tác!`);
@@ -6705,9 +6731,11 @@ async function msalSpLoadTransfers(){
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Vai trò <span style="color:var(--red);">*</span></label>
         <select id="role-f-role"
           style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;">
-          <option value="admin">Admin — Toàn quyền</option>
-          <option value="member">Member — Xem + sửa (không xóa)</option>
-          <option value="viewer" selected>Viewer — Chỉ xem + export</option>
+          <option value="global_admin">🌐 Global Admin — Toàn quyền mọi công ty</option>
+          <option value="admin">🔑 Admin — Toàn quyền (legacy)</option>
+          <option value="company_admin">🏢 Company Admin — Toàn quyền trong công ty</option>
+          <option value="member">✏️ Member — Xem + sửa (không xóa)</option>
+          <option value="viewer" selected>👁️ Viewer — Chỉ xem + export</option>
         </select>
       </div>
     </div>
