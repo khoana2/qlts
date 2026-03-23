@@ -2817,6 +2817,15 @@ const DEPTS = [
   'Trợ lý thư ký','Kế Hoạch Ngân Sách/Ngân Quỹ/Nguồn Vốn',
   'Kiểm Soát Nội Bộ - Tài Chính'
 ];
+// Phòng ban riêng theo từng công ty con
+// Muốn thêm công ty mới: thêm 1 dòng vào đây
+const COMPANY_DEPTS_MAP = {
+  'LLM-member': [
+    'Front Office','Housekeeping','Kitchen','Engineering',
+    'Finance','Food & Beverage','Human Resource',
+    'Reservation','Sales & Marketing','Security','Spa & Recreation'
+  ],
+};
 
 // ═══════════════════════ INIT ═══════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
@@ -3249,7 +3258,11 @@ async function spManualSync(){
 // ═══════════════════════ END SHAREPOINT ═══════════════════════
 
 function populateDeptSelects(){
-  const allDepts = [...new Set([...DEPTS, ...assets.map(a=>a.boPhan).filter(Boolean)])].sort();
+  // Dùng danh sách phòng ban theo công ty nếu có, fallback về DEPTS chung
+  const baseDepts = (_userCompanyGroup && COMPANY_DEPTS_MAP[_userCompanyGroup])
+    ? COMPANY_DEPTS_MAP[_userCompanyGroup]
+    : DEPTS;
+  const allDepts = [...new Set([...baseDepts, ...assets.map(a=>a.boPhan).filter(Boolean)])].sort();
   const opts = '<option value="">-- Chọn phòng ban --</option>' + allDepts.map(d=>`<option>${d}</option>`).join('');
 
   document.getElementById('f-dept').innerHTML = '<option value="">🏢 Phòng ban</option>' + allDepts.map(d=>`<option>${d}</option>`).join('');
