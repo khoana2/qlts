@@ -1084,7 +1084,7 @@ input[type=checkbox].row-cb{
       <select class="fsel" id="f-dept" onchange="applyFilters()" style="min-width:180px;">
         <option value="">🏢 Phòng ban</option>
       </select>
-      <select class="fsel" id="f-company" onchange="applyFilters()">
+      <select class="fsel" id="f-company" onchange="applyFilters();_refreshDeptFilter(this.value)">
         <option value="">🏬 Công ty</option>
       </select>
       <span class="filter-count" id="filter-count"></span>
@@ -1451,7 +1451,8 @@ input[type=checkbox].row-cb{
         </div>
         <div class="field">
           <label>Công ty</label>
-          <input type="text" id="f-congTy" list="company-datalist" placeholder="VD: TTG Vietnam"/>
+          <input type="text" id="f-congTy" list="company-datalist" placeholder="VD: TTG Vietnam"
+            oninput="_refreshFormDepts(this.value)" onchange="_refreshFormDepts(this.value)"/>
           <datalist id="company-datalist"></datalist>
         </div>
         <div class="field">
@@ -1947,7 +1948,7 @@ const JUNK_SERIALS = new Set(['','none','default string','to be filled by o.e.m.
 // viewer       — chỉ xem + export (KHÔNG thêm/sửa/xóa/sync)
 // _default     — role mặc định cho email chưa có trong danh sách
 const ROLE_CONFIG = {
-  'khoa.na@ttgvn.com': 'admin',  // Admin mặc định — fallback khi SP list chưa có
+  'khoa.na@ttgvn.com': 'global_admin', // Global Admin — fallback khi SP list chưa có
   '_default': 'viewer',           // ai không có trong list → viewer
 };
 // ════════════════════════════════════════════════════════════════════════════
@@ -3287,6 +3288,45 @@ function populateDeptSelects(){
   populateCompanySelects();
 }
 
+// ─── Helper: lấy danh sách phòng ban theo tên công ty ────────────────────────
+// Reverse-lookup COMPANY_GROUP_LABEL → COMPANY_DEPTS_MAP → fallback DEPTS
+function _deptsForLabel(companyLabel){
+  if(!companyLabel) return null; // null → dùng tất cả
+  for(const [grp, lbl] of Object.entries(COMPANY_GROUP_LABEL)){
+    if(lbl === companyLabel && COMPANY_DEPTS_MAP[grp]) return COMPANY_DEPTS_MAP[grp];
+  }
+  return null; // công ty không có danh sách riêng → dùng DEPTS chung
+}
+
+// ─── Refresh dropdown f-dept (filter bar) khi admin đổi công ty ─────────────
+function _refreshDeptFilter(companyLabel){
+  const deptEl = document.getElementById('f-dept');
+  if(!deptEl) return;
+  const specificDepts = _deptsForLabel(companyLabel);
+  const baseDepts = specificDepts || DEPTS;
+  // Gộp thêm boPhan thực tế từ assets (nếu lọc theo công ty)
+  const assetDepts = companyLabel
+    ? assets.filter(a=>a.congTy===companyLabel).map(a=>a.boPhan).filter(Boolean)
+    : assets.map(a=>a.boPhan).filter(Boolean);
+  const allDepts = [...new Set([...baseDepts, ...assetDepts])].sort();
+  const prev = deptEl.value; // giữ lại giá trị đang chọn nếu vẫn còn hợp lệ
+  deptEl.innerHTML = '<option value="">🏢 Phòng ban</option>' + allDepts.map(d=>`<option>${esc(d)}</option>`).join('');
+  if(prev && allDepts.includes(prev)) deptEl.value = prev;
+}
+
+// ─── Refresh dropdown f-boPhan (form thêm/sửa) khi đổi công ty ──────────────
+function _refreshFormDepts(companyLabel){
+  const el = document.getElementById('f-boPhan');
+  if(!el) return;
+  const specificDepts = _deptsForLabel(companyLabel);
+  const baseDepts = specificDepts || ((_userCompanyGroup && COMPANY_DEPTS_MAP[_userCompanyGroup]) ? COMPANY_DEPTS_MAP[_userCompanyGroup] : DEPTS);
+  const assetDepts = assets.filter(a=>a.boPhan).map(a=>a.boPhan);
+  const allDepts = [...new Set([...baseDepts, ...assetDepts])].sort();
+  const prev = el.value;
+  el.innerHTML = '<option value="">-- Chọn phòng ban --</option>' + allDepts.map(d=>`<option>${esc(d)}</option>`).join('');
+  if(prev && allDepts.includes(prev)) el.value = prev;
+}
+
 // ═══════════════════════ ROLES SP — Quan_Ly_Roles ════════════════════════════
 // SP list cần có 2 cột: Title (Email), VaiTro (admin/member/viewer), TenHienThi (optional)
 let _spRoles    = {};   // { 'email@ttg.vn': { role:'admin', spId:123, ten:'...' } }
@@ -4219,6 +4259,7 @@ function resetFilters(){
   document.getElementById('f-status').value='';
   document.getElementById('f-dept').value='';
   const fc = document.getElementById('f-company'); if(fc) fc.value='';
+  _refreshDeptFilter(''); // reset f-dept về toàn bộ phòng ban
   // Xóa luôn advanced filters
   ['af-from','af-to'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const aw = document.getElementById('af-warranty'); if(aw) aw.value='';
