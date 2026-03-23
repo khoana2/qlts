@@ -2312,9 +2312,9 @@ async function msalSpLoad(){
       assets = all.map(i=>spItemToAsset(i));
       saveToStorage(); saveTransfers();
       populateDeptSelects(); applyFilters(); updateDashboard(); renderEvents(); updateTopbarSub();
-      toast(`✅ Đã tải ${assets.length} tài sản từ SharePoint!`,'ok');
+      console.log(`[QLTS] Đã tải ${assets.length} tài sản từ SharePoint`);
     } else {
-      toast('⚠️ SharePoint List đang trống','warn');
+      console.log('[QLTS] SharePoint List đang trống');
     }
     // Load SP roles trước để resolveRole() dùng đúng quyền
     await msalSpLoadRoles();
@@ -5938,13 +5938,13 @@ async function msalSpLoadLicenses(){
       saveLicenses();
       populateCompanySelects();
       renderLicenses();
-      toast(`🔑 Đã tải ${all.length} license từ SP!`, 'ok');
+      console.log(`[QLTS] Đã tải ${all.length} license từ SharePoint`);
       // Kiểm tra cảnh báo hết hạn sau khi load xong
       setTimeout(checkLicenseExpiry, 800);
       // Tự động gửi email nếu chưa gửi hôm nay
       setTimeout(autoSendLicenseAlert, 4000);
     } else {
-      toast(`⚠️ Danh sách ${MSAL_CONFIG.spLicenseList} đang trống`, 'warn');
+      console.log(`[QLTS] ${MSAL_CONFIG.spLicenseList} đang trống`);
     }
   }catch(e){
     console.error('[LIC] load error:', e);
