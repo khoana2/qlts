@@ -2833,7 +2833,12 @@ const DEPTS = [
   'Kiểm Soát Nội Bộ - Tài Chính'
 ];
 // Phòng ban riêng theo từng công ty con
-// Muốn thêm công ty mới: thêm 1 dòng vào đây
+// Map mã ngắn trong COMPANIES → AD group key (dùng để khớp dept khi admin filter)
+// Muốn thêm công ty mới: thêm cả vào COMPANY_CODE_TO_GROUP + COMPANY_DEPTS_MAP
+const COMPANY_CODE_TO_GROUP = {
+  'LLM': 'LLM-member',
+  // 'MAB': 'MAB-member',  // ví dụ thêm sau
+};
 const COMPANY_DEPTS_MAP = {
   'LLM-member': [
     'Front Office','Housekeeping','Kitchen','Engineering',
@@ -3292,9 +3297,13 @@ function populateDeptSelects(){
 // Reverse-lookup COMPANY_GROUP_LABEL → COMPANY_DEPTS_MAP → fallback DEPTS
 function _deptsForLabel(companyLabel){
   if(!companyLabel) return null; // null → dùng tất cả
+  // 1. Khớp full label: 'Lancaster Legacy Management' → 'LLM-member'
   for(const [grp, lbl] of Object.entries(COMPANY_GROUP_LABEL)){
     if(lbl === companyLabel && COMPANY_DEPTS_MAP[grp]) return COMPANY_DEPTS_MAP[grp];
   }
+  // 2. Khớp mã ngắn: 'LLM' → COMPANY_CODE_TO_GROUP → 'LLM-member'
+  const grpFromCode = COMPANY_CODE_TO_GROUP[companyLabel];
+  if(grpFromCode && COMPANY_DEPTS_MAP[grpFromCode]) return COMPANY_DEPTS_MAP[grpFromCode];
   return null; // công ty không có danh sách riêng → dùng DEPTS chung
 }
 
