@@ -2015,6 +2015,9 @@ function resolveRole(email){
   for(const [k,v] of Object.entries(ROLE_CONFIG)){
     if(k !== '_default' && k.toLowerCase() === e) return v;
   }
+  // 3. Thuộc Azure AD Group trong COMPANY_GROUP_MAP → tự động 'member'
+  //    (không cần add tay vào Quan_Ly_Roles — group membership là đủ)
+  if(_userCompanyGroup && COMPANY_GROUP_MAP[_userCompanyGroup]) return 'member';
   return ROLE_CONFIG._default || 'viewer';
 }
 function can(action){
