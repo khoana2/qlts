@@ -1943,22 +1943,41 @@ const MSAL_CONFIG = {
   clientId: '7d159fb5-2063-425e-a549-76744e339ebd',          // Application (client) ID từ Azure Portal
   tenantId: '801edb4c-29ba-4d07-80b1-16a955dbf20d',          // Directory (tenant) ID từ Azure Portal
   spSite:   'https://ttgvncom.sharepoint.com/teams/qlts',
-  spList:   'Quan_Ly_Tai_San_CNTT',
+  spList:        'Quan_Ly_Tai_San_CNTT',
+  spLicenseList:     'Quan_Ly_License',           // list license mặc định (TTG)
+  spLicenseHistList: 'Quan_Ly_LicenseHistory',   // list lịch sử gia hạn mặc định (TTG)
+  spTransferList:    'Quan_Ly_TransferHistory',   // list lịch sử bàn giao mặc định (TTG)
+  spXacNhanList:     'Quan_Ly_XacNhan_BanGiao',   // list xác nhận bàn giao mặc định (TTG)
   redirectUri: window.location.origin + window.location.pathname,  // tự động
   scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Write', 'Mail.Send', 'User.Read'],
 };
 // ─── Phân quyền theo Azure AD Group ─────────────────────────────────────────
-// Mỗi dòng: 'Tên Azure AD Group' → 'Tên SP List tương ứng'
-// Muốn thêm công ty con mới: chỉ cần thêm 1 dòng vào đây
+// Muốn thêm công ty con mới: thêm 1 dòng vào COMPANY_GROUP_MAP và COMPANY_LICENSE_MAP
 const COMPANY_GROUP_MAP = {
   'LLM-member': 'Quan_Ly_Tai_San_LLM',
-  // 'FPT-member': 'Quan_Ly_Tai_San_FPT',  // ← ví dụ thêm sau
+  // 'FPT-member': 'Quan_Ly_Tai_San_FPT',
 };
-// Tên hiển thị thân thiện cho từng group
+const COMPANY_LICENSE_MAP = {
+  'LLM-member': 'Quan_Ly_License_LLM',
+  // 'FPT-member': 'Quan_Ly_License_FPT',
+};
+const COMPANY_LICENSE_HIST_MAP = {
+  'LLM-member': 'Quan_Ly_LicenseHistory_LLM',
+};
+const COMPANY_TRANSFER_MAP = {
+  'LLM-member': 'Quan_Ly_TransferHistory_LLM',
+};
+const COMPANY_XACNHAN_MAP = {
+  'LLM-member': 'Quan_Ly_XacNhan_BanGiao_LLM',
+};
 const COMPANY_GROUP_LABEL = {
   'LLM-member': 'Lancaster LLM',
 };
-const DEFAULT_SP_LIST = MSAL_CONFIG.spList; // TTG admin — list gốc
+const DEFAULT_SP_LIST             = MSAL_CONFIG.spList;
+const DEFAULT_SP_LICENSE_LIST     = MSAL_CONFIG.spLicenseList;
+const DEFAULT_SP_LICENSE_HIST_LIST= MSAL_CONFIG.spLicenseHistList;
+const DEFAULT_SP_TRANSFER_LIST    = MSAL_CONFIG.spTransferList;
+const DEFAULT_SP_XACNHAN_LIST     = MSAL_CONFIG.spXacNhanList;
 // ════════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════ CONFIRM FORM CONFIG ════════════════════════════════
@@ -2205,7 +2224,11 @@ function msalBarLabel(extra){
 }
 async function detectUserCompany(){
   _userCompanyGroup = null;
-  MSAL_CONFIG.spList = DEFAULT_SP_LIST;
+  MSAL_CONFIG.spList            = DEFAULT_SP_LIST;
+  MSAL_CONFIG.spLicenseList     = DEFAULT_SP_LICENSE_LIST;
+  MSAL_CONFIG.spLicenseHistList = DEFAULT_SP_LICENSE_HIST_LIST;
+  MSAL_CONFIG.spTransferList    = DEFAULT_SP_TRANSFER_LIST;
+  MSAL_CONFIG.spXacNhanList     = DEFAULT_SP_XACNHAN_LIST;
   if(!Object.keys(COMPANY_GROUP_MAP).length) return;
   try {
     const token = await getGraphToken(['https://graph.microsoft.com/GroupMember.Read.All']);
@@ -2217,13 +2240,17 @@ async function detectUserCompany(){
     const myGroups = (data.value || []).map(g => g.displayName);
     for(const [groupName, listName] of Object.entries(COMPANY_GROUP_MAP)){
       if(myGroups.includes(groupName)){
-        _userCompanyGroup = groupName;
-        MSAL_CONFIG.spList = listName;
-        console.log(`[QLTS] User thuộc group "${groupName}" → SP list: "${listName}"`);
+        _userCompanyGroup             = groupName;
+        MSAL_CONFIG.spList            = listName;
+        MSAL_CONFIG.spLicenseList     = COMPANY_LICENSE_MAP[groupName]     || DEFAULT_SP_LICENSE_LIST;
+        MSAL_CONFIG.spLicenseHistList = COMPANY_LICENSE_HIST_MAP[groupName] || DEFAULT_SP_LICENSE_HIST_LIST;
+        MSAL_CONFIG.spTransferList    = COMPANY_TRANSFER_MAP[groupName]     || DEFAULT_SP_TRANSFER_LIST;
+        MSAL_CONFIG.spXacNhanList     = COMPANY_XACNHAN_MAP[groupName]      || DEFAULT_SP_XACNHAN_LIST;
+        console.log(`[QLTS] Group "${groupName}" → assets: "${MSAL_CONFIG.spList}" | license: "${MSAL_CONFIG.spLicenseList}"`);
         return;
       }
     }
-    console.log('[QLTS] User không thuộc group nào → dùng list mặc định TTG');
+    console.log('[QLTS] Không thuộc group nào → dùng list TTG mặc định');
   } catch(e) {
     console.warn('[QLTS] detectUserCompany failed (dùng list mặc định):', e.message);
   }
@@ -5798,7 +5825,7 @@ const _LIC_OPT_DISPLAY = ['Công ty', 'CongTy'];  // thử cả 2 cách viết
 async function _licEnsureFieldMap(){
   if(_licFieldMapLoaded) return;
   try{
-    const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_License')`;
+    const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spLicenseList}')`;
     const fdata = await msalSpReq(`${base}/fields?$select=Title,InternalName`);
     _licFieldMap = {};
     for(const f of (fdata.value||[])){
@@ -5823,7 +5850,7 @@ function _licField(displayName, ...fallbacks){
 // ─── SP: Load all licenses ────────────────────────────────────────
 async function msalSpLoadLicenses(){
   if(!_msalAccount) return;
-  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_License')`;
+  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spLicenseList}')`;
   try{
     // Bước 1: load field map để biết internal name thật
     await _licEnsureFieldMap();
@@ -5889,7 +5916,7 @@ async function msalSpLoadLicenses(){
       // Tự động gửi email nếu chưa gửi hôm nay
       setTimeout(autoSendLicenseAlert, 4000);
     } else {
-      toast('⚠️ Danh sách Quan_Ly_License đang trống', 'warn');
+      toast(`⚠️ Danh sách ${MSAL_CONFIG.spLicenseList} đang trống`, 'warn');
     }
   }catch(e){
     console.error('[LIC] load error:', e);
@@ -5902,7 +5929,7 @@ async function msalSpPushLicense(id){
   if(!_msalAccount) return;
   const l = licenses.find(x=>x.id===id);
   if(!l) return;
-  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_License')/items`;
+  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spLicenseList}')/items`;
 
   // Đảm bảo field map đã load (cần biết internal name thật của "Công ty")
   await _licEnsureFieldMap();
@@ -5964,7 +5991,7 @@ async function msalSpPushLicense(id){
 // ─── SP: Delete 1 license ─────────────────────────────────────────
 async function msalSpDeleteLicense(spId){
   if(!_msalAccount || !spId) return;
-  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_License')/items(${spId})`;
+  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spLicenseList}')/items(${spId})`;
   await msalSpReq(url, {
     method: 'POST',
     headers: { 'X-HTTP-Method': 'DELETE', 'IF-MATCH': '*' },
@@ -6365,7 +6392,7 @@ async function saveRenewal(){
 
 async function msalSpPushLicenseHistory(rec){
   if(!_msalAccount) return;
-  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_LicenseHistory')/items`;
+  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spLicenseHistList}')/items`;
   const body = {
     'Title':          rec.tenPhanMem||'',
     'LicenseId':      rec.licenseId||'',
@@ -6385,7 +6412,7 @@ async function msalSpLoadLicenseHistory(localId){
   const l = licenses.find(x=>x.id===localId);
   if(!l || !l.spId) return;
   try{
-    const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_LicenseHistory')`;
+    const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spLicenseHistList}')`;
     const url  = `${base}/items?$filter=LicenseId eq '${localId}'&$orderby=NgayGiaHan asc&$top=200`;
     const data = await msalSpReq(url);
     if(data.value?.length){
@@ -6506,7 +6533,7 @@ function parseTextTransferHistory(text){
 async function msalSpPushTransfer(assetId, rec){
   if(!_msalAccount) return;
   const a = assets.find(x=>x.id===assetId);
-  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_TransferHistory')/items`;
+  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')/items`;
   const body = JSON.stringify({
     Title:        assetId,
     MaTaiSan:     a?.maTaiSan || assetId,
@@ -6537,7 +6564,7 @@ async function msalSpPushTransfer(assetId, rec){
 // ─── Load xác nhận bàn giao từ Quan_Ly_XacNhan_BanGiao ───────────────────────
 async function msalSpLoadXacNhan(){
   if(!_msalAccount) return;
-  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_XacNhan_BanGiao')/items`
+  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spXacNhanList}')/items`
     + `?$select=*&$top=2000&$orderby=Created desc`;
   try{
     const data = await msalSpReq(url);
@@ -6571,7 +6598,7 @@ async function msalSpLoadXacNhan(){
 
 async function msalSpLoadTransfers(){
   if(!_msalAccount) return;
-  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('Quan_Ly_TransferHistory')/items`;
+  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')/items`;
   const url  = `${base}?$select=Title,MaTaiSan,TuNguoi,DenNguoi,TuBoPhan,DenBoPhan,ToEmail,NgayBanGiao,TinhTrang,GhiChu,ThoiGian&$top=2000&$orderby=ThoiGian asc`;
   try{
     const data = await msalSpReq(url);
