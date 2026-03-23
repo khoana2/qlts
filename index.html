@@ -975,6 +975,11 @@ input[type=checkbox].row-cb{
       <select class="fsel" id="dash-company" onchange="updateDashboard()" style="min-width:180px;">
         <option value="">🏬 Tất cả công ty</option>
       </select>
+      <span id="dash-company-locked" style="display:none;
+        font-size:13px;font-weight:700;color:var(--accent);
+        background:#EFF6FF;border:1.5px solid #BFDBFE;
+        padding:5px 14px;border-radius:999px;">
+      </span>
       <select class="fsel" id="dash-status" onchange="updateDashboard()" style="min-width:170px;">
         <option value="">📋 Tất cả trạng thái</option>
         <option value="active">✅ Đang sử dụng</option>
@@ -3480,6 +3485,26 @@ function applyRoleUI(){
   }
   // Cập nhật sidebar role badge
   _updateTopbarUser();
+  // Lock dashboard về đúng công ty nếu là user công ty con
+  _lockDashboardCompany();
+}
+
+function _lockDashboardCompany(){
+  const sel    = document.getElementById('dash-company');
+  const locked = document.getElementById('dash-company-locked');
+  if(!sel || !locked) return;
+  if(_userCompanyGroup && COMPANY_GROUP_LABEL[_userCompanyGroup]){
+    // User công ty con: ẩn dropdown, hiện badge tên công ty
+    sel.style.display    = 'none';
+    locked.textContent   = `🏢 ${COMPANY_GROUP_LABEL[_userCompanyGroup]}`;
+    locked.style.display = '';
+    // Reset filter về "tất cả" vì data đã scoped theo list riêng
+    sel.value = '';
+  } else {
+    // TTG admin: hiện dropdown bình thường
+    sel.style.display    = '';
+    locked.style.display = 'none';
+  }
 }
 
 function populateCompanySelects(){
