@@ -128,6 +128,27 @@ body{
 }
 .btn-sidebar-logout:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5);}
 
+/* ── Context Switcher (Global Admin) ── */
+.ctx-switcher{
+  padding:8px 10px;border-bottom:1px solid var(--border);
+}
+.ctx-switcher label{
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:#94A3B8;display:block;margin-bottom:5px;
+}
+.ctx-sel{
+  width:100%;padding:7px 10px;border-radius:8px;
+  border:1.5px solid var(--border);background:var(--surface2);
+  color:var(--text);font-size:12px;font-weight:600;cursor:pointer;
+  transition:border-color .15s;
+}
+.ctx-sel:focus{outline:none;border-color:var(--accent);}
+.ctx-badge{
+  display:inline-block;margin-top:4px;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:999px;
+  background:rgba(124,58,237,.12);color:#7C3AED;border:1px solid rgba(124,58,237,.3);
+}
+
 /* ── CONTENT AREA ── */
 .content{flex:1;padding:16px 16px 40px;min-width:0;overflow-x:auto;}
 
@@ -946,6 +967,16 @@ input[type=checkbox].row-cb{
 
     <!-- ── SIDEBAR ── -->
     <aside class="sidebar">
+
+      <!-- Context Switcher: chỉ Global Admin thấy -->
+      <div class="ctx-switcher" id="ctx-switcher-block" style="display:none;">
+        <label>🌐 Đang xem công ty</label>
+        <select class="ctx-sel" id="ctx-company-sel" onchange="switchCompanyContext(this.value)">
+          <option value="">🏢 TTG (mặc định)</option>
+        </select>
+        <div class="ctx-badge" id="ctx-badge" style="display:none;"></div>
+      </div>
+
       <nav class="sidebar-nav">
         <div class="sidebar-section">Menu</div>
         <button class="nav-tab active" onclick="switchTab('dashboard')" id="tab-dashboard">
@@ -2041,6 +2072,11 @@ const MSAL_CONFIG = {
 };
 // ─── Phân quyền theo Azure AD Group ─────────────────────────────────────────
 // Muốn thêm công ty con mới: thêm 1 dòng vào COMPANY_GROUP_MAP và COMPANY_LICENSE_MAP
+// Map AD group → company_admin role (tự động gán company_admin qua AD group riêng)
+// Thêm Azure AD group tên 'LLM-admin' vào Azure Portal, sau đó khai báo tại đây:
+const COMPANY_ADMIN_GROUP_MAP = {
+  // 'LLM-admin': 'LLM-member',   // user trong group 'LLM-admin' → company_admin của LLM
+};
 const COMPANY_GROUP_MAP = {
   'LLM-member': 'Quan_Ly_Tai_San_LLM',
   // 'FPT-member': 'Quan_Ly_Tai_San_FPT',
@@ -2103,8 +2139,9 @@ function resolveRole(email){
   for(const [k,v] of Object.entries(ROLE_CONFIG)){
     if(k !== '_default' && k.toLowerCase() === e) return v;
   }
-  // 3. Thuộc Azure AD Group trong COMPANY_GROUP_MAP → tự động 'member'
-  //    (không cần add tay vào Quan_Ly_Roles — group membership là đủ)
+  // 3a. Thuộc COMPANY_ADMIN_GROUP_MAP → tự động 'company_admin'
+  if(_userIsCompanyAdmin) return 'company_admin';
+  // 3b. Thuộc COMPANY_GROUP_MAP → tự động 'member'
   if(_userCompanyGroup && COMPANY_GROUP_MAP[_userCompanyGroup]) return 'member';
   return ROLE_CONFIG._default || 'viewer';
 }
@@ -2313,7 +2350,10 @@ async function getGraphToken(scopes){
 // ─── Detect group → chọn đúng SP list cho user ────────────────────────────
 // Gọi 1 lần sau login. Nếu user thuộc COMPANY_GROUP_MAP → dùng list riêng.
 // Nếu không thuộc group nào → dùng DEFAULT_SP_LIST (admin TTG).
-let _userCompanyGroup = null; // group name đang active, null = TTG admin
+let _userCompanyGroup   = null;  // group name đang active, null = TTG admin
+let _userIsCompanyAdmin = false; // true nếu thuộc COMPANY_ADMIN_GROUP_MAP
+let _activeContextGroup = null;  // global_admin context switch: null = TTG, group key = công ty con
+let _skipDetectCompany  = false; // flag: bỏ qua detectUserCompany khi switchCompanyContext
 // Helper: tạo status bar label kèm tên công ty
 function msalBarLabel(extra){
   const name   = _msalAccount?.name || _msalAccount?.username || '';
@@ -2323,13 +2363,15 @@ function msalBarLabel(extra){
   return `🔷 ${name}${coTag}${extra ? ' — ' + extra : ''}`;
 }
 async function detectUserCompany(){
-  _userCompanyGroup = null;
+  _userCompanyGroup   = null;
+  _userIsCompanyAdmin = false;
   MSAL_CONFIG.spList            = DEFAULT_SP_LIST;
   MSAL_CONFIG.spLicenseList     = DEFAULT_SP_LICENSE_LIST;
   MSAL_CONFIG.spLicenseHistList = DEFAULT_SP_LICENSE_HIST_LIST;
   MSAL_CONFIG.spTransferList    = DEFAULT_SP_TRANSFER_LIST;
   MSAL_CONFIG.spXacNhanList     = DEFAULT_SP_XACNHAN_LIST;
-  if(!Object.keys(COMPANY_GROUP_MAP).length) return;
+  const hasMaps = Object.keys(COMPANY_GROUP_MAP).length || Object.keys(COMPANY_ADMIN_GROUP_MAP).length;
+  if(!hasMaps) return;
   try {
     const token = await getGraphToken(['https://graph.microsoft.com/GroupMember.Read.All']);
     const res   = await fetch(
@@ -2338,6 +2380,23 @@ async function detectUserCompany(){
     );
     const data  = await res.json();
     const myGroups = (data.value || []).map(g => g.displayName);
+
+    // 1. Kiểm tra COMPANY_ADMIN_GROUP_MAP trước (quyền cao hơn member)
+    for(const [adminGroup, memberGroup] of Object.entries(COMPANY_ADMIN_GROUP_MAP)){
+      if(myGroups.includes(adminGroup)){
+        _userCompanyGroup   = memberGroup;
+        _userIsCompanyAdmin = true;
+        const listName = COMPANY_GROUP_MAP[memberGroup] || DEFAULT_SP_LIST;
+        MSAL_CONFIG.spList            = listName;
+        MSAL_CONFIG.spLicenseList     = COMPANY_LICENSE_MAP[memberGroup]     || DEFAULT_SP_LICENSE_LIST;
+        MSAL_CONFIG.spLicenseHistList = COMPANY_LICENSE_HIST_MAP[memberGroup] || DEFAULT_SP_LICENSE_HIST_LIST;
+        MSAL_CONFIG.spTransferList    = COMPANY_TRANSFER_MAP[memberGroup]     || DEFAULT_SP_TRANSFER_LIST;
+        MSAL_CONFIG.spXacNhanList     = COMPANY_XACNHAN_MAP[memberGroup]      || DEFAULT_SP_XACNHAN_LIST;
+        console.log(`[QLTS] Admin group "${adminGroup}" → company_admin của "${memberGroup}" | list: "${MSAL_CONFIG.spList}"`);
+        return;
+      }
+    }
+    // 2. Kiểm tra COMPANY_GROUP_MAP (member thường)
     for(const [groupName, listName] of Object.entries(COMPANY_GROUP_MAP)){
       if(myGroups.includes(groupName)){
         _userCompanyGroup             = groupName;
@@ -2356,14 +2415,90 @@ async function detectUserCompany(){
   }
 }
 
+// ─── Context Switcher: Global Admin xem công ty con ──────────────────────────
+function _populateCtxSwitcher(){
+  const sel = document.getElementById('ctx-company-sel');
+  if(!sel) return;
+  const prev = sel.value;
+  const opts = ['<option value="">🏢 TTG (mặc định)</option>'];
+  for(const [grp] of Object.entries(COMPANY_GROUP_MAP)){
+    const label = COMPANY_GROUP_LABEL[grp] || grp;
+    opts.push(`<option value="${grp}">${label}</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  // Restore selection nếu vẫn còn hợp lệ
+  if(prev && COMPANY_GROUP_MAP[prev]) sel.value = prev;
+  else if(_activeContextGroup && COMPANY_GROUP_MAP[_activeContextGroup]) sel.value = _activeContextGroup;
+  _updateCtxBadge();
+}
+
+function _updateCtxBadge(){
+  const badge = document.getElementById('ctx-badge');
+  if(!badge) return;
+  if(_activeContextGroup){
+    const label = COMPANY_GROUP_LABEL[_activeContextGroup] || _activeContextGroup;
+    badge.textContent = `📂 ${label}`;
+    badge.style.display = '';
+    badge.style.background = '#FEF3C7';
+    badge.style.color = '#92400E';
+    badge.style.fontSize = '11px';
+    badge.style.fontWeight = '700';
+    badge.style.padding = '3px 8px';
+    badge.style.borderRadius = '6px';
+    badge.style.marginTop = '5px';
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function switchCompanyContext(groupKey){
+  if(!_msalAccount){ toast('⚠️ Vui lòng đăng nhập M365 trước','warn'); return; }
+  _activeContextGroup = groupKey || null;
+
+  if(!groupKey){
+    // Reset về TTG default
+    MSAL_CONFIG.spList            = DEFAULT_SP_LIST;
+    MSAL_CONFIG.spLicenseList     = DEFAULT_SP_LICENSE_LIST;
+    MSAL_CONFIG.spLicenseHistList = DEFAULT_SP_LICENSE_HIST_LIST;
+    MSAL_CONFIG.spTransferList    = DEFAULT_SP_TRANSFER_LIST;
+    MSAL_CONFIG.spXacNhanList     = DEFAULT_SP_XACNHAN_LIST;
+    _userCompanyGroup             = null;
+    console.log('[CTX] Switched to TTG default');
+  } else {
+    // Set lists theo công ty đã chọn
+    MSAL_CONFIG.spList            = COMPANY_GROUP_MAP[groupKey]          || DEFAULT_SP_LIST;
+    MSAL_CONFIG.spLicenseList     = COMPANY_LICENSE_MAP[groupKey]        || DEFAULT_SP_LICENSE_LIST;
+    MSAL_CONFIG.spLicenseHistList = COMPANY_LICENSE_HIST_MAP[groupKey]   || DEFAULT_SP_LICENSE_HIST_LIST;
+    MSAL_CONFIG.spTransferList    = COMPANY_TRANSFER_MAP[groupKey]       || DEFAULT_SP_TRANSFER_LIST;
+    MSAL_CONFIG.spXacNhanList     = COMPANY_XACNHAN_MAP[groupKey]        || DEFAULT_SP_XACNHAN_LIST;
+    _userCompanyGroup             = groupKey; // để _lockDashboardCompany + filter hoạt động đúng
+    console.log(`[CTX] Switched to "${groupKey}" | list: "${MSAL_CONFIG.spList}"`);
+  }
+
+  _updateCtxBadge();
+  // Reload từ SP nhưng bỏ qua detectUserCompany (đã set context thủ công)
+  _skipDetectCompany = true;
+  await msalSpLoad();
+  // Sau khi load xong: giữ vai trò global_admin dù _userCompanyGroup đang là company con
+  _userRole = resolveRole(_msalAccount.username);
+  applyRoleUI();
+}
+
 async function msalSpLoad(){
   if(!_msalAccount){ toast('⚠️ Vui lòng đăng nhập M365 trước','bad'); return; }
   // Set SP_MODE + SP_SITE ngay khi có account
   SP_MODE = true; SP_SITE = MSAL_CONFIG.spSite;
-  msalSetBar('⟳ Đang kiểm tra quyền truy cập…','s-busy');
-  // Detect group → set đúng SP list trước khi load
-  await detectUserCompany();
-  msalSetBar('⟳ Đang tải từ SharePoint…','s-busy');
+  if(_skipDetectCompany){
+    // Context switch: lists đã được set bởi switchCompanyContext — bỏ qua detectUserCompany
+    _skipDetectCompany = false;
+    msalSetBar('⟳ Đang tải từ SharePoint…','s-busy');
+  } else {
+    msalSetBar('⟳ Đang kiểm tra quyền truy cập…','s-busy');
+    // Detect group → set đúng SP list trước khi load
+    await detectUserCompany();
+    msalSetBar('⟳ Đang tải từ SharePoint…','s-busy');
+  }
   const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')`;
   try{
     // Build field map — lấy TẤT CẢ fields kèm TypeAsString để detect Number/Calculated
@@ -3773,6 +3908,10 @@ function applyRoleUI(){
   // ── Nút migrate / set-ttg — chỉ global_admin / admin thấy ──
   show('btn-migrate-transfer', isGlobalAdmin && !!_msalAccount);
   show('btn-set-ttg',          isGlobalAdmin && !!_msalAccount);
+  // ── Context Switcher — chỉ global_admin thấy khi đã login ──
+  const hasCompanyMaps = Object.keys(COMPANY_GROUP_MAP).length > 0;
+  show('ctx-switcher-block',   isGlobalAdmin && !!_msalAccount && hasCompanyMaps);
+  if(isGlobalAdmin && !!_msalAccount && hasCompanyMaps) _populateCtxSwitcher();
 
   // ── Badge role ở topbar ──
   const badge = document.getElementById('role-badge');
