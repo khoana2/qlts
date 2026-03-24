@@ -2072,7 +2072,17 @@ const MSAL_CONFIG = {
 };
 // ─── Phân quyền theo Azure AD Group ─────────────────────────────────────────
 // Muốn thêm công ty con mới: thêm 1 dòng vào COMPANY_GROUP_MAP và COMPANY_LICENSE_MAP
-// Map AD group → company_admin role (tự động gán company_admin qua AD group riêng)
+// ─── Company Admin Role — 3 cách (không cần sửa code khi thay đổi admin) ──────
+// Cách 1 (Khuyến nghị): Tạo Azure AD group theo quy ước '{prefix}-admin'
+//   VD: company group 'LLM-member' → tạo group 'LLM-admin', thêm user vào group đó
+//   App tự nhận diện — không cần khai báo thêm ở đây
+//
+// Cách 2: Khai báo tường minh trong COMPANY_ADMIN_GROUP_MAP bên dưới (nếu tên group khác quy ước)
+//
+// Cách 3: Thêm vào SP Roles list qua tab Phân Quyền (dùng giao diện web)
+//   Yêu cầu: Quan_Ly_Roles list cần có VaiTro là Text field + tất cả user có quyền đọc list
+
+// Map AD group tường minh (dùng khi tên AD group KHÔNG theo quy ước '{prefix}-admin')
 // Thêm Azure AD group tên 'LLM-admin' vào Azure Portal, sau đó khai báo tại đây:
 const COMPANY_ADMIN_GROUP_MAP = {
   // 'LLM-admin': 'LLM-member',   // user trong group 'LLM-admin' → company_admin của LLM
@@ -2139,7 +2149,7 @@ function resolveRole(email){
   for(const [k,v] of Object.entries(ROLE_CONFIG)){
     if(k !== '_default' && k.toLowerCase() === e) return v;
   }
-  // 3a. Thuộc COMPANY_ADMIN_GROUP_MAP → tự động 'company_admin'
+  // 3a. _userIsCompanyAdmin = true (từ COMPANY_ADMIN_GROUP_MAP hoặc auto-detect '{prefix}-admin')
   if(_userIsCompanyAdmin) return 'company_admin';
   // 3b. Thuộc COMPANY_GROUP_MAP → tự động 'member'
   if(_userCompanyGroup && COMPANY_GROUP_MAP[_userCompanyGroup]) return 'member';
@@ -2381,30 +2391,46 @@ async function detectUserCompany(){
     const data  = await res.json();
     const myGroups = (data.value || []).map(g => g.displayName);
 
-    // 1. Kiểm tra COMPANY_ADMIN_GROUP_MAP trước (quyền cao hơn member)
+    // ── Helper gán lists cho 1 group ──────────────────────────────────────────
+    function _setGroupLists(grp){
+      const ln = COMPANY_GROUP_MAP[grp] || DEFAULT_SP_LIST;
+      MSAL_CONFIG.spList            = ln;
+      MSAL_CONFIG.spLicenseList     = COMPANY_LICENSE_MAP[grp]     || DEFAULT_SP_LICENSE_LIST;
+      MSAL_CONFIG.spLicenseHistList = COMPANY_LICENSE_HIST_MAP[grp] || DEFAULT_SP_LICENSE_HIST_LIST;
+      MSAL_CONFIG.spTransferList    = COMPANY_TRANSFER_MAP[grp]     || DEFAULT_SP_TRANSFER_LIST;
+      MSAL_CONFIG.spXacNhanList     = COMPANY_XACNHAN_MAP[grp]      || DEFAULT_SP_XACNHAN_LIST;
+    }
+
+    // 1. Kiểm tra COMPANY_ADMIN_GROUP_MAP (cấu hình tường minh)
     for(const [adminGroup, memberGroup] of Object.entries(COMPANY_ADMIN_GROUP_MAP)){
       if(myGroups.includes(adminGroup)){
         _userCompanyGroup   = memberGroup;
         _userIsCompanyAdmin = true;
-        const listName = COMPANY_GROUP_MAP[memberGroup] || DEFAULT_SP_LIST;
-        MSAL_CONFIG.spList            = listName;
-        MSAL_CONFIG.spLicenseList     = COMPANY_LICENSE_MAP[memberGroup]     || DEFAULT_SP_LICENSE_LIST;
-        MSAL_CONFIG.spLicenseHistList = COMPANY_LICENSE_HIST_MAP[memberGroup] || DEFAULT_SP_LICENSE_HIST_LIST;
-        MSAL_CONFIG.spTransferList    = COMPANY_TRANSFER_MAP[memberGroup]     || DEFAULT_SP_TRANSFER_LIST;
-        MSAL_CONFIG.spXacNhanList     = COMPANY_XACNHAN_MAP[memberGroup]      || DEFAULT_SP_XACNHAN_LIST;
+        _setGroupLists(memberGroup);
         console.log(`[QLTS] Admin group "${adminGroup}" → company_admin của "${memberGroup}" | list: "${MSAL_CONFIG.spList}"`);
         return;
       }
     }
+
+    // 1b. Auto-detect theo quy ước tên: '{prefix}-member' → kiểm tra '{prefix}-admin'
+    // Không cần sửa code — chỉ cần tạo Azure AD group '{prefix}-admin' và add user vào
+    for(const [groupName] of Object.entries(COMPANY_GROUP_MAP)){
+      // Tạo tên admin group theo quy ước: 'LLM-member' → 'LLM-admin'
+      const autoAdminGroup = groupName.replace(/-member$/i, '-admin');
+      if(autoAdminGroup !== groupName && myGroups.includes(autoAdminGroup)){
+        _userCompanyGroup   = groupName;
+        _userIsCompanyAdmin = true;
+        _setGroupLists(groupName);
+        console.log(`[QLTS] Auto-detected admin group "${autoAdminGroup}" → company_admin của "${groupName}" | list: "${MSAL_CONFIG.spList}"`);
+        return;
+      }
+    }
+
     // 2. Kiểm tra COMPANY_GROUP_MAP (member thường)
-    for(const [groupName, listName] of Object.entries(COMPANY_GROUP_MAP)){
+    for(const [groupName] of Object.entries(COMPANY_GROUP_MAP)){
       if(myGroups.includes(groupName)){
-        _userCompanyGroup             = groupName;
-        MSAL_CONFIG.spList            = listName;
-        MSAL_CONFIG.spLicenseList     = COMPANY_LICENSE_MAP[groupName]     || DEFAULT_SP_LICENSE_LIST;
-        MSAL_CONFIG.spLicenseHistList = COMPANY_LICENSE_HIST_MAP[groupName] || DEFAULT_SP_LICENSE_HIST_LIST;
-        MSAL_CONFIG.spTransferList    = COMPANY_TRANSFER_MAP[groupName]     || DEFAULT_SP_TRANSFER_LIST;
-        MSAL_CONFIG.spXacNhanList     = COMPANY_XACNHAN_MAP[groupName]      || DEFAULT_SP_XACNHAN_LIST;
+        _userCompanyGroup = groupName;
+        _setGroupLists(groupName);
         console.log(`[QLTS] Group "${groupName}" → assets: "${MSAL_CONFIG.spList}" | license: "${MSAL_CONFIG.spLicenseList}"`);
         return;
       }
@@ -2432,25 +2458,7 @@ function _populateCtxSwitcher(){
   _updateCtxBadge();
 }
 
-function _updateCtxBadge(){
-  const badge = document.getElementById('ctx-badge');
-  if(!badge) return;
-  if(_activeContextGroup){
-    const label = COMPANY_GROUP_LABEL[_activeContextGroup] || _activeContextGroup;
-    badge.textContent = `📂 ${label}`;
-    badge.style.display = '';
-    badge.style.background = '#FEF3C7';
-    badge.style.color = '#92400E';
-    badge.style.fontSize = '11px';
-    badge.style.fontWeight = '700';
-    badge.style.padding = '3px 8px';
-    badge.style.borderRadius = '6px';
-    badge.style.marginTop = '5px';
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
-}
+function _updateCtxBadge(){ /* badge đã ẩn — không cần */ }
 
 async function switchCompanyContext(groupKey){
   if(!_msalAccount){ toast('⚠️ Vui lòng đăng nhập M365 trước','warn'); return; }
@@ -3718,8 +3726,12 @@ async function msalSpLoadRoles(){
     }
   }catch(e){
     console.warn('[ROLES] Không tải được Quan_Ly_Roles:', e.message);
-    // SP list chưa tạo → dùng ROLE_CONFIG fallback, không crash app
+    // SP list chưa tạo / không có quyền → dùng ROLE_CONFIG + COMPANY_ADMIN_EMAILS fallback
     _spRolesLoaded = true;
+    // Chỉ cảnh báo cho admin — user thường không cần biết
+    if(_userRole === 'global_admin' || _userRole === 'admin'){
+      toast('⚠️ Không tải được danh sách Roles (Quan_Ly_Roles). Đang dùng cấu hình HTML.','warn');
+    }
   }
 }
 
