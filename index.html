@@ -554,6 +554,29 @@ input[type=checkbox].row-cb{
 .action-btn.del:hover{background:#FEF2F2;border-color:#FECACA;color:#DC2626;}
 .action-btn.view:hover{background:#EFF6FF;border-color:#BFDBFE;color:#2563EB;}
 .action-btn.transfer:hover{background:#ECFDF5;border-color:#A7F3D0;color:#059669;}
+.action-btn.xfer-co{color:#7C3AED;font-size:13px;}
+.action-btn.xfer-co:hover{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.3);color:#7C3AED;}
+
+/* ── Modal: Chuyển công ty ── */
+.xfer-co-info{
+  background:var(--surface2);border-radius:10px;padding:12px 14px;
+  border:1px solid var(--border);font-size:13px;
+}
+.xfer-co-arrow{
+  display:flex;align-items:center;gap:12px;
+}
+.xfer-co-arrow .xfer-side{flex:1;}
+.xfer-co-arrow .xfer-icon{font-size:22px;color:var(--muted);padding-top:18px;flex-shrink:0;}
+.xfer-co-arrow label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;}
+.xfer-co-arrow .xfer-from-box{
+  font-weight:700;font-size:13px;padding:8px 10px;
+  background:var(--surface2);border-radius:8px;border:1px solid var(--border);
+  min-height:36px;display:flex;align-items:center;
+}
+.xfer-warn{
+  background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;
+  padding:10px 12px;font-size:12px;color:#92400E;line-height:1.5;
+}
 
 /* ═══════════════════════════ TRANSFER HISTORY ═══════════════════════════ */
 .transfer-log{margin-top:10px;}
@@ -1611,6 +1634,56 @@ input[type=checkbox].row-cb{
   </div>
 </div>
 
+<!-- ══════════════ MODAL: CHUYỂN CÔNG TY ══════════════ -->
+<div class="modal-backdrop" id="modal-xfer-company" style="display:none;">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-head">
+      <div>
+        <h3 style="font-size:15px;font-weight:700;">🏢 Chuyển tài sản sang công ty khác</h3>
+        <p style="font-size:11px;color:var(--muted);margin-top:2px;">Chỉ Global Admin mới thực hiện được</p>
+      </div>
+      <button class="btn icon-only" onclick="closeModal('modal-xfer-company')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Thông tin tài sản -->
+      <div class="xfer-co-info" id="xfer-asset-card">—</div>
+
+      <!-- From → To -->
+      <div class="xfer-co-arrow">
+        <div class="xfer-side">
+          <label>Từ công ty</label>
+          <div class="xfer-from-box" id="xfer-from">—</div>
+        </div>
+        <div class="xfer-icon">→</div>
+        <div class="xfer-side">
+          <label>Sang công ty <span style="color:var(--red);">*</span></label>
+          <select id="xfer-to"
+            style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;">
+          </select>
+        </div>
+      </div>
+
+      <!-- Ghi chú -->
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Ghi chú (tùy chọn)</label>
+        <input id="xfer-note" type="text" placeholder="VD: Triển khai dự án Lancaster, chuyển theo quyết định số…"
+          style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;box-sizing:border-box;"/>
+      </div>
+
+      <!-- Cảnh báo -->
+      <div class="xfer-warn">
+        ⚠️ Tài sản sẽ bị <strong>xóa khỏi list SharePoint nguồn</strong> và tạo mới vào <strong>list đích</strong>.
+        Công ty, phòng ban sẽ được cập nhật tự động. Thao tác <strong>không thể hoàn tác</strong>.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-xfer-company')">Hủy</button>
+      <button class="btn primary" id="btn-xfer-confirm" onclick="confirmXferCompany()">🏢 Xác nhận chuyển</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════ MODAL: BÀN GIAO MÁY ══════════════ -->
 <div class="modal-backdrop" id="modal-transfer">
   <div class="modal" style="max-width:560px;">
@@ -2452,6 +2525,129 @@ async function msalSpDeleteAsset(id){
     await msalSpReq(url,{ method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
   }catch(e){ console.error('[MSAL] delete error:', e); }
 }
+
+// ═══════════════════════ CROSS-COMPANY ASSET TRANSFER ════════════════════════
+// Cho phép Global Admin chuyển tài sản từ list này sang list của công ty khác.
+// Flow: POST item mới vào dest list → DELETE item cũ ở src list → remove local.
+
+let _xferAssetId = null;
+
+// Trả về tất cả company lists đã cấu hình: [{label, listName}]
+function _getAllCompanyLists(){
+  const result = [{ label:'TTG (mặc định)', listName: DEFAULT_SP_LIST }];
+  for(const [grp, listName] of Object.entries(COMPANY_GROUP_MAP)){
+    result.push({ label: COMPANY_GROUP_LABEL[grp] || grp, listName });
+  }
+  return result;
+}
+
+function openXferCompany(id){
+  if(_userRole !== 'global_admin' && _userRole !== 'admin'){
+    toast('⛔ Chỉ Global Admin mới có thể chuyển tài sản giữa công ty','bad'); return;
+  }
+  if(!_msalAccount || !SP_MODE){
+    toast('⚠️ Cần đăng nhập SharePoint để thực hiện chuyển công ty','warn'); return;
+  }
+  const a = assets.find(x=>x.id===id);
+  if(!a){ toast('Không tìm thấy tài sản','bad'); return; }
+  _xferAssetId = id;
+
+  // Hiện thông tin tài sản
+  document.getElementById('xfer-asset-card').innerHTML = `
+    <div style="font-weight:700;">${esc(a.tenTaiSan||'—')}${a.model?`<span style="font-weight:400;color:var(--muted);"> · ${esc(a.model)}</span>`:''}
+      ${a.maTaiSan?`<code style="font-size:11px;color:var(--accent2);margin-left:8px;">${esc(a.maTaiSan)}</code>`:''}
+    </div>
+    ${a.serial?`<div style="font-size:11px;color:var(--muted);margin-top:3px;">S/N: ${esc(a.serial)}</div>`:''}
+    ${a.nguoiDung?`<div style="font-size:12px;margin-top:4px;">👤 ${esc(a.nguoiDung)}${a.boPhan?' · <em>'+esc(a.boPhan)+'</em>':''}</div>`:''}
+  `;
+
+  // Công ty nguồn
+  const fromLabel = a.congTy || 'TTG (mặc định)';
+  document.getElementById('xfer-from').textContent = fromLabel;
+
+  // Xây dropdown đích — loại trừ list đang dùng hiện tại
+  const allCos = _getAllCompanyLists();
+  const srcList = MSAL_CONFIG.spList;
+  const sel = document.getElementById('xfer-to');
+  sel.innerHTML = allCos
+    .filter(c => c.listName !== srcList)
+    .map(c => `<option value="${esc(c.listName)}" data-label="${esc(c.label)}">${esc(c.label)}</option>`)
+    .join('');
+
+  if(!sel.options.length){
+    toast('⚠️ Không có công ty đích nào được cấu hình','warn'); return;
+  }
+
+  document.getElementById('xfer-note').value = '';
+  const btn = document.getElementById('btn-xfer-confirm');
+  btn.disabled = false; btn.textContent = '🏢 Xác nhận chuyển';
+  openModal('modal-xfer-company');
+}
+
+async function confirmXferCompany(){
+  const a = assets.find(x=>x.id===_xferAssetId);
+  if(!a){ toast('Không tìm thấy tài sản','bad'); closeModal('modal-xfer-company'); return; }
+
+  const sel       = document.getElementById('xfer-to');
+  const destList  = sel.value;
+  const destLabel = sel.options[sel.selectedIndex]?.getAttribute('data-label') || destList;
+  const note      = document.getElementById('xfer-note').value.trim();
+  if(!destList){ toast('⚠️ Chưa chọn công ty đích','warn'); return; }
+
+  const btn = document.getElementById('btn-xfer-confirm');
+  btn.disabled = true; btn.textContent = '⟳ Đang chuyển…';
+
+  try{
+    // 1. Clone asset, cập nhật congTy sang công ty đích
+    const aNew = { ...a, congTy: destLabel };
+
+    // 2. Build SP body (list nguồn & đích cùng schema → dùng SP_FIELDS hiện tại)
+    const body = assetToSpItem(aNew);
+    const skipped = body._skippedFields || [];
+    delete body._skippedFields;
+    if(skipped.length) console.warn('[XferCo] skipped fields:', skipped);
+
+    // Sanitize Number fields (giống msalSpPushAsset)
+    for(const [key, val] of Object.entries(body)){
+      const ftype = SP_FIELD_TYPES[key] || '';
+      if((ftype==='Number'||ftype==='Currency'||ftype==='Integer') && typeof val==='string'){
+        if(/\d{4}-\d{2}/.test(val)||val.includes('T')){ delete body[key]; continue; }
+        const num = parseFloat(val.replace(/[^0-9.\-]/g,''));
+        if(!isNaN(num)) body[key]=num; else delete body[key];
+      }
+    }
+
+    // 3. POST item mới vào list đích
+    const destBase = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${destList}')/items`;
+    const res = await msalSpReq(destBase, { method:'POST', body: JSON.stringify(body) });
+    const newSpId = res?.ID;
+    console.log(`[XferCo] Created in "${destList}" with SP ID: ${newSpId}`);
+
+    // 4. Xóa item khỏi list nguồn (nếu đã sync SP)
+    if(a._spId){
+      const srcUrl = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items(${a._spId})`;
+      await msalSpReq(srcUrl, { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
+      console.log(`[XferCo] Deleted SP ID ${a._spId} from "${MSAL_CONFIG.spList}"`);
+    }
+
+    // 5. Xóa khỏi local assets[] và lưu
+    assets = assets.filter(x=>x.id!==_xferAssetId);
+    saveToStorage();
+    closeModal('modal-xfer-company');
+    applyFilters();
+    updateDashboard();
+
+    // 6. Toast thành công
+    const noteStr = note ? ` — ${note}` : '';
+    toast(`✅ Đã chuyển "${esc(a.tenTaiSan||a.maTaiSan||a.id)}" → ${destLabel}${newSpId?' (SP#'+newSpId+')':''}${noteStr}`, 'ok');
+
+  }catch(e){
+    console.error('[XferCo] Error:', e);
+    toast('❌ Lỗi chuyển công ty: '+e.message, 'bad');
+    btn.disabled = false; btn.textContent = '🏢 Xác nhận chuyển';
+  }
+}
+// ═════════════════════════════════════════════════════════════════════════════
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
 function msalSetBar(txt, cls){
@@ -4016,6 +4212,7 @@ function renderTable(){
           <div class="row-actions">
             <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')">👁</button>
             <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')">🔄</button>
+            ${(_userRole==='global_admin'||_userRole==='admin')?`<button class="action-btn xfer-co" title="Chuyển sang công ty khác" onclick="openXferCompany('${a.id}')">🏢→</button>`:''}
             <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')">✏️</button>
             <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')">🗑</button>
           </div>
