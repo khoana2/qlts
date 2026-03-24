@@ -3180,7 +3180,8 @@ const SP_DISPLAY_MAP = {
   'CongTy':           'congTy',
 };
 
-// Danh sách công ty (có thể thêm bớt tại đây)
+// Danh sách công ty TTG (có thể thêm bớt tại đây)
+// Các công ty con có SP list riêng (LLM...) không liệt kê ở đây — filter tự lấy từ data thực tế
 const COMPANIES = [
   'TTG','MAB','R02','LCB','MKLT','MKTG','LM','LHB','195DBP','Senspa'
 ];
@@ -3969,7 +3970,14 @@ function populateCompanySelects(){
   const licCos    = licenses.map(l=>l.congTy).filter(Boolean);
   // User công ty con → chỉ dùng data thực tế, không mix danh sách TTG
   const baseCos   = _userCompanyGroup ? [] : COMPANIES;
-  const allCos    = [...new Set([...baseCos, ...assetCos, ...licCos])].sort();
+  // Loại các công ty đã có SP list riêng khỏi filter TTG (labels + mã ngắn)
+  const _separated = _userCompanyGroup ? new Set() : new Set([
+    ...Object.values(COMPANY_GROUP_LABEL),   // VD: 'Lancaster Legacy Management'
+    ...Object.keys(COMPANY_CODE_TO_GROUP),   // VD: 'LLM'
+  ]);
+  const allCos = [...new Set([...baseCos, ...assetCos, ...licCos])]
+    .filter(c => !_separated.has(c))
+    .sort();
 
   // Datalist (dùng cho input text trong form)
   const dl = document.getElementById('company-datalist');
