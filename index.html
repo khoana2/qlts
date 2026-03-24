@@ -2287,7 +2287,14 @@ async function msalSpReq(url, opts={}){
     throw new Error(msg + (detail ? ' | ' + detail.substring(0,120) : ''));
   }
   if(r.status===204) return null;
-  return r.json();
+  // Đọc text trước — tránh crash khi SP trả về body rỗng (status 200/201 nhưng empty body)
+  const text = await r.text();
+  if(!text || !text.trim()) return null;
+  try{ return JSON.parse(text); }
+  catch(x){
+    console.warn('[SP] Response không phải JSON:', text.substring(0,200));
+    return null;
+  }
 }
 
 // ─── Load tất cả items từ SP List qua MSAL ───────────────────────────────────
@@ -2601,13 +2608,15 @@ async function confirmXferCompany(){
     // 1. Clone asset, cập nhật congTy sang công ty đích
     const aNew = { ...a, congTy: destLabel };
 
-    // 2. Build SP body (list nguồn & đích cùng schema → dùng SP_FIELDS hiện tại)
+    // 2. Build SP body — load field types của dest list nếu cần
+    //    (đảm bảo map đúng column khi list LLM có schema riêng)
+    if(!Object.keys(SP_FIELD_TYPES).length) await msalReloadFieldTypes();
     const body = assetToSpItem(aNew);
     const skipped = body._skippedFields || [];
     delete body._skippedFields;
     if(skipped.length) console.warn('[XferCo] skipped fields:', skipped);
 
-    // Sanitize Number fields (giống msalSpPushAsset)
+    // Sanitize Number/Currency fields
     for(const [key, val] of Object.entries(body)){
       const ftype = SP_FIELD_TYPES[key] || '';
       if((ftype==='Number'||ftype==='Currency'||ftype==='Integer') && typeof val==='string'){
@@ -2616,18 +2625,28 @@ async function confirmXferCompany(){
         if(!isNaN(num)) body[key]=num; else delete body[key];
       }
     }
+    console.log('[XferCo] Step 3 — POST to dest list:', destList, '| body keys:', Object.keys(body));
 
-    // 3. POST item mới vào list đích
+    // 3. POST item mới vào list đích (CRITICAL — phải thành công)
     const destBase = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${destList}')/items`;
     const res = await msalSpReq(destBase, { method:'POST', body: JSON.stringify(body) });
     const newSpId = res?.ID;
-    console.log(`[XferCo] Created in "${destList}" with SP ID: ${newSpId}`);
+    console.log(`[XferCo] ✅ Created in "${destList}" with SP ID: ${newSpId}`);
 
-    // 4. Xóa item khỏi list nguồn (nếu đã sync SP)
+    // 4. Xóa item khỏi list nguồn — NON-FATAL: nếu item đã bị xóa hoặc chưa sync thì bỏ qua
+    let deleteNote = '';
     if(a._spId){
-      const srcUrl = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items(${a._spId})`;
-      await msalSpReq(srcUrl, { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
-      console.log(`[XferCo] Deleted SP ID ${a._spId} from "${MSAL_CONFIG.spList}"`);
+      try{
+        const srcUrl = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items(${a._spId})`;
+        await msalSpReq(srcUrl, { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
+        console.log(`[XferCo] ✅ Deleted SP ID ${a._spId} from "${MSAL_CONFIG.spList}"`);
+      }catch(delErr){
+        // Item có thể đã bị xóa thủ công hoặc chưa sync → chỉ log, không dừng flow
+        console.warn(`[XferCo] ⚠️ Could not delete SP ID ${a._spId} from source (already gone?):`, delErr.message);
+        deleteNote = ' (item nguồn không xóa được — có thể đã bị xóa trước đó)';
+      }
+    } else {
+      console.log('[XferCo] Asset chưa sync SP — bỏ qua bước xóa nguồn');
     }
 
     // 5. Xóa khỏi local assets[] và lưu
@@ -2637,13 +2656,16 @@ async function confirmXferCompany(){
     applyFilters();
     updateDashboard();
 
-    // 6. Toast thành công
+    // 6. Toast thành công (có ghi chú nếu delete nguồn thất bại)
     const noteStr = note ? ` — ${note}` : '';
+    const warnStr = deleteNote ? `\n⚠️${deleteNote}` : '';
     toast(`✅ Đã chuyển "${esc(a.tenTaiSan||a.maTaiSan||a.id)}" → ${destLabel}${newSpId?' (SP#'+newSpId+')':''}${noteStr}`, 'ok');
+    if(deleteNote) toast(`⚠️ Lưu ý: item SP nguồn không xóa được (đã ghi log console)`, 'warn');
 
   }catch(e){
-    console.error('[XferCo] Error:', e);
-    toast('❌ Lỗi chuyển công ty: '+e.message, 'bad');
+    // Chỉ catch lỗi từ bước 3 (POST dest) — bước quan trọng nhất
+    console.error('[XferCo] Fatal error at POST step:', e);
+    toast('❌ Lỗi tạo item tại list đích: '+e.message, 'bad');
     btn.disabled = false; btn.textContent = '🏢 Xác nhận chuyển';
   }
 }
