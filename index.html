@@ -4373,7 +4373,7 @@ function renderTable(){
       <tr class="${rowClass}" data-id="${a.id}">
         <td class="cb-col"><input type="checkbox" class="row-cb" ${isSel?'checked':''} onchange="toggleSelectRow('${a.id}',this.checked)"/></td>
         <td class="tbl-num">${start+i+1}</td>
-        <td><code class="ma-ts-link" style="font-size:11px;color:var(--accent2);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;" onclick="viewDetail('${a.id}')" title="Xem chi tiết">${esc(a.maTaiSan||'—')}</code></td>
+        <td><code style="font-size:11px;color:var(--accent2);">${esc(a.maTaiSan||'—')}</code></td>
         <td><span class="type-badge">${esc(a.tenTaiSan||'—')}</span></td>
         <td data-col="model">${esc(a.model||'—')}</td>
         <td data-col="serial"><code style="font-size:11px;">${esc(a.serial||'—')}</code></td>
@@ -4392,9 +4392,10 @@ function renderTable(){
         </td>
         <td>
           <div class="row-actions">
+            <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')">👁</button>
+            <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')">✏️</button>
             <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')">🔄</button>
             ${(_userRole==='global_admin'||_userRole==='admin')?`<button class="action-btn xfer-co" title="Chuyển sang công ty khác" onclick="openXferCompany('${a.id}')">🏢→</button>`:''}
-            <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')">✏️</button>
             <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')">🗑</button>
           </div>
         </td>
