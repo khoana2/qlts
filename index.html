@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
 <style>
 /* ═══════════════════════════ RESET & BASE ═══════════════════════════ */
 :root {
@@ -90,6 +91,7 @@ body{
   color:var(--accent);background:#EFF6FF;font-weight:700;
 }
 .nav-tab .tab-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.nav-tab .tab-icon i.ph{font-size:16px;line-height:1;}
 
 /* Sidebar footer: user info */
 .sidebar-footer{
@@ -570,6 +572,10 @@ input[type=checkbox].row-cb{
   color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;
   transition:all .15s;
 }
+.action-btn i.ph{font-size:14px;line-height:1;pointer-events:none;}
+.kpi-icon i.ph{font-size:24px;line-height:1;}
+.btn-icon-ph{display:inline-flex;align-items:center;gap:5px;}
+.btn-icon-ph i.ph{font-size:14px;line-height:1;}
 .action-btn:hover{background:#F1F5F9;border-color:#CBD5E1;}
 .action-btn.edit:hover{background:#EFF6FF;border-color:#BFDBFE;color:#2563EB;}
 .action-btn.del:hover{background:#FEF2F2;border-color:#FECACA;color:#DC2626;}
@@ -764,7 +770,8 @@ input[type=checkbox].row-cb{
 .login-divider{width:100%;height:1px;background:rgba(0,0,0,.08);margin:20px 0;}
 .login-features{display:flex;gap:22px;justify-content:center;}
 .lf-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
-.lf-icon{font-size:20px;}
+.lf-icon{font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;}
+.lf-icon i.ph{font-size:22px;}
 .lf-label{font-size:10px;color:#94A3B8;white-space:nowrap;}
 .login-footer{
   position:absolute;bottom:16px;left:0;right:0;text-align:center;
@@ -895,11 +902,11 @@ input[type=checkbox].row-cb{
 
     <div class="login-divider"></div>
     <div class="login-features">
-      <div class="lf-item"><div class="lf-icon">📦</div><div class="lf-label">Tài Sản</div></div>
-      <div class="lf-item"><div class="lf-icon">🔑</div><div class="lf-label">License</div></div>
-      <div class="lf-item"><div class="lf-icon">📋</div><div class="lf-label">Lịch Sử</div></div>
-      <div class="lf-item"><div class="lf-icon">📊</div><div class="lf-label">Dashboard</div></div>
-      <div class="lf-item"><div class="lf-icon">☁️</div><div class="lf-label">SharePoint</div></div>
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-package"></i></div><div class="lf-label">Tài Sản</div></div>
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-key"></i></div><div class="lf-label">License</div></div>
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-clock-counter-clockwise"></i></div><div class="lf-label">Lịch Sử</div></div>
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-chart-bar"></i></div><div class="lf-label">Dashboard</div></div>
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-cloud"></i></div><div class="lf-label">SharePoint</div></div>
     </div>
     <div class="login-local-warn" id="login-local-warn" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#92400E;font-size:12px;line-height:1.5;text-align:left;">
       ⚠️ <strong>Đang chạy local (file://)</strong><br>
@@ -949,17 +956,17 @@ input[type=checkbox].row-cb{
     <div class="top-actions">
       <!-- MSAL SharePoint sync bar -->
       <div class="sync-bar s-warn" id="msal-bar" onclick="msalBarClick()" title="Kết nối SharePoint qua Microsoft 365" style="font-size:11px;">
-        <span>🔷</span>
+        <i class="ph ph-microsoft-teams-logo"></i>
         <span id="msal-bar-text">M365</span>
       </div>
       <!-- File sync status -->
       <div class="sync-bar s-info" id="file-sync-bar" onclick="fsbClick()" title="File JSON OneDrive" style="font-size:10.5px;display:none;">
-        <span>📂</span>
+        <i class="ph ph-folder-open"></i>
         <span class="fsb-name" id="fsb-name">File JSON</span>
       </div>
-      <button class="btn success" id="btn-import-asset" onclick="openImport()">⬆️ Import Excel</button>
-      <button class="btn warn" id="btn-export-asset" onclick="exportExcel()">⬇️ Export</button>
-      <button class="btn primary" id="btn-add-asset" onclick="openAdd()">＋ Thêm Tài Sản</button>
+      <button class="btn success btn-icon-ph" id="btn-import-asset" onclick="openImport()"><i class="ph ph-upload-simple"></i> Import Excel</button>
+      <button class="btn warn btn-icon-ph" id="btn-export-asset" onclick="exportExcel()"><i class="ph ph-download-simple"></i> Export</button>
+      <button class="btn primary btn-icon-ph" id="btn-add-asset" onclick="openAdd()"><i class="ph ph-plus"></i> Thêm Tài Sản</button>
     </div>
   </div>
 
@@ -971,7 +978,7 @@ input[type=checkbox].row-cb{
 
       <!-- Context Switcher: chỉ Global Admin thấy -->
       <div class="ctx-switcher" id="ctx-switcher-block" style="display:none;">
-        <label>🌐 Đang xem công ty</label>
+        <label><i class="ph ph-globe"></i> Đang xem công ty</label>
         <select class="ctx-sel" id="ctx-company-sel" onchange="switchCompanyContext(this.value)">
           <option value="">🏢 TTG (mặc định)</option>
         </select>
@@ -981,19 +988,19 @@ input[type=checkbox].row-cb{
       <nav class="sidebar-nav">
         <div class="sidebar-section">Menu</div>
         <button class="nav-tab active" onclick="switchTab('dashboard')" id="tab-dashboard">
-          <span class="tab-icon">📊</span> Dashboard
+          <span class="tab-icon"><i class="ph ph-chart-bar"></i></span> Dashboard
         </button>
         <button class="nav-tab" onclick="switchTab('assets')" id="tab-assets">
-          <span class="tab-icon">📦</span> Tài Sản
+          <span class="tab-icon"><i class="ph ph-package"></i></span> Tài Sản
         </button>
         <button class="nav-tab" onclick="switchTab('events')" id="tab-events">
-          <span class="tab-icon">📋</span> Lịch Sử
+          <span class="tab-icon"><i class="ph ph-clock-counter-clockwise"></i></span> Lịch Sử
         </button>
         <button class="nav-tab" onclick="switchTab('license')" id="tab-license">
-          <span class="tab-icon">🔑</span> License
+          <span class="tab-icon"><i class="ph ph-key"></i></span> License
         </button>
         <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">
-          <span class="tab-icon">👥</span> Phân Quyền
+          <span class="tab-icon"><i class="ph ph-users-three"></i></span> Phân Quyền
         </button>
       </nav>
 
@@ -1006,7 +1013,7 @@ input[type=checkbox].row-cb{
             <span class="sidebar-role-badge" id="sidebar-role-badge">Viewer</span>
           </div>
         </div>
-        <button class="btn-sidebar-logout" onclick="confirmLogout()">⏏ Đăng xuất</button>
+        <button class="btn-sidebar-logout" onclick="confirmLogout()"><i class="ph ph-sign-out"></i> Đăng xuất</button>
       </div>
     </aside>
 
@@ -1017,10 +1024,10 @@ input[type=checkbox].row-cb{
   <div id="fsb-menu" style="display:none;position:fixed;z-index:200;
     background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;
     box-shadow:0 4px 20px rgba(0,0,0,.12);padding:6px;min-width:220px;">
-    <div class="fsb-mi" onclick="fsbOpen()">📂 Mở file dữ liệu có sẵn</div>
-    <div class="fsb-mi" onclick="fsbCreate()">➕ Tạo file mới</div>
-    <div class="fsb-mi" onclick="fsbReload()">🔄 Tải lại từ file</div>
-    <div class="fsb-mi danger" onclick="fsbDisconnect()">✕ Ngắt kết nối file</div>
+    <div class="fsb-mi" onclick="fsbOpen()"><i class="ph ph-folder-open"></i> Mở file dữ liệu có sẵn</div>
+    <div class="fsb-mi" onclick="fsbCreate()"><i class="ph ph-plus"></i> Tạo file mới</div>
+    <div class="fsb-mi" onclick="fsbReload()"><i class="ph ph-arrows-clockwise"></i> Tải lại từ file</div>
+    <div class="fsb-mi danger" onclick="fsbDisconnect()"><i class="ph ph-x"></i> Ngắt kết nối file</div>
   </div>
 
   <!-- ══════════════ DASHBOARD VIEW ══════════════ -->
@@ -1028,7 +1035,7 @@ input[type=checkbox].row-cb{
 
     <!-- Dashboard filters -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-      <span style="font-size:12px;color:var(--muted);">📊 Đang xem:</span>
+      <span style="font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;"><i class="ph ph-funnel"></i> Đang xem:</span>
       <select class="fsel" id="dash-company" onchange="updateDashboard()" style="min-width:180px;">
         <option value="">🏬 Tất cả công ty</option>
       </select>
@@ -1049,37 +1056,37 @@ input[type=checkbox].row-cb{
 
     <div class="kpi-grid">
       <div class="kpi blue">
-        <div class="kpi-icon">📦</div>
+        <div class="kpi-icon"><i class="ph ph-package"></i></div>
         <div class="kpi-val" id="kpi-total">0</div>
         <div class="kpi-label">Tổng tài sản</div>
         <div class="kpi-sub">Tất cả thiết bị</div>
       </div>
       <div class="kpi green">
-        <div class="kpi-icon">✅</div>
+        <div class="kpi-icon"><i class="ph ph-check-circle"></i></div>
         <div class="kpi-val" id="kpi-active">0</div>
         <div class="kpi-label">Đang sử dụng</div>
         <div class="kpi-sub" id="kpi-active-pct">—</div>
       </div>
       <div class="kpi yellow">
-        <div class="kpi-icon">🏭</div>
+        <div class="kpi-icon"><i class="ph ph-warehouse"></i></div>
         <div class="kpi-val" id="kpi-stock">0</div>
         <div class="kpi-label">Lưu kho</div>
         <div class="kpi-sub">Chưa phân bổ</div>
       </div>
       <div class="kpi red">
-        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-icon"><i class="ph ph-warning-circle"></i></div>
         <div class="kpi-val" id="kpi-broken">0</div>
         <div class="kpi-label">Hỏng / Sửa chữa</div>
         <div class="kpi-sub">Cần xử lý</div>
       </div>
       <div class="kpi">
-        <div class="kpi-icon">🏢</div>
+        <div class="kpi-icon"><i class="ph ph-buildings"></i></div>
         <div class="kpi-val" id="kpi-dept">0</div>
         <div class="kpi-label">Phòng ban</div>
         <div class="kpi-sub">Đang sử dụng</div>
       </div>
       <div class="kpi yellow">
-        <div class="kpi-icon">🛡️</div>
+        <div class="kpi-icon"><i class="ph ph-shield-warning"></i></div>
         <div class="kpi-val" id="kpi-warranty">0</div>
         <div class="kpi-label">Sắp hết BH</div>
         <div class="kpi-sub" id="kpi-warranty-sub">Trong 90 ngày</div>
@@ -1088,15 +1095,15 @@ input[type=checkbox].row-cb{
 
     <div class="dash-grid">
       <div class="chart-card">
-        <div class="chart-head">📊 Theo loại tài sản</div>
+        <div class="chart-head"><i class="ph ph-chart-bar"></i> Theo loại tài sản</div>
         <div class="chart-body"><canvas id="chart-type"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-head">🔵 Trạng thái</div>
+        <div class="chart-head"><i class="ph ph-chart-donut"></i> Trạng thái</div>
         <div class="chart-body"><canvas id="chart-status"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-head">🏢 Top phòng ban (số lượng)</div>
+        <div class="chart-head"><i class="ph ph-buildings"></i> Top phòng ban (số lượng)</div>
         <div class="chart-body"><canvas id="chart-dept"></canvas></div>
       </div>
     </div>
@@ -1104,7 +1111,7 @@ input[type=checkbox].row-cb{
     <div style="margin-top:12px;">
       <div class="chart-card">
         <div class="chart-head" style="justify-content:space-between;">
-          <span>⏰ Thiết bị sắp hết bảo hành</span>
+          <span><i class="ph ph-timer"></i> Thiết bị sắp hết bảo hành</span>
           <span id="warranty-count-badge" style="font-size:11px;color:var(--orange);font-weight:600;"></span>
         </div>
         <div class="chart-body" style="padding:8px 10px;height:220px;overflow-y:auto;">
@@ -1120,9 +1127,9 @@ input[type=checkbox].row-cb{
 
     <div class="filter-bar">
       <div class="search-wrap">
-        <span>🔍</span>
+        <i class="ph ph-magnifying-glass" style="font-size:14px;color:var(--muted);flex-shrink:0;"></i>
         <input type="text" id="search-input" placeholder="Tìm kiếm tên, mã, serial, người dùng, model…" oninput="_debouncedSearch()"/>
-        <button class="btn icon-only ghost" onclick="clearSearch()" title="Xóa tìm kiếm" style="border:none;padding:4px;">✕</button>
+        <button class="btn icon-only ghost" onclick="clearSearch()" title="Xóa tìm kiếm" style="border:none;padding:4px;"><i class="ph ph-x" style="font-size:13px;"></i></button>
       </div>
       <select class="fsel" id="f-type" onchange="applyFilters()">
         <option value="">📦 Loại tài sản</option>
@@ -1143,22 +1150,22 @@ input[type=checkbox].row-cb{
         <option value="">🏬 Công ty</option>
       </select>
       <span class="filter-count" id="filter-count"></span>
-      <button id="btn-adv-toggle" class="btn-adv-toggle" onclick="toggleAdvFilter()" title="Bộ lọc nâng cao">
-        🔎 Nâng cao <span class="adv-caret">▾</span>
+      <button id="btn-adv-toggle" class="btn-adv-toggle btn-icon-ph" onclick="toggleAdvFilter()" title="Bộ lọc nâng cao">
+        <i class="ph ph-sliders"></i> Nâng cao <span class="adv-caret">▾</span>
       </button>
-      <button class="btn" onclick="resetFilters()" style="margin-left:auto;">↺ Reset</button>
+      <button class="btn btn-icon-ph" onclick="resetFilters()" style="margin-left:auto;"><i class="ph ph-arrow-counter-clockwise"></i> Reset</button>
     </div>
 
     <!-- ══ ADVANCED FILTER ROW ══ -->
     <div class="adv-filter-row" id="adv-filter-row">
       <div class="adv-group">
-        <label>📅 Ngày mua</label>
+        <label><i class="ph ph-calendar-blank"></i> Ngày mua</label>
         <input type="date" class="adv-date" id="af-from" onchange="applyFilters()" title="Từ ngày"/>
         <span class="adv-sep">→</span>
         <input type="date" class="adv-date" id="af-to"   onchange="applyFilters()" title="Đến ngày"/>
       </div>
       <div class="adv-group" style="margin-left:16px;">
-        <label>🛡️ Bảo hành</label>
+        <label><i class="ph ph-shield-check"></i> Bảo hành</label>
         <select class="fsel" id="af-warranty" onchange="applyFilters()" style="min-width:200px;">
           <option value="">Tất cả</option>
           <option value="ok">✅ Còn bảo hành (&gt; 90 ngày)</option>
@@ -1168,7 +1175,7 @@ input[type=checkbox].row-cb{
           <option value="none">— Không có thông tin BH</option>
         </select>
       </div>
-      <button class="btn" onclick="resetAdvFilter()" style="margin-left:auto;font-size:11.5px;">✕ Xóa bộ lọc nâng cao</button>
+      <button class="btn btn-icon-ph" onclick="resetAdvFilter()" style="margin-left:auto;font-size:11.5px;"><i class="ph ph-x"></i> Xóa bộ lọc nâng cao</button>
     </div>
 
     <!-- ══ BULK ACTION BAR ══ -->
@@ -1180,23 +1187,23 @@ input[type=checkbox].row-cb{
         <option>Đang dùng</option><option>Lưu Kho</option>
         <option>Sửa chữa</option><option>Hỏng</option><option>Thanh lý</option>
       </select>
-      <button class="btn primary" style="padding:7px 12px;" onclick="bulkApplyStatus()">✓ Áp dụng</button>
+      <button class="btn primary btn-icon-ph" style="padding:7px 12px;" onclick="bulkApplyStatus()"><i class="ph ph-check"></i> Áp dụng</button>
       <div class="bulk-sep"></div>
-      <button class="btn success" onclick="bulkExportSelected()">📥 Xuất Excel</button>
-      <button class="btn danger" id="bulk-del-btn" onclick="bulkDeleteSelected()" style="display:none;">🗑️ Xóa</button>
-      <button class="btn" onclick="clearBulkSelect()" style="margin-left:auto;">✕ Bỏ chọn tất cả</button>
+      <button class="btn success btn-icon-ph" onclick="bulkExportSelected()"><i class="ph ph-file-xls"></i> Xuất Excel</button>
+      <button class="btn danger btn-icon-ph" id="bulk-del-btn" onclick="bulkDeleteSelected()" style="display:none;"><i class="ph ph-trash"></i> Xóa</button>
+      <button class="btn btn-icon-ph" onclick="clearBulkSelect()" style="margin-left:auto;"><i class="ph ph-x"></i> Bỏ chọn tất cả</button>
     </div>
 
     <div class="table-card">
       <!-- Quick filter chips -->
       <div class="qf-chips" style="padding:10px 14px 0;">
         <span style="font-size:11px;color:var(--muted);align-self:center;margin-right:2px;">Lọc nhanh:</span>
-        <button class="qf-chip" id="qf-kho" onclick="quickFilter('kho')">📦 Trong kho</button>
-        <button class="qf-chip" id="qf-sua" onclick="quickFilter('sua')">🔧 Đang sửa</button>
-        <button class="qf-chip" id="qf-hong" onclick="quickFilter('hong')">❌ Hỏng</button>
-        <button class="qf-chip" id="qf-dung" onclick="quickFilter('dung')">✅ Đang dùng</button>
+        <button class="qf-chip btn-icon-ph" id="qf-kho" onclick="quickFilter('kho')"><i class="ph ph-package"></i> Trong kho</button>
+        <button class="qf-chip btn-icon-ph" id="qf-sua" onclick="quickFilter('sua')"><i class="ph ph-wrench"></i> Đang sửa</button>
+        <button class="qf-chip btn-icon-ph" id="qf-hong" onclick="quickFilter('hong')"><i class="ph ph-x-circle"></i> Hỏng</button>
+        <button class="qf-chip btn-icon-ph" id="qf-dung" onclick="quickFilter('dung')"><i class="ph ph-check-circle"></i> Đang dùng</button>
         <div class="col-toggle-wrap" style="margin-left:auto;">
-          <button class="btn" onclick="toggleColMenu()" style="font-size:12px;padding:4px 10px;">⚙️ Cột hiển thị</button>
+          <button class="btn btn-icon-ph" onclick="toggleColMenu()" style="font-size:12px;padding:4px 10px;"><i class="ph ph-columns"></i> Cột hiển thị</button>
           <div class="col-toggle-menu" id="col-toggle-menu">
             <label><input type="checkbox" checked onchange="toggleCol('model',this.checked)"> Model</label>
             <label><input type="checkbox" checked onchange="toggleCol('serial',this.checked)"> Serial</label>
@@ -1250,7 +1257,7 @@ input[type=checkbox].row-cb{
 
     <div class="filter-bar" style="margin-top:14px;">
       <div class="search-wrap">
-        <span>🔍</span>
+        <i class="ph ph-magnifying-glass" style="font-size:14px;color:var(--muted);flex-shrink:0;"></i>
         <input type="text" id="ev-search" placeholder="Tìm theo mã tài sản, nội dung sự kiện…" oninput="renderEvents()"/>
       </div>
       <select class="fsel" id="ev-type" onchange="renderEvents()">
@@ -1264,11 +1271,11 @@ input[type=checkbox].row-cb{
       <span class="filter-count" id="ev-count"></span>
       <button id="btn-migrate-transfer" onclick="migrateTransfersToSP()" style="display:none;"
         class="btn" title="Đẩy toàn bộ lịch sử bàn giao cũ lên SharePoint (chạy 1 lần)">
-        ☁️ Migrate lịch sử → SP
+        <i class="ph ph-cloud-arrow-up"></i> Migrate lịch sử → SP
       </button>
       <button id="btn-set-ttg" onclick="bulkSetCompanyTTG()" style="display:none;margin-left:auto;"
-        class="btn warn" title="Gán TTG cho tất cả tài sản chưa có công ty">
-        🏬 Gán TTG cho tất cả
+        class="btn warn btn-icon-ph" title="Gán TTG cho tất cả tài sản chưa có công ty">
+        <i class="ph ph-buildings"></i> Gán TTG cho tất cả
       </button>
     </div>
 
@@ -1299,23 +1306,23 @@ input[type=checkbox].row-cb{
     <!-- Stats bar gọn cho License -->
     <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:6px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:6px 14px;">
-        <span style="font-size:14px;">🔑</span>
+        <i class="ph ph-key" style="font-size:16px;color:#3B82F6;"></i>
         <span id="lic-kpi-total" style="font-size:20px;font-weight:800;color:#1D4ED8;line-height:1;">0</span>
         <span style="font-size:11px;color:#3B82F6;font-weight:600;">Tổng</span>
       </div>
       <div style="color:var(--border);font-size:18px;font-weight:300;">|</div>
       <div style="display:flex;align-items:center;gap:5px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:6px 14px;">
-        <span style="font-size:13px;">✅</span>
+        <i class="ph ph-check-circle" style="font-size:15px;color:#22C55E;"></i>
         <span id="lic-kpi-ok" style="font-size:20px;font-weight:800;color:#16A34A;line-height:1;">0</span>
         <span style="font-size:11px;color:#22C55E;font-weight:600;">Còn hạn</span>
       </div>
       <div style="display:flex;align-items:center;gap:5px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:6px 14px;">
-        <span style="font-size:13px;">⚠️</span>
+        <i class="ph ph-warning" style="font-size:15px;color:#F59E0B;"></i>
         <span id="lic-kpi-warn" style="font-size:20px;font-weight:800;color:#D97706;line-height:1;">0</span>
         <span style="font-size:11px;color:#F59E0B;font-weight:600;">Sắp hết (&lt;30 ngày)</span>
       </div>
       <div style="display:flex;align-items:center;gap:5px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:6px 14px;">
-        <span style="font-size:13px;">❌</span>
+        <i class="ph ph-x-circle" style="font-size:15px;color:#EF4444;"></i>
         <span id="lic-kpi-exp" style="font-size:20px;font-weight:800;color:#DC2626;line-height:1;">0</span>
         <span style="font-size:11px;color:#EF4444;font-weight:600;">Đã hết hạn</span>
       </div>
@@ -1324,7 +1331,7 @@ input[type=checkbox].row-cb{
     <!-- Bảng tóm tắt giá trị theo gói -->
     <div id="lic-summary-wrap" style="margin-top:12px;background:var(--surface2);border-radius:10px;padding:12px 16px;display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <div style="font-size:12px;font-weight:700;color:var(--accent2);">💰 Tổng giá trị theo gói</div>
+        <div style="font-size:12px;font-weight:700;color:var(--accent2);display:flex;align-items:center;gap:5px;"><i class="ph ph-currency-circle-dollar"></i> Tổng giá trị theo gói</div>
         <button id="lic-summary-toggle" onclick="toggleLicSummary()" title="Thu gọn / Mở rộng"
           style="background:none;border:1px solid var(--border);cursor:pointer;font-size:11px;color:var(--muted);padding:2px 8px;border-radius:6px;line-height:1.6;">▾ Thu gọn</button>
       </div>
@@ -1345,7 +1352,7 @@ input[type=checkbox].row-cb{
 
     <div class="filter-bar" style="margin-top:12px;">
       <div class="search-wrap">
-        <span>🔍</span>
+        <i class="ph ph-magnifying-glass" style="font-size:14px;color:var(--muted);flex-shrink:0;"></i>
         <input type="text" id="lic-search" placeholder="Tìm tên phần mềm, số hợp đồng, nhà cung cấp…" oninput="renderLicenses()"/>
       </div>
       <select class="fsel" id="lic-filter-status" onchange="renderLicenses()">
@@ -1363,10 +1370,10 @@ input[type=checkbox].row-cb{
       </select>
       <span class="filter-count" id="lic-count"></span>
       <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <button class="btn" id="lic-group-btn" onclick="toggleLicGroup()" title="Gom nhóm theo gói">📦 Nhóm theo gói</button>
-        <button class="btn" id="btn-export-lic" onclick="exportLicenseExcel()" title="Xuất Excel">📥 Export Excel</button>
-        <button class="btn" id="lic-sync-btn" onclick="licSyncSP()" style="display:none">🔄 Sync SP</button>
-        <button class="btn primary" id="btn-lic-add" onclick="openLicenseAdd()">＋ Thêm License</button>
+        <button class="btn btn-icon-ph" id="lic-group-btn" onclick="toggleLicGroup()" title="Gom nhóm theo gói"><i class="ph ph-package"></i> Nhóm theo gói</button>
+        <button class="btn btn-icon-ph" id="btn-export-lic" onclick="exportLicenseExcel()" title="Xuất Excel"><i class="ph ph-file-xls"></i> Export Excel</button>
+        <button class="btn btn-icon-ph" id="lic-sync-btn" onclick="licSyncSP()" style="display:none"><i class="ph ph-arrows-clockwise"></i> Sync SP</button>
+        <button class="btn primary btn-icon-ph" id="btn-lic-add" onclick="openLicenseAdd()"><i class="ph ph-plus"></i> Thêm License</button>
       </div>
     </div>
 
@@ -1401,10 +1408,10 @@ input[type=checkbox].row-cb{
   <div class="view" id="view-roles">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div>
-        <div style="font-size:16px;font-weight:700;">👥 Quản lý phân quyền</div>
+        <div style="font-size:16px;font-weight:700;"><i class="ph ph-users-three"></i> Quản lý phân quyền</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Thêm thành viên và gán quyền truy cập. Thay đổi có hiệu lực ngay khi đăng nhập lại.</div>
       </div>
-      <button class="btn primary" onclick="openRoleForm()" id="btn-role-add">＋ Thêm thành viên</button>
+      <button class="btn primary btn-icon-ph" onclick="openRoleForm()" id="btn-role-add"><i class="ph ph-plus"></i> Thêm thành viên</button>
     </div>
 
     <!-- Chú thích role -->
@@ -1445,11 +1452,11 @@ input[type=checkbox].row-cb{
 
     <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;">
       💡 <strong>Phân cấp quyền:</strong>
-      <span style="color:#7C3AED;font-weight:600;">🌐 Global Admin</span> — toàn quyền mọi công ty (cross-company) ·
-      <span style="color:var(--green);font-weight:600;">🔑 Admin</span> — toàn quyền (legacy) ·
-      <span style="color:#D97706;font-weight:600;">🏢 Company Admin</span> — toàn quyền trong công ty của họ (full CRUD) ·
-      <span style="color:var(--accent2);font-weight:600;">✏️ Member</span> — xem + thêm + sửa (không xóa) ·
-      <span style="color:var(--muted);font-weight:600;">👁️ Viewer</span> — chỉ xem + export.
+      <span style="color:#7C3AED;font-weight:600;"><i class="ph ph-globe"></i> Global Admin</span> — toàn quyền mọi công ty (cross-company) ·
+      <span style="color:var(--green);font-weight:600;"><i class="ph ph-key"></i> Admin</span> — toàn quyền (legacy) ·
+      <span style="color:#D97706;font-weight:600;"><i class="ph ph-buildings"></i> Company Admin</span> — toàn quyền trong công ty của họ (full CRUD) ·
+      <span style="color:var(--accent2);font-weight:600;"><i class="ph ph-pencil-simple"></i> Member</span> — xem + thêm + sửa (không xóa) ·
+      <span style="color:var(--muted);font-weight:600;"><i class="ph ph-eye"></i> Viewer</span> — chỉ xem + export.
       <br/>Mặc định cho user chưa có trong danh sách: <strong>Viewer</strong>.
     </div>
   </div>
@@ -1466,7 +1473,7 @@ input[type=checkbox].row-cb{
     <div class="modal-body">
       <input type="hidden" id="f-id"/>
       <div class="grid3">
-        <div class="section-divider span3"><span>📋 Thông tin cơ bản</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-info"></i> Thông tin cơ bản</span><hr/></div>
 
         <div class="field">
           <label>Mã tài sản</label>
@@ -1518,7 +1525,7 @@ input[type=checkbox].row-cb{
           </select>
         </div>
 
-        <div class="section-divider span3"><span>⚙️ Cấu hình (tùy chọn)</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-sliders"></i> Cấu hình (tùy chọn)</span><hr/></div>
 
         <div class="field">
           <label>CPU</label>
@@ -1541,7 +1548,7 @@ input[type=checkbox].row-cb{
           <input type="text" id="f-manHinh" placeholder="VD: Dell 24inch FHD"/>
         </div>
 
-        <div class="section-divider span3"><span>📦 Mua sắm / Bảo hành</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-shopping-cart"></i> Mua sắm / Bảo hành</span><hr/></div>
 
         <div class="field">
           <label>Ngày mua</label>
@@ -1556,7 +1563,7 @@ input[type=checkbox].row-cb{
           <div id="f-warranty-status" style="padding:9px 11px;font-size:13px;border-radius:8px;background:#F8FAFC;border:1px solid var(--border);color:var(--muted);">—</div>
         </div>
 
-        <div class="section-divider span3"><span>🔍 Nguồn thiết bị</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-magnifying-glass"></i> Nguồn thiết bị</span><hr/></div>
 
         <div class="field">
           <label>Nguồn thiết bị</label>
@@ -1583,7 +1590,7 @@ input[type=checkbox].row-cb{
           <input type="number" id="f-giaTri" placeholder="VD: 25000000" min="0" step="1000"/>
         </div>
 
-        <div class="section-divider span3"><span>📅 Sự kiện</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-calendar-blank"></i> Sự kiện</span><hr/></div>
 
         <div class="field">
           <label>Ngày sự kiện</label>
@@ -1617,7 +1624,7 @@ input[type=checkbox].row-cb{
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('modal-form')">Hủy</button>
-      <button class="btn primary" onclick="saveAsset()">💾 Lưu</button>
+      <button class="btn primary btn-icon-ph" onclick="saveAsset()"><i class="ph ph-floppy-disk"></i> Lưu</button>
     </div>
   </div>
 </div>
@@ -1628,8 +1635,8 @@ input[type=checkbox].row-cb{
     <div class="modal-head">
       <h2 id="detail-title">Chi tiết tài sản</h2>
       <div style="display:flex;gap:8px;">
-        <button class="btn" id="detail-edit-btn" onclick="editFromDetail()">✏️ Chỉnh sửa</button>
-        <button class="btn" id="detail-resync-btn" onclick="resyncDetail()" style="display:none" title="Đẩy lại toàn bộ dữ liệu lên SharePoint">🔄 Đồng bộ SP</button>
+        <button class="btn btn-icon-ph" id="detail-edit-btn" onclick="editFromDetail()"><i class="ph ph-pencil-simple"></i> Chỉnh sửa</button>
+        <button class="btn btn-icon-ph" id="detail-resync-btn" onclick="resyncDetail()" style="display:none" title="Đẩy lại toàn bộ dữ liệu lên SharePoint"><i class="ph ph-arrows-clockwise"></i> Đồng bộ SP</button>
         <button class="btn icon-only" onclick="closeModal('modal-detail')" style="border:none;font-size:18px;">✕</button>
       </div>
     </div>
@@ -1644,13 +1651,13 @@ input[type=checkbox].row-cb{
 <div class="modal-backdrop" id="modal-import">
   <div class="modal" style="max-width:560px;">
     <div class="modal-head">
-      <h2>⬆️ Import từ Excel</h2>
+      <h2><i class="ph ph-upload-simple"></i> Import từ Excel</h2>
       <button class="btn icon-only" onclick="closeModal('modal-import')" style="border:none;font-size:18px;">✕</button>
     </div>
     <div class="modal-body">
       <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
            ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
-        <div class="dz-icon">📂</div>
+        <div class="dz-icon"><i class="ph ph-file-xls" style="font-size:36px;"></i></div>
         <p>Kéo thả file Excel vào đây hoặc click để chọn</p>
         <small>Hỗ trợ: .xlsx, .xls — Sheet "Tai_san_Lich_su"</small>
         <br/>
@@ -1661,7 +1668,7 @@ input[type=checkbox].row-cb{
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('modal-import')">Hủy</button>
-      <button class="btn primary" id="import-confirm-btn" onclick="confirmImport()" style="display:none;">✅ Xác nhận Import</button>
+      <button class="btn primary btn-icon-ph" id="import-confirm-btn" onclick="confirmImport()" style="display:none;"><i class="ph ph-check-circle"></i> Xác nhận Import</button>
     </div>
   </div>
 </div>
@@ -1671,7 +1678,7 @@ input[type=checkbox].row-cb{
   <div class="modal" style="max-width:500px;">
     <div class="modal-head">
       <div>
-        <h3 style="font-size:15px;font-weight:700;">🏢 Chuyển tài sản sang công ty khác</h3>
+        <h3 style="font-size:15px;font-weight:700;"><i class="ph ph-buildings"></i> Chuyển tài sản sang công ty khác</h3>
         <p style="font-size:11px;color:var(--muted);margin-top:2px;">Chỉ Global Admin mới thực hiện được</p>
       </div>
       <button class="btn icon-only" onclick="closeModal('modal-xfer-company')" style="border:none;font-size:18px;">✕</button>
@@ -1711,7 +1718,7 @@ input[type=checkbox].row-cb{
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('modal-xfer-company')">Hủy</button>
-      <button class="btn primary" id="btn-xfer-confirm" onclick="confirmXferCompany()">🏢 Xác nhận chuyển</button>
+      <button class="btn primary btn-icon-ph" id="btn-xfer-confirm" onclick="confirmXferCompany()"><i class="ph ph-buildings"></i> Xác nhận chuyển</button>
     </div>
   </div>
 </div>
@@ -1721,7 +1728,7 @@ input[type=checkbox].row-cb{
   <div class="modal" style="max-width:560px;">
     <div class="modal-head">
       <div>
-        <h2>🔄 Bàn Giao Tài Sản</h2>
+        <h2><i class="ph ph-arrows-left-right"></i> Bàn Giao Tài Sản</h2>
         <p id="transfer-asset-name" style="font-size:11px;color:var(--accent2);margin-top:3px;"></p>
       </div>
       <button class="btn icon-only" onclick="closeModal('modal-transfer')" style="border:none;font-size:18px;">✕</button>
@@ -1803,8 +1810,8 @@ input[type=checkbox].row-cb{
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('modal-transfer')">Hủy</button>
-      <button class="btn warn" onclick="printHandover()" id="tr-print-btn" style="display:none;">🖨️ In biên bản</button>
-      <button class="btn primary" onclick="confirmTransfer()">🔄 Xác nhận bàn giao</button>
+      <button class="btn warn btn-icon-ph" onclick="printHandover()" id="tr-print-btn" style="display:none;"><i class="ph ph-printer"></i> In biên bản</button>
+      <button class="btn primary btn-icon-ph" onclick="confirmTransfer()"><i class="ph ph-arrows-left-right"></i> Xác nhận bàn giao</button>
     </div>
   </div>
 </div>
@@ -1816,7 +1823,7 @@ input[type=checkbox].row-cb{
 <div class="modal-backdrop" id="modal-delete">
   <div class="modal" style="max-width:420px;">
     <div class="modal-head">
-      <h2>⚠️ Xác nhận xóa</h2>
+      <h2><i class="ph ph-warning-circle"></i> Xác nhận xóa</h2>
     </div>
     <div class="modal-body" style="padding:20px 18px;">
       <p style="font-size:14px;">Bạn có chắc muốn xóa tài sản <strong id="delete-name"></strong>?</p>
@@ -1824,7 +1831,7 @@ input[type=checkbox].row-cb{
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('modal-delete')">Hủy</button>
-      <button class="btn danger" onclick="confirmDelete()">🗑️ Xóa</button>
+      <button class="btn danger btn-icon-ph" onclick="confirmDelete()"><i class="ph ph-trash"></i> Xóa</button>
     </div>
   </div>
 </div>
@@ -1840,7 +1847,7 @@ input[type=checkbox].row-cb{
       <input type="hidden" id="lf-id"/>
       <input type="hidden" id="lf-spid"/>
       <div class="grid3">
-        <div class="section-divider span3"><span>🔑 Thông tin phần mềm</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-key"></i> Thông tin phần mềm</span><hr/></div>
 
         <div class="field span2">
           <label>Tên phần mềm *</label>
@@ -1896,7 +1903,7 @@ input[type=checkbox].row-cb{
           </datalist>
         </div>
 
-        <div class="section-divider span3"><span>💰 Giá trị</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-currency-circle-dollar"></i> Giá trị</span><hr/></div>
 
         <div class="field span2">
           <label>Giá trị hợp đồng</label>
@@ -1911,7 +1918,7 @@ input[type=checkbox].row-cb{
           </select>
         </div>
 
-        <div class="section-divider span3"><span>📅 Thời hạn</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-calendar-blank"></i> Thời hạn</span><hr/></div>
 
         <div class="field">
           <label>Ngày mua</label>
@@ -1926,7 +1933,7 @@ input[type=checkbox].row-cb{
           <div id="lf-expiry-status" style="padding:8px 0;font-size:13px;color:var(--muted);">—</div>
         </div>
 
-        <div class="section-divider span3"><span>📝 Ghi chú</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-note-pencil"></i> Ghi chú</span><hr/></div>
 
         <div class="field span3">
           <label>Ghi chú</label>
@@ -1936,8 +1943,8 @@ input[type=checkbox].row-cb{
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('modal-license')">Hủy</button>
-      <button class="btn" id="btn-open-history" onclick="openLicenseHistory(document.getElementById('lf-id').value)" style="display:none;">📋 Lịch sử gia hạn</button>
-      <button class="btn primary" onclick="saveLicense()">💾 Lưu</button>
+      <button class="btn btn-icon-ph" id="btn-open-history" onclick="openLicenseHistory(document.getElementById('lf-id').value)" style="display:none;"><i class="ph ph-clock-counter-clockwise"></i> Lịch sử gia hạn</button>
+      <button class="btn primary btn-icon-ph" onclick="saveLicense()"><i class="ph ph-floppy-disk"></i> Lưu</button>
     </div>
   </div>
 </div>
@@ -1961,7 +1968,7 @@ input[type=checkbox].row-cb{
 <div class="modal-backdrop" id="modal-license-history">
   <div class="modal" style="max-width:700px;">
     <div class="modal-head">
-      <h2>📋 Lịch sử gia hạn</h2>
+      <h2><i class="ph ph-clock-counter-clockwise"></i> Lịch sử gia hạn</h2>
       <button class="btn icon-only" onclick="closeModal('modal-license-history')" style="border:none;font-size:18px;">✕</button>
     </div>
     <div class="modal-body">
@@ -1970,7 +1977,7 @@ input[type=checkbox].row-cb{
 
       <!-- Form gia hạn mới -->
       <div style="background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;">➕ Ghi nhận gia hạn mới</div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:5px;"><i class="ph ph-plus-circle"></i> Ghi nhận gia hạn mới</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;align-items:end;">
           <div class="field">
             <label>Ngày hết hạn mới</label>
@@ -1986,12 +1993,12 @@ input[type=checkbox].row-cb{
           </div>
         </div>
         <div style="margin-top:10px;text-align:right;">
-          <button class="btn primary" onclick="saveRenewal()">✅ Xác nhận gia hạn</button>
+          <button class="btn primary btn-icon-ph" onclick="saveRenewal()"><i class="ph ph-check-circle"></i> Xác nhận gia hạn</button>
         </div>
       </div>
 
       <!-- Bảng lịch sử -->
-      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;">📅 Lịch sử các lần gia hạn</div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:5px;"><i class="ph ph-calendar-blank"></i> Lịch sử các lần gia hạn</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead>
           <tr style="color:var(--muted);border-bottom:1px solid var(--border);">
@@ -3811,18 +3818,18 @@ function renderRolesTable(){
     company_admin:'#D97706', member:'var(--accent2)', viewer:'var(--muted)'
   };
   const roleLabel = {
-    global_admin:'🌐 Global Admin', admin:'🔑 Admin',
-    company_admin:'🏢 Co. Admin', member:'✏️ Member', viewer:'👁️ Viewer'
+    global_admin:'<i class="ph ph-globe"></i> Global Admin', admin:'<i class="ph ph-key"></i> Admin',
+    company_admin:'<i class="ph ph-buildings"></i> Co. Admin', member:'<i class="ph ph-pencil-simple"></i> Member', viewer:'<i class="ph ph-eye"></i> Viewer'
   };
 
   tbody.innerHTML = rows.map((r,i) => {
     const badge = `<span style="font-size:11px;font-weight:700;color:${roleColor[r.role]||'var(--muted)'};">${roleLabel[r.role]||r.role}</span>`;
     const src   = r.src==='sp'
-      ? `<span style="font-size:10px;color:var(--green);">☁️ SharePoint</span>`
-      : `<span style="font-size:10px;color:var(--muted);">📄 HTML config</span>`;
+      ? `<span style="font-size:10px;color:var(--green);display:inline-flex;align-items:center;gap:3px;"><i class="ph ph-cloud-check"></i> SharePoint</span>`
+      : `<span style="font-size:10px;color:var(--muted);display:inline-flex;align-items:center;gap:3px;"><i class="ph ph-file-code"></i> HTML config</span>`;
     const actions = r.src==='sp'
-      ? `<button class="btn icon-only btn-edit-role" onclick="openRoleForm(${r.spId},'${esc(r.email)}','${esc(r.role)}','${esc(r.ten)}')" title="Sửa" style="font-size:14px;">✏️</button>
-         <button class="btn icon-only btn-del-role" onclick="confirmDeleteRole(${r.spId},'${esc(r.email)}')" title="Xóa" style="font-size:14px;color:var(--red);">🗑</button>`
+      ? `<button class="btn icon-only btn-edit-role" onclick="openRoleForm(${r.spId},'${esc(r.email)}','${esc(r.role)}','${esc(r.ten)}')" title="Sửa" style="font-size:14px;"><i class="ph ph-pencil-simple"></i></button>
+         <button class="btn icon-only btn-del-role" onclick="confirmDeleteRole(${r.spId},'${esc(r.email)}')" title="Xóa" style="font-size:14px;color:var(--red);"><i class="ph ph-trash"></i></button>`
       : `<span style="font-size:10px;color:var(--muted);">Sửa trong HTML</span>`;
     return `<tr>
       <td style="width:36px;text-align:center;color:var(--muted);">${i+1}</td>
@@ -4208,7 +4215,7 @@ function buildWarrantyTable(src){
   const el = document.getElementById('warranty-table');
   if(!el) return;
   if(!warn.length){
-    el.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;font-size:12px;">✅ Không có thiết bị nào sắp hết bảo hành trong 180 ngày tới</td></tr>`;
+    el.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;font-size:12px;"><i class="ph ph-check-circle" style="color:var(--green);margin-right:4px;"></i> Không có thiết bị nào sắp hết bảo hành trong 180 ngày tới</td></tr>`;
     return;
   }
   el.innerHTML = `<thead><tr>
@@ -4366,7 +4373,7 @@ function renderTable(){
   if(!pageData.length){
     tbody.innerHTML = `<tr><td colspan="13">
       <div class="empty-state">
-        <div class="es-icon">🔍</div>
+        <div class="es-icon"><i class="ph ph-magnifying-glass"></i></div>
         <p>Không tìm thấy tài sản nào</p>
         <small>Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</small>
       </div>
@@ -4401,11 +4408,11 @@ function renderTable(){
         </td>
         <td>
           <div class="row-actions">
-            <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')">👁</button>
-            <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')">✏️</button>
-            <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')">🔄</button>
-            ${(_userRole==='global_admin'||_userRole==='admin')?`<button class="action-btn xfer-co" title="Chuyển sang công ty khác" onclick="openXferCompany('${a.id}')">🏢→</button>`:''}
-            <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')">🗑</button>
+            <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')"><i class="ph ph-eye"></i></button>
+            <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')"><i class="ph ph-pencil-simple"></i></button>
+            <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i></button>
+            ${(_userRole==='global_admin'||_userRole==='admin')?`<button class="action-btn xfer-co" title="Chuyển sang công ty khác" onclick="openXferCompany('${a.id}')"><i class="ph ph-buildings"></i></button>`:''}
+            <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')"><i class="ph ph-trash"></i></button>
           </div>
         </td>
       </tr>`;
@@ -4718,7 +4725,7 @@ function xacNhanDetailHTML(assetId){
         </div>
       </div>
       <button class="btn" style="font-size:11px;padding:4px 10px;flex-shrink:0;"
-        onclick="msalSpLoadXacNhan().then(()=>viewDetail('${assetId}'))">🔄 Refresh</button>
+        onclick="msalSpLoadXacNhan().then(()=>viewDetail('${assetId}'))"><i class="ph ph-arrows-clockwise"></i> Refresh</button>
     </div>`;
   }
 
@@ -4777,7 +4784,7 @@ function renderEvents(){
 
   const tbody = document.getElementById('events-tbody');
   if(!evAssets.length){
-    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📋</div><p>Không có sự kiện nào</p></div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="es-icon"><i class="ph ph-clock-counter-clockwise"></i></div><p>Không có sự kiện nào</p></div></td></tr>`;
     return;
   }
 
@@ -5044,8 +5051,8 @@ function viewDetail(id){
   const transferHTML = tLog.length ? `
     <div style="margin-top:16px;">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-        <span>📜 Lịch sử bàn giao (${tLog.length} lần)</span>
-        <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="closeModal('modal-detail');openTransfer('${a.id}')">🔄 Bàn giao mới</button>
+        <span><i class="ph ph-clock-counter-clockwise"></i> Lịch sử bàn giao (${tLog.length} lần)</span>
+        <button class="btn btn-icon-ph" style="padding:4px 10px;font-size:11px;" onclick="closeModal('modal-detail');openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i> Bàn giao mới</button>
       </div>
       <div class="transfer-log">
         ${tLog.map((t,i)=>{
@@ -5055,7 +5062,7 @@ function viewDetail(id){
             ? (() => {
                 const d = xn.thoiGian ? new Date(xn.thoiGian).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
                 return `<div style="margin-top:8px;padding:7px 10px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:7px;font-size:11px;">
-                  <span style="color:#059669;font-weight:700;">✅ Đã xác nhận</span>
+                  <span style="color:#059669;font-weight:700;display:inline-flex;align-items:center;gap:3px;"><i class="ph ph-check-circle"></i> Đã xác nhận</span>
                   <span style="color:#065F46;margin-left:6px;">${esc(xn.nguoiNhan)}</span>
                   ${d?`<span style="color:var(--muted);margin-left:6px;">· ${d}</span>`:''}
                   ${xn.ghiChu?`<div style="color:#047857;margin-top:3px;font-style:italic;">"${esc(xn.ghiChu)}"</div>`:''}
@@ -5064,12 +5071,12 @@ function viewDetail(id){
             : (i===0
                 ? `<div style="margin-top:8px;padding:5px 10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <span style="color:#92400E;">⏳ Chờ xác nhận</span>
-                    <button class="btn" style="padding:1px 8px;font-size:10px;" onclick="msalSpLoadXacNhan().then(()=>viewDetail('${a.id}'))">🔄</button>
+                    <button class="btn" style="padding:1px 8px;font-size:10px;" onclick="msalSpLoadXacNhan().then(()=>viewDetail('${a.id}'))"><i class="ph ph-arrows-clockwise"></i></button>
                   </div>`
                 : '');
           return `
           <div class="transfer-row">
-            <div class="tr-arrow">🔄</div>
+            <div class="tr-arrow"><i class="ph ph-arrows-left-right"></i></div>
             <div class="tr-info">
               <div class="from">Từ: <strong>${esc(t.from||'Chưa có người dùng')}</strong> <span style="color:var(--muted);">${t.fromDept?`(${esc(t.fromDept)})`:''}  </span></div>
               <div class="to">→ ${esc(t.to)}</div>
@@ -5081,8 +5088,8 @@ function viewDetail(id){
             <div class="tr-meta">
               <div class="date">${t.date?new Date(t.date).toLocaleDateString('vi-VN'):'—'}</div>
               <div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
-                <button class="btn" style="padding:2px 8px;font-size:10px;" onclick="doPrint('${a.id}',${(tLog.length-1-i)})">🖨️ In</button>
-                <button class="btn danger" style="padding:2px 8px;font-size:10px;" onclick="deleteTransfer('${a.id}',${(tLog.length-1-i)},this)">🗑 Xóa</button>
+                <button class="btn btn-icon-ph" style="padding:2px 8px;font-size:10px;" onclick="doPrint('${a.id}',${(tLog.length-1-i)})"><i class="ph ph-printer"></i> In</button>
+                <button class="btn danger btn-icon-ph" style="padding:2px 8px;font-size:10px;" onclick="deleteTransfer('${a.id}',${(tLog.length-1-i)},this)"><i class="ph ph-trash"></i> Xóa</button>
               </div>
             </div>
           </div>`;
@@ -5090,8 +5097,8 @@ function viewDetail(id){
       </div>
     </div>` : `
     <div style="margin-top:14px;padding:12px;background:rgba(124,107,255,.05);border:1px dashed rgba(124,107,255,.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:12px;color:var(--muted);">📜 Chưa có lịch sử bàn giao</span>
-      <button class="btn success" style="padding:5px 12px;font-size:12px;" onclick="closeModal('modal-detail');openTransfer('${a.id}')">🔄 Bàn giao ngay</button>
+      <span style="font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;"><i class="ph ph-clock-counter-clockwise"></i> Chưa có lịch sử bàn giao</span>
+      <button class="btn success btn-icon-ph" style="padding:5px 12px;font-size:12px;" onclick="closeModal('modal-detail');openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i> Bàn giao ngay</button>
     </div>`;
 
   // Warranty status for detail
@@ -5983,9 +5990,9 @@ function _licRow(l, i, showGoi){
     <td>${licStatusBadge(diff)}</td>
     <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(l.ghichu||'')}">${esc(l.ghichu||'')}</td>
     <td style="white-space:nowrap;">
-      <button class="btn btn-edit-lic" style="padding:3px 8px;font-size:11px;" onclick="openLicenseEdit('${l.id}')">✏️</button>
-      <button class="btn danger btn-del-lic" style="padding:3px 8px;font-size:11px;" onclick="confirmDeleteLicense('${l.id}')">🗑</button>
-      ${l.spId ? '<span title="Đã sync SP" style="font-size:12px;margin-left:2px;">🔷</span>' : ''}
+      <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
+      <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
+      ${l.spId ? '<span title="Đã sync SP" style="font-size:12px;margin-left:2px;color:var(--accent2);"><i class="ph ph-cloud-check"></i></span>' : ''}
     </td>
   </tr>`;
 }
@@ -6184,7 +6191,7 @@ function renderLicenses(){
       // Group header row
       html += `<tr style="background:rgba(124,107,255,.10);border-top:2px solid rgba(124,107,255,.25);">
         <td colspan="13" style="padding:7px 12px;font-size:12px;font-weight:700;color:var(--accent2);">
-          📦 ${esc(label)}
+          <i class="ph ph-package"></i> ${esc(label)}
           <span style="font-weight:400;color:var(--muted);margin-left:8px;">${grpList.length} license${seatInfo}${moneyInfo}${warnIcon}</span>
         </td>
       </tr>`;
@@ -6968,7 +6975,7 @@ async function bulkSetCompanyTTG(){
 
   saveToStorage();
   applyFilters(); updateDashboard(); populateCompanySelects();
-  if(btn){ btn.disabled=false; btn.textContent='🏬 Gán TTG cho tất cả'; }
+  if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-buildings"></i> Gán TTG cho tất cả'; }
   toast(`✅ Đã gán TTG cho ${ok} tài sản${fail?' | ❌ '+fail+' lỗi':''}`, ok>0?'ok':'warn');
 }
 
