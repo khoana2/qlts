@@ -1121,7 +1121,7 @@ input[type=checkbox].row-cb{
     <div class="filter-bar">
       <div class="search-wrap">
         <span>🔍</span>
-        <input type="text" id="search-input" placeholder="Tìm kiếm tên, mã, serial, người dùng, model…" oninput="applyFilters()"/>
+        <input type="text" id="search-input" placeholder="Tìm kiếm tên, mã, serial, người dùng, model…" oninput="_debouncedSearch()"/>
         <button class="btn icon-only ghost" onclick="clearSearch()" title="Xóa tìm kiếm" style="border:none;padding:4px;">✕</button>
       </div>
       <select class="fsel" id="f-type" onchange="applyFilters()">
@@ -4260,6 +4260,15 @@ function _syncAdvToggleState(){
 }
 
 // ═══════════════════════ FILTERS & TABLE ═══════════════════════
+function debounce(fn, delay){
+  let timer;
+  return function(...args){
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+const _debouncedSearch = debounce(() => applyFilters(), 350);
+
 function applyFilters(keepPage = false){
   const q       = document.getElementById('search-input').value.toLowerCase().trim();
   const fType   = document.getElementById('f-type').value;
