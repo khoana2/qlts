@@ -304,16 +304,14 @@ thead th.sortable:hover{color:var(--text);}
 thead th .sort-icon{margin-left:4px;opacity:.45;}
 thead th.sorted .sort-icon{opacity:1;color:var(--accent);}
 tbody td{
-  border-bottom:1px solid #F1F5F9;
+  border-bottom:1px solid #E8EDF3;
   padding:10px 10px;font-size:12.5px;color:#1E293B;
   white-space:nowrap;vertical-align:middle;
 }
-/* ── Zebra striping: near-invisible tint — just enough to guide the eye ── */
-tbody tr:nth-child(even) td{background:rgba(148,163,184,.07);}
-/* Hover always wins */
+/* Hover */
 tbody tr:hover td{background:#EFF6FF;}
 tbody tr.selected td{background:#DBEAFE!important;border-bottom-color:#BFDBFE;}
-/* ROW HIGHLIGHT BY STATUS — always win over zebra; no extra even-row overrides needed */
+/* ROW HIGHLIGHT BY STATUS */
 tbody tr.row-kho td{border-left:3px solid #F59E0B;background:#FFFBEB;}
 tbody tr.row-hong td{border-left:3px solid #EF4444;background:#FEF2F2;}
 tbody tr.row-sua td{border-left:3px solid #F97316;background:#FFF7ED;}
