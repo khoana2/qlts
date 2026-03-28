@@ -266,31 +266,7 @@ body{
   border:1px solid var(--border);border-radius:var(--radius);
   box-shadow:var(--shadow);overflow:hidden;
 }
-/* ── Table wrap: overflow container + right-edge scroll hint ── */
-.table-wrap{
-  width:100%;overflow:auto;max-height:calc(100vh - 300px);
-  position:relative;
-}
-/* Pseudo-element fade gradient — shown by default, hidden when scrolled to end */
-.table-wrap::after{
-  content:'';
-  pointer-events:none;
-  position:sticky;
-  right:0;top:0;
-  display:block;
-  width:48px;
-  /* pulled up to overlap last row using negative margin */
-  margin-top:-9999px;
-  height:9999px;
-  background:linear-gradient(to right, transparent, rgba(241,245,249,.82));
-  transition:opacity .25s;
-  opacity:1;
-  z-index:5;
-  float:right;
-}
-.table-wrap.scroll-end::after{
-  opacity:0;
-}
+.table-wrap{width:100%;overflow:auto;max-height:calc(100vh - 300px);}
 table{width:100%;border-collapse:separate;border-spacing:0;min-width:1300px;}
 thead th{
   position:sticky;top:0;z-index:10;
@@ -4650,21 +4626,6 @@ function initColVisibility(){
 }
 document.addEventListener('DOMContentLoaded', initColVisibility);
 
-/* ── Scroll-end detection for table right-edge shadow ── */
-function _initScrollHints(){
-  document.querySelectorAll('.table-wrap').forEach(wrap => {
-    const _check = () => {
-      // scrollLeft + clientWidth >= scrollWidth → scrolled to end (±2px tolerance)
-      const atEnd = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 2;
-      wrap.classList.toggle('scroll-end', atEnd);
-    };
-    wrap.addEventListener('scroll', _check, {passive:true});
-    // Also re-check on resize (e.g. sidebar collapse, window resize)
-    new ResizeObserver(_check).observe(wrap);
-    _check(); // initial check
-  });
-}
-document.addEventListener('DOMContentLoaded', _initScrollHints);
 
 function renderPager(){
   const total = Math.ceil(filtered.length / perPage);
