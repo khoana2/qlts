@@ -266,7 +266,31 @@ body{
   border:1px solid var(--border);border-radius:var(--radius);
   box-shadow:var(--shadow);overflow:hidden;
 }
-.table-wrap{width:100%;overflow:auto;max-height:calc(100vh - 300px);}
+/* ── Table wrap: overflow container + right-edge scroll hint ── */
+.table-wrap{
+  width:100%;overflow:auto;max-height:calc(100vh - 300px);
+  position:relative;
+}
+/* Pseudo-element fade gradient — shown by default, hidden when scrolled to end */
+.table-wrap::after{
+  content:'';
+  pointer-events:none;
+  position:sticky;
+  right:0;top:0;
+  display:block;
+  width:48px;
+  /* pulled up to overlap last row using negative margin */
+  margin-top:-9999px;
+  height:9999px;
+  background:linear-gradient(to right, transparent, rgba(241,245,249,.82));
+  transition:opacity .25s;
+  opacity:1;
+  z-index:5;
+  float:right;
+}
+.table-wrap.scroll-end::after{
+  opacity:0;
+}
 table{width:100%;border-collapse:separate;border-spacing:0;min-width:1300px;}
 thead th{
   position:sticky;top:0;z-index:10;
@@ -284,13 +308,20 @@ tbody td{
   padding:10px 10px;font-size:12.5px;color:#1E293B;
   white-space:nowrap;vertical-align:middle;
 }
+/* ── Zebra striping: even rows get a very subtle tint ── */
+tbody tr:nth-child(even) td{background:#F8FAFC;}
+/* Hover always wins over zebra */
 tbody tr:hover td{background:#EFF6FF;}
 tbody tr.selected td{background:#DBEAFE!important;border-bottom-color:#BFDBFE;}
-/* ROW HIGHLIGHT BY STATUS */
+/* ROW HIGHLIGHT BY STATUS — these take priority over zebra */
 tbody tr.row-kho td{border-left:3px solid #F59E0B;background:#FFFBEB;}
 tbody tr.row-hong td{border-left:3px solid #EF4444;background:#FEF2F2;}
 tbody tr.row-sua td{border-left:3px solid #F97316;background:#FFF7ED;}
 tbody tr.row-thanh-ly td{opacity:.5;}
+/* Zebra override: even status rows get a slightly deeper tint to keep stripe visible */
+tbody tr.row-kho:nth-child(even) td{background:#FEF3C7;}
+tbody tr.row-hong:nth-child(even) td{background:#FEE2E2;}
+tbody tr.row-sua:nth-child(even) td{background:#FFEDD5;}
 /* COLUMN VISIBILITY */
 #assets-table th[data-col],#assets-table td[data-col]{}
 #assets-table.hide-model th[data-col="model"],#assets-table.hide-model td[data-col="model"]{display:none;}
@@ -4625,6 +4656,22 @@ function initColVisibility(){
   });
 }
 document.addEventListener('DOMContentLoaded', initColVisibility);
+
+/* ── Scroll-end detection for table right-edge shadow ── */
+function _initScrollHints(){
+  document.querySelectorAll('.table-wrap').forEach(wrap => {
+    const _check = () => {
+      // scrollLeft + clientWidth >= scrollWidth → scrolled to end (±2px tolerance)
+      const atEnd = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 2;
+      wrap.classList.toggle('scroll-end', atEnd);
+    };
+    wrap.addEventListener('scroll', _check, {passive:true});
+    // Also re-check on resize (e.g. sidebar collapse, window resize)
+    new ResizeObserver(_check).observe(wrap);
+    _check(); // initial check
+  });
+}
+document.addEventListener('DOMContentLoaded', _initScrollHints);
 
 function renderPager(){
   const total = Math.ceil(filtered.length / perPage);
