@@ -608,72 +608,6 @@ input[type=checkbox].row-cb{
 .action-btn.xfer-co{color:#7C3AED;font-size:13px;}
 .action-btn.xfer-co:hover{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.3);color:#7C3AED;}
 .action-btn.attach:hover{background:#FFF7ED;border-color:#FED7AA;color:#EA580C;}
-
-.smart-action-wrap{position:relative;display:inline-flex;}
-.smart-trigger{
-  width:34px;height:34px;padding:0;border:1px solid #FDE68A;border-radius:12px;
-  background:#FFFBEB;color:#D97706;
-  display:inline-flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 12px rgba(245,158,11,.10);
-}
-.smart-trigger:hover{
-  transform:translateY(-1px);
-  background:#FEF3C7;border-color:#FCD34D;color:#B45309;
-  box-shadow:0 8px 18px rgba(245,158,11,.16);
-}
-.smart-trigger i.ph{font-size:14px;}
-.smart-trigger.has-alert{box-shadow:0 0 0 3px rgba(251,191,36,.16),0 8px 18px rgba(245,158,11,.14);}
-.smart-badge-dot{
-  position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:999px;
-  background:#F59E0B;border:2px solid #fff;
-}
-.smart-menu{
-  position:absolute;right:0;top:42px;z-index:40;width:408px;display:none;
-  background:#fff;border:1px solid #E2E8F0;border-radius:18px;overflow:hidden;
-  box-shadow:0 20px 40px rgba(15,23,42,.16),0 8px 18px rgba(15,23,42,.08);
-}
-.smart-menu.open{display:block;animation:smartMenuIn .18s ease;}
-@keyframes smartMenuIn{from{opacity:0;transform:translateY(6px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
-.smart-menu-head{padding:16px;background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-bottom:1px solid #FDE68A;}
-.smart-menu-eyebrow{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#D97706;}
-.smart-menu-title{margin-top:8px;font-size:24px;font-weight:800;color:#0F172A;display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.smart-menu-desc{margin-top:8px;font-size:13px;line-height:1.6;color:#475569;}
-.smart-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:10px;font-weight:800;border:1px solid transparent;}
-.smart-chip.warn{background:#FFF7ED;color:#C2410C;border-color:#FED7AA;}
-.smart-chip.ok{background:#ECFDF5;color:#059669;border-color:#A7F3D0;}
-.smart-chip.info{background:#EFF6FF;color:#2563EB;border-color:#BFDBFE;}
-.smart-menu-section{padding:14px 14px 10px;}
-.smart-menu-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94A3B8;padding:0 2px 10px;}
-.smart-menu-item{
-  width:100%;display:flex;align-items:flex-start;gap:12px;text-align:left;cursor:pointer;
-  border:1px solid #E2E8F0;background:#fff;border-radius:16px;padding:12px;transition:all .15s;color:#0F172A;
-  margin-bottom:8px;
-}
-.smart-menu-item:hover{background:#FFFBEB;border-color:#FDE68A;}
-.smart-menu-item .mi-icon{
-  width:32px;height:32px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-  background:#FFFBEB;color:#D97706;flex-shrink:0;font-size:15px;
-}
-.smart-menu-item .mi-body{flex:1;min-width:0;}
-.smart-menu-item .mi-title{font-size:14px;font-weight:700;color:#0F172A;}
-.smart-menu-item .mi-sub{font-size:12px;line-height:1.5;color:#64748B;margin-top:2px;}
-.smart-quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px;}
-.smart-quick-btn{
-  border:none;border-radius:14px;background:#F8FAFC;color:#334155;padding:12px 12px;
-  font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;
-}
-.smart-quick-btn:hover{background:#E2E8F0;}
-.smart-quick-btn.danger{background:#FEF2F2;color:#DC2626;}
-.smart-quick-btn.danger:hover{background:#FEE2E2;}
-.smart-priority{
-  margin:0 14px 12px;padding:12px 14px;border-radius:16px;
-  background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;
-  font-size:13px;line-height:1.55;
-}
-.smart-priority strong{display:block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;}
-@media (max-width: 980px){
-  .smart-menu{width:340px;right:auto;left:0;}
-}
 /* ── Attachment Modal ── */
 .attach-item{
   display:flex;align-items:center;gap:10px;
@@ -1346,7 +1280,7 @@ input[type=checkbox].row-cb{
               <th data-col="ssd">SSD</th>
               <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
-              <th style="width:126px;">Hành động</th>
+              <th style="width:112px;">Hành động</th>
             </tr>
           </thead>
           <tbody id="assets-tbody"></tbody>
@@ -4508,109 +4442,6 @@ function sortBy(col){
   applyFilters();
 }
 
-
-function smartMeta(a){
-  const issues = [];
-  const status = (a.tinhTrang||'').toLowerCase();
-  const d = calcDepreciation(a);
-  if(status.includes('hỏng') || status.includes('sửa')) issues.push('Cần xử lý kỹ thuật');
-  if(!a.serial) issues.push('Thiếu serial');
-  if(!a.nguoiDung && !['lưu kho','trong kho'].includes(status)) issues.push('Chưa gán người dùng');
-  if(d && !d.fullyDepreciated && d.years >= 3) issues.push('Đã dùng lâu năm');
-
-  let tone = 'info', badge = 'Ổn định';
-  if(issues.length >= 2){ tone = 'warn'; badge = 'Có rủi ro'; }
-  else if(issues.length === 1){ tone = 'info'; badge = 'Cần chú ý'; }
-  else if(status.includes('dùng')){ tone = 'ok'; badge = 'Ổn định'; }
-
-  const quickSummary = issues.length
-    ? issues.slice(0,2).join(' · ')
-    : (a.nguoiDung ? `Đang dùng bởi ${a.nguoiDung}` : 'Sẵn sàng thao tác nhanh');
-
-  return {issues, tone, badge, summary:quickSummary};
-}
-
-function buildSmartMenu(a){
-  const meta = smartMeta(a);
-  const suggestions = [];
-  const tinhTrang = (a.tinhTrang || '').toLowerCase();
-
-  if(tinhTrang.includes('sửa') || tinhTrang.includes('hỏng')){
-    suggestions.push(['ph ph-wrench','Tạo phiếu sửa chữa','Mở ngay luồng xử lý bảo trì và ghi nhận nguyên nhân lỗi.', `openTransfer('${a.id}')`]);
-  }
-  if(!a.serial || !a.model){
-    suggestions.push(['ph ph-warning-circle','Rà soát hồ sơ','Kiểm tra serial, model và file đính kèm trước khi bàn giao.', `openEdit('${a.id}')`]);
-  }
-  if(!a.nguoiDung && !['Lưu Kho','Trong kho'].includes(a.tinhTrang||'')){
-    suggestions.push(['ph ph-user-plus','Gán người sử dụng','Thiết bị chưa có người nhận, nên cập nhật trước khi tiếp tục thao tác.', `openEdit('${a.id}')`]);
-  }
-  const d = calcDepreciation(a);
-  if(d && !d.fullyDepreciated && d.years >= 3){
-    suggestions.push(['ph ph-arrows-clockwise','Đánh dấu kiểm kê','Thiết bị đã sử dụng lâu, nên rà soát hoặc lên kế hoạch thay mới.', `openEdit('${a.id}')`]);
-  }
-  if(!suggestions.length){
-    suggestions.push(['ph ph-paperclip','Đính kèm hồ sơ','Mở khu vực tệp để bổ sung biên bản, hóa đơn hoặc chứng từ.', `openAttachments('${a.id}')`]);
-    suggestions.push(['ph ph-buildings','Chuyển công ty','Thực hiện điều chuyển tài sản nếu cần cập nhật đơn vị quản lý.', `openXferCompany('${a.id}')`]);
-  }
-
-  const priorityText = suggestions[0]
-    ? suggestions[0][1] + ' — ' + suggestions[0][2]
-    : 'Chưa có gợi ý ưu tiên. Bạn có thể dùng các hành động nhanh bên dưới.';
-
-  return `
-    <div class="smart-menu-head">
-      <div class="smart-menu-eyebrow"><i class="ph ph-sparkle"></i> Smart Actions</div>
-      <div class="smart-menu-title">
-        <span>Trợ lý thao tác</span>
-        <span class="smart-chip ${meta.tone}">${meta.badge}</span>
-      </div>
-      <div class="smart-menu-desc">Chỉ tập trung vào các thao tác còn lại cho tài sản này. Phần xem chi tiết đã tách riêng ở nút mắt.</div>
-    </div>
-    <div class="smart-priority">
-      <strong>Ưu tiên</strong>
-      ${esc(priorityText)}
-    </div>
-    <div class="smart-menu-section">
-      <div class="smart-menu-label">Gợi ý hành động</div>
-      ${suggestions.slice(0,3).map(([icon, t, sub, action]) => `
-        <button class="smart-menu-item" onclick="closeSmartMenus(); ${action}">
-          <span class="mi-icon"><i class="${icon}"></i></span>
-          <span class="mi-body">
-            <span class="mi-title">${esc(t)}</span>
-            <span class="mi-sub">${esc(sub)}</span>
-          </span>
-        </button>`).join('')}
-    </div>
-    <div class="smart-menu-label" style="padding:0 16px 10px;">Hành động</div>
-    <div class="smart-quick-grid">
-      <button class="smart-quick-btn" onclick="closeSmartMenus(); openTransfer('${a.id}')">Bàn giao</button>
-      <button class="smart-quick-btn" onclick="closeSmartMenus(); openAttachments('${a.id}')">Đính kèm</button>
-      ${(_userRole==='global_admin'||_userRole==='admin') ? `<button class="smart-quick-btn" onclick="closeSmartMenus(); openXferCompany('${a.id}')">Chuyển công ty</button>` : `<button class="smart-quick-btn" onclick="closeSmartMenus(); openEdit('${a.id}')">Cập nhật hồ sơ</button>`}
-      <button class="smart-quick-btn" onclick="closeSmartMenus(); openEdit('${a.id}')">Đánh dấu bảo trì</button>
-      <button class="smart-quick-btn" onclick="closeSmartMenus(); openEdit('${a.id}')">Thu hồi tài sản</button>
-      <button class="smart-quick-btn danger" onclick="closeSmartMenus(); openDelete('${a.id}')">Xóa tài sản</button>
-    </div>`;
-}
-
-function closeSmartMenus(){
-  document.querySelectorAll('.smart-menu.open').forEach(el => el.classList.remove('open'));
-}
-
-function toggleSmartActions(ev, id){
-  ev.stopPropagation();
-  const wrap = ev.currentTarget.closest('.smart-action-wrap');
-  if(!wrap) return;
-  const menu = wrap.querySelector('.smart-menu');
-  if(!menu) return;
-  const wasOpen = menu.classList.contains('open');
-  closeSmartMenus();
-  if(!wasOpen) menu.classList.add('open');
-}
-
-document.addEventListener('click', (ev) => {
-  if(!ev.target.closest('.smart-action-wrap')) closeSmartMenus();
-});
-
 function renderTable(){
   const tbody = document.getElementById('assets-tbody');
   const start = (currentPage-1)*perPage;
@@ -4663,10 +4494,10 @@ function renderTable(){
           <div class="row-actions">
             <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')"><i class="ph ph-eye"></i></button>
             <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')"><i class="ph ph-pencil-simple"></i></button>
-            <div class="smart-action-wrap">
-              <button class="action-btn smart-trigger ${smartMeta(a).issues.length ? 'has-alert' : ''}" title="Trợ lý tài sản" onclick="toggleSmartActions(event, '${a.id}')"><i class="ph ph-sparkle"></i>${smartMeta(a).issues.length ? '<span class="smart-badge-dot"></span>' : ''}</button>
-              <div class="smart-menu">${buildSmartMenu(a)}</div>
-            </div>
+            <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i></button>
+            <button class="action-btn attach" title="Hồ sơ & Đính kèm" onclick="openAttachments('${a.id}')"><i class="ph ph-paperclip"></i></button>
+            ${(_userRole==='global_admin'||_userRole==='admin')?`<button class="action-btn xfer-co" title="Chuyển sang công ty khác" onclick="openXferCompany('${a.id}')"><i class="ph ph-buildings"></i></button>`:''}
+            <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')"><i class="ph ph-trash"></i></button>
           </div>
         </td>
       </tr>`;
