@@ -299,6 +299,33 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 #assets-table.hide-cpu th[data-col="cpu"],#assets-table.hide-cpu td[data-col="cpu"]{display:none;}
 #assets-table.hide-ram th[data-col="ram"],#assets-table.hide-ram td[data-col="ram"]{display:none;}
 #assets-table.hide-ssd th[data-col="ssd"],#assets-table.hide-ssd td[data-col="ssd"]{display:none;}
+#assets-table.hide-depreciation th[data-col="depreciation"],#assets-table.hide-depreciation td[data-col="depreciation"]{display:none;}
+
+/* ── Sticky first columns (Mã TS + Tên TS) ── */
+#assets-table .cb-col,
+#assets-table .sc-num,
+#assets-table .sc-ma,
+#assets-table .sc-ten{position:sticky;z-index:2;background:#fff;}
+#assets-table .cb-col{left:0;}
+#assets-table .sc-num{left:38px;}
+#assets-table .sc-ma {left:74px;}
+#assets-table .sc-ten{left:190px;box-shadow:3px 0 8px -3px rgba(0,0,0,.12);}
+/* Thead: also sticky vertically → higher z-index */
+#assets-table thead .cb-col,
+#assets-table thead .sc-num,
+#assets-table thead .sc-ma,
+#assets-table thead .sc-ten{z-index:11;background:#F8FAFC;}
+/* Status row bg overrides for sticky cells */
+#assets-table tr.row-kho .cb-col,#assets-table tr.row-kho .sc-num,
+#assets-table tr.row-kho .sc-ma,#assets-table tr.row-kho .sc-ten{background:#FFFBEB;}
+#assets-table tr.row-hong .cb-col,#assets-table tr.row-hong .sc-num,
+#assets-table tr.row-hong .sc-ma,#assets-table tr.row-hong .sc-ten{background:#FEF2F2;}
+#assets-table tr.row-sua .cb-col,#assets-table tr.row-sua .sc-num,
+#assets-table tr.row-sua .sc-ma,#assets-table tr.row-sua .sc-ten{background:#FFF7ED;}
+#assets-table tr:hover .cb-col,#assets-table tr:hover .sc-num,
+#assets-table tr:hover .sc-ma,#assets-table tr:hover .sc-ten{background:#EFF6FF;}
+#assets-table tr.selected .cb-col,#assets-table tr.selected .sc-num,
+#assets-table tr.selected .sc-ma,#assets-table tr.selected .sc-ten{background:#DBEAFE;}
 /* COL TOGGLE DROPDOWN */
 .col-toggle-wrap{position:relative;display:inline-block;}
 .col-toggle-menu{
@@ -1211,6 +1238,7 @@ input[type=checkbox].row-cb{
             <label><input type="checkbox" checked onchange="toggleCol('cpu',this.checked)"> CPU</label>
             <label><input type="checkbox" checked onchange="toggleCol('ram',this.checked)"> RAM</label>
             <label><input type="checkbox" checked onchange="toggleCol('ssd',this.checked)"> SSD</label>
+            <label><input type="checkbox" onchange="toggleCol('depreciation',this.checked)"> <i class="ph ph-chart-line-down" style="font-size:12px;color:var(--muted);"></i> Khấu hao</label>
           </div>
         </div>
       </div>
@@ -1219,9 +1247,9 @@ input[type=checkbox].row-cb{
           <thead>
             <tr>
               <th class="cb-col"><input type="checkbox" class="row-cb" id="cb-all" title="Chọn tất cả" onchange="toggleSelectAll(this.checked)"/></th>
-              <th style="width:36px;">#</th>
-              <th class="sortable" onclick="sortBy('maTaiSan')">Mã TS <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="sortBy('tenTaiSan')">Loại <span class="sort-icon">↕</span></th>
+              <th class="sc-num" style="width:36px;">#</th>
+              <th class="sortable sc-ma" onclick="sortBy('maTaiSan')">Mã TS <span class="sort-icon">↕</span></th>
+              <th class="sortable sc-ten" onclick="sortBy('tenTaiSan')">Loại <span class="sort-icon">↕</span></th>
               <th data-col="model" class="sortable" onclick="sortBy('model')">Model <span class="sort-icon">↕</span></th>
               <th data-col="serial">Serial</th>
               <th class="sortable" onclick="sortBy('nguoiDung')">Người dùng <span class="sort-icon">↕</span></th>
@@ -1229,6 +1257,7 @@ input[type=checkbox].row-cb{
               <th data-col="cpu">CPU</th>
               <th data-col="ram">RAM</th>
               <th data-col="ssd">SSD</th>
+              <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
               <th style="width:90px;">Hành động</th>
             </tr>
@@ -3194,6 +3223,13 @@ const COMPANIES = [
   'TTG','MAB','R02','LCB','MKLT','MKTG','LM','LHB','195DBP','Senspa'
 ];
 
+// ─── Khấu hao tài sản: số năm sử dụng theo loại ──────────────────────────────
+const DEPRECIATION_YEARS = {
+  'Laptop':3, 'PC Desktop':5, 'Smartphone':2, 'Tablet':3, 'IPAD':3,
+  'Màn hình':5, 'Bàn phím':3, 'Chuột':3, 'Tai nghe':2,
+  'Dock Station':3, 'Phụ kiện khác':3, '_default':3,
+};
+
 const DEPTS = [
   'Công Nghệ Thông Tin','Ngân Quỹ','Kế Toán','Marketing',
   'Hành Chính Quản Trị','Pháp Lý','Quản Lý Thiết Kế','Kiểm Soát Nội Bộ',
@@ -4330,6 +4366,13 @@ function applyFilters(keepPage = false){
 
   if(sortCol){
     filtered.sort((a,b)=>{
+      // Special numeric sort for depreciation column
+      if(sortCol === '_deprRemaining'){
+        const da = calcDepreciation(a); const db = calcDepreciation(b);
+        const av = da ? da.remaining : -1;
+        const bv = db ? db.remaining : -1;
+        return (av - bv) * sortDir;
+      }
       const av = (a[sortCol]||'').toLowerCase();
       const bv = (b[sortCol]||'').toLowerCase();
       return av < bv ? -sortDir : av > bv ? sortDir : 0;
@@ -4388,9 +4431,9 @@ function renderTable(){
       return `
       <tr class="${rowClass}" data-id="${a.id}">
         <td class="cb-col"><input type="checkbox" class="row-cb" ${isSel?'checked':''} onchange="toggleSelectRow('${a.id}',this.checked)"/></td>
-        <td class="tbl-num">${start+i+1}</td>
-        <td><code style="font-size:11px;color:var(--accent2);">${esc(a.maTaiSan||'—')}</code></td>
-        <td><span class="type-badge">${esc(a.tenTaiSan||'—')}</span></td>
+        <td class="tbl-num sc-num">${start+i+1}</td>
+        <td class="sc-ma"><code style="font-size:11px;color:var(--accent2);">${esc(a.maTaiSan||'—')}</code></td>
+        <td class="sc-ten"><span class="type-badge">${esc(a.tenTaiSan||'—')}</span></td>
         <td data-col="model">${esc(a.model||'—')}</td>
         <td data-col="serial"><code style="font-size:11px;">${esc(a.serial||'—')}</code></td>
         <td>
@@ -4401,6 +4444,13 @@ function renderTable(){
         <td data-col="cpu" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted);">${esc(a.cpu||'—')}</td>
         <td data-col="ram">${esc(a.ram||'—')}</td>
         <td data-col="ssd">${esc(a.ssd||'—')}</td>
+        <td data-col="depreciation" style="text-align:right;">${(()=>{
+          const d = calcDepreciation(a);
+          if(!d) return '<span style="color:var(--muted);font-size:11px;">—</span>';
+          if(d.fullyDepreciated) return '<span style="font-size:11px;color:var(--muted);">Đã KH</span>';
+          return `<span style="font-weight:600;color:#059669;font-size:11.5px;">${d.remaining.toLocaleString('vi-VN')}₫</span>`
+            + `<br><span style="font-size:10px;color:var(--muted);">${d.pct}% · ${d.years}năm</span>`;
+        })()}</td>
         <td>
           ${statusPill(a.tinhTrang)}
           ${warrantyBadge(a)}
@@ -4426,6 +4476,8 @@ function renderTable(){
 
   // Sync header checkbox (checked / indeterminate)
   _syncSelectAllCb();
+  // Re-compute sticky column left offsets from actual rendered widths
+  requestAnimationFrame(_setStickyOffsets);
 }
 
 // ═══════════════════════ BULK SELECT & ACTIONS ═══════════════════════
@@ -4598,7 +4650,7 @@ applyFilters = function(keepPage=false){
 
 // ─── COLUMN TOGGLE ────────────────────────────────────────────────────────────
 const COL_STORAGE_KEY = 'qlts_hidden_cols';
-let hiddenCols = JSON.parse(localStorage.getItem(COL_STORAGE_KEY)||'[]');
+let hiddenCols = JSON.parse(localStorage.getItem(COL_STORAGE_KEY)||'["depreciation"]');
 
 function toggleColMenu(){
   document.getElementById('col-toggle-menu').classList.toggle('open');
@@ -4626,6 +4678,42 @@ function initColVisibility(){
 }
 document.addEventListener('DOMContentLoaded', initColVisibility);
 
+// ─── Tính khấu hao đường thẳng ───────────────────────────────────────────────
+function calcDepreciation(asset){
+  const orig = parseFloat(asset.giaTri);
+  if(!orig || !asset.ngayMua) return null;
+  const years    = DEPRECIATION_YEARS[asset.tenTaiSan] ?? DEPRECIATION_YEARS._default;
+  const lifeDays = years * 365;
+  const elapsed  = Math.round((Date.now() - new Date(asset.ngayMua)) / 86400000);
+  const ratio    = Math.max(0, 1 - elapsed / lifeDays);
+  return {
+    orig,
+    remaining:         Math.round(orig * ratio),
+    ratio,
+    pct:               Math.round(ratio * 100),
+    years,
+    fullyDepreciated:  ratio === 0,
+  };
+}
+
+// ─── Sticky columns: tính left theo chiều rộng thực tế sau render ────────────
+function _setStickyOffsets(){
+  const thead = document.querySelector('#assets-table thead tr');
+  if(!thead) return;
+  const ths = thead.querySelectorAll('th');
+  // col index: 0=cb-col, 1=sc-num, 2=sc-ma, 3=sc-ten
+  let left = 0;
+  [0,1,2,3].forEach(i => {
+    const th = ths[i];
+    if(!th) return;
+    const w = th.getBoundingClientRect().width;
+    // apply to all cells in this column (both thead and tbody)
+    const cls = ['cb-col','sc-num','sc-ma','sc-ten'][i];
+    document.querySelectorAll(`#assets-table .${cls}`)
+      .forEach(el => { el.style.left = left + 'px'; });
+    left += w;
+  });
+}
 
 function renderPager(){
   const total = Math.ceil(filtered.length / perPage);
@@ -5128,7 +5216,19 @@ function viewDetail(id){
       ${a.nguonThietBi ? dc('Nguồn thiết bị', `<span style="background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:600;">${esc(a.nguonThietBi)}</span>`) : ''}
       ${a.congTyNguon  ? dc('Công ty nguồn', esc(a.congTyNguon)) : ''}
       ${a.soHoaDon     ? dc('Số hóa đơn / PO', `<code style="color:var(--accent2)">${esc(a.soHoaDon)}</code>`) : ''}
-      ${(a.giaTri !== '' && a.giaTri !== undefined && a.giaTri !== null) ? dc('Giá trị', `<span style="font-weight:700;color:#059669;">${Number(a.giaTri).toLocaleString('vi-VN')} ₫</span>`) : ''}
+      ${(a.giaTri !== '' && a.giaTri !== undefined && a.giaTri !== null) ? dc('Giá trị gốc', `<span style="font-weight:700;color:#059669;">${Number(a.giaTri).toLocaleString('vi-VN')} ₫</span>`) : ''}
+      ${(()=>{
+        const d = calcDepreciation(a);
+        if(!d) return '';
+        const bar = `<div style="height:5px;border-radius:3px;background:#E2E8F0;margin-top:5px;overflow:hidden;">
+          <div style="height:100%;width:${d.pct}%;background:${d.pct>50?'#10B981':d.pct>20?'#F59E0B':'#EF4444'};border-radius:3px;transition:width .4s;"></div>
+        </div>`;
+        const label = d.fullyDepreciated
+          ? `<span style="color:var(--muted);">Đã khấu hao hết (${d.years} năm)</span>`
+          : `<span style="font-weight:700;color:#059669;">${d.remaining.toLocaleString('vi-VN')} ₫</span>
+             <span style="font-size:11px;color:var(--muted);margin-left:6px;">(còn ${d.pct}% — ${d.years} năm KH)</span>`;
+        return dc('Giá trị còn lại', label + bar);
+      })()}
     </div>
     ${specs?`<div class="detail-specs">${specs}</div>`:''}
     <div class="detail-grid" style="margin-top:10px;">
