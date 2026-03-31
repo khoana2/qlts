@@ -663,6 +663,48 @@ input[type=checkbox].row-cb{
   font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto;flex-shrink:0;
   background:linear-gradient(135deg,#818CF8,#A78BFA);color:#fff;font-weight:600;
 }
+/* ══════════════ AI HEALTH CHECK MODAL ══════════════ */
+.ai-modal-body{padding:20px 18px;}
+.ai-asset-pill{
+  display:inline-flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #C7D2FE;border-radius:20px;
+  padding:5px 12px;font-size:12px;margin-bottom:14px;
+}
+.ai-loading{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  padding:32px 0;color:var(--muted);font-size:13px;
+}
+.ai-spinner{
+  width:32px;height:32px;border:3px solid #E0E7FF;
+  border-top-color:#818CF8;border-radius:50%;
+  animation:aiSpin .8s linear infinite;
+}
+@keyframes aiSpin{to{transform:rotate(360deg);}}
+.ai-result{font-size:13.5px;line-height:1.7;color:var(--text);}
+.ai-result-box{
+  background:#FAFAFA;border:1px solid var(--border);
+  border-radius:10px;padding:14px 16px;margin-top:4px;
+}
+.ai-verdict{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:12px;
+}
+.ai-verdict.good {background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;}
+.ai-verdict.warn {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A;}
+.ai-verdict.bad  {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;}
+.ai-footer{
+  display:flex;align-items:center;gap:6px;
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--border);
+  font-size:11px;color:var(--muted);
+}
+/* API key setup */
+.ai-setup{text-align:center;padding:24px 16px;}
+.ai-setup input{
+  width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+  font-size:13px;margin:10px 0;outline:none;
+}
+.ai-setup input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
 
 /* ── Attachment Modal ── */
 .attach-item{
@@ -1924,6 +1966,21 @@ input[type=checkbox].row-cb{
 
 <!-- ═══ PRINT AREA (hidden, only shown on print) ═══ -->
 <div id="print-area"></div>
+
+<!-- ══════════════ AI HEALTH CHECK MODAL ══════════════ -->
+<div class="modal-backdrop" id="modal-ai" onclick="if(event.target===this)closeModal('modal-ai')">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-head">
+      <h2>✨ Smart Assistant</h2>
+      <button class="modal-close" onclick="closeModal('modal-ai')"><i class="ph ph-x"></i></button>
+    </div>
+    <div class="ai-modal-body" id="ai-modal-body"><!-- populated by JS --></div>
+    <div class="modal-foot" id="ai-modal-foot" style="display:none;">
+      <button class="btn" onclick="closeModal('modal-ai')">Đóng</button>
+      <button class="btn" style="color:var(--muted);font-size:12px;" onclick="aiClearKey()"><i class="ph ph-key"></i> Đổi API Key</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════ SMART ACTION POPOVER ══════════════ -->
 <div id="smart-action-menu" role="menu" aria-label="Smart Action"></div>
@@ -5409,6 +5466,161 @@ async function spDeleteAttach(spId, filename){
 }
 // ════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════ GEMINI AI ═══════════════════════
+const GEMINI_KEY_STORAGE = 'qlts_gemini_key';
+const GEMINI_MODEL       = 'gemini-1.5-flash';
+
+function geminiGetKey(){ return localStorage.getItem(GEMINI_KEY_STORAGE)||''; }
+function geminiSaveKey(k){ localStorage.setItem(GEMINI_KEY_STORAGE, k.trim()); }
+function aiClearKey(){
+  localStorage.removeItem(GEMINI_KEY_STORAGE);
+  closeModal('modal-ai');
+  toast('🔑 Đã xóa API key','ok');
+}
+
+async function geminiAsk(prompt){
+  const key = geminiGetKey();
+  if(!key) throw new Error('NO_KEY');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
+  const res = await fetch(url,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      contents:[{parts:[{text: prompt}]}],
+      generationConfig:{temperature:0.7, maxOutputTokens:600}
+    })
+  });
+  if(!res.ok){
+    const e = await res.json().catch(()=>({}));
+    throw new Error(e.error?.message || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '(Không có phản hồi)';
+}
+
+async function geminiHealthCheck(assetId){
+  closeSmartAction();
+  const a = assets.find(x=>x.id===assetId);
+  if(!a) return;
+
+  const body = document.getElementById('ai-modal-body');
+  const foot = document.getElementById('ai-modal-foot');
+  foot.style.display = 'none';
+
+  // Kiểm tra API key
+  if(!geminiGetKey()){
+    body.innerHTML = `
+      <div class="ai-setup">
+        <div style="font-size:28px;margin-bottom:8px;">🔑</div>
+        <p style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Nhập Gemini API Key</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+          Lấy miễn phí tại <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com</a>
+        </p>
+        <input id="ai-key-input" type="password" placeholder="AIza..." autocomplete="off"/>
+        <button class="btn primary" style="width:100%;" onclick="aiSaveKeyAndRun('${assetId}')">
+          <i class="ph ph-sparkle"></i> Lưu & Chạy phân tích
+        </button>
+      </div>`;
+    foot.style.display = 'none';
+    openModal('modal-ai');
+    setTimeout(()=>document.getElementById('ai-key-input')?.focus(),200);
+    return;
+  }
+
+  // Hiện loading
+  body.innerHTML = `
+    <div class="ai-loading">
+      <div class="ai-spinner"></div>
+      <span>✨ Đang phân tích tài sản…</span>
+      <span style="font-size:11px;opacity:.6;">Powered by Gemini ${GEMINI_MODEL}</span>
+    </div>`;
+  openModal('modal-ai');
+
+  // Build prompt
+  const depr  = calcDepreciation(a);
+  const deprInfo = depr
+    ? `Khấu hao: còn ${depr.pct}% giá trị (${depr.remaining.toLocaleString('vi-VN')} ₫ / ${depr.orig.toLocaleString('vi-VN')} ₫ gốc), thời hạn ${depr.years} năm${depr.fullyDepreciated?' — ĐÃ KHẤU HAO HẾT':''}.`
+    : 'Khấu hao: không có dữ liệu.';
+
+  const prompt = `Bạn là AI assistant cho hệ thống quản lý tài sản CNTT của công ty Việt Nam.
+Hãy phân tích tài sản dưới đây và trả lời NGẮN GỌN bằng tiếng Việt theo đúng format JSON sau:
+
+{
+  "verdict": "good|warn|bad",
+  "verdict_label": "Tốt|Cần chú ý|Cần xử lý",
+  "summary": "1-2 câu đánh giá tổng quan",
+  "recommendation": "Khuyến nghị cụ thể (1 câu)",
+  "reason": "Lý do ngắn gọn (1-2 câu)"
+}
+
+THÔNG TIN TÀI SẢN:
+- Loại: ${a.tenTaiSan||'—'} | Model: ${a.model||'—'}
+- Mã TS: ${a.maTaiSan||'—'}
+- Ngày mua: ${a.ngayMua||'Không rõ'}
+- Giá trị gốc: ${a.giaTri ? Number(a.giaTri).toLocaleString('vi-VN')+' ₫' : 'Không rõ'}
+- Tình trạng: ${a.tinhTrang||'—'}
+- Người sử dụng: ${a.nguoiDung||'Chưa cấp phát'}
+- Bộ phận: ${a.boPhan||'—'}
+- ${deprInfo}
+- Ghi chú: ${a.ghiChu||'Không có'}
+
+Chỉ trả về JSON, không thêm markdown hay giải thích ngoài JSON.`;
+
+  try{
+    const raw  = await geminiAsk(prompt);
+    // Parse JSON từ response
+    const json = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const vcls = json.verdict || 'warn';
+
+    body.innerHTML = `
+      <div class="ai-asset-pill">
+        <i class="ph ph-laptop" style="font-size:13px;color:#818CF8;"></i>
+        <strong>${esc(a.tenTaiSan||'Tài sản')}</strong>
+        <span style="color:var(--muted);">${esc(a.maTaiSan||'')}</span>
+      </div>
+      <span class="ai-verdict ${vcls}">
+        ${ vcls==='good'?'✅':vcls==='warn'?'⚠️':'🔴' } ${esc(json.verdict_label||vcls)}
+      </span>
+      <div class="ai-result-box">
+        <div class="ai-result">${esc(json.summary||'')}</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Khuyến nghị</div>
+          <div class="ai-result" style="font-weight:600;">${esc(json.recommendation||'')}</div>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Lý do</div>
+          <div class="ai-result" style="color:var(--muted);">${esc(json.reason||'')}</div>
+        </div>
+      </div>
+      <div class="ai-footer">
+        <i class="ph ph-sparkle" style="font-size:13px;color:#818CF8;"></i>
+        Powered by Google Gemini · ${GEMINI_MODEL}
+      </div>`;
+    foot.style.display = 'flex';
+  }catch(e){
+    const isKey = e.message?.includes('API_KEY') || e.message?.includes('key') || e.message?.includes('403');
+    body.innerHTML = `
+      <div style="text-align:center;padding:24px 0;">
+        <i class="ph ph-warning-circle" style="font-size:28px;color:var(--red);"></i>
+        <p style="font-size:13px;color:var(--red);margin-top:10px;font-weight:600;">
+          ${isKey ? '❌ API Key không hợp lệ' : '❌ Lỗi kết nối Gemini'}
+        </p>
+        <p style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(e.message)}</p>
+        ${isKey ? `<button class="btn" style="margin-top:12px;" onclick="aiClearKey()">🔑 Nhập lại API Key</button>` : ''}
+      </div>`;
+    foot.style.display = 'flex';
+  }
+}
+
+function aiSaveKeyAndRun(assetId){
+  const val = document.getElementById('ai-key-input')?.value?.trim();
+  if(!val){ toast('⚠️ Vui lòng nhập API key','warn'); return; }
+  geminiSaveKey(val);
+  closeModal('modal-ai');
+  setTimeout(()=>geminiHealthCheck(assetId), 150);
+}
+// ════════════════════════════════════════════════════════
+
 // ═══════════════════════ SMART ACTION ═══════════════════════
 let _saCurrentId = null;
 
@@ -5443,11 +5655,12 @@ function openSmartAction(assetId, triggerEl){
     <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash"></i> Xóa tài sản</button>
 
     <div class="sa-divider"></div>
-    <div class="sa-section">AI</div>
-    <div class="sa-item ai-item">
-      <i class="ph ph-sparkle"></i> Smart Assistant
-      <span class="sa-ai-badge">Soon</span>
-    </div>`;
+    <div class="sa-section">✨ AI</div>
+    <button class="sa-item" onclick="saAct('ai-health')" style="background:linear-gradient(135deg,rgba(129,140,248,.08),rgba(167,139,250,.08));">
+      <i class="ph ph-sparkle" style="color:#818CF8;"></i>
+      <span>Asset Health Check</span>
+      <span class="sa-ai-badge">Gemini</span>
+    </button>`;
 
   // ── Vị trí popover (tránh overflow viewport) ──
   menu.classList.add('open');
@@ -5471,12 +5684,13 @@ function saAct(action){
   closeSmartAction();
   const id = _saCurrentId;
   if(!id) return;
-  if(action === 'view')     viewDetail(id);
-  if(action === 'edit')     openEdit(id);
-  if(action === 'transfer') openTransfer(id);
-  if(action === 'attach')   openAttachments(id);
-  if(action === 'xfer-co')  openXferCompany(id);
-  if(action === 'delete')   openDelete(id);
+  if(action === 'view')      viewDetail(id);
+  if(action === 'edit')      openEdit(id);
+  if(action === 'transfer')  openTransfer(id);
+  if(action === 'attach')    openAttachments(id);
+  if(action === 'xfer-co')   openXferCompany(id);
+  if(action === 'delete')    openDelete(id);
+  if(action === 'ai-health') geminiHealthCheck(id);
 }
 
 function closeSmartAction(){
