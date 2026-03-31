@@ -5468,7 +5468,7 @@ async function spDeleteAttach(spId, filename){
 
 // ═══════════════════════ GEMINI AI ═══════════════════════
 const GEMINI_KEY_STORAGE = 'qlts_gemini_key';
-const GEMINI_MODEL       = 'gemini-1.5-flash';
+const GEMINI_MODEL       = 'gemini-2.0-flash';
 
 function geminiGetKey(){ return localStorage.getItem(GEMINI_KEY_STORAGE)||''; }
 function geminiSaveKey(k){ localStorage.setItem(GEMINI_KEY_STORAGE, k.trim()); }
