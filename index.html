@@ -594,7 +594,7 @@ input[type=checkbox].row-cb{
 .empty-state .es-icon{font-size:48px;margin-bottom:12px;opacity:.4;}
 .empty-state p{font-size:14px;}
 .empty-state small{font-size:12px;opacity:.7;}
-.row-actions{display:flex;gap:6px;}
+.row-actions{display:flex;gap:6px;justify-content:center;}
 .action-btn{
   width:26px;height:26px;border-radius:7px;font-size:13px;
   border:1px solid #E2E8F0;background:#F8FAFC;
@@ -4551,7 +4551,7 @@ function renderTable(){
         </td>
         <td>
           <div class="row-actions">
-            <button class="sa-btn" title="Smart Action" onclick="openSmartAction('${a.id}',this)">
+            <button class="sa-btn" title="Smart Action" onclick="openSmartAction('${a.id}',this)" style="margin:0 auto;">
               <span style="font-size:15px;pointer-events:none;line-height:1;">✨</span>
             </button>
           </div>
