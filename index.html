@@ -284,18 +284,21 @@ tbody td{
   padding:10px 10px;font-size:12.5px;color:#1E293B;
   white-space:nowrap;vertical-align:middle;
 }
-/* Nền đặt ở <tr> để sticky cells có thể inherit — không bị bleed-through */
-tbody tr:hover{background:#EFF6FF;}
-tbody tr.selected{background:#DBEAFE!important;}
-tbody tr.selected td{border-bottom-color:#BFDBFE;}
+/* ── CSS custom property cho màu nền row ──
+   Variable cascade từ tr → td (khác background:inherit không chạy trên sticky) */
+tbody tr           {--row-bg:#FFFFFF;}
+tbody tr:hover     {--row-bg:#EFF6FF;}
+tbody tr:hover td  {background:#EFF6FF;}
+tbody tr.selected  {--row-bg:#DBEAFE;}
+tbody tr.selected td{background:#DBEAFE!important;border-bottom-color:#BFDBFE;}
 /* ROW HIGHLIGHT BY STATUS */
-tbody tr.row-kho{background:#FFFBEB;}
-tbody tr.row-kho td{border-left:3px solid #F59E0B;}
-tbody tr.row-hong{background:#FEF2F2;}
-tbody tr.row-hong td{border-left:3px solid #EF4444;}
-tbody tr.row-sua{background:#FFF7ED;}
-tbody tr.row-sua td{border-left:3px solid #F97316;}
-tbody tr.row-thanh-ly{opacity:.5;}
+tbody tr.row-kho   {--row-bg:#FFFBEB;}
+tbody tr.row-kho td{border-left:3px solid #F59E0B;background:#FFFBEB;}
+tbody tr.row-hong  {--row-bg:#FEF2F2;}
+tbody tr.row-hong td{border-left:3px solid #EF4444;background:#FEF2F2;}
+tbody tr.row-sua   {--row-bg:#FFF7ED;}
+tbody tr.row-sua td{border-left:3px solid #F97316;background:#FFF7ED;}
+tbody tr.row-thanh-ly td{opacity:.5;}
 /* COLUMN VISIBILITY */
 #assets-table th[data-col],#assets-table td[data-col]{}
 #assets-table.hide-model th[data-col="model"],#assets-table.hide-model td[data-col="model"]{display:none;}
@@ -306,23 +309,25 @@ tbody tr.row-thanh-ly{opacity:.5;}
 #assets-table.hide-ssd th[data-col="ssd"],#assets-table.hide-ssd td[data-col="ssd"]{display:none;}
 #assets-table.hide-depreciation th[data-col="depreciation"],#assets-table.hide-depreciation td[data-col="depreciation"]{display:none;}
 
-/* ── Sticky first columns (Mã TS + Tên TS) ── */
-#assets-table .cb-col,
-#assets-table .sc-num,
-#assets-table .sc-ma,
-#assets-table .sc-ten{
+/* ── Sticky first columns ──
+   background: var(--row-bg) đọc từ CSS variable định nghĩa trên <tr>
+   → tự cập nhật khi hover/selected/status mà không cần override riêng */
+#assets-table tbody .cb-col,
+#assets-table tbody .sc-num,
+#assets-table tbody .sc-ma,
+#assets-table tbody .sc-ten{
   position:sticky;z-index:2;
-  background:inherit; /* kế thừa nền từ <tr> → tự động đổi màu theo hover/status/selected */
+  background:var(--row-bg,#FFFFFF);
 }
 #assets-table .cb-col{left:0;}
 #assets-table .sc-num{left:38px;}
 #assets-table .sc-ma {left:74px;}
 #assets-table .sc-ten{left:190px;box-shadow:3px 0 8px -3px rgba(0,0,0,.12);}
-/* Thead: cố định nền riêng (đè lên inherit) */
+/* Thead sticky: nền cố định (không dùng variable) */
 #assets-table thead .cb-col,
 #assets-table thead .sc-num,
 #assets-table thead .sc-ma,
-#assets-table thead .sc-ten{z-index:11;background:#F8FAFC;}
+#assets-table thead .sc-ten{position:sticky;z-index:11;background:#F8FAFC;}
 /* COL TOGGLE DROPDOWN */
 .col-toggle-wrap{position:relative;display:inline-block;}
 .col-toggle-menu{
