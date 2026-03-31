@@ -5114,10 +5114,12 @@ async function saveAsset(){
 }
 
 // ═══════════════════════ HỒ SƠ & ĐÍNH KÈM (SharePoint List Attachments) ═══════════════════════
-let _attachAssetId = null;
+let _attachAssetId  = null;
+let _attachListName = null;   // set per caller (spList or spLicenseList)
 
 function _attachBase(spId){
-  return `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items(${spId})/AttachmentFiles`;
+  const list = _attachListName || MSAL_CONFIG.spList;
+  return `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${list}')/items(${spId})/AttachmentFiles`;
 }
 
 function _attachFileIcon(filename){
@@ -5131,7 +5133,8 @@ function _attachFileIcon(filename){
 }
 
 async function openAttachments(assetId){
-  _attachAssetId = assetId;
+  _attachAssetId  = assetId;
+  _attachListName = MSAL_CONFIG.spList;
   const a = assets.find(x => x.id === assetId);
   if(!a) return;
 
@@ -5164,6 +5167,83 @@ async function openAttachments(assetId){
   openModal('modal-attach');
 
   await _refreshAttachments(a._spId);
+}
+
+// Mở hợp đồng theo gói — dùng license đầu tiên có spId làm đại diện
+async function openGoiAttachments(goiName){
+  _attachListName = MSAL_CONFIG.spLicenseList;
+  const grpList = licenses.filter(l => (l.goi||'') === goiName);
+  // Ưu tiên item đã sync SP
+  const rep = grpList.find(l => l.spId) || grpList[0];
+
+  const titleEl = document.getElementById('attach-modal-title');
+  const body    = document.getElementById('attach-body');
+  const label   = goiName || '— Không có gói';
+
+  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Hợp đồng — <span style="color:var(--accent2);">${esc(label)}</span>`;
+
+  if(!_msalAccount || !SP_MODE){
+    body.innerHTML = `<div style="text-align:center;padding:32px 0;">
+      <i class="ph ph-cloud-slash" style="font-size:28px;color:var(--muted);"></i>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px;">Cần đăng nhập SharePoint để dùng tính năng đính kèm file.</p>
+    </div>`;
+    openModal('modal-attach');
+    return;
+  }
+
+  if(!rep?.spId){
+    body.innerHTML = `<div style="text-align:center;padding:32px 0;">
+      <i class="ph ph-warning-circle" style="font-size:28px;color:var(--yellow);"></i>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px;">Gói chưa có license nào được lưu lên SharePoint. Hãy lưu ít nhất 1 license của gói này trước.</p>
+    </div>`;
+    openModal('modal-attach');
+    return;
+  }
+
+  _attachAssetId = rep.id;
+
+  body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">
+    <i class="ph ph-spinner-gap" style="font-size:22px;"></i><br>Đang tải danh sách file…
+  </div>`;
+  openModal('modal-attach');
+  await _refreshAttachments(rep.spId);
+}
+
+async function openLicenseAttachments(licId){
+  _attachAssetId  = licId;
+  _attachListName = MSAL_CONFIG.spLicenseList;
+  const l = licenses.find(x => x.id === licId);
+  if(!l) return;
+
+  const titleEl = document.getElementById('attach-modal-title');
+  const body    = document.getElementById('attach-body');
+
+  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm — <span style="color:var(--accent2);">${esc(l.tenPhanMem||l.id)}</span>`;
+
+  if(!_msalAccount || !SP_MODE){
+    body.innerHTML = `<div style="text-align:center;padding:32px 0;">
+      <i class="ph ph-cloud-slash" style="font-size:28px;color:var(--muted);"></i>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px;">Cần đăng nhập SharePoint để dùng tính năng đính kèm file.</p>
+    </div>`;
+    openModal('modal-attach');
+    return;
+  }
+
+  if(!l.spId){
+    body.innerHTML = `<div style="text-align:center;padding:32px 0;">
+      <i class="ph ph-warning-circle" style="font-size:28px;color:var(--yellow);"></i>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px;">License chưa được lưu lên SharePoint. Hãy lưu trước rồi thử lại.</p>
+    </div>`;
+    openModal('modal-attach');
+    return;
+  }
+
+  body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">
+    <i class="ph ph-spinner-gap" style="font-size:22px;"></i><br>Đang tải danh sách file…
+  </div>`;
+  openModal('modal-attach');
+
+  await _refreshAttachments(l.spId);
 }
 
 async function _refreshAttachments(spId){
@@ -6253,13 +6333,18 @@ function toggleLicGroup(){
 }
 
 // ─── Render 1 license row ─────────────────────────────────────────
-function _licRow(l, i, showGoi){
+// inGroup=true → trong chế độ nhóm theo gói, hợp đồng ở group header
+function _licRow(l, i, hideGoi, inGroup){
   const diff = licDiff(l.ngayHetHan);
   const keyMask = l.key ? (l.key.length>12 ? l.key.substring(0,8)+'…'+l.key.slice(-4) : l.key) : '—';
+  // Nút đính kèm: chỉ hiện ở flat mode (mỗi license độc lập)
+  const attachBtn = !inGroup
+    ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Hồ sơ & Đính kèm" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i></button>`
+    : '';
   return `<tr>
-    <td style="color:var(--muted);font-size:11px;">${i+1}</td>
+    <td style="color:var(--muted);font-size:11px;">${i}</td>
     <td><strong>${esc(l.ten||'—')}</strong></td>
-    <td style="font-size:11px;color:var(--accent2);">${showGoi ? '' : esc(l.goi||'—')}</td>
+    <td style="font-size:11px;color:var(--accent2);">${hideGoi ? '' : esc(l.goi||'—')}</td>
     <td style="font-size:11px;font-weight:600;">${esc(l.congTy||'—')}</td>
     <td style="font-family:monospace;font-size:11px;" title="${esc(l.key||'')}">${esc(keyMask)}</td>
     <td>${esc(l.ncc||'—')}</td>
@@ -6271,6 +6356,7 @@ function _licRow(l, i, showGoi){
     <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(l.ghichu||'')}">${esc(l.ghichu||'')}</td>
     <td style="white-space:nowrap;">
       <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
+      ${attachBtn}
       <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
       ${l.spId ? '<span title="Đã sync SP" style="font-size:12px;margin-left:2px;color:var(--accent2);"><i class="ph ph-cloud-check"></i></span>' : ''}
     </td>
@@ -6468,20 +6554,28 @@ function renderLicenses(){
         moneyInfo = ` · 💰 ${totStr}`;
       }
 
-      // Group header row
+      // Group header row — nút đính kèm nằm ở đây (hợp đồng theo gói)
+      const goiKey = goiName.replace(/'/g,"\\'");
       html += `<tr style="background:rgba(124,107,255,.10);border-top:2px solid rgba(124,107,255,.25);">
-        <td colspan="13" style="padding:7px 12px;font-size:12px;font-weight:700;color:var(--accent2);">
+        <td colspan="12" style="padding:7px 12px;font-size:12px;font-weight:700;color:var(--accent2);">
           <i class="ph ph-package"></i> ${esc(label)}
           <span style="font-weight:400;color:var(--muted);margin-left:8px;">${grpList.length} license${seatInfo}${moneyInfo}${warnIcon}</span>
         </td>
+        <td style="padding:4px 8px;text-align:right;white-space:nowrap;">
+          <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);"
+                  title="Hợp đồng gói: ${esc(label)}"
+                  onclick="openGoiAttachments('${goiKey}')">
+            <i class="ph ph-paperclip"></i> HĐ
+          </button>
+        </td>
       </tr>`;
-      // Rows trong nhóm (ẩn cột Gói vì đã có header)
-      grpList.forEach(l=>{ html += _licRow(l, ++globalIdx, true); });
+      // Rows trong nhóm — không có nút attach riêng (inGroup=true)
+      grpList.forEach(l=>{ html += _licRow(l, ++globalIdx, true, true); });
     }
     tbody.innerHTML = html;
   } else {
-    // ── Chế độ flat list ──────────────────────────────────────────
-    tbody.innerHTML = list.map((l,i)=>_licRow(l, i+1, false)).join('');
+    // ── Chế độ flat list — nút attach hiện ở từng dòng ──────────
+    tbody.innerHTML = list.map((l,i)=>_licRow(l, i+1, false, false)).join('');
   }
 }
 
