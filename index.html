@@ -613,6 +613,57 @@ input[type=checkbox].row-cb{
 .action-btn.xfer-co{color:#7C3AED;font-size:13px;}
 .action-btn.xfer-co:hover{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.3);color:#7C3AED;}
 .action-btn.attach:hover{background:#FFF7ED;border-color:#FED7AA;color:#EA580C;}
+
+/* ══════════════ SMART ACTION ══════════════ */
+.sa-btn{
+  width:30px;height:30px;border-radius:8px;font-size:15px;
+  border:1px solid #E2E8F0;background:#F8FAFC;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;color:var(--text);
+}
+.sa-btn:hover{background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-color:#C7D2FE;box-shadow:0 2px 8px rgba(99,102,241,.15);}
+/* Popover */
+#smart-action-menu{
+  position:fixed;z-index:9999;
+  background:#FFFFFF;border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
+  min-width:210px;padding:6px;
+  display:none;
+  animation:saFadeIn .12s ease;
+}
+@keyframes saFadeIn{from{opacity:0;transform:scale(.95) translateY(-4px);}to{opacity:1;transform:scale(1) translateY(0);}}
+#smart-action-menu.open{display:block;}
+/* Header */
+.sa-header{
+  padding:9px 10px 7px;border-bottom:1px solid var(--border);margin-bottom:4px;
+}
+.sa-header-name{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}
+.sa-header-code{font-size:11px;color:var(--muted);margin-top:1px;}
+/* Section label */
+.sa-section{
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);padding:6px 10px 2px;
+}
+/* Action item */
+.sa-item{
+  display:flex;align-items:center;gap:9px;
+  padding:7px 10px;border-radius:8px;cursor:pointer;
+  font-size:13px;color:var(--text);border:none;background:none;width:100%;text-align:left;
+  transition:background .1s;
+}
+.sa-item:hover{background:#F1F5F9;}
+.sa-item i.ph{font-size:15px;width:18px;text-align:center;flex-shrink:0;}
+.sa-item.danger{color:#DC2626;}
+.sa-item.danger:hover{background:#FEF2F2;}
+.sa-item.ai-item{color:var(--muted);cursor:default;opacity:.7;}
+.sa-item.ai-item:hover{background:none;}
+.sa-divider{height:1px;background:var(--border);margin:4px 0;}
+/* AI badge */
+.sa-ai-badge{
+  font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto;flex-shrink:0;
+  background:linear-gradient(135deg,#818CF8,#A78BFA);color:#fff;font-weight:600;
+}
+
 /* ── Attachment Modal ── */
 .attach-item{
   display:flex;align-items:center;gap:10px;
@@ -1285,7 +1336,7 @@ input[type=checkbox].row-cb{
               <th data-col="ssd">SSD</th>
               <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
-              <th style="width:112px;">Hành động</th>
+              <th style="width:48px;"></th>
             </tr>
           </thead>
           <tbody id="assets-tbody"></tbody>
@@ -1873,6 +1924,9 @@ input[type=checkbox].row-cb{
 
 <!-- ═══ PRINT AREA (hidden, only shown on print) ═══ -->
 <div id="print-area"></div>
+
+<!-- ══════════════ SMART ACTION POPOVER ══════════════ -->
+<div id="smart-action-menu" role="menu" aria-label="Smart Action"></div>
 
 <!-- ══════════════ HỒ SƠ & ĐÍNH KÈM ══════════════ -->
 <div class="modal-backdrop" id="modal-attach" onclick="if(event.target===this)closeModal('modal-attach')">
@@ -4497,12 +4551,9 @@ function renderTable(){
         </td>
         <td>
           <div class="row-actions">
-            <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')"><i class="ph ph-eye"></i></button>
-            <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')"><i class="ph ph-pencil-simple"></i></button>
-            <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i></button>
-            <button class="action-btn attach" title="Hồ sơ & Đính kèm" onclick="openAttachments('${a.id}')"><i class="ph ph-paperclip"></i></button>
-            ${(_userRole==='global_admin'||_userRole==='admin')?`<button class="action-btn xfer-co" title="Chuyển sang công ty khác" onclick="openXferCompany('${a.id}')"><i class="ph ph-buildings"></i></button>`:''}
-            <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')"><i class="ph ph-trash"></i></button>
+            <button class="sa-btn" title="Smart Action" onclick="openSmartAction('${a.id}',this)">
+              <span style="font-size:15px;pointer-events:none;line-height:1;">✨</span>
+            </button>
           </div>
         </td>
       </tr>`;
@@ -5357,6 +5408,93 @@ async function spDeleteAttach(spId, filename){
   }
 }
 // ════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════ SMART ACTION ═══════════════════════
+let _saCurrentId = null;
+
+function openSmartAction(assetId, triggerEl){
+  const a = assets.find(x => x.id === assetId);
+  if(!a) return;
+  _saCurrentId = assetId;
+
+  const menu = document.getElementById('smart-action-menu');
+  const isAdmin = _userRole === 'global_admin' || _userRole === 'admin';
+
+  // ── Render nội dung menu ──
+  menu.innerHTML = `
+    <div class="sa-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <div class="sa-header-name"><i class="ph ph-laptop" style="font-size:12px;margin-right:4px;"></i>${esc(a.tenTaiSan||'Tài sản')}</div>
+        <span style="font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);white-space:nowrap;">✨ Smart Action</span>
+      </div>
+      <div class="sa-header-code">${esc(a.maTaiSan||'—')} · ${esc(a.nguoiDung||'Chưa cấp phát')}</div>
+    </div>
+
+    <button class="sa-item" onclick="saAct('view')"><i class="ph ph-eye" style="color:var(--accent);"></i> Xem chi tiết</button>
+    <button class="sa-item" onclick="saAct('edit')"><i class="ph ph-pencil-simple" style="color:var(--accent2);"></i> Chỉnh sửa</button>
+
+    <div class="sa-divider"></div>
+    <div class="sa-section">Quản lý</div>
+    <button class="sa-item" onclick="saAct('transfer')"><i class="ph ph-arrows-left-right" style="color:#059669;"></i> Bàn giao</button>
+    <button class="sa-item" onclick="saAct('attach')"><i class="ph ph-paperclip" style="color:#EA580C;"></i> Hồ sơ & Đính kèm</button>
+    ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="color:#7C3AED;"></i> Chuyển công ty</button>` : ''}
+
+    <div class="sa-divider"></div>
+    <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash"></i> Xóa tài sản</button>
+
+    <div class="sa-divider"></div>
+    <div class="sa-section">AI</div>
+    <div class="sa-item ai-item">
+      <i class="ph ph-sparkle"></i> Smart Assistant
+      <span class="sa-ai-badge">Soon</span>
+    </div>`;
+
+  // ── Vị trí popover (tránh overflow viewport) ──
+  menu.classList.add('open');
+  const rect  = triggerEl.getBoundingClientRect();
+  const mw    = menu.offsetWidth  || 220;
+  const mh    = menu.offsetHeight || 280;
+  const vw    = window.innerWidth;
+  const vh    = window.innerHeight;
+
+  let top  = rect.bottom + 6;
+  let left = rect.right - mw;
+  if(top + mh > vh - 12)  top  = rect.top - mh - 6;
+  if(left < 8)             left = 8;
+  if(left + mw > vw - 8)  left = vw - mw - 8;
+
+  menu.style.top  = top  + 'px';
+  menu.style.left = left + 'px';
+}
+
+function saAct(action){
+  closeSmartAction();
+  const id = _saCurrentId;
+  if(!id) return;
+  if(action === 'view')     viewDetail(id);
+  if(action === 'edit')     openEdit(id);
+  if(action === 'transfer') openTransfer(id);
+  if(action === 'attach')   openAttachments(id);
+  if(action === 'xfer-co')  openXferCompany(id);
+  if(action === 'delete')   openDelete(id);
+}
+
+function closeSmartAction(){
+  const menu = document.getElementById('smart-action-menu');
+  if(menu){ menu.classList.remove('open'); }
+  _saCurrentId = null;
+}
+
+// Đóng khi click ngoài hoặc nhấn Escape
+document.addEventListener('click', e => {
+  const menu = document.getElementById('smart-action-menu');
+  if(!menu?.classList.contains('open')) return;
+  if(!menu.contains(e.target) && !e.target.closest('.sa-btn')) closeSmartAction();
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeSmartAction();
+});
+// ════════════════════════════════════════════════════════
 
 function openDelete(id){
   if(!can('delete')){ toast('🔒 Bạn không có quyền xóa','bad'); return; }
