@@ -599,6 +599,30 @@ input[type=checkbox].row-cb{
 .action-btn.transfer:hover{background:#ECFDF5;border-color:#A7F3D0;color:#059669;}
 .action-btn.xfer-co{color:#7C3AED;font-size:13px;}
 .action-btn.xfer-co:hover{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.3);color:#7C3AED;}
+.action-btn.attach:hover{background:#FFF7ED;border-color:#FED7AA;color:#EA580C;}
+/* ── Attachment Modal ── */
+.attach-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:8px;border:1px solid var(--border);
+  margin-bottom:7px;background:#FAFAFA;
+}
+.attach-item:hover{background:#F1F5F9;}
+.attach-name{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.attach-upload-zone{
+  margin-top:12px;border:2px dashed #CBD5E1;border-radius:10px;
+  padding:22px 16px;text-align:center;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  transition:border-color .15s,background .15s;
+}
+.attach-upload-zone:hover,.attach-upload-zone.drag-over{
+  border-color:var(--accent);background:#EFF6FF;
+}
+.attach-progress-bar{
+  height:4px;border-radius:2px;background:#E2E8F0;margin-top:8px;overflow:hidden;
+}
+.attach-progress-fill{
+  height:100%;background:var(--accent);border-radius:2px;transition:width .2s;
+}
 .ma-ts-link:hover{color:var(--accent)!important;text-decoration-style:solid!important;}
 
 /* ── Modal: Chuyển công ty ── */
@@ -1248,7 +1272,7 @@ input[type=checkbox].row-cb{
               <th data-col="ssd">SSD</th>
               <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
-              <th style="width:90px;">Hành động</th>
+              <th style="width:112px;">Hành động</th>
             </tr>
           </thead>
           <tbody id="assets-tbody"></tbody>
@@ -1836,6 +1860,19 @@ input[type=checkbox].row-cb{
 
 <!-- ═══ PRINT AREA (hidden, only shown on print) ═══ -->
 <div id="print-area"></div>
+
+<!-- ══════════════ HỒ SƠ & ĐÍNH KÈM ══════════════ -->
+<div class="modal-backdrop" id="modal-attach" onclick="if(event.target===this)closeModal('modal-attach')">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <h2 id="attach-modal-title"><i class="ph ph-paperclip"></i> Hồ sơ & Đính kèm</h2>
+      <button class="modal-close" onclick="closeModal('modal-attach')"><i class="ph ph-x"></i></button>
+    </div>
+    <div class="modal-body" id="attach-body" style="padding:20px 18px;min-height:180px;max-height:calc(80vh - 100px);overflow-y:auto;">
+      <!-- populated by JS -->
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════ DELETE CONFIRM ══════════════ -->
 <div class="modal-backdrop" id="modal-delete">
@@ -4450,6 +4487,7 @@ function renderTable(){
             <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')"><i class="ph ph-eye"></i></button>
             <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')"><i class="ph ph-pencil-simple"></i></button>
             <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i></button>
+            <button class="action-btn attach" title="Hồ sơ & Đính kèm" onclick="openAttachments('${a.id}')"><i class="ph ph-paperclip"></i></button>
             ${(_userRole==='global_admin'||_userRole==='admin')?`<button class="action-btn xfer-co" title="Chuyển sang công ty khác" onclick="openXferCompany('${a.id}')"><i class="ph ph-buildings"></i></button>`:''}
             <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')"><i class="ph ph-trash"></i></button>
           </div>
@@ -5074,6 +5112,158 @@ async function saveAsset(){
     toast('💾 Đã lưu cục bộ (chưa kết nối SharePoint)','warn');
   }
 }
+
+// ═══════════════════════ HỒ SƠ & ĐÍNH KÈM (SharePoint List Attachments) ═══════════════════════
+let _attachAssetId = null;
+
+function _attachBase(spId){
+  return `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items(${spId})/AttachmentFiles`;
+}
+
+function _attachFileIcon(filename){
+  const ext = (filename.split('.').pop()||'').toLowerCase();
+  if(ext==='pdf') return 'ph-file-pdf';
+  if(['doc','docx'].includes(ext)) return 'ph-file-doc';
+  if(['xls','xlsx'].includes(ext)) return 'ph-file-xls';
+  if(['png','jpg','jpeg','gif','webp','svg'].includes(ext)) return 'ph-image';
+  if(['zip','rar','7z'].includes(ext)) return 'ph-file-zip';
+  return 'ph-file-text';
+}
+
+async function openAttachments(assetId){
+  _attachAssetId = assetId;
+  const a = assets.find(x => x.id === assetId);
+  if(!a) return;
+
+  const titleEl = document.getElementById('attach-modal-title');
+  const body    = document.getElementById('attach-body');
+
+  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm — <span style="color:var(--accent);">${esc(a.maTaiSan||a.tenTaiSan||'Tài sản')}</span>`;
+
+  if(!_msalAccount || !SP_MODE){
+    body.innerHTML = `<div style="text-align:center;padding:32px 0;">
+      <i class="ph ph-cloud-slash" style="font-size:28px;color:var(--muted);"></i>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px;">Cần đăng nhập SharePoint để dùng tính năng đính kèm file.</p>
+    </div>`;
+    openModal('modal-attach');
+    return;
+  }
+
+  if(!a._spId){
+    body.innerHTML = `<div style="text-align:center;padding:32px 0;">
+      <i class="ph ph-warning-circle" style="font-size:28px;color:var(--yellow);"></i>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px;">Tài sản chưa được lưu lên SharePoint. Hãy lưu trước rồi thử lại.</p>
+    </div>`;
+    openModal('modal-attach');
+    return;
+  }
+
+  body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">
+    <i class="ph ph-spinner-gap" style="font-size:22px;"></i><br>Đang tải danh sách file…
+  </div>`;
+  openModal('modal-attach');
+
+  await _refreshAttachments(a._spId);
+}
+
+async function _refreshAttachments(spId){
+  const body = document.getElementById('attach-body');
+  try{
+    const data  = await msalSpReq(_attachBase(spId));
+    const files = data?.value || [];
+    _renderAttachBody(spId, files);
+  }catch(e){
+    body.innerHTML = `<p style="color:var(--red);font-size:13px;padding:12px;">❌ Lỗi tải danh sách: ${esc(e.message)}</p>`;
+  }
+}
+
+function _renderAttachBody(spId, files){
+  const body = document.getElementById('attach-body');
+  const spOrigin = new URL(MSAL_CONFIG.spSite).origin;
+
+  const fileHTML = files.length
+    ? files.map(f => {
+        const viewUrl = spOrigin + f.ServerRelativeUrl;
+        return `<div class="attach-item">
+          <i class="ph ${_attachFileIcon(f.FileName)}" style="font-size:20px;color:var(--accent);flex-shrink:0;"></i>
+          <span class="attach-name" title="${esc(f.FileName)}">${esc(f.FileName)}</span>
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            <button class="action-btn view" title="Mở file" onclick="window.open('${esc(viewUrl)}','_blank')"><i class="ph ph-arrow-square-out"></i></button>
+            <button class="action-btn del" title="Xóa file" onclick="spDeleteAttach(${spId},'${esc(f.FileName).replace(/'/g,'\\\'') }')"><i class="ph ph-trash"></i></button>
+          </div>
+        </div>`;
+      }).join('')
+    : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file đính kèm nào.</p>`;
+
+  body.innerHTML = `
+    ${fileHTML}
+    <div class="attach-upload-zone" id="attach-zone"
+         onclick="document.getElementById('attach-file-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="_attachOnDrop(event,${spId})">
+      <i class="ph ph-upload-simple" style="font-size:24px;color:var(--accent);"></i>
+      <span style="font-size:13px;color:var(--muted);">Kéo thả file hoặc <strong style="color:var(--accent);cursor:pointer;">chọn file</strong></span>
+      <span style="font-size:11px;color:var(--muted);">PDF, Word, Excel, hình ảnh…</span>
+    </div>
+    <input type="file" id="attach-file-input" style="display:none;" multiple
+           onchange="_attachOnFileSelect(this,${spId})">
+    <div id="attach-progress" style="display:none;margin-top:8px;font-size:12px;color:var(--muted);text-align:center;"></div>`;
+}
+
+async function _attachOnDrop(e, spId){
+  e.preventDefault();
+  document.getElementById('attach-zone')?.classList.remove('drag-over');
+  const files = [...e.dataTransfer.files];
+  if(files.length) await _uploadAttachFiles(spId, files);
+}
+
+async function _attachOnFileSelect(input, spId){
+  const files = [...input.files];
+  input.value = '';
+  if(files.length) await _uploadAttachFiles(spId, files);
+}
+
+async function _uploadAttachFiles(spId, files){
+  const prog = document.getElementById('attach-progress');
+  if(prog){ prog.style.display='block'; }
+  let ok=0, fail=0;
+  for(const file of files){
+    if(prog) prog.innerHTML = `⬆ Đang upload <b>${esc(file.name)}</b>…`;
+    try{
+      const buf   = await file.arrayBuffer();
+      const fname = encodeURIComponent(file.name);
+      await msalSpReq(
+        `${_attachBase(spId)}/add(FileName='${fname}')`,
+        { method:'POST', headers:{'Content-Type':'application/octet-stream','Accept':'application/json;odata=nometadata'}, body: buf }
+      );
+      ok++;
+    }catch(e){
+      fail++;
+      toast(`❌ Upload thất bại: ${esc(file.name)}`, 'bad');
+      console.error('[Attach] upload error:', e);
+    }
+  }
+  if(prog) prog.style.display='none';
+  if(ok) toast(`✅ Đã upload ${ok} file`, 'ok');
+  await _refreshAttachments(spId);
+}
+
+async function spDeleteAttach(spId, filename){
+  if(!confirm(`Xóa file "${filename}"?\nHành động này không thể hoàn tác.`)) return;
+  try{
+    const fname = encodeURIComponent(filename);
+    await msalSpReq(
+      `${_attachBase(spId)}/getbyfilename('${fname}')`,
+      { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' }
+    );
+    toast('🗑 Đã xóa file', 'ok');
+    await _refreshAttachments(spId);
+  }catch(e){
+    toast(`❌ Lỗi xóa file: ${esc(e.message)}`, 'bad');
+  }
+}
+// ════════════════════════════════════════════════════════════════════════════
 
 function openDelete(id){
   if(!can('delete')){ toast('🔒 Bạn không có quyền xóa','bad'); return; }
