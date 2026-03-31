@@ -5681,8 +5681,8 @@ function openSmartAction(assetId, triggerEl){
 }
 
 function saAct(action){
+  const id = _saCurrentId;  // ← lưu trước khi closeSmartAction reset về null
   closeSmartAction();
-  const id = _saCurrentId;
   if(!id) return;
   if(action === 'view')      viewDetail(id);
   if(action === 'edit')      openEdit(id);
