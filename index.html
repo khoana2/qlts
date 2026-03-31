@@ -305,27 +305,16 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 #assets-table .cb-col,
 #assets-table .sc-num,
 #assets-table .sc-ma,
-#assets-table .sc-ten{position:sticky;z-index:2;background:#fff;}
+#assets-table .sc-ten{position:sticky;z-index:2;}
 #assets-table .cb-col{left:0;}
 #assets-table .sc-num{left:38px;}
 #assets-table .sc-ma {left:74px;}
 #assets-table .sc-ten{left:190px;box-shadow:3px 0 8px -3px rgba(0,0,0,.12);}
-/* Thead: also sticky vertically → higher z-index */
+/* Thead: also sticky vertically → higher z-index + opaque (needed for vertical scroll) */
 #assets-table thead .cb-col,
 #assets-table thead .sc-num,
 #assets-table thead .sc-ma,
 #assets-table thead .sc-ten{z-index:11;background:#F8FAFC;}
-/* Status row bg overrides for sticky cells */
-#assets-table tr.row-kho .cb-col,#assets-table tr.row-kho .sc-num,
-#assets-table tr.row-kho .sc-ma,#assets-table tr.row-kho .sc-ten{background:#FFFBEB;}
-#assets-table tr.row-hong .cb-col,#assets-table tr.row-hong .sc-num,
-#assets-table tr.row-hong .sc-ma,#assets-table tr.row-hong .sc-ten{background:#FEF2F2;}
-#assets-table tr.row-sua .cb-col,#assets-table tr.row-sua .sc-num,
-#assets-table tr.row-sua .sc-ma,#assets-table tr.row-sua .sc-ten{background:#FFF7ED;}
-#assets-table tr:hover .cb-col,#assets-table tr:hover .sc-num,
-#assets-table tr:hover .sc-ma,#assets-table tr:hover .sc-ten{background:#EFF6FF;}
-#assets-table tr.selected .cb-col,#assets-table tr.selected .sc-num,
-#assets-table tr.selected .sc-ma,#assets-table tr.selected .sc-ten{background:#DBEAFE;}
 /* COL TOGGLE DROPDOWN */
 .col-toggle-wrap{position:relative;display:inline-block;}
 .col-toggle-menu{
