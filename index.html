@@ -5507,7 +5507,7 @@ async function geminiHealthCheck(assetId){
     <div class="ai-loading">
       <div class="ai-spinner"></div>
       <span>✨ Đang phân tích tài sản…</span>
-      <span style="font-size:11px;opacity:.6;">Powered by Google Gemini · gemini-2.0-flash</span>
+      <span style="font-size:11px;opacity:.6;">Powered by Google Gemini · gemini-2.5-flash</span>
     </div>`;
   openModal('modal-ai');
 
@@ -5560,7 +5560,7 @@ async function geminiHealthCheck(assetId){
       </div>
       <div class="ai-footer">
         <i class="ph ph-sparkle" style="font-size:13px;color:#818CF8;"></i>
-        Powered by Google Gemini · gemini-2.0-flash · qua Azure Function
+        Powered by Google Gemini · gemini-2.5-flash · qua Azure Function
       </div>`;
     foot.style.display = 'flex';
 
@@ -5630,7 +5630,7 @@ function openSmartAction(assetId, triggerEl){
       <span class="sa-ai-badge">Gemini</span>
     </button>`;
 
-  // ── Vị trí popover (tránh overflow viewport) ──
+  // ── Vị trí popover: ngang hàng nút, mở sang trái ──
   menu.classList.add('open');
   const rect  = triggerEl.getBoundingClientRect();
   const mw    = menu.offsetWidth  || 220;
@@ -5638,11 +5638,18 @@ function openSmartAction(assetId, triggerEl){
   const vw    = window.innerWidth;
   const vh    = window.innerHeight;
 
-  let top  = rect.bottom + 6;
-  let left = rect.right - mw;
-  if(top + mh > vh - 12)  top  = rect.top - mh - 6;
-  if(left < 8)             left = 8;
-  if(left + mw > vw - 8)  left = vw - mw - 8;
+  // Mặc định: top ngang với nút, left sát bên trái nút
+  let top  = rect.top;
+  let left = rect.left - mw - 6;
+
+  // Nếu tràn trái thì mở sang phải
+  if(left < 8) left = rect.right + 6;
+  // Nếu tràn phải thì kéo vào
+  if(left + mw > vw - 8) left = vw - mw - 8;
+  // Nếu tràn dưới thì đẩy lên
+  if(top + mh > vh - 12) top = vh - mh - 12;
+  // Không vượt quá đỉnh
+  if(top < 8) top = 8;
 
   menu.style.top  = top  + 'px';
   menu.style.left = left + 'px';
