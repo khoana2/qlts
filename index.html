@@ -1378,7 +1378,7 @@ input[type=checkbox].row-cb{
               <th data-col="ssd">SSD</th>
               <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
-              <th style="width:80px;text-align:center;">✨ Smart Action</th>
+              <th style="width:80px;text-align:center;">Q.Action</th>
             </tr>
           </thead>
           <tbody id="assets-tbody"></tbody>
@@ -1983,7 +1983,7 @@ input[type=checkbox].row-cb{
 </div>
 
 <!-- ══════════════ SMART ACTION POPOVER ══════════════ -->
-<div id="smart-action-menu" role="menu" aria-label="Smart Action"></div>
+<div id="smart-action-menu" role="menu" aria-label="Q.Action"></div>
 
 <!-- ══════════════ HỒ SƠ & ĐÍNH KÈM ══════════════ -->
 <div class="modal-backdrop" id="modal-attach" onclick="if(event.target===this)closeModal('modal-attach')">
@@ -4608,7 +4608,7 @@ function renderTable(){
         </td>
         <td>
           <div class="row-actions">
-            <button class="sa-btn" title="Smart Action" onclick="openSmartAction('${a.id}',this)" style="margin:0 auto;">
+            <button class="sa-btn" title="Q.Action" onclick="openSmartAction('${a.id}',this)" style="margin:0 auto;">
               <span style="font-size:15px;pointer-events:none;line-height:1;">✨</span>
             </button>
           </div>
@@ -5605,7 +5605,7 @@ function openSmartAction(assetId, triggerEl){
     <div class="sa-header">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
         <div class="sa-header-name"><i class="ph ph-laptop" style="font-size:12px;margin-right:4px;"></i>${esc(a.tenTaiSan||'Tài sản')}</div>
-        <span style="font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);white-space:nowrap;">✨ Smart Action</span>
+        <span style="font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);white-space:nowrap;">Q.Action</span>
       </div>
       <div class="sa-header-code">${esc(a.maTaiSan||'—')} · ${esc(a.nguoiDung||'Chưa cấp phát')}</div>
     </div>
