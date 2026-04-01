@@ -5620,6 +5620,21 @@ function openSmartAction(assetId, triggerEl){
     ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="color:#7C3AED;"></i> Chuyển công ty</button>` : ''}
 
     <div class="sa-divider"></div>
+    <div class="sa-section">Trạng thái nhanh</div>
+    ${a.tinhTrang !== 'Hỏng' && a.tinhTrang !== 'Sửa chữa'
+      ? `<button class="sa-item" onclick="saAct('report-damage')" style="color:#DC2626;">
+           <i class="ph ph-warning" style="color:#DC2626;"></i> Báo hỏng
+         </button>`
+      : `<button class="sa-item" onclick="saAct('report-damage')" style="color:#059669;">
+           <i class="ph ph-wrench" style="color:#059669;"></i> Đang sửa chữa — đổi trạng thái
+         </button>`}
+    ${a.nguoiDung
+      ? `<button class="sa-item" onclick="saAct('recall')" style="color:#B45309;">
+           <i class="ph ph-package" style="color:#D97706;"></i> Thu hồi về kho
+         </button>`
+      : ''}
+
+    <div class="sa-divider"></div>
     <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash"></i> Xóa tài sản</button>
 
     <div class="sa-divider"></div>
@@ -5664,14 +5679,66 @@ function saAct(action){
   if(action === 'transfer')  openTransfer(id);
   if(action === 'attach')    openAttachments(id);
   if(action === 'xfer-co')   openXferCompany(id);
-  if(action === 'delete')    openDelete(id);
-  if(action === 'ai-health') geminiHealthCheck(id);
+  if(action === 'delete')        openDelete(id);
+  if(action === 'report-damage') saReportDamage(id);
+  if(action === 'recall')        saRecall(id);
+  if(action === 'ai-health')     geminiHealthCheck(id);
 }
 
 function closeSmartAction(){
   const menu = document.getElementById('smart-action-menu');
   if(menu){ menu.classList.remove('open'); }
   _saCurrentId = null;
+}
+
+// ── Báo hỏng ─────────────────────────────────────────────────
+async function saReportDamage(id){
+  const idx = assets.findIndex(a => a.id === id);
+  if(idx < 0) return;
+  const a = assets[idx];
+
+  // Nếu đang Hỏng/Sửa chữa thì cho phép đổi về Đang dùng
+  if(a.tinhTrang === 'Hỏng' || a.tinhTrang === 'Sửa chữa'){
+    const back = confirm(`"${a.tenTaiSan} — ${a.maTaiSan}" đang ở trạng thái "${a.tinhTrang}".\n\nĐổi về "Đang dùng"?`);
+    if(!back) return;
+    assets[idx].tinhTrang = 'Đang dùng';
+    toast(`✅ Đã cập nhật trạng thái về "Đang dùng"`, 'ok');
+  } else {
+    const note = prompt(`Báo hỏng: "${a.tenTaiSan} — ${a.maTaiSan}"\n\nNhập lý do hỏng (có thể để trống):`);
+    if(note === null) return; // user bấm Cancel
+    assets[idx].tinhTrang = 'Hỏng';
+    if(note.trim()) assets[idx].ghiChu = (assets[idx].ghiChu ? assets[idx].ghiChu + ' | ' : '') + `[Hỏng] ${note.trim()}`;
+    toast(`⚠️ Đã báo hỏng "${a.maTaiSan}"`, 'warn');
+  }
+
+  saveAssets();
+  if(_msalAccount && assets[idx]._spId){
+    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail'); }
+  }
+  renderTable();
+}
+
+// ── Thu hồi về kho ────────────────────────────────────────────
+async function saRecall(id){
+  const idx = assets.findIndex(a => a.id === id);
+  if(idx < 0) return;
+  const a = assets[idx];
+  if(!a.nguoiDung){ toast('ℹ️ Tài sản chưa được cấp phát', 'info'); return; }
+
+  const ok = confirm(`Thu hồi "${a.tenTaiSan} — ${a.maTaiSan}" từ ${a.nguoiDung} (${a.boPhan || '—'})?\n\nTài sản sẽ được chuyển về kho.`);
+  if(!ok) return;
+
+  assets[idx].nguoiDung  = '';
+  assets[idx].email      = '';
+  assets[idx].boPhan     = '';
+  assets[idx].tinhTrang  = 'Lưu Kho';
+
+  saveAssets();
+  if(_msalAccount && assets[idx]._spId){
+    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail'); }
+  }
+  renderTable();
+  toast(`📦 Đã thu hồi "${a.maTaiSan}" về kho`, 'ok');
 }
 
 // Đóng khi click ngoài hoặc nhấn Escape
