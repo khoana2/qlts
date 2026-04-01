@@ -5466,40 +5466,15 @@ async function spDeleteAttach(spId, filename){
 }
 // ════════════════════════════════════════════════════════════════════════════
 
-// ═══════════════════════ GEMINI AI ═══════════════════════
-const GEMINI_KEY_STORAGE = 'qlts_gemini_key';
-const GEMINI_MODEL       = 'gemini-2.0-flash';
+// ═══════════════════════ SMART ASSISTANT — Azure Function ═══════════════════════
+// Điền URL Azure Function sau khi deploy
+const AI_FUNCTION_URL = 'https://qlts.khoa-na.workers.dev/';
 
-function geminiGetKey(){ return localStorage.getItem(GEMINI_KEY_STORAGE)||''; }
-function geminiSaveKey(k){ localStorage.setItem(GEMINI_KEY_STORAGE, k.trim()); }
 function aiClearKey(){
-  localStorage.removeItem(GEMINI_KEY_STORAGE);
   closeModal('modal-ai');
-  toast('🔑 Đã xóa API key','ok');
-}
-
-async function geminiAsk(prompt){
-  const key = geminiGetKey();
-  if(!key) throw new Error('NO_KEY');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
-  const res = await fetch(url,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      contents:[{parts:[{text: prompt}]}],
-      generationConfig:{temperature:0.7, maxOutputTokens:600}
-    })
-  });
-  if(!res.ok){
-    const e = await res.json().catch(()=>({}));
-    throw new Error(e.error?.message || `HTTP ${res.status}`);
-  }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '(Không có phản hồi)';
 }
 
 async function geminiHealthCheck(assetId){
-  closeSmartAction();
   const a = assets.find(x=>x.id===assetId);
   if(!a) return;
 
@@ -5507,69 +5482,60 @@ async function geminiHealthCheck(assetId){
   const foot = document.getElementById('ai-modal-foot');
   foot.style.display = 'none';
 
-  // Kiểm tra API key
-  if(!geminiGetKey()){
+  // Kiểm tra Azure Function URL đã cấu hình chưa
+  if(AI_FUNCTION_URL.includes('<your-function-app>')){
     body.innerHTML = `
       <div class="ai-setup">
-        <div style="font-size:28px;margin-bottom:8px;">🔑</div>
-        <p style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Nhập Gemini API Key</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
-          Lấy miễn phí tại <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com</a>
+        <div style="font-size:28px;margin-bottom:8px;">⚙️</div>
+        <p style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Chưa cấu hình Azure Function</p>
+        <p style="font-size:12px;color:var(--muted);line-height:1.6;">
+          Cần deploy Azure Function và điền URL vào biến <code>AI_FUNCTION_URL</code> trong file index.html.<br><br>
+          Xem hướng dẫn trong thư mục <code>azure-function/</code>.
         </p>
-        <input id="ai-key-input" type="password" placeholder="AIza..." autocomplete="off"/>
-        <button class="btn primary" style="width:100%;" onclick="aiSaveKeyAndRun('${assetId}')">
-          <i class="ph ph-sparkle"></i> Lưu & Chạy phân tích
-        </button>
       </div>`;
-    foot.style.display = 'none';
+    foot.style.display = 'flex';
     openModal('modal-ai');
-    setTimeout(()=>document.getElementById('ai-key-input')?.focus(),200);
     return;
   }
+
+  // Lấy Azure AD token (đã có sẵn từ MSAL)
+  let token = '';
+  try{ token = await msalGetToken(); }catch(e){ /* nếu chưa login thì bỏ qua */ }
 
   // Hiện loading
   body.innerHTML = `
     <div class="ai-loading">
       <div class="ai-spinner"></div>
       <span>✨ Đang phân tích tài sản…</span>
-      <span style="font-size:11px;opacity:.6;">Powered by Gemini ${GEMINI_MODEL}</span>
+      <span style="font-size:11px;opacity:.6;">Powered by Google Gemini · gemini-2.0-flash</span>
     </div>`;
   openModal('modal-ai');
 
-  // Build prompt
-  const depr  = calcDepreciation(a);
-  const deprInfo = depr
-    ? `Khấu hao: còn ${depr.pct}% giá trị (${depr.remaining.toLocaleString('vi-VN')} ₫ / ${depr.orig.toLocaleString('vi-VN')} ₫ gốc), thời hạn ${depr.years} năm${depr.fullyDepreciated?' — ĐÃ KHẤU HAO HẾT':''}.`
-    : 'Khấu hao: không có dữ liệu.';
-
-  const prompt = `Bạn là AI assistant cho hệ thống quản lý tài sản CNTT của công ty Việt Nam.
-Hãy phân tích tài sản dưới đây và trả lời NGẮN GỌN bằng tiếng Việt theo đúng format JSON sau:
-
-{
-  "verdict": "good|warn|bad",
-  "verdict_label": "Tốt|Cần chú ý|Cần xử lý",
-  "summary": "1-2 câu đánh giá tổng quan",
-  "recommendation": "Khuyến nghị cụ thể (1 câu)",
-  "reason": "Lý do ngắn gọn (1-2 câu)"
-}
-
-THÔNG TIN TÀI SẢN:
-- Loại: ${a.tenTaiSan||'—'} | Model: ${a.model||'—'}
-- Mã TS: ${a.maTaiSan||'—'}
-- Ngày mua: ${a.ngayMua||'Không rõ'}
-- Giá trị gốc: ${a.giaTri ? Number(a.giaTri).toLocaleString('vi-VN')+' ₫' : 'Không rõ'}
-- Tình trạng: ${a.tinhTrang||'—'}
-- Người sử dụng: ${a.nguoiDung||'Chưa cấp phát'}
-- Bộ phận: ${a.boPhan||'—'}
-- ${deprInfo}
-- Ghi chú: ${a.ghiChu||'Không có'}
-
-Chỉ trả về JSON, không thêm markdown hay giải thích ngoài JSON.`;
+  // Chuẩn bị dữ liệu gửi lên Azure Function
+  const depr = calcDepreciation(a);
+  const assetData = {
+    tenTaiSan: a.tenTaiSan, model: a.model, maTaiSan: a.maTaiSan,
+    ngayMua: a.ngayMua, giaTri: a.giaTri, tinhTrang: a.tinhTrang,
+    nguoiDung: a.nguoiDung, boPhan: a.boPhan, ghiChu: a.ghiChu,
+    depreciation: depr,
+  };
 
   try{
-    const raw  = await geminiAsk(prompt);
-    // Parse JSON từ response
-    const json = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const res = await fetch(AI_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      body: JSON.stringify({ assetData }),
+    });
+
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.error || `HTTP ${res.status}`);
+    }
+
+    const json = await res.json();
     const vcls = json.verdict || 'warn';
 
     body.innerHTML = `
@@ -5594,30 +5560,24 @@ Chỉ trả về JSON, không thêm markdown hay giải thích ngoài JSON.`;
       </div>
       <div class="ai-footer">
         <i class="ph ph-sparkle" style="font-size:13px;color:#818CF8;"></i>
-        Powered by Google Gemini · ${GEMINI_MODEL}
+        Powered by Google Gemini · gemini-2.0-flash · qua Azure Function
       </div>`;
     foot.style.display = 'flex';
+
   }catch(e){
-    const isKey = e.message?.includes('API_KEY') || e.message?.includes('key') || e.message?.includes('403');
+    const msg = e.message || '';
+    const isAuth  = msg.includes('401') || msg.includes('Unauthorized');
+    const isQuota = msg.includes('quota') || msg.includes('429');
     body.innerHTML = `
-      <div style="text-align:center;padding:24px 0;">
+      <div style="text-align:center;padding:20px 0;">
         <i class="ph ph-warning-circle" style="font-size:28px;color:var(--red);"></i>
         <p style="font-size:13px;color:var(--red);margin-top:10px;font-weight:600;">
-          ${isKey ? '❌ API Key không hợp lệ' : '❌ Lỗi kết nối Gemini'}
+          ${isAuth ? '❌ Chưa đăng nhập Azure AD' : isQuota ? '⚠️ Hết quota OpenAI' : '❌ Lỗi kết nối'}
         </p>
-        <p style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(e.message)}</p>
-        ${isKey ? `<button class="btn" style="margin-top:12px;" onclick="aiClearKey()">🔑 Nhập lại API Key</button>` : ''}
+        <p style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5;">${esc(msg.substring(0,200))}</p>
       </div>`;
     foot.style.display = 'flex';
   }
-}
-
-function aiSaveKeyAndRun(assetId){
-  const val = document.getElementById('ai-key-input')?.value?.trim();
-  if(!val){ toast('⚠️ Vui lòng nhập API key','warn'); return; }
-  geminiSaveKey(val);
-  closeModal('modal-ai');
-  setTimeout(()=>geminiHealthCheck(assetId), 150);
 }
 // ════════════════════════════════════════════════════════
 
