@@ -5532,10 +5532,20 @@ async function _uploadAttachFiles(spId, files){
     try{
       const buf   = await file.arrayBuffer();
       const fname = encodeURIComponent(file.name);
-      await msalSpReq(
-        `${_attachBase(spId)}/add(FileName='${fname}')`,
-        { method:'POST', headers:{'Content-Type':'application/octet-stream','Accept':'application/json;odata=nometadata'}, body: buf }
-      );
+      try{
+        await msalSpReq(
+          `${_attachBase(spId)}/add(FileName='${fname}')`,
+          { method:'POST', headers:{'Content-Type':'application/octet-stream','Accept':'application/json;odata=nometadata'}, body: buf }
+        );
+      }catch(uploadErr){
+        const msg = uploadErr.message || '';
+        // File đã tồn tại trên SP (HTTP 409) — chỉ tag lại, không cần upload
+        if(msg.includes('409') || msg.includes('already exists') || msg.includes('duplicate')){
+          toast(`ℹ️ File đã tồn tại trên SP, đã gán vào dòng này: ${esc(file.name)}`, 'ok');
+        } else {
+          throw uploadErr; // lỗi khác thì re-throw
+        }
+      }
       // Tag file vào licId nếu đang ở chế độ 'lic'
       if(_attachFilterMode === 'lic' && _attachFilterLicId){
         if(!_licAttachTags[_attachFilterLicId]) _licAttachTags[_attachFilterLicId] = [];
