@@ -5845,21 +5845,48 @@ async function saRecall(id){
   const idx = assets.findIndex(a => a.id === id);
   if(idx < 0) return;
   const a = assets[idx];
-  if(!a.nguoiDung){ toast('ℹ️ Tài sản chưa được cấp phát', 'info'); return; }
 
-  const ok = confirm(`Thu hồi "${a.tenTaiSan} — ${a.maTaiSan}" từ ${a.nguoiDung} (${a.boPhan || '—'})?\n\nTài sản sẽ được chuyển về kho.`);
+  // Kiểm tra tài sản đã được bàn giao chưa
+  const hasBanGiao = a.trangThaiHienTai === 'Bàn giao'
+                   || (transfers[id] && transfers[id].length > 0)
+                   || !!a.nguoiDung;
+  if(!hasBanGiao){ toast('ℹ️ Tài sản chưa được cấp phát', 'info'); return; }
+
+  const nguoiCu = a.nguoiDung || '—';
+  const boPhanCu = a.boPhan || '—';
+  const ok = confirm(`Thu hồi "${a.tenTaiSan} — ${a.maTaiSan}" từ ${nguoiCu} (${boPhanCu})?\n\nTài sản sẽ được chuyển về kho.`);
   if(!ok) return;
 
-  assets[idx].nguoiDung  = '';
-  assets[idx].email      = '';
-  assets[idx].boPhan     = '';
-  assets[idx].tinhTrang  = 'Lưu Kho';
+  const now = new Date().toISOString().slice(0,10);
+
+  // Tạo bản ghi thu hồi trong lịch sử bàn giao
+  if(!transfers[id]) transfers[id] = [];
+  transfers[id].push({
+    from:     nguoiCu,
+    fromDept: boPhanCu,
+    to:       'Kho',
+    toDept:   '',
+    toEmail:  '',
+    date:     now,
+    condition: a.tinhTrang || '',
+    notes:    'Thu hồi về kho',
+  });
+  saveTransfers();
+
+  // Cập nhật tài sản
+  assets[idx].nguoiDung        = '';
+  assets[idx].email            = '';
+  assets[idx].boPhan           = '';
+  assets[idx].tinhTrang        = 'Lưu Kho';
+  assets[idx].trangThaiHienTai = 'Thu hồi';
+  assets[idx].ngaySuKien       = now;
 
   saveAssets();
   if(_msalAccount && assets[idx]._spId){
     try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail'); }
   }
   renderTable();
+  renderEvents();
   toast(`📦 Đã thu hồi "${a.maTaiSan}" về kho`, 'ok');
 }
 
@@ -7072,7 +7099,7 @@ function renderLicenses(){
   const tbody = document.getElementById('lic-tbody');
   if(!tbody) return;
   if(!list.length){
-    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--muted);">Chưa có dữ liệu license</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--muted);">Chưa có dữ liệu license</td></tr>`;
     return;
   }
 
@@ -7234,7 +7261,11 @@ async function saveLicense(){
   if(isNew && !can('add')){ toast('🔒 Bạn không có quyền thêm license','bad'); return; }
   if(!isNew && !can('edit')){ toast('🔒 Bạn không có quyền chỉnh sửa','bad'); return; }
   const ten = document.getElementById('lf-ten').value.trim();
-  if(!ten){ toast('⚠️ Vui lòng nhập tên phần mềm','bad'); return; }
+  const _typeVal = document.getElementById('lf-type')?.value || 'Software';
+  if(!ten){
+    const _tenLabel = ['Domain','Hosting'].includes(_typeVal) ? 'tên miền' : 'tên phần mềm / hợp đồng';
+    toast(`⚠️ Vui lòng nhập ${_tenLabel}`,'bad'); return;
+  }
 
   const id      = document.getElementById('lf-id').value || genId();
   const spId    = document.getElementById('lf-spid').value || null;
@@ -7376,7 +7407,7 @@ async function msalSpLoadLicenses(){
         const donViVal  = donViField  ? (item[donViField]||'')   : '';
         const giaTrVal  = giaTrField  ? (item[giaTrField]!=null ? item[giaTrField] : null) : null;
         const tienTeVal = tienTeField ? (item[tienTeField]||'VND') : 'VND';
-        const rec = {
+        const spRec = {
           id:         localId,
           spId:       item.ID,
           ten:        item.Title||'',
@@ -7391,9 +7422,27 @@ async function msalSpLoadLicenses(){
           ngayMua:    item.NgayMua    ? item.NgayMua.substring(0,10)    : null,
           ngayHetHan: item.NgayHetHan ? item.NgayHetHan.substring(0,10) : null,
           ghichu:     item.GhiChu||'',
+          // Fields mới — đọc từ SP nếu có, giữ local nếu SP không có
+          type:       item.ContractType||null,
+          autoRenew:  item.AutoRenew||null,
+          dns:        item.DnsInfo||null,
+          mucDich:    item.MucDich||null,
         };
         const idx = licenses.findIndex(l=>l.spId===item.ID);
-        if(idx>=0) licenses[idx]=rec; else licenses.push(rec);
+        if(idx>=0){
+          // Merge: giữ lại field local nếu SP trả về null/empty
+          const local = licenses[idx];
+          const rec = { ...spRec };
+          if(!rec.type)      rec.type      = local.type      || 'Software';
+          if(!rec.autoRenew) rec.autoRenew = local.autoRenew || '';
+          if(!rec.dns)       rec.dns       = local.dns       || '';
+          if(!rec.mucDich)   rec.mucDich   = local.mucDich   || '';
+          licenses[idx] = rec;
+        } else {
+          const rec = { ...spRec };
+          if(!rec.type) rec.type = 'Software';
+          licenses.push(rec);
+        }
       });
       saveLicenses();
       populateCompanySelects();
@@ -7443,6 +7492,10 @@ async function msalSpPushLicense(id){
     if(tienTeField && l.tienTe)   b[tienTeField]    = l.tienTe;
     if(l.ngayMua)     b['NgayMua']     = l.ngayMua    + 'T00:00:00Z';
     if(l.ngayHetHan)  b['NgayHetHan']  = l.ngayHetHan + 'T00:00:00Z';
+    if(l.type)        b['ContractType'] = l.type;
+    if(l.autoRenew)   b['AutoRenew']   = l.autoRenew;
+    if(l.dns)         b['DnsInfo']     = l.dns;
+    if(l.mucDich)     b['MucDich']     = l.mucDich;
     return b;
   };
 
