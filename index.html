@@ -6845,9 +6845,10 @@ function _licRow(l, i, hideGoi, inGroup){
     <td>${licStatusBadge(diff)}</td>
     <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(l.ghichu||'')}">${esc(l.ghichu||'')}</td>
     <td style="white-space:nowrap;">
-      <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
+      <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
+      <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#059669;" title="Gia hạn" onclick="quickRenewLicense('${l.id}')"><i class="ph ph-arrow-clockwise"></i></button>
       ${attachBtn}
-      <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
+      <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Xóa" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
       ${l.spId ? '<span title="Đã sync SP" style="font-size:12px;margin-left:2px;color:var(--accent2);"><i class="ph ph-cloud-check"></i></span>' : ''}
     </td>
   </tr>`;
@@ -7715,6 +7716,11 @@ let _licHistory = {}; // { licenseId: [ {date, oldExpiry, newExpiry, oldVal, new
 
 function saveLicHistory(){ try{ localStorage.setItem('qlts_lich_su_license', JSON.stringify(_licHistory)); }catch(e){} }
 function loadLicHistory(){ try{ _licHistory = JSON.parse(localStorage.getItem('qlts_lich_su_license')||'{}'); }catch(e){ _licHistory={}; } }
+
+function quickRenewLicense(id){
+  // Mở thẳng modal gia hạn mà không cần qua edit form
+  openLicenseHistory(id);
+}
 
 async function openLicenseHistory(id){
   const l = licenses.find(x=>x.id===id);
