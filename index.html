@@ -1143,7 +1143,7 @@ input[type=checkbox].row-cb{
           <span class="tab-icon"><i class="ph ph-clock-counter-clockwise"></i></span> Lịch Sử
         </button>
         <button class="nav-tab" onclick="switchTab('license')" id="tab-license">
-          <span class="tab-icon"><i class="ph ph-key"></i></span> License
+          <span class="tab-icon"><i class="ph ph-files"></i></span> Contracts
         </button>
         <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">
           <span class="tab-icon"><i class="ph ph-users-three"></i></span> Phân Quyền
@@ -1451,10 +1451,10 @@ input[type=checkbox].row-cb{
   <!-- ══════════════ LICENSE VIEW ══════════════ -->
   <div class="view" id="view-license">
 
-    <!-- Stats bar gọn cho License -->
+    <!-- Stats bar gọn cho Contracts -->
     <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:6px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:6px 14px;">
-        <i class="ph ph-key" style="font-size:16px;color:#3B82F6;"></i>
+        <i class="ph ph-files" style="font-size:16px;color:#3B82F6;"></i>
         <span id="lic-kpi-total" style="font-size:20px;font-weight:800;color:#1D4ED8;line-height:1;">0</span>
         <span style="font-size:11px;color:#3B82F6;font-weight:600;">Tổng</span>
       </div>
@@ -1501,7 +1501,7 @@ input[type=checkbox].row-cb{
     <div class="filter-bar" style="margin-top:12px;">
       <div class="search-wrap">
         <i class="ph ph-magnifying-glass" style="font-size:14px;color:var(--muted);flex-shrink:0;"></i>
-        <input type="text" id="lic-search" placeholder="Tìm tên phần mềm, số hợp đồng, nhà cung cấp…" oninput="renderLicenses()"/>
+        <input type="text" id="lic-search" placeholder="Tìm tên, số hợp đồng, nhà cung cấp, tên miền…" oninput="renderLicenses()"/>
       </div>
       <select class="fsel" id="lic-filter-status" onchange="renderLicenses()">
         <option value="">📋 Tất cả trạng thái</option>
@@ -1510,8 +1510,16 @@ input[type=checkbox].row-cb{
         <option value="exp">❌ Đã hết hạn</option>
         <option value="nohd">— Không có hạn</option>
       </select>
+      <select class="fsel" id="lic-filter-type" onchange="renderLicenses()">
+        <option value="">🗂 Tất cả loại</option>
+        <option value="Software">💿 Software</option>
+        <option value="Domain">🌐 Domain</option>
+        <option value="Hosting">🖥 Hosting</option>
+        <option value="Cloud">☁️ Cloud</option>
+        <option value="Other">📄 Other</option>
+      </select>
       <select class="fsel" id="lic-filter-goi" onchange="renderLicenses()">
-        <option value="">📦 Gói phần mềm</option>
+        <option value="">📦 Gói / Nhóm</option>
       </select>
       <select class="fsel" id="lic-filter-company" onchange="renderLicenses()">
         <option value="">🏬 Công ty</option>
@@ -1521,7 +1529,7 @@ input[type=checkbox].row-cb{
         <button class="btn btn-icon-ph" id="lic-group-btn" onclick="toggleLicGroup()" title="Gom nhóm theo gói"><i class="ph ph-package"></i> Nhóm theo gói</button>
         <button class="btn btn-icon-ph" id="btn-export-lic" onclick="exportLicenseExcel()" title="Xuất Excel"><i class="ph ph-file-xls"></i> Export Excel</button>
         <button class="btn btn-icon-ph" id="lic-sync-btn" onclick="licSyncSP()" style="display:none"><i class="ph ph-arrows-clockwise"></i> Sync SP</button>
-        <button class="btn primary btn-icon-ph" id="btn-lic-add" onclick="openLicenseAdd()"><i class="ph ph-plus"></i> Thêm License</button>
+        <button class="btn primary btn-icon-ph" id="btn-lic-add" onclick="openLicenseAdd()"><i class="ph ph-plus"></i> Thêm Contract</button>
       </div>
     </div>
 
@@ -1531,7 +1539,8 @@ input[type=checkbox].row-cb{
           <thead>
             <tr>
               <th>#</th>
-              <th>Tên phần mềm</th>
+              <th>Type</th>
+              <th>Tên / Tên miền</th>
               <th>Gói</th>
               <th>Công ty</th>
               <th>Số hợp đồng</th>
@@ -2019,18 +2028,28 @@ input[type=checkbox].row-cb{
 <div class="modal-backdrop" id="modal-license">
   <div class="modal" style="max-width:620px;">
     <div class="modal-head">
-      <h2 id="lic-form-title">Thêm License</h2>
+      <h2 id="lic-form-title">Thêm Contract</h2>
       <button class="btn icon-only" onclick="closeModal('modal-license')" style="border:none;font-size:18px;">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="lf-id"/>
       <input type="hidden" id="lf-spid"/>
       <div class="grid3">
-        <div class="section-divider span3"><span><i class="ph ph-key"></i> Thông tin phần mềm</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-files"></i> Thông tin hợp đồng</span><hr/></div>
 
+        <div class="field">
+          <label>Loại (Type)</label>
+          <select id="lf-type" onchange="onLicTypeChange()">
+            <option value="Software">💿 Software</option>
+            <option value="Domain">🌐 Domain</option>
+            <option value="Hosting">🖥 Hosting</option>
+            <option value="Cloud">☁️ Cloud</option>
+            <option value="Other">📄 Other</option>
+          </select>
+        </div>
         <div class="field span2">
-          <label>Tên phần mềm *</label>
-          <input type="text" id="lf-ten" list="ten-datalist" placeholder="VD: Office E3"/>
+          <label id="lf-ten-label">Tên phần mềm / Tên miền *</label>
+          <input type="text" id="lf-ten" list="ten-datalist" placeholder="VD: Office E3 hoặc ttgvn.com"/>
           <datalist id="ten-datalist">
             <option value="Office 365 Extra File Storage">
             <option value="Power Automate Premium">
@@ -2110,6 +2129,37 @@ input[type=checkbox].row-cb{
         <div class="field">
           <label>Trạng thái</label>
           <div id="lf-expiry-status" style="padding:8px 0;font-size:13px;color:var(--muted);">—</div>
+        </div>
+
+        <!-- Domain-specific fields: chỉ hiện khi Type = Domain/Hosting -->
+        <div id="lf-domain-section" style="display:none;grid-column:1/-1;">
+          <div class="grid3" style="margin:0;">
+            <div class="section-divider span3"><span><i class="ph ph-globe"></i> Thông tin Domain</span><hr/></div>
+            <div class="field">
+              <label>Auto-renew</label>
+              <select id="lf-autorenew">
+                <option value="">— Chưa rõ</option>
+                <option value="yes">✅ Có</option>
+                <option value="no">❌ Không</option>
+              </select>
+            </div>
+            <div class="field span2">
+              <label>DNS / Trỏ về</label>
+              <input type="text" id="lf-dns" placeholder="VD: Cloudflare, hosting PA, 103.x.x.x"/>
+            </div>
+            <div class="field span3">
+              <label>Mục đích</label>
+              <input type="text" id="lf-mucdich" list="mucdich-datalist" placeholder="VD: Website chính, Email, Redirect, Dự phòng"/>
+              <datalist id="mucdich-datalist">
+                <option value="Website chính">
+                <option value="Email hosting">
+                <option value="Redirect">
+                <option value="Dự phòng">
+                <option value="Landing page">
+                <option value="Nội bộ">
+              </datalist>
+            </div>
+          </div>
         </div>
 
         <div class="section-divider span3"><span><i class="ph ph-note-pencil"></i> Ghi chú</span><hr/></div>
@@ -6743,16 +6793,47 @@ function toggleLicGroup(){
 
 // ─── Render 1 license row ─────────────────────────────────────────
 // inGroup=true → trong chế độ nhóm theo gói, hợp đồng ở group header
+function _licTypeBadge(type){
+  const map = {
+    'Software': {icon:'ph-disc',     color:'#3B82F6', bg:'#EFF6FF'},
+    'Domain':   {icon:'ph-globe',    color:'#7C3AED', bg:'#F5F3FF'},
+    'Hosting':  {icon:'ph-hard-drives', color:'#059669', bg:'#F0FDF4'},
+    'Cloud':    {icon:'ph-cloud',    color:'#0284C7', bg:'#F0F9FF'},
+    'Other':    {icon:'ph-file-text',color:'#6B7280', bg:'#F9FAFB'},
+  };
+  const t = map[type] || map['Other'];
+  return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;background:${t.bg};color:${t.color};">
+    <i class="ph ${t.icon}" style="font-size:11px;"></i>${type||'Software'}
+  </span>`;
+}
+
 function _licRow(l, i, hideGoi, inGroup){
   const diff = licDiff(l.ngayHetHan);
   const keyMask = l.key ? (l.key.length>12 ? l.key.substring(0,8)+'…'+l.key.slice(-4) : l.key) : '—';
-  // Nút đính kèm: chỉ hiện ở flat mode (mỗi license độc lập)
   const attachBtn = !inGroup
     ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Hồ sơ & Đính kèm" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i></button>`
     : '';
-  return `<tr>
+
+  // Highlight row khi sắp/đã hết hạn
+  const rowStyle = diff !== null && diff < 0
+    ? 'background:#FEF2F2;'
+    : diff !== null && diff <= 30
+      ? 'background:#FFFBEB;'
+      : '';
+
+  // Domain: hiện thêm DNS + auto-renew trong tooltip
+  const domainExtra = (l.type==='Domain'||l.type==='Hosting') && (l.dns||l.autoRenew||l.mucDich)
+    ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">
+        ${l.dns ? `<span>DNS: ${esc(l.dns)}</span>` : ''}
+        ${l.autoRenew ? ` · Auto-renew: ${l.autoRenew==='yes'?'✅':'❌'}` : ''}
+        ${l.mucDich ? ` · ${esc(l.mucDich)}` : ''}
+      </div>`
+    : '';
+
+  return `<tr style="${rowStyle}">
     <td style="color:var(--muted);font-size:11px;">${i}</td>
-    <td><strong>${esc(l.ten||'—')}</strong></td>
+    <td>${_licTypeBadge(l.type||'Software')}</td>
+    <td><strong>${esc(l.ten||'—')}</strong>${domainExtra}</td>
     <td style="font-size:11px;color:var(--accent2);">${hideGoi ? '' : esc(l.goi||'—')}</td>
     <td style="font-size:11px;font-weight:600;">${esc(l.congTy||'—')}</td>
     <td style="font-family:monospace;font-size:11px;" title="${esc(l.key||'')}">${esc(keyMask)}</td>
@@ -6760,7 +6841,7 @@ function _licRow(l, i, hideGoi, inGroup){
     <td>${seatBar(l.tongSeat, l.donVi)}</td>
     <td style="font-size:12px;text-align:right;">${fmtMoney(l.giaTri, l.tienTe)}</td>
     <td style="font-size:12px;">${l.ngayMua||'—'}</td>
-    <td style="font-size:12px;">${l.ngayHetHan||'—'}</td>
+    <td style="font-size:12px;font-weight:${diff!==null&&diff<=30?'700':'400'}">${l.ngayHetHan||'—'}</td>
     <td>${licStatusBadge(diff)}</td>
     <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(l.ghichu||'')}">${esc(l.ghichu||'')}</td>
     <td style="white-space:nowrap;">
@@ -6885,16 +6966,18 @@ function renderLicSummary(list){
 }
 
 function renderLicenses(){
-  const q    = (document.getElementById('lic-search')?.value||'').toLowerCase();
-  const fst  = document.getElementById('lic-filter-status')?.value||'';
-  const fcmp = document.getElementById('lic-filter-company')?.value||'';
-  const fgoi = document.getElementById('lic-filter-goi')?.value||'';
+  const q     = (document.getElementById('lic-search')?.value||'').toLowerCase();
+  const fst   = document.getElementById('lic-filter-status')?.value||'';
+  const fcmp  = document.getElementById('lic-filter-company')?.value||'';
+  const fgoi  = document.getElementById('lic-filter-goi')?.value||'';
+  const ftype = document.getElementById('lic-filter-type')?.value||'';
 
   let list = licenses.slice();
-  if(q)    list = list.filter(l=>(l.ten+l.key+l.ncc+l.ghichu+(l.congTy||'')+(l.goi||'')).toLowerCase().includes(q));
-  if(fst)  list = list.filter(l=> licStatusKey(licDiff(l.ngayHetHan))===fst);
-  if(fcmp) list = list.filter(l=> (l.congTy||'')===fcmp);
-  if(fgoi) list = list.filter(l=> (l.goi||'')===fgoi);
+  if(q)     list = list.filter(l=>(l.ten+l.key+l.ncc+l.ghichu+(l.congTy||'')+(l.goi||'')+(l.dns||'')+(l.mucDich||'')).toLowerCase().includes(q));
+  if(fst)   list = list.filter(l=> licStatusKey(licDiff(l.ngayHetHan))===fst);
+  if(fcmp)  list = list.filter(l=> (l.congTy||'')===fcmp);
+  if(fgoi)  list = list.filter(l=> (l.goi||'')===fgoi);
+  if(ftype) list = list.filter(l=> (l.type||'Software')===ftype);
 
   // KPI (luôn dựa trên toàn bộ licenses, không theo filter)
   document.getElementById('lic-kpi-total').textContent = licenses.length;
@@ -7001,22 +7084,34 @@ function updateLicExpiry(){
   else { el.textContent='✅ Còn '+diff+' ngày'; el.style.color='var(--green)'; }
 }
 
+function onLicTypeChange(){
+  const type = document.getElementById('lf-type')?.value || 'Software';
+  const sec  = document.getElementById('lf-domain-section');
+  const lbl  = document.getElementById('lf-ten-label');
+  const isDomain = type === 'Domain' || type === 'Hosting';
+  if(sec) sec.style.display = isDomain ? '' : 'none';
+  if(lbl) lbl.textContent = isDomain ? 'Tên miền *' : 'Tên phần mềm / Dịch vụ *';
+}
+
+function _licFormReset(){
+  ['lf-id','lf-spid','lf-ten','lf-ncc','lf-key','lf-congty',
+   'lf-tongseat','lf-donvi','lf-giatri','lf-ngaymua','lf-ngayhethan',
+   'lf-ghichu','lf-goi','lf-dns','lf-mucdich'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const type  = document.getElementById('lf-type');
+  const tiente= document.getElementById('lf-tiente');
+  const ar    = document.getElementById('lf-autorenew');
+  if(type)   type.value   = 'Software';
+  if(tiente) tiente.value = 'VND';
+  if(ar)     ar.value     = '';
+  onLicTypeChange();
+}
+
 function openLicenseAdd(){
-  document.getElementById('lic-form-title').textContent = '＋ Thêm License';
-  document.getElementById('lf-id').value      = '';
-  document.getElementById('lf-spid').value    = '';
-  document.getElementById('lf-ten').value     = '';
-  document.getElementById('lf-ncc').value     = '';
-  document.getElementById('lf-key').value     = '';
-  document.getElementById('lf-congty').value  = '';
-  document.getElementById('lf-tongseat').value= '';
-  document.getElementById('lf-donvi').value   = '';
-  document.getElementById('lf-giatri').value  = '';
-  document.getElementById('lf-tiente').value  = 'VND';
-  document.getElementById('lf-ngaymua').value = '';
-  document.getElementById('lf-ngayhethan').value = '';
-  document.getElementById('lf-ghichu').value  = '';
-  document.getElementById('lf-goi').value     = '';
+  document.getElementById('lic-form-title').textContent = '＋ Thêm Contract';
+  _licFormReset();
   document.getElementById('btn-open-history').style.display = 'none';
   document.getElementById('lf-expiry-status').textContent = '—';
   document.getElementById('lf-expiry-status').style.color = 'var(--muted)';
@@ -7025,10 +7120,12 @@ function openLicenseAdd(){
 
 function openLicenseEdit(id){
   const l = licenses.find(x=>x.id===id);
-  if(!l){ toast('⚠️ Không tìm thấy license','bad'); return; }
-  document.getElementById('lic-form-title').textContent   = '✏️ Sửa License';
+  if(!l){ toast('⚠️ Không tìm thấy contract','bad'); return; }
+  document.getElementById('lic-form-title').textContent   = '✏️ Sửa Contract';
+  _licFormReset();
   document.getElementById('lf-id').value       = l.id;
   document.getElementById('lf-spid').value     = l.spId||'';
+  document.getElementById('lf-type').value     = l.type||'Software';
   document.getElementById('lf-ten').value      = l.ten||'';
   document.getElementById('lf-ncc').value      = l.ncc||'';
   document.getElementById('lf-key').value      = l.key||'';
@@ -7041,6 +7138,10 @@ function openLicenseEdit(id){
   document.getElementById('lf-ngayhethan').value = l.ngayHetHan||'';
   document.getElementById('lf-ghichu').value   = l.ghichu||'';
   document.getElementById('lf-goi').value      = l.goi||'';
+  document.getElementById('lf-autorenew').value= l.autoRenew||'';
+  document.getElementById('lf-dns').value      = l.dns||'';
+  document.getElementById('lf-mucdich').value  = l.mucDich||'';
+  onLicTypeChange();
   document.getElementById('btn-open-history').style.display = 'inline-flex';
   updateLicExpiry();
   openModal('modal-license');
@@ -7061,6 +7162,7 @@ async function saveLicense(){
   const rec = {
     id,
     spId: spId ? parseInt(spId) : null,
+    type:      document.getElementById('lf-type')?.value || 'Software',
     ten,
     ncc:       document.getElementById('lf-ncc').value.trim(),
     key:       document.getElementById('lf-key').value.trim(),
@@ -7073,6 +7175,10 @@ async function saveLicense(){
     ngayMua:   document.getElementById('lf-ngaymua').value     || null,
     ngayHetHan:document.getElementById('lf-ngayhethan').value  || null,
     ghichu:    document.getElementById('lf-ghichu').value.trim(),
+    // Domain-specific
+    autoRenew: document.getElementById('lf-autorenew')?.value || '',
+    dns:       document.getElementById('lf-dns')?.value.trim() || '',
+    mucDich:   document.getElementById('lf-mucdich')?.value.trim() || '',
   };
 
   const idx = licenses.findIndex(x=>x.id===id);
