@@ -3460,6 +3460,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadFromStorage();          // load localStorage trước → UI không trắng
   loadLicenses();             // load license data
   loadLicHistory();           // load lịch sử gia hạn
+  loadLicAttachTags();        // load tag file đính kèm theo dòng
   populateDeptSelects();
   applyFilters();
   updateDashboard();
@@ -5344,6 +5345,8 @@ async function openAttachments(assetId){
 
 // Mở hợp đồng theo gói — dùng license đầu tiên có spId làm đại diện
 async function openGoiAttachments(goiName){
+  _attachFilterMode  = 'goi';   // hiện TẤT CẢ file của group
+  _attachFilterLicId = null;
   _attachListName = MSAL_CONFIG.spLicenseList;
   const grpList = licenses.filter(l => (l.goi||'') === goiName);
   // Ưu tiên item đã sync SP
@@ -5383,6 +5386,8 @@ async function openGoiAttachments(goiName){
 }
 
 async function openLicenseAttachments(licId){
+  _attachFilterMode  = 'lic';   // chỉ hiện file của dòng này
+  _attachFilterLicId = licId;
   _attachAssetId  = licId;
   _attachListName = MSAL_CONFIG.spLicenseList;
   const l = licenses.find(x => x.id === licId);
@@ -5391,7 +5396,7 @@ async function openLicenseAttachments(licId){
   const titleEl = document.getElementById('attach-modal-title');
   const body    = document.getElementById('attach-body');
 
-  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm — <span style="color:var(--accent2);">${esc(l.tenPhanMem||l.id)}</span>`;
+  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm — <span style="color:var(--accent2);">${esc(l.ten||l.id)}</span>${l.congTy?` <span style="font-size:11px;color:var(--muted);">(${esc(l.congTy)})</span>`:''}${l.key?` <span style="font-size:10px;color:var(--muted);">· ${esc(l.key)}</span>`:''}`;
 
   if(!_msalAccount || !SP_MODE){
     body.innerHTML = `<div style="text-align:center;padding:32px 0;">
@@ -5434,19 +5439,60 @@ function _renderAttachBody(spId, files){
   const body = document.getElementById('attach-body');
   const spOrigin = new URL(MSAL_CONFIG.spSite).origin;
 
-  const fileHTML = files.length
-    ? files.map(f => {
-        const viewUrl = spOrigin + f.ServerRelativeUrl;
-        return `<div class="attach-item">
-          <i class="ph ${_attachFileIcon(f.FileName)}" style="font-size:20px;color:var(--accent);flex-shrink:0;"></i>
-          <span class="attach-name" title="${esc(f.FileName)}">${esc(f.FileName)}</span>
-          <div style="display:flex;gap:4px;flex-shrink:0;">
-            <button class="action-btn view" title="Mở file" onclick="window.open('${esc(viewUrl)}','_blank')"><i class="ph ph-arrow-square-out"></i></button>
-            <button class="action-btn del" title="Xóa file" onclick="spDeleteAttach(${spId},'${esc(f.FileName).replace(/'/g,'\\\'') }')"><i class="ph ph-trash"></i></button>
-          </div>
-        </div>`;
-      }).join('')
-    : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file đính kèm nào.</p>`;
+  // Lọc file theo mode
+  let visibleFiles = files;
+  if(_attachFilterMode === 'lic' && _attachFilterLicId){
+    const tagged = _licAttachTags[_attachFilterLicId] || [];
+    visibleFiles  = files.filter(f => tagged.includes(f.FileName));
+  }
+
+  // File chưa được tag nào (chỉ hiện ở HĐ khung)
+  const allTagged = Object.values(_licAttachTags).flat();
+  const untagged  = files.filter(f => !allTagged.includes(f.FileName));
+
+  const renderFile = (f, isUntagged=false) => {
+    const viewUrl = spOrigin + f.ServerRelativeUrl;
+    const untagNote = isUntagged ? `<span style="font-size:10px;color:var(--muted);margin-left:4px;">(chưa gán)</span>` : '';
+    return `<div class="attach-item">
+      <i class="ph ${_attachFileIcon(f.FileName)}" style="font-size:20px;color:var(--accent);flex-shrink:0;"></i>
+      <span class="attach-name" title="${esc(f.FileName)}">${esc(f.FileName)}${untagNote}</span>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="action-btn view" title="Mở file" onclick="window.open('${esc(viewUrl)}','_blank')"><i class="ph ph-arrow-square-out"></i></button>
+        <button class="action-btn del" title="Xóa file" onclick="spDeleteAttach(${spId},'${esc(f.FileName).replace(/'/g,'\\\'') }')"><i class="ph ph-trash"></i></button>
+      </div>
+    </div>`;
+  };
+
+  let fileHTML = '';
+  if(_attachFilterMode === 'goi'){
+    // HĐ khung: hiện tất cả, nhóm theo licId
+    if(!files.length){
+      fileHTML = `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file đính kèm nào.</p>`;
+    } else {
+      // File đã được tag: nhóm theo dòng
+      const licIdsInGroup = Object.keys(_licAttachTags).filter(lid =>
+        (_licAttachTags[lid]||[]).some(fn => files.find(f=>f.FileName===fn))
+      );
+      licIdsInGroup.forEach(lid => {
+        const lic = licenses.find(x=>x.id===lid);
+        const label = lic ? `${lic.ten}${lic.key?' · '+lic.key:''}` : lid;
+        const taggedFiles = files.filter(f => (_licAttachTags[lid]||[]).includes(f.FileName));
+        if(!taggedFiles.length) return;
+        fileHTML += `<div style="font-size:11px;font-weight:700;color:var(--accent2);margin:10px 0 4px;padding-left:4px;border-left:3px solid var(--accent2);">${esc(label)}</div>`;
+        fileHTML += taggedFiles.map(f=>renderFile(f)).join('');
+      });
+      // File chưa tag
+      if(untagged.length){
+        fileHTML += `<div style="font-size:11px;font-weight:700;color:var(--muted);margin:10px 0 4px;padding-left:4px;border-left:3px solid var(--border);">Chưa gán vào dòng cụ thể</div>`;
+        fileHTML += untagged.map(f=>renderFile(f, true)).join('');
+      }
+    }
+  } else {
+    // Chế độ dòng: chỉ hiện file của licId này
+    fileHTML = visibleFiles.length
+      ? visibleFiles.map(f=>renderFile(f)).join('')
+      : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file nào cho dòng này.<br><span style="font-size:11px;">Upload file để gán vào dòng này.</span></p>`;
+  }
 
   body.innerHTML = `
     ${fileHTML}
@@ -5490,6 +5536,13 @@ async function _uploadAttachFiles(spId, files){
         `${_attachBase(spId)}/add(FileName='${fname}')`,
         { method:'POST', headers:{'Content-Type':'application/octet-stream','Accept':'application/json;odata=nometadata'}, body: buf }
       );
+      // Tag file vào licId nếu đang ở chế độ 'lic'
+      if(_attachFilterMode === 'lic' && _attachFilterLicId){
+        if(!_licAttachTags[_attachFilterLicId]) _licAttachTags[_attachFilterLicId] = [];
+        if(!_licAttachTags[_attachFilterLicId].includes(file.name))
+          _licAttachTags[_attachFilterLicId].push(file.name);
+        saveLicAttachTags();
+      }
       ok++;
     }catch(e){
       fail++;
@@ -5510,6 +5563,11 @@ async function spDeleteAttach(spId, filename){
       `${_attachBase(spId)}/getbyfilename('${fname}')`,
       { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' }
     );
+    // Bỏ tag file đã xóa khỏi tất cả licId
+    Object.keys(_licAttachTags).forEach(lid => {
+      _licAttachTags[lid] = (_licAttachTags[lid]||[]).filter(f => f !== filename);
+    });
+    saveLicAttachTags();
     toast('🗑 Đã xóa file', 'ok');
     await _refreshAttachments(spId);
   }catch(e){
@@ -6741,10 +6799,19 @@ function fmtMoney(val, tienTe){
 }
 
 // ─── Data store ──────────────────────────────────────────────────
-const LIC_STORE_KEY = 'qlts_v14_licenses';
+const LIC_STORE_KEY        = 'qlts_v14_licenses';
+const LIC_ATTACH_TAGS_KEY  = 'qlts_v14_lic_attach_tags';
 let licenses = [];
 let _licSummaryCollapsed = false;
 let _licGoiCollapsed     = {}; // { goiIdx: bool }
+// Tag: { licId: ['file1.pdf', 'file2.pdf', ...] } — file nào thuộc dòng nào
+let _licAttachTags = {};
+// Chế độ attach hiện tại: 'lic' (lọc theo licId) | 'goi' (hiện tất cả)
+let _attachFilterMode  = 'goi';
+let _attachFilterLicId = null;
+
+function saveLicAttachTags(){ try{ localStorage.setItem(LIC_ATTACH_TAGS_KEY, JSON.stringify(_licAttachTags)); }catch(e){} }
+function loadLicAttachTags(){ try{ const d=localStorage.getItem(LIC_ATTACH_TAGS_KEY); if(d) _licAttachTags=JSON.parse(d); }catch(e){ _licAttachTags={}; } }
 
 function saveLicenses(){
   try{ localStorage.setItem(LIC_STORE_KEY, JSON.stringify(licenses)); }catch(e){}
