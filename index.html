@@ -1516,6 +1516,7 @@ input[type=checkbox].row-cb{
         <option value="Domain">🌐 Domain</option>
         <option value="Hosting">🖥 Hosting</option>
         <option value="Cloud">☁️ Cloud</option>
+        <option value="Internet">📶 Internet</option>
         <option value="Other">📄 Other</option>
       </select>
       <select class="fsel" id="lic-filter-goi" onchange="renderLicenses()">
@@ -2044,6 +2045,7 @@ input[type=checkbox].row-cb{
             <option value="Domain">🌐 Domain</option>
             <option value="Hosting">🖥 Hosting</option>
             <option value="Cloud">☁️ Cloud</option>
+            <option value="Internet">📶 Internet</option>
             <option value="Other">📄 Other</option>
           </select>
         </div>
@@ -6795,11 +6797,12 @@ function toggleLicGroup(){
 // inGroup=true → trong chế độ nhóm theo gói, hợp đồng ở group header
 function _licTypeBadge(type){
   const map = {
-    'Software': {icon:'ph-disc',     color:'#3B82F6', bg:'#EFF6FF'},
-    'Domain':   {icon:'ph-globe',    color:'#7C3AED', bg:'#F5F3FF'},
+    'Software': {icon:'ph-disc',        color:'#3B82F6', bg:'#EFF6FF'},
+    'Domain':   {icon:'ph-globe',       color:'#7C3AED', bg:'#F5F3FF'},
     'Hosting':  {icon:'ph-hard-drives', color:'#059669', bg:'#F0FDF4'},
-    'Cloud':    {icon:'ph-cloud',    color:'#0284C7', bg:'#F0F9FF'},
-    'Other':    {icon:'ph-file-text',color:'#6B7280', bg:'#F9FAFB'},
+    'Cloud':    {icon:'ph-cloud',       color:'#0284C7', bg:'#F0F9FF'},
+    'Internet': {icon:'ph-wifi-high',   color:'#DB2777', bg:'#FDF2F8'},
+    'Other':    {icon:'ph-file-text',   color:'#6B7280', bg:'#F9FAFB'},
   };
   const t = map[type] || map['Other'];
   return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;background:${t.bg};color:${t.color};">
