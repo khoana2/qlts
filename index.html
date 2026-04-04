@@ -6810,9 +6810,9 @@ function _licTypeBadge(type){
 function _licRow(l, i, hideGoi, inGroup){
   const diff = licDiff(l.ngayHetHan);
   const keyMask = l.key ? (l.key.length>12 ? l.key.substring(0,8)+'…'+l.key.slice(-4) : l.key) : '—';
-  const attachBtn = !inGroup
-    ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Hồ sơ & Đính kèm" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i></button>`
-    : '';
+  const attachBtn = inGroup
+    ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Phụ lục / Addendum của dòng này" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i> PL</button>`
+    : `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Hồ sơ & Đính kèm" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i></button>`;
 
   // Highlight row khi sắp/đã hết hạn
   const rowStyle = diff !== null && diff < 0
@@ -7046,23 +7046,23 @@ function renderLicenses(){
         moneyInfo = ` · 💰 ${totStr}`;
       }
 
-      // Group header row — nút đính kèm nằm ở đây (hợp đồng theo gói)
+      // Group header row — nút đính kèm HĐ khung (master agreement)
       const goiKey = goiName.replace(/'/g,"\\'");
       html += `<tr style="background:rgba(124,107,255,.10);border-top:2px solid rgba(124,107,255,.25);">
         <td colspan="12" style="padding:7px 12px;font-size:12px;font-weight:700;color:var(--accent2);">
           <i class="ph ph-package"></i> ${esc(label)}
-          <span style="font-weight:400;color:var(--muted);margin-left:8px;">${grpList.length} license${seatInfo}${moneyInfo}${warnIcon}</span>
+          <span style="font-weight:400;color:var(--muted);margin-left:8px;">${grpList.length} hợp đồng${seatInfo}${moneyInfo}${warnIcon}</span>
         </td>
         <td style="padding:4px 8px;text-align:right;white-space:nowrap;">
-          <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);"
-                  title="Hợp đồng gói: ${esc(label)}"
+          <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--accent2);"
+                  title="HĐ khung / Master Agreement của gói ${esc(label)}"
                   onclick="openGoiAttachments('${goiKey}')">
-            <i class="ph ph-paperclip"></i> HĐ
+            <i class="ph ph-paperclip"></i> HĐ khung
           </button>
         </td>
       </tr>`;
-      // Rows trong nhóm — không có nút attach riêng (inGroup=true)
-      grpList.forEach(l=>{ html += _licRow(l, ++globalIdx, true, true); });
+      // Rows trong nhóm — mỗi dòng có nút đính kèm riêng (phụ lục / addendum)
+      grpList.forEach(l=>{ html += _licRow(l, ++globalIdx, true, false); });
     }
     tbody.innerHTML = html;
   } else {
