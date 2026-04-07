@@ -284,18 +284,21 @@ tbody td{
   padding:10px 10px;font-size:12.5px;color:#1E293B;
   white-space:nowrap;vertical-align:middle;
 }
-/* Nền đặt ở <tr> để sticky cells có thể inherit — không bị bleed-through */
-tbody tr:hover{background:#EFF6FF;}
-tbody tr.selected{background:#DBEAFE!important;}
-tbody tr.selected td{border-bottom-color:#BFDBFE;}
+/* ── CSS custom property cho màu nền row ──
+   Variable cascade từ tr → td (khác background:inherit không chạy trên sticky) */
+tbody tr           {--row-bg:#FFFFFF;}
+tbody tr:hover     {--row-bg:#EFF6FF;}
+tbody tr:hover td  {background:#EFF6FF;}
+tbody tr.selected  {--row-bg:#DBEAFE;}
+tbody tr.selected td{background:#DBEAFE!important;border-bottom-color:#BFDBFE;}
 /* ROW HIGHLIGHT BY STATUS */
-tbody tr.row-kho{background:#FFFBEB;}
-tbody tr.row-kho td{border-left:3px solid #F59E0B;}
-tbody tr.row-hong{background:#FEF2F2;}
-tbody tr.row-hong td{border-left:3px solid #EF4444;}
-tbody tr.row-sua{background:#FFF7ED;}
-tbody tr.row-sua td{border-left:3px solid #F97316;}
-tbody tr.row-thanh-ly{opacity:.5;}
+tbody tr.row-kho   {--row-bg:#FFFBEB;}
+tbody tr.row-kho td{border-left:3px solid #F59E0B;background:#FFFBEB;}
+tbody tr.row-hong  {--row-bg:#FEF2F2;}
+tbody tr.row-hong td{border-left:3px solid #EF4444;background:#FEF2F2;}
+tbody tr.row-sua   {--row-bg:#FFF7ED;}
+tbody tr.row-sua td{border-left:3px solid #F97316;background:#FFF7ED;}
+tbody tr.row-thanh-ly td{opacity:.5;}
 /* COLUMN VISIBILITY */
 #assets-table th[data-col],#assets-table td[data-col]{}
 #assets-table.hide-model th[data-col="model"],#assets-table.hide-model td[data-col="model"]{display:none;}
@@ -306,23 +309,25 @@ tbody tr.row-thanh-ly{opacity:.5;}
 #assets-table.hide-ssd th[data-col="ssd"],#assets-table.hide-ssd td[data-col="ssd"]{display:none;}
 #assets-table.hide-depreciation th[data-col="depreciation"],#assets-table.hide-depreciation td[data-col="depreciation"]{display:none;}
 
-/* ── Sticky first columns (Mã TS + Tên TS) ── */
-#assets-table .cb-col,
-#assets-table .sc-num,
-#assets-table .sc-ma,
-#assets-table .sc-ten{
+/* ── Sticky first columns ──
+   background: var(--row-bg) đọc từ CSS variable định nghĩa trên <tr>
+   → tự cập nhật khi hover/selected/status mà không cần override riêng */
+#assets-table tbody .cb-col,
+#assets-table tbody .sc-num,
+#assets-table tbody .sc-ma,
+#assets-table tbody .sc-ten{
   position:sticky;z-index:2;
-  background:inherit; /* kế thừa nền từ <tr> → tự động đổi màu theo hover/status/selected */
+  background:var(--row-bg,#FFFFFF);
 }
 #assets-table .cb-col{left:0;}
 #assets-table .sc-num{left:38px;}
 #assets-table .sc-ma {left:74px;}
 #assets-table .sc-ten{left:190px;box-shadow:3px 0 8px -3px rgba(0,0,0,.12);}
-/* Thead: cố định nền riêng (đè lên inherit) */
+/* Thead sticky: nền cố định (không dùng variable) */
 #assets-table thead .cb-col,
 #assets-table thead .sc-num,
 #assets-table thead .sc-ma,
-#assets-table thead .sc-ten{z-index:11;background:#F8FAFC;}
+#assets-table thead .sc-ten{position:sticky;z-index:11;background:#F8FAFC;}
 /* COL TOGGLE DROPDOWN */
 .col-toggle-wrap{position:relative;display:inline-block;}
 .col-toggle-menu{
@@ -589,7 +594,7 @@ input[type=checkbox].row-cb{
 .empty-state .es-icon{font-size:48px;margin-bottom:12px;opacity:.4;}
 .empty-state p{font-size:14px;}
 .empty-state small{font-size:12px;opacity:.7;}
-.row-actions{display:flex;gap:6px;}
+.row-actions{display:flex;gap:6px;justify-content:center;}
 .action-btn{
   width:26px;height:26px;border-radius:7px;font-size:13px;
   border:1px solid #E2E8F0;background:#F8FAFC;
@@ -608,6 +613,99 @@ input[type=checkbox].row-cb{
 .action-btn.xfer-co{color:#7C3AED;font-size:13px;}
 .action-btn.xfer-co:hover{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.3);color:#7C3AED;}
 .action-btn.attach:hover{background:#FFF7ED;border-color:#FED7AA;color:#EA580C;}
+
+/* ══════════════ SMART ACTION ══════════════ */
+.sa-btn{
+  width:30px;height:30px;border-radius:8px;font-size:15px;
+  border:1px solid #E2E8F0;background:#F8FAFC;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;color:var(--text);
+}
+.sa-btn:hover{background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-color:#C7D2FE;box-shadow:0 2px 8px rgba(99,102,241,.15);}
+/* Popover */
+#smart-action-menu{
+  position:fixed;z-index:9999;
+  background:#FFFFFF;border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
+  min-width:210px;padding:6px;
+  display:none;
+  animation:saFadeIn .12s ease;
+}
+@keyframes saFadeIn{from{opacity:0;transform:scale(.95) translateY(-4px);}to{opacity:1;transform:scale(1) translateY(0);}}
+#smart-action-menu.open{display:block;}
+/* Header */
+.sa-header{
+  padding:9px 10px 7px;border-bottom:1px solid var(--border);margin-bottom:4px;
+}
+.sa-header-name{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}
+.sa-header-code{font-size:11px;color:var(--muted);margin-top:1px;}
+/* Section label */
+.sa-section{
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);padding:6px 10px 2px;
+}
+/* Action item */
+.sa-item{
+  display:flex;align-items:center;gap:9px;
+  padding:7px 10px;border-radius:8px;cursor:pointer;
+  font-size:13px;color:var(--text);border:none;background:none;width:100%;text-align:left;
+  transition:background .1s;
+}
+.sa-item:hover{background:#F1F5F9;}
+.sa-item i.ph{font-size:15px;width:18px;text-align:center;flex-shrink:0;}
+.sa-item.danger{color:#DC2626;}
+.sa-item.danger:hover{background:#FEF2F2;}
+.sa-item.ai-item{color:var(--muted);cursor:default;opacity:.7;}
+.sa-item.ai-item:hover{background:none;}
+.sa-divider{height:1px;background:var(--border);margin:4px 0;}
+/* AI badge */
+.sa-ai-badge{
+  font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto;flex-shrink:0;
+  background:linear-gradient(135deg,#818CF8,#A78BFA);color:#fff;font-weight:600;
+}
+/* ══════════════ AI HEALTH CHECK MODAL ══════════════ */
+.ai-modal-body{padding:20px 18px;}
+.ai-asset-pill{
+  display:inline-flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #C7D2FE;border-radius:20px;
+  padding:5px 12px;font-size:12px;margin-bottom:14px;
+}
+.ai-loading{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  padding:32px 0;color:var(--muted);font-size:13px;
+}
+.ai-spinner{
+  width:32px;height:32px;border:3px solid #E0E7FF;
+  border-top-color:#818CF8;border-radius:50%;
+  animation:aiSpin .8s linear infinite;
+}
+@keyframes aiSpin{to{transform:rotate(360deg);}}
+.ai-result{font-size:13.5px;line-height:1.7;color:var(--text);}
+.ai-result-box{
+  background:#FAFAFA;border:1px solid var(--border);
+  border-radius:10px;padding:14px 16px;margin-top:4px;
+}
+.ai-verdict{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:12px;
+}
+.ai-verdict.good {background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;}
+.ai-verdict.warn {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A;}
+.ai-verdict.bad  {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;}
+.ai-footer{
+  display:flex;align-items:center;gap:6px;
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--border);
+  font-size:11px;color:var(--muted);
+}
+/* API key setup */
+.ai-setup{text-align:center;padding:24px 16px;}
+.ai-setup input{
+  width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+  font-size:13px;margin:10px 0;outline:none;
+}
+.ai-setup input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+
 /* ── Attachment Modal ── */
 .attach-item{
   display:flex;align-items:center;gap:10px;
@@ -904,6 +1002,471 @@ input[type=checkbox].row-cb{
   pointer-events:none;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   🌊 DARK GLASSMORPHISM THEME — Nam Ô Heritage
+   ─ Đặt ảnh nền: lưu file bg.jpg vào cùng thư mục index.html ─
+═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Root color overrides ── */
+:root {
+  --bg:          #EFF6FF;
+  --panel:       rgba(255,255,255,0.82);
+  --panel2:      rgba(245,250,255,0.80);
+  --header:      rgba(255,255,255,0.88);
+  --border:      rgba(0,100,200,0.12);
+  --text:        #0F172A;
+  --muted:       #64748B;
+  --accent:      #2563EB;
+  --accent2:     #0EA5E9;
+  --green:       #10B981;
+  --yellow:      #F59E0B;
+  --red:         #EF4444;
+  --orange:      #F97316;
+  --shadow:      0 4px 24px rgba(0,60,160,0.12);
+  --surface:     rgba(255,255,255,0.82);
+  --surface2:    rgba(245,250,255,0.80);
+  --glass:       rgba(255,255,255,0.78);
+  --glass-border:rgba(0,100,210,0.13);
+}
+
+/* ── 2. Body: beach image + light overlay ── */
+html { background: #cce8f4; }
+body {
+  background:
+    linear-gradient(160deg,
+      rgba(220,238,255,0.52) 0%,
+      rgba(200,228,255,0.42) 40%,
+      rgba(210,235,255,0.48) 100%),
+    url('bg.jpg') center center / cover no-repeat fixed;
+  color: var(--text);
+}
+.app { position: relative; z-index: 1; max-width: 100%; }
+
+/* ── 3. Scrollbar ── */
+::-webkit-scrollbar-track { background: rgba(5,12,28,0.5); }
+::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.25); }
+::-webkit-scrollbar-thumb:hover { background: rgba(34,211,238,0.45); }
+
+/* ── 4. Topbar ── */
+.topbar {
+  background: rgba(255,255,255,0.86) !important;
+  border-bottom: 1px solid rgba(0,100,210,0.12) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 rgba(37,99,235,0.08), 0 4px 20px rgba(0,60,160,0.1) !important;
+}
+.brand-text h1 { color: #0F172A !important; }
+.brand-text p  { color: #64748B !important; }
+.brand-icon {
+  background: linear-gradient(135deg,#2563EB,#0EA5E9) !important;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.25) !important;
+}
+
+/* ── 5. Sidebar ── */
+.sidebar {
+  background: rgba(255,255,255,0.84) !important;
+  border-right: 1px solid rgba(0,100,210,0.12) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.sidebar-nav { gap: 3px; }
+.sidebar-section { color: #94A3B8 !important; }
+.nav-tab {
+  color: #64748B !important;
+  border-radius: 999px !important;
+  padding: 9px 14px !important;
+  transition: all .2s !important;
+}
+.nav-tab:hover {
+  background: rgba(37,99,235,0.07) !important;
+  color: #1E40AF !important;
+}
+.nav-tab.active {
+  background: rgba(37,99,235,0.12) !important;
+  color: #2563EB !important;
+  border: 1px solid rgba(37,99,235,0.25) !important;
+  box-shadow: 0 2px 12px rgba(37,99,235,0.12) !important;
+  font-weight: 700 !important;
+}
+/* Sidebar footer */
+.sidebar-footer { border-top: 1px solid rgba(0,100,210,0.1) !important; }
+.sidebar-user-card {
+  background: rgba(239,246,255,0.8) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+}
+.sidebar-uname  { color: #0F172A !important; }
+.sidebar-avatar { background: linear-gradient(135deg,#2563EB,#0EA5E9) !important; }
+.btn-sidebar-logout {
+  border-color: rgba(239,68,68,0.3) !important;
+  background: rgba(239,68,68,0.05) !important;
+  color: #DC2626 !important;
+}
+.btn-sidebar-logout:hover { background: rgba(239,68,68,0.1) !important; }
+/* Role badges */
+.sidebar-role-badge { background: #EFF6FF !important; color: #2563EB !important; border-color: #BFDBFE !important; }
+.sidebar-role-badge.global_admin { background: rgba(124,58,237,.1) !important; color: #7C3AED !important; border-color: rgba(124,58,237,.3) !important; }
+.sidebar-role-badge.company_admin { background: rgba(217,119,6,.1) !important; color: #D97706 !important; border-color: rgba(217,119,6,.3) !important; }
+.sidebar-role-badge.member { background: rgba(16,185,129,.08) !important; color: #059669 !important; border-color: rgba(16,185,129,.25) !important; }
+
+/* ── 6. Content area ── */
+.content { background: transparent !important; }
+
+/* ── 7. KPI Cards ── */
+.kpi {
+  background: rgba(255,255,255,0.80) !important;
+  border: 1px solid rgba(0,100,210,0.10) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 4px 20px rgba(0,60,160,0.1), inset 0 1px 0 rgba(255,255,255,0.9) !important;
+}
+.kpi-val   { color: #0F172A !important; }
+.kpi-label { color: #64748B !important; }
+.kpi-sub   { color: #94A3B8 !important; }
+.kpi::before { opacity: 1; }
+
+/* ── 8. Chart cards ── */
+.chart-card {
+  background: rgba(255,255,255,0.80) !important;
+  border: 1px solid rgba(0,100,210,0.10) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow) !important;
+}
+.chart-head {
+  background: rgba(248,250,255,0.7) !important;
+  border-bottom: 1px solid rgba(0,100,210,0.08) !important;
+  color: #64748B !important;
+}
+
+/* ── 9. Filter bar ── */
+.filter-bar {
+  background: rgba(255,255,255,0.78) !important;
+  border: 1px solid rgba(0,100,210,0.10) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.search-wrap {
+  background: rgba(248,250,255,0.85) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+}
+.search-wrap input { color: #0F172A !important; }
+.search-wrap input::placeholder { color: #94A3B8 !important; }
+.fsel {
+  background: rgba(248,250,255,0.85) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  color: #0F172A !important;
+}
+.fsel option { background: #FFFFFF !important; color: #0F172A !important; }
+.filter-count { color: #64748B !important; }
+
+/* Quick filter chips */
+.qf-chip {
+  background: rgba(255,255,255,0.75) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  color: #64748B !important;
+}
+.qf-chip:hover {
+  border-color: rgba(37,99,235,0.35) !important;
+  color: #2563EB !important;
+  background: rgba(37,99,235,0.06) !important;
+}
+.qf-chip.active {
+  background: #EFF6FF !important;
+  border-color: rgba(37,99,235,0.3) !important;
+  color: #2563EB !important;
+}
+
+/* ── 10. Table card ── */
+.table-card {
+  background: rgba(255,255,255,0.80) !important;
+  border: 1px solid rgba(0,100,210,0.10) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow) !important;
+}
+thead th {
+  background: rgba(248,250,255,0.90) !important;
+  border-bottom: 1px solid rgba(0,100,210,0.10) !important;
+  color: #64748B !important;
+}
+/* sticky thead */
+#assets-table thead .cb-col,
+#assets-table thead .sc-num,
+#assets-table thead .sc-ma,
+#assets-table thead .sc-ten { background: rgba(248,250,255,0.90) !important; }
+
+tbody td {
+  border-bottom: 1px solid rgba(0,80,180,0.06) !important;
+  color: #1E293B !important;
+}
+tbody tr           { --row-bg: transparent; }
+tbody tr:hover td  { background: rgba(37,99,235,0.05) !important; }
+tbody tr.selected td { background: #DBEAFE !important; border-bottom-color: #BFDBFE !important; }
+
+/* sticky body cells */
+#assets-table tbody .cb-col,
+#assets-table tbody .sc-num,
+#assets-table tbody .sc-ma,
+#assets-table tbody .sc-ten { background: var(--row-bg, rgba(255,255,255,0.8)) !important; }
+#assets-table tbody tr:hover .cb-col,
+#assets-table tbody tr:hover .sc-num,
+#assets-table tbody tr:hover .sc-ma,
+#assets-table tbody tr:hover .sc-ten { background: rgba(37,99,235,0.05) !important; }
+
+/* row status */
+tbody tr.row-kho td  { background: rgba(245,158,11,0.06) !important; border-left-color: #F59E0B !important; }
+tbody tr.row-hong td { background: rgba(239,68,68,0.05) !important; border-left-color: #EF4444 !important; }
+tbody tr.row-sua td  { background: rgba(249,115,22,0.05) !important; border-left-color: #F97316 !important; }
+
+/* Table footer */
+.tbl-footer {
+  background: rgba(248,250,255,0.85) !important;
+  border-top: 1px solid rgba(0,100,210,0.08) !important;
+}
+.tbl-meta { color: #64748B !important; }
+.per-page-sel {
+  background: rgba(255,255,255,0.85) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  color: #0F172A !important;
+}
+.page-btn {
+  background: rgba(255,255,255,0.85) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  color: #0F172A !important;
+}
+.page-btn:hover { background: #EFF6FF !important; border-color: #BFDBFE !important; }
+.page-btn.active { background: linear-gradient(135deg,#2563EB,#0EA5E9) !important; border:none !important; box-shadow: 0 2px 10px rgba(37,99,235,0.3) !important; }
+
+/* ── 11. Buttons ── */
+.btn {
+  background: rgba(255,255,255,0.82) !important;
+  border: 1px solid rgba(0,100,210,0.14) !important;
+  color: #0F172A !important;
+  backdrop-filter: blur(8px);
+}
+.btn:hover { background: #F8FAFC !important; border-color: #CBD5E1 !important; color: #0F172A !important; }
+.btn.primary {
+  background: linear-gradient(135deg,#2563EB,#0EA5E9) !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(37,99,235,0.28) !important;
+}
+.btn.primary:hover { box-shadow: 0 4px 18px rgba(37,99,235,0.4) !important; filter: brightness(1.06); }
+.btn.success { border-color: rgba(16,185,129,0.4) !important; background: rgba(16,185,129,0.08) !important; color: #059669 !important; }
+.btn.danger  { border-color: rgba(239,68,68,0.4) !important; background: rgba(239,68,68,0.08) !important; color: #DC2626 !important; }
+.btn.warn    { border-color: rgba(245,158,11,0.4) !important; background: rgba(245,158,11,0.08) !important; color: #D97706 !important; }
+.btn.msal    { background: linear-gradient(135deg,#0078d4,#0EA5E9) !important; color:#fff !important; border:none !important; }
+
+/* ── 12. Modals ── */
+.modal-backdrop { background: rgba(15,23,42,0.45) !important; backdrop-filter: blur(4px); }
+.modal {
+  background: rgba(255,255,255,0.92) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 20px 60px rgba(0,60,160,0.18) !important;
+}
+.modal-head {
+  background: rgba(248,250,255,0.90) !important;
+  border-bottom: 1px solid rgba(0,100,210,0.10) !important;
+}
+.modal-head h2 { color: #0F172A !important; }
+.modal-foot {
+  background: rgba(248,250,255,0.90) !important;
+  border-top: 1px solid rgba(0,100,210,0.10) !important;
+}
+
+/* Form fields inside modals */
+.field label { color: #64748B !important; }
+.field input, .field select, .field textarea {
+  background: #F8FAFC !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #0F172A !important;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
+}
+.field select option { background: #FFFFFF !important; color: #0F172A !important; }
+
+/* ── 13. Status pills ── */
+.pill.green  { color:#059669 !important; border-color:rgba(16,185,129,0.4) !important; background:rgba(16,185,129,0.1) !important; }
+.pill.yellow { color:#D97706 !important; border-color:rgba(245,158,11,0.4) !important; background:rgba(245,158,11,0.1) !important; }
+.pill.red    { color:#DC2626 !important; border-color:rgba(239,68,68,0.4) !important; background:rgba(239,68,68,0.1) !important; }
+.pill.blue   { color:#2563EB !important; border-color:rgba(37,99,235,0.35) !important; background:rgba(37,99,235,0.08) !important; }
+.pill.gray   { color:#64748B !important; border-color:#E2E8F0 !important; background:#F8FAFC !important; }
+
+/* ── 14. Type badge ── */
+.type-badge {
+  background: #EFF6FF !important;
+  border: 1px solid #BFDBFE !important;
+  color: #2563EB !important;
+}
+
+/* ── 15. Action buttons ── */
+.action-btn {
+  background: rgba(255,255,255,0.80) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  color: #0F172A !important;
+}
+.action-btn:hover   { background: #F1F5F9 !important; border-color: #CBD5E1 !important; }
+.action-btn.edit:hover     { background: #EFF6FF !important; border-color: #BFDBFE !important; color: #2563EB !important; }
+.action-btn.del:hover      { background: #FEF2F2 !important; border-color: #FECACA !important; color: #DC2626 !important; }
+.action-btn.view:hover     { background: #EFF6FF !important; border-color: #BFDBFE !important; color: #2563EB !important; }
+.action-btn.transfer:hover { background: #ECFDF5 !important; border-color: #A7F3D0 !important; color: #059669 !important; }
+
+/* ── 16. Smart Action button + menu ── */
+.sa-btn {
+  background: rgba(255,255,255,0.80) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  color: #0F172A !important;
+}
+.sa-btn:hover {
+  background: linear-gradient(135deg,#EFF6FF,#F5F3FF) !important;
+  border-color: #C7D2FE !important;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.15) !important;
+}
+#smart-action-menu {
+  background: rgba(255,255,255,0.94) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0,60,160,0.14) !important;
+}
+.sa-header { border-bottom: 1px solid #E2E8F0 !important; }
+.sa-header-name { color: #0F172A !important; }
+.sa-header-code { color: #64748B !important; }
+.sa-section { color: #94A3B8 !important; }
+.sa-item { color: #0F172A !important; }
+.sa-item:hover { background: #F1F5F9 !important; }
+.sa-item.danger { color: #DC2626 !important; }
+.sa-item.danger:hover { background: #FEF2F2 !important; }
+.sa-divider { background: #E2E8F0 !important; }
+
+/* ── 17. Toasts ── */
+.toast {
+  background: rgba(255,255,255,0.93) !important;
+  border: 1px solid rgba(0,100,210,0.10) !important;
+  color: #0F172A !important;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0,60,160,0.12) !important;
+}
+.toast .t-msg { color: #1E293B !important; }
+
+/* ── 18. Attachment modal ── */
+.attach-item { border-bottom: 1px solid #F1F5F9 !important; }
+.attach-item:hover { background: #F8FAFC !important; }
+.attach-name { color: #1E293B !important; }
+.attach-upload-zone {
+  border: 2px dashed #CBD5E1 !important;
+  background: #F8FAFC !important;
+}
+.attach-upload-zone:hover, .attach-upload-zone.drag-over {
+  border-color: #2563EB !important;
+  background: #EFF6FF !important;
+}
+
+/* ── 19. Event timeline ── */
+.event-item { border-left-color: #E2E8F0 !important; }
+.event-body h4 { color: #0F172A !important; }
+.event-body p  { color: #64748B !important; }
+.event-date    { color: #94A3B8 !important; }
+
+/* ── 20. Detail modal specifics ── */
+.detail-cell { border-bottom: 1px solid #F1F5F9 !important; }
+.detail-cell .dc-label { color: #64748B !important; }
+.detail-cell .dc-val   { color: #1E293B !important; }
+.detail-specs {
+  background: #EFF6FF !important;
+  border: 1px solid #BFDBFE !important;
+}
+.spec-chip {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #1E293B !important;
+}
+.spec-chip .sc-label { color: #64748B !important; }
+
+/* ── 21. Section divider ── */
+.section-divider span { color: #2563EB !important; }
+.section-divider hr   { border-top-color: #E2E8F0 !important; }
+
+/* ── 22. Col toggle menu ── */
+.col-toggle-menu {
+  background: rgba(255,255,255,0.96) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  backdrop-filter: blur(12px);
+}
+.col-toggle-menu label { color: #0F172A !important; }
+.col-toggle-menu label:hover { background: #EFF6FF !important; }
+.col-toggle-menu input[type=checkbox] { accent-color: #2563EB !important; }
+
+/* ── 23. Adv filter row ── */
+.adv-filter-row {
+  background: rgba(248,250,255,0.88) !important;
+  border: 1px solid #BFDBFE !important;
+}
+.adv-group label { color: #64748B !important; }
+.adv-date {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #0F172A !important;
+}
+.btn-adv-toggle {
+  background: rgba(255,255,255,0.82) !important;
+  border: 1px solid rgba(0,100,210,0.12) !important;
+  color: #64748B !important;
+}
+.btn-adv-toggle:hover, .btn-adv-toggle.has-filter {
+  border-color: #2563EB !important;
+  color: #2563EB !important;
+  background: #EFF6FF !important;
+}
+
+/* ── 24. Bulk action bar ── */
+.bulk-bar {
+  background: linear-gradient(135deg,#EFF6FF,#F0FDF4) !important;
+  border: 1.5px solid #BFDBFE !important;
+}
+.bulk-count { background: #DBEAFE !important; color: #2563EB !important; }
+
+/* ── 25. Misc ── */
+.tag-chip { background: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; color: #64748B !important; }
+.empty-state { color: #64748B !important; }
+.tbl-num   { color: #64748B !important; }
+.mail-link { color: #2563EB !important; }
+.warn-badge.expired { color:#DC2626 !important; background:rgba(239,68,68,.1) !important; border-color:rgba(239,68,68,.3) !important; }
+.warn-badge.soon    { color:#D97706 !important; background:rgba(245,158,11,.1) !important; border-color:rgba(245,158,11,.3) !important; }
+.warn-badge.ok      { color:#059669 !important; background:rgba(16,185,129,.08) !important; border-color:rgba(16,185,129,.25) !important; }
+
+/* ── 26. Context switcher ── */
+.ctx-switcher { border-bottom: 1px solid rgba(0,100,210,0.10) !important; }
+.ctx-switcher label { color: #94A3B8 !important; }
+.ctx-sel { background: rgba(248,250,255,0.9) !important; border: 1px solid #E2E8F0 !important; color: #0F172A !important; }
+.ctx-badge { background: rgba(124,58,237,.1) !important; color: #7C3AED !important; }
+
+/* ── 27. Drop zone ── */
+.drop-zone { border: 2px dashed #CBD5E1 !important; background: #F8FAFC !important; }
+.drop-zone:hover, .drop-zone.over { border-color: #2563EB !important; background: #EFF6FF !important; }
+.drop-zone p { color: #64748B !important; }
+
+/* ── 28. Scrollbar light ── */
+::-webkit-scrollbar-track { background: rgba(240,248,255,0.5) !important; }
+::-webkit-scrollbar-thumb { background: rgba(37,99,235,0.2) !important; }
+::-webkit-scrollbar-thumb:hover { background: rgba(37,99,235,0.35) !important; }
+
+/* ── 29. Focus ring ── */
+input:focus, select:focus, textarea:focus {
+  outline-color: rgba(37,99,235,0.4) !important;
+}
+
+/* ── 30. Topbar sub bars ── */
+#msal-bar, #file-sync-bar, #sp-bar {
+  background: rgba(255,255,255,0.75) !important;
+  border: 1px solid rgba(0,100,210,0.10) !important;
+  color: #0F172A !important;
+}
+
 </style>
 </head>
 <body>
@@ -1045,7 +1608,7 @@ input[type=checkbox].row-cb{
           <span class="tab-icon"><i class="ph ph-clock-counter-clockwise"></i></span> Lịch Sử
         </button>
         <button class="nav-tab" onclick="switchTab('license')" id="tab-license">
-          <span class="tab-icon"><i class="ph ph-key"></i></span> License
+          <span class="tab-icon"><i class="ph ph-files"></i></span> Contracts
         </button>
         <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">
           <span class="tab-icon"><i class="ph ph-users-three"></i></span> Phân Quyền
@@ -1280,7 +1843,7 @@ input[type=checkbox].row-cb{
               <th data-col="ssd">SSD</th>
               <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
-              <th style="width:112px;">Hành động</th>
+              <th style="width:80px;text-align:center;">Q.Action</th>
             </tr>
           </thead>
           <tbody id="assets-tbody"></tbody>
@@ -1353,10 +1916,10 @@ input[type=checkbox].row-cb{
   <!-- ══════════════ LICENSE VIEW ══════════════ -->
   <div class="view" id="view-license">
 
-    <!-- Stats bar gọn cho License -->
+    <!-- Stats bar gọn cho Contracts -->
     <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:6px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:6px 14px;">
-        <i class="ph ph-key" style="font-size:16px;color:#3B82F6;"></i>
+        <i class="ph ph-files" style="font-size:16px;color:#3B82F6;"></i>
         <span id="lic-kpi-total" style="font-size:20px;font-weight:800;color:#1D4ED8;line-height:1;">0</span>
         <span style="font-size:11px;color:#3B82F6;font-weight:600;">Tổng</span>
       </div>
@@ -1403,7 +1966,7 @@ input[type=checkbox].row-cb{
     <div class="filter-bar" style="margin-top:12px;">
       <div class="search-wrap">
         <i class="ph ph-magnifying-glass" style="font-size:14px;color:var(--muted);flex-shrink:0;"></i>
-        <input type="text" id="lic-search" placeholder="Tìm tên phần mềm, số hợp đồng, nhà cung cấp…" oninput="renderLicenses()"/>
+        <input type="text" id="lic-search" placeholder="Tìm tên, số hợp đồng, nhà cung cấp, tên miền…" oninput="renderLicenses()"/>
       </div>
       <select class="fsel" id="lic-filter-status" onchange="renderLicenses()">
         <option value="">📋 Tất cả trạng thái</option>
@@ -1412,8 +1975,17 @@ input[type=checkbox].row-cb{
         <option value="exp">❌ Đã hết hạn</option>
         <option value="nohd">— Không có hạn</option>
       </select>
+      <select class="fsel" id="lic-filter-type" onchange="renderLicenses()">
+        <option value="">🗂 Tất cả loại</option>
+        <option value="Software">💿 Software</option>
+        <option value="Domain">🌐 Domain</option>
+        <option value="Hosting">🖥 Hosting</option>
+        <option value="Cloud">☁️ Cloud</option>
+        <option value="Internet">📶 Internet</option>
+        <option value="Other">📄 Other</option>
+      </select>
       <select class="fsel" id="lic-filter-goi" onchange="renderLicenses()">
-        <option value="">📦 Gói phần mềm</option>
+        <option value="">📦 Gói / Nhóm</option>
       </select>
       <select class="fsel" id="lic-filter-company" onchange="renderLicenses()">
         <option value="">🏬 Công ty</option>
@@ -1423,7 +1995,7 @@ input[type=checkbox].row-cb{
         <button class="btn btn-icon-ph" id="lic-group-btn" onclick="toggleLicGroup()" title="Gom nhóm theo gói"><i class="ph ph-package"></i> Nhóm theo gói</button>
         <button class="btn btn-icon-ph" id="btn-export-lic" onclick="exportLicenseExcel()" title="Xuất Excel"><i class="ph ph-file-xls"></i> Export Excel</button>
         <button class="btn btn-icon-ph" id="lic-sync-btn" onclick="licSyncSP()" style="display:none"><i class="ph ph-arrows-clockwise"></i> Sync SP</button>
-        <button class="btn primary btn-icon-ph" id="btn-lic-add" onclick="openLicenseAdd()"><i class="ph ph-plus"></i> Thêm License</button>
+        <button class="btn primary btn-icon-ph" id="btn-lic-add" onclick="openLicenseAdd()"><i class="ph ph-plus"></i> Thêm Contract</button>
       </div>
     </div>
 
@@ -1433,7 +2005,8 @@ input[type=checkbox].row-cb{
           <thead>
             <tr>
               <th>#</th>
-              <th>Tên phần mềm</th>
+              <th>Type</th>
+              <th>Tên / Tên miền</th>
               <th>Gói</th>
               <th>Công ty</th>
               <th>Số hợp đồng</th>
@@ -1869,6 +2442,24 @@ input[type=checkbox].row-cb{
 <!-- ═══ PRINT AREA (hidden, only shown on print) ═══ -->
 <div id="print-area"></div>
 
+<!-- ══════════════ AI HEALTH CHECK MODAL ══════════════ -->
+<div class="modal-backdrop" id="modal-ai" onclick="if(event.target===this)closeModal('modal-ai')">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-head">
+      <h2>✨ Smart Assistant</h2>
+      <button class="modal-close" onclick="closeModal('modal-ai')"><i class="ph ph-x"></i></button>
+    </div>
+    <div class="ai-modal-body" id="ai-modal-body"><!-- populated by JS --></div>
+    <div class="modal-foot" id="ai-modal-foot" style="display:none;">
+      <button class="btn" onclick="closeModal('modal-ai')">Đóng</button>
+      <button class="btn" style="color:var(--muted);font-size:12px;" onclick="aiClearKey()"><i class="ph ph-key"></i> Đổi API Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SMART ACTION POPOVER ══════════════ -->
+<div id="smart-action-menu" role="menu" aria-label="Q.Action"></div>
+
 <!-- ══════════════ HỒ SƠ & ĐÍNH KÈM ══════════════ -->
 <div class="modal-backdrop" id="modal-attach" onclick="if(event.target===this)closeModal('modal-attach')">
   <div class="modal" style="max-width:520px;">
@@ -1903,18 +2494,29 @@ input[type=checkbox].row-cb{
 <div class="modal-backdrop" id="modal-license">
   <div class="modal" style="max-width:620px;">
     <div class="modal-head">
-      <h2 id="lic-form-title">Thêm License</h2>
+      <h2 id="lic-form-title">Thêm Contract</h2>
       <button class="btn icon-only" onclick="closeModal('modal-license')" style="border:none;font-size:18px;">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="lf-id"/>
       <input type="hidden" id="lf-spid"/>
       <div class="grid3">
-        <div class="section-divider span3"><span><i class="ph ph-key"></i> Thông tin phần mềm</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-files"></i> Thông tin hợp đồng</span><hr/></div>
 
+        <div class="field">
+          <label>Loại (Type)</label>
+          <select id="lf-type" onchange="onLicTypeChange()">
+            <option value="Software">💿 Software</option>
+            <option value="Domain">🌐 Domain</option>
+            <option value="Hosting">🖥 Hosting</option>
+            <option value="Cloud">☁️ Cloud</option>
+            <option value="Internet">📶 Internet</option>
+            <option value="Other">📄 Other</option>
+          </select>
+        </div>
         <div class="field span2">
-          <label>Tên phần mềm *</label>
-          <input type="text" id="lf-ten" list="ten-datalist" placeholder="VD: Office E3"/>
+          <label id="lf-ten-label">Tên phần mềm / Tên miền *</label>
+          <input type="text" id="lf-ten" list="ten-datalist" placeholder="VD: Office E3 hoặc ttgvn.com"/>
           <datalist id="ten-datalist">
             <option value="Office 365 Extra File Storage">
             <option value="Power Automate Premium">
@@ -1994,6 +2596,37 @@ input[type=checkbox].row-cb{
         <div class="field">
           <label>Trạng thái</label>
           <div id="lf-expiry-status" style="padding:8px 0;font-size:13px;color:var(--muted);">—</div>
+        </div>
+
+        <!-- Domain-specific fields: chỉ hiện khi Type = Domain/Hosting -->
+        <div id="lf-domain-section" style="display:none;grid-column:1/-1;">
+          <div class="grid3" style="margin:0;">
+            <div class="section-divider span3"><span><i class="ph ph-globe"></i> Thông tin Domain</span><hr/></div>
+            <div class="field">
+              <label>Auto-renew</label>
+              <select id="lf-autorenew">
+                <option value="">— Chưa rõ</option>
+                <option value="yes">✅ Có</option>
+                <option value="no">❌ Không</option>
+              </select>
+            </div>
+            <div class="field span2">
+              <label>DNS / Trỏ về</label>
+              <input type="text" id="lf-dns" placeholder="VD: Cloudflare, hosting PA, 103.x.x.x"/>
+            </div>
+            <div class="field span3">
+              <label>Mục đích</label>
+              <input type="text" id="lf-mucdich" list="mucdich-datalist" placeholder="VD: Website chính, Email, Redirect, Dự phòng"/>
+              <datalist id="mucdich-datalist">
+                <option value="Website chính">
+                <option value="Email hosting">
+                <option value="Redirect">
+                <option value="Dự phòng">
+                <option value="Landing page">
+                <option value="Nội bộ">
+              </datalist>
+            </div>
+          </div>
         </div>
 
         <div class="section-divider span3"><span><i class="ph ph-note-pencil"></i> Ghi chú</span><hr/></div>
@@ -3292,6 +3925,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadFromStorage();          // load localStorage trước → UI không trắng
   loadLicenses();             // load license data
   loadLicHistory();           // load lịch sử gia hạn
+  loadLicAttachTags();        // load tag file đính kèm theo dòng
   populateDeptSelects();
   applyFilters();
   updateDashboard();
@@ -4492,12 +5126,9 @@ function renderTable(){
         </td>
         <td>
           <div class="row-actions">
-            <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')"><i class="ph ph-eye"></i></button>
-            <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')"><i class="ph ph-pencil-simple"></i></button>
-            <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i></button>
-            <button class="action-btn attach" title="Hồ sơ & Đính kèm" onclick="openAttachments('${a.id}')"><i class="ph ph-paperclip"></i></button>
-            ${(_userRole==='global_admin'||_userRole==='admin')?`<button class="action-btn xfer-co" title="Chuyển sang công ty khác" onclick="openXferCompany('${a.id}')"><i class="ph ph-buildings"></i></button>`:''}
-            <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')"><i class="ph ph-trash"></i></button>
+            <button class="sa-btn" title="Q.Action" onclick="openSmartAction('${a.id}',this)" style="margin:0 auto;">
+              <span style="font-size:15px;pointer-events:none;line-height:1;">✨</span>
+            </button>
           </div>
         </td>
       </tr>`;
@@ -4592,7 +5223,7 @@ async function bulkApplyStatus(){
     }
   }
 
-  saveAssets();
+  saveToStorage();
   document.getElementById('bulk-status-sel').value = '';
   clearBulkSelect();
   toast(`✅ Đã đổi trạng thái ${successCount} tài sản sang "${newStatus}"`, 'ok');
@@ -4647,7 +5278,7 @@ async function bulkDeleteSelected(){
       try{ await spDeleteAsset(spId); }catch(e){ console.warn('[BULK DEL] SP fail:', id); }
     }
   }
-  saveAssets();
+  saveToStorage();
   clearBulkSelect();
   toast(`🗑️ Đã xóa ${done} tài sản`, 'ok');
 }
@@ -5179,6 +5810,8 @@ async function openAttachments(assetId){
 
 // Mở hợp đồng theo gói — dùng license đầu tiên có spId làm đại diện
 async function openGoiAttachments(goiName){
+  _attachFilterMode  = 'goi';   // hiện TẤT CẢ file của group
+  _attachFilterLicId = null;
   _attachListName = MSAL_CONFIG.spLicenseList;
   const grpList = licenses.filter(l => (l.goi||'') === goiName);
   // Ưu tiên item đã sync SP
@@ -5218,6 +5851,8 @@ async function openGoiAttachments(goiName){
 }
 
 async function openLicenseAttachments(licId){
+  _attachFilterMode  = 'lic';   // chỉ hiện file của dòng này
+  _attachFilterLicId = licId;
   _attachAssetId  = licId;
   _attachListName = MSAL_CONFIG.spLicenseList;
   const l = licenses.find(x => x.id === licId);
@@ -5226,7 +5861,7 @@ async function openLicenseAttachments(licId){
   const titleEl = document.getElementById('attach-modal-title');
   const body    = document.getElementById('attach-body');
 
-  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm — <span style="color:var(--accent2);">${esc(l.tenPhanMem||l.id)}</span>`;
+  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm — <span style="color:var(--accent2);">${esc(l.ten||l.id)}</span>${l.congTy?` <span style="font-size:11px;color:var(--muted);">(${esc(l.congTy)})</span>`:''}${l.key?` <span style="font-size:10px;color:var(--muted);">· ${esc(l.key)}</span>`:''}`;
 
   if(!_msalAccount || !SP_MODE){
     body.innerHTML = `<div style="text-align:center;padding:32px 0;">
@@ -5261,7 +5896,51 @@ async function _refreshAttachments(spId){
     const files = data?.value || [];
     _renderAttachBody(spId, files);
   }catch(e){
-    body.innerHTML = `<p style="color:var(--red);font-size:13px;padding:12px;">❌ Lỗi tải danh sách: ${esc(e.message)}</p>`;
+    const msg = e.message || '';
+    const isGone = msg.includes('Item does not exist') || msg.includes('-2147024809') || msg.includes('does not exist');
+    if(isGone && _attachFilterMode === 'lic' && _attachFilterLicId){
+      // SP item đã bị xóa — cho phép đồng bộ lại
+      const lid = _attachFilterLicId;
+      body.innerHTML = `<div style="text-align:center;padding:32px 16px;">
+        <i class="ph ph-warning-circle" style="font-size:32px;color:var(--yellow);"></i>
+        <p style="font-size:13px;color:var(--text);margin:10px 0 4px;font-weight:600;">Bản ghi SharePoint không còn tồn tại</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Item này có thể đã bị xóa khỏi SP.<br>Nhấn <strong>Đồng bộ lại</strong> để tạo mới và dùng đính kèm.</p>
+        <button class="btn primary btn-icon-ph" onclick="resyncLicenseAttach('${lid}')"><i class="ph ph-arrows-clockwise"></i> Đồng bộ lại</button>
+      </div>`;
+    } else if(isGone && _attachFilterMode === 'goi'){
+      body.innerHTML = `<div style="text-align:center;padding:32px 16px;">
+        <i class="ph ph-warning-circle" style="font-size:32px;color:var(--yellow);"></i>
+        <p style="font-size:13px;color:var(--text);margin:10px 0 4px;font-weight:600;">Bản ghi SharePoint không còn tồn tại</p>
+        <p style="font-size:12px;color:var(--muted);">Hãy vào từng dòng hợp đồng, nhấn Lưu để đồng bộ lại lên SP.</p>
+      </div>`;
+    } else {
+      body.innerHTML = `<p style="color:var(--red);font-size:13px;padding:12px;">❌ Lỗi tải danh sách: ${esc(msg)}</p>`;
+    }
+  }
+}
+
+// Xóa spId cũ và push lại để tạo bản ghi SP mới
+async function resyncLicenseAttach(licId){
+  const idx = licenses.findIndex(l => l.id === licId);
+  if(idx < 0) return;
+  const body = document.getElementById('attach-body');
+  body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">
+    <i class="ph ph-spinner-gap" style="font-size:22px;"></i><br>Đang đồng bộ lại…
+  </div>`;
+  // Clear spId cũ → msalSpPushLicense sẽ POST tạo item mới
+  licenses[idx].spId = null;
+  saveLicenses();
+  try{
+    await msalSpPushLicense(licId);
+    const l = licenses.find(x => x.id === licId);
+    if(l?.spId){
+      await _refreshAttachments(l.spId);
+      toast('✅ Đã đồng bộ lại, bạn có thể upload file', 'ok');
+    } else {
+      body.innerHTML = `<p style="color:var(--red);font-size:13px;padding:12px;">❌ Không lấy được ID mới từ SP. Hãy thử lưu lại license từ form.</p>`;
+    }
+  }catch(e){
+    body.innerHTML = `<p style="color:var(--red);font-size:13px;padding:12px;">❌ Lỗi đồng bộ: ${esc(e.message)}</p>`;
   }
 }
 
@@ -5269,19 +5948,60 @@ function _renderAttachBody(spId, files){
   const body = document.getElementById('attach-body');
   const spOrigin = new URL(MSAL_CONFIG.spSite).origin;
 
-  const fileHTML = files.length
-    ? files.map(f => {
-        const viewUrl = spOrigin + f.ServerRelativeUrl;
-        return `<div class="attach-item">
-          <i class="ph ${_attachFileIcon(f.FileName)}" style="font-size:20px;color:var(--accent);flex-shrink:0;"></i>
-          <span class="attach-name" title="${esc(f.FileName)}">${esc(f.FileName)}</span>
-          <div style="display:flex;gap:4px;flex-shrink:0;">
-            <button class="action-btn view" title="Mở file" onclick="window.open('${esc(viewUrl)}','_blank')"><i class="ph ph-arrow-square-out"></i></button>
-            <button class="action-btn del" title="Xóa file" onclick="spDeleteAttach(${spId},'${esc(f.FileName).replace(/'/g,'\\\'') }')"><i class="ph ph-trash"></i></button>
-          </div>
-        </div>`;
-      }).join('')
-    : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file đính kèm nào.</p>`;
+  // Lọc file theo mode
+  let visibleFiles = files;
+  if(_attachFilterMode === 'lic' && _attachFilterLicId){
+    const tagged = _licAttachTags[_attachFilterLicId] || [];
+    visibleFiles  = files.filter(f => tagged.includes(f.FileName));
+  }
+
+  // File chưa được tag nào (chỉ hiện ở HĐ khung)
+  const allTagged = Object.values(_licAttachTags).flat();
+  const untagged  = files.filter(f => !allTagged.includes(f.FileName));
+
+  const renderFile = (f, isUntagged=false) => {
+    const viewUrl = spOrigin + f.ServerRelativeUrl;
+    const untagNote = isUntagged ? `<span style="font-size:10px;color:var(--muted);margin-left:4px;">(chưa gán)</span>` : '';
+    return `<div class="attach-item">
+      <i class="ph ${_attachFileIcon(f.FileName)}" style="font-size:20px;color:var(--accent);flex-shrink:0;"></i>
+      <span class="attach-name" title="${esc(f.FileName)}">${esc(f.FileName)}${untagNote}</span>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="action-btn view" title="Mở file" onclick="window.open('${esc(viewUrl)}','_blank')"><i class="ph ph-arrow-square-out"></i></button>
+        <button class="action-btn del" title="Xóa file" onclick="spDeleteAttach(${spId},'${esc(f.FileName).replace(/'/g,'\\\'') }')"><i class="ph ph-trash"></i></button>
+      </div>
+    </div>`;
+  };
+
+  let fileHTML = '';
+  if(_attachFilterMode === 'goi'){
+    // HĐ khung: hiện tất cả, nhóm theo licId
+    if(!files.length){
+      fileHTML = `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file đính kèm nào.</p>`;
+    } else {
+      // File đã được tag: nhóm theo dòng
+      const licIdsInGroup = Object.keys(_licAttachTags).filter(lid =>
+        (_licAttachTags[lid]||[]).some(fn => files.find(f=>f.FileName===fn))
+      );
+      licIdsInGroup.forEach(lid => {
+        const lic = licenses.find(x=>x.id===lid);
+        const label = lic ? `${lic.ten}${lic.key?' · '+lic.key:''}` : lid;
+        const taggedFiles = files.filter(f => (_licAttachTags[lid]||[]).includes(f.FileName));
+        if(!taggedFiles.length) return;
+        fileHTML += `<div style="font-size:11px;font-weight:700;color:var(--accent2);margin:10px 0 4px;padding-left:4px;border-left:3px solid var(--accent2);">${esc(label)}</div>`;
+        fileHTML += taggedFiles.map(f=>renderFile(f)).join('');
+      });
+      // File chưa tag
+      if(untagged.length){
+        fileHTML += `<div style="font-size:11px;font-weight:700;color:var(--muted);margin:10px 0 4px;padding-left:4px;border-left:3px solid var(--border);">Chưa gán vào dòng cụ thể</div>`;
+        fileHTML += untagged.map(f=>renderFile(f, true)).join('');
+      }
+    }
+  } else {
+    // Chế độ dòng: chỉ hiện file của licId này
+    fileHTML = visibleFiles.length
+      ? visibleFiles.map(f=>renderFile(f)).join('')
+      : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file nào cho dòng này.<br><span style="font-size:11px;">Upload file để gán vào dòng này.</span></p>`;
+  }
 
   body.innerHTML = `
     ${fileHTML}
@@ -5321,10 +6041,27 @@ async function _uploadAttachFiles(spId, files){
     try{
       const buf   = await file.arrayBuffer();
       const fname = encodeURIComponent(file.name);
-      await msalSpReq(
-        `${_attachBase(spId)}/add(FileName='${fname}')`,
-        { method:'POST', headers:{'Content-Type':'application/octet-stream','Accept':'application/json;odata=nometadata'}, body: buf }
-      );
+      try{
+        await msalSpReq(
+          `${_attachBase(spId)}/add(FileName='${fname}')`,
+          { method:'POST', headers:{'Content-Type':'application/octet-stream','Accept':'application/json;odata=nometadata'}, body: buf }
+        );
+      }catch(uploadErr){
+        const msg = uploadErr.message || '';
+        // File đã tồn tại trên SP (HTTP 409) — chỉ tag lại, không cần upload
+        if(msg.includes('409') || msg.includes('already exists') || msg.includes('duplicate')){
+          toast(`ℹ️ File đã tồn tại trên SP, đã gán vào dòng này: ${esc(file.name)}`, 'ok');
+        } else {
+          throw uploadErr; // lỗi khác thì re-throw
+        }
+      }
+      // Tag file vào licId nếu đang ở chế độ 'lic'
+      if(_attachFilterMode === 'lic' && _attachFilterLicId){
+        if(!_licAttachTags[_attachFilterLicId]) _licAttachTags[_attachFilterLicId] = [];
+        if(!_licAttachTags[_attachFilterLicId].includes(file.name))
+          _licAttachTags[_attachFilterLicId].push(file.name);
+        saveLicAttachTags();
+      }
       ok++;
     }catch(e){
       fail++;
@@ -5345,6 +6082,11 @@ async function spDeleteAttach(spId, filename){
       `${_attachBase(spId)}/getbyfilename('${fname}')`,
       { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' }
     );
+    // Bỏ tag file đã xóa khỏi tất cả licId
+    Object.keys(_licAttachTags).forEach(lid => {
+      _licAttachTags[lid] = (_licAttachTags[lid]||[]).filter(f => f !== filename);
+    });
+    saveLicAttachTags();
     toast('🗑 Đã xóa file', 'ok');
     await _refreshAttachments(spId);
   }catch(e){
@@ -5352,6 +6094,327 @@ async function spDeleteAttach(spId, filename){
   }
 }
 // ════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════ SMART ASSISTANT — Azure Function ═══════════════════════
+// Điền URL Azure Function sau khi deploy
+const AI_FUNCTION_URL = 'https://qlts.khoa-na.workers.dev/';
+
+function aiClearKey(){
+  closeModal('modal-ai');
+}
+
+async function geminiHealthCheck(assetId){
+  const a = assets.find(x=>x.id===assetId);
+  if(!a) return;
+
+  const body = document.getElementById('ai-modal-body');
+  const foot = document.getElementById('ai-modal-foot');
+  foot.style.display = 'none';
+
+  // Kiểm tra Azure Function URL đã cấu hình chưa
+  if(AI_FUNCTION_URL.includes('<your-function-app>')){
+    body.innerHTML = `
+      <div class="ai-setup">
+        <div style="font-size:28px;margin-bottom:8px;">⚙️</div>
+        <p style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Chưa cấu hình Azure Function</p>
+        <p style="font-size:12px;color:var(--muted);line-height:1.6;">
+          Cần deploy Azure Function và điền URL vào biến <code>AI_FUNCTION_URL</code> trong file index.html.<br><br>
+          Xem hướng dẫn trong thư mục <code>azure-function/</code>.
+        </p>
+      </div>`;
+    foot.style.display = 'flex';
+    openModal('modal-ai');
+    return;
+  }
+
+  // Lấy Azure AD token (đã có sẵn từ MSAL)
+  let token = '';
+  try{ token = await msalGetToken(); }catch(e){ /* nếu chưa login thì bỏ qua */ }
+
+  // Hiện loading
+  body.innerHTML = `
+    <div class="ai-loading">
+      <div class="ai-spinner"></div>
+      <span>✨ Đang phân tích tài sản…</span>
+      <span style="font-size:11px;opacity:.6;">Powered by Google Gemini · gemini-2.5-flash</span>
+    </div>`;
+  openModal('modal-ai');
+
+  // Chuẩn bị dữ liệu gửi lên Azure Function
+  const depr = calcDepreciation(a);
+  const assetData = {
+    tenTaiSan: a.tenTaiSan, model: a.model, maTaiSan: a.maTaiSan,
+    ngayMua: a.ngayMua, giaTri: a.giaTri, tinhTrang: a.tinhTrang,
+    nguoiDung: a.nguoiDung, boPhan: a.boPhan, ghiChu: a.ghiChu,
+    depreciation: depr,
+  };
+
+  try{
+    const res = await fetch(AI_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      body: JSON.stringify({ assetData }),
+    });
+
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.error || `HTTP ${res.status}`);
+    }
+
+    const json = await res.json();
+    const vcls = json.verdict || 'warn';
+
+    body.innerHTML = `
+      <div class="ai-asset-pill">
+        <i class="ph ph-laptop" style="font-size:13px;color:#818CF8;"></i>
+        <strong>${esc(a.tenTaiSan||'Tài sản')}</strong>
+        <span style="color:var(--muted);">${esc(a.maTaiSan||'')}</span>
+      </div>
+      <span class="ai-verdict ${vcls}">
+        ${ vcls==='good'?'✅':vcls==='warn'?'⚠️':'🔴' } ${esc(json.verdict_label||vcls)}
+      </span>
+      <div class="ai-result-box">
+        <div class="ai-result">${esc(json.summary||'')}</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Khuyến nghị</div>
+          <div class="ai-result" style="font-weight:600;">${esc(json.recommendation||'')}</div>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Lý do</div>
+          <div class="ai-result" style="color:var(--muted);">${esc(json.reason||'')}</div>
+        </div>
+      </div>
+      <div class="ai-footer">
+        <i class="ph ph-sparkle" style="font-size:13px;color:#818CF8;"></i>
+        Powered by Google Gemini · gemini-2.5-flash · qua Azure Function
+      </div>`;
+    foot.style.display = 'flex';
+
+  }catch(e){
+    const msg = e.message || '';
+    const isAuth  = msg.includes('401') || msg.includes('Unauthorized');
+    const isQuota = msg.includes('quota') || msg.includes('429');
+    body.innerHTML = `
+      <div style="text-align:center;padding:20px 0;">
+        <i class="ph ph-warning-circle" style="font-size:28px;color:var(--red);"></i>
+        <p style="font-size:13px;color:var(--red);margin-top:10px;font-weight:600;">
+          ${isAuth ? '❌ Chưa đăng nhập Azure AD' : isQuota ? '⚠️ Hết quota Gemini API' : '❌ Lỗi kết nối'}
+        </p>
+        <p style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5;">
+          ${isQuota
+            ? `Gemini free tier giới hạn 15 request/phút và 1.500 request/ngày.<br>
+               Vui lòng thử lại sau ít phút, hoặc vào
+               <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary);">AI Studio</a>
+               để kiểm tra quota.`
+            : esc(msg.substring(0,200))
+          }
+        </p>
+      </div>`;
+    foot.style.display = 'flex';
+  }
+}
+// ════════════════════════════════════════════════════════
+
+// ═══════════════════════ SMART ACTION ═══════════════════════
+let _saCurrentId = null;
+
+function openSmartAction(assetId, triggerEl){
+  const a = assets.find(x => x.id === assetId);
+  if(!a) return;
+  _saCurrentId = assetId;
+
+  const menu = document.getElementById('smart-action-menu');
+  const isAdmin = _userRole === 'global_admin' || _userRole === 'admin';
+
+  // ── Render nội dung menu ──
+  menu.innerHTML = `
+    <div class="sa-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <div class="sa-header-name"><i class="ph ph-laptop" style="font-size:12px;margin-right:4px;"></i>${esc(a.tenTaiSan||'Tài sản')}</div>
+        <span style="font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);white-space:nowrap;">Q.Action</span>
+      </div>
+      <div class="sa-header-code">${esc(a.maTaiSan||'—')} · ${esc(a.nguoiDung||'Chưa cấp phát')}</div>
+    </div>
+
+    <button class="sa-item" onclick="saAct('view')"><i class="ph ph-eye" style="color:var(--accent);"></i> Xem chi tiết</button>
+    <button class="sa-item" onclick="saAct('edit')"><i class="ph ph-pencil-simple" style="color:var(--accent2);"></i> Chỉnh sửa</button>
+
+    <div class="sa-divider"></div>
+    <div class="sa-section">Quản lý</div>
+    <button class="sa-item" onclick="saAct('transfer')"><i class="ph ph-arrows-left-right" style="color:#059669;"></i> Bàn giao</button>
+    <button class="sa-item" onclick="saAct('attach')"><i class="ph ph-paperclip" style="color:#EA580C;"></i> Hồ sơ & Đính kèm</button>
+    ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="color:#7C3AED;"></i> Chuyển công ty</button>` : ''}
+
+    <div class="sa-divider"></div>
+    <div class="sa-section">Trạng thái nhanh</div>
+    ${a.tinhTrang !== 'Hỏng' && a.tinhTrang !== 'Sửa chữa'
+      ? `<button class="sa-item" onclick="saAct('report-damage')" style="color:#DC2626;">
+           <i class="ph ph-warning" style="color:#DC2626;"></i> Báo hỏng
+         </button>`
+      : `<button class="sa-item" onclick="saAct('report-damage')" style="color:#059669;">
+           <i class="ph ph-wrench" style="color:#059669;"></i> Đang sửa chữa — đổi trạng thái
+         </button>`}
+    ${a.nguoiDung
+      ? `<button class="sa-item" onclick="saAct('recall')" style="color:#B45309;">
+           <i class="ph ph-package" style="color:#D97706;"></i> Thu hồi về kho
+         </button>`
+      : ''}
+
+    <div class="sa-divider"></div>
+    <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash"></i> Xóa tài sản</button>
+
+    <!-- AI Health Check — tạm ẩn, bật lại khi cần:
+    <div class="sa-divider"></div>
+    <div class="sa-section">✨ AI</div>
+    <button class="sa-item" onclick="saAct('ai-health')" style="background:linear-gradient(135deg,rgba(129,140,248,.08),rgba(167,139,250,.08));">
+      <i class="ph ph-sparkle" style="color:#818CF8;"></i>
+      <span>Asset Health Check</span>
+      <span class="sa-ai-badge">Gemini</span>
+    </button>
+    -->`;
+
+  // ── Vị trí popover: ngang hàng nút, mở sang trái ──
+  menu.classList.add('open');
+  const rect  = triggerEl.getBoundingClientRect();
+  const mw    = menu.offsetWidth  || 220;
+  const mh    = menu.offsetHeight || 280;
+  const vw    = window.innerWidth;
+  const vh    = window.innerHeight;
+
+  // Mặc định: top ngang với nút, left sát bên trái nút
+  let top  = rect.top;
+  let left = rect.left - mw - 6;
+
+  // Nếu tràn trái thì mở sang phải
+  if(left < 8) left = rect.right + 6;
+  // Nếu tràn phải thì kéo vào
+  if(left + mw > vw - 8) left = vw - mw - 8;
+  // Nếu tràn dưới thì đẩy lên
+  if(top + mh > vh - 12) top = vh - mh - 12;
+  // Không vượt quá đỉnh
+  if(top < 8) top = 8;
+
+  menu.style.top  = top  + 'px';
+  menu.style.left = left + 'px';
+}
+
+function saAct(action){
+  const id = _saCurrentId;  // ← lưu trước khi closeSmartAction reset về null
+  closeSmartAction();
+  if(!id) return;
+  if(action === 'view')      viewDetail(id);
+  if(action === 'edit')      openEdit(id);
+  if(action === 'transfer')  openTransfer(id);
+  if(action === 'attach')    openAttachments(id);
+  if(action === 'xfer-co')   openXferCompany(id);
+  if(action === 'delete')        openDelete(id);
+  if(action === 'report-damage') saReportDamage(id);
+  if(action === 'recall')        saRecall(id);
+  if(action === 'ai-health')     geminiHealthCheck(id);
+}
+
+function closeSmartAction(){
+  const menu = document.getElementById('smart-action-menu');
+  if(menu){ menu.classList.remove('open'); }
+  _saCurrentId = null;
+}
+
+// ── Báo hỏng ─────────────────────────────────────────────────
+async function saReportDamage(id){
+  const idx = assets.findIndex(a => a.id === id);
+  if(idx < 0) return;
+  const a = assets[idx];
+
+  // Nếu đang Hỏng/Sửa chữa thì cho phép đổi về Đang dùng
+  if(a.tinhTrang === 'Hỏng' || a.tinhTrang === 'Sửa chữa'){
+    const back = confirm(`"${a.tenTaiSan} — ${a.maTaiSan}" đang ở trạng thái "${a.tinhTrang}".\n\nĐổi về "Đang dùng"?`);
+    if(!back) return;
+    assets[idx].tinhTrang = 'Đang dùng';
+    toast(`✅ Đã cập nhật trạng thái về "Đang dùng"`, 'ok');
+  } else {
+    const note = prompt(`Báo hỏng: "${a.tenTaiSan} — ${a.maTaiSan}"\n\nNhập lý do hỏng (có thể để trống):`);
+    if(note === null) return; // user bấm Cancel
+    assets[idx].tinhTrang = 'Hỏng';
+    if(note.trim()) assets[idx].ghiChu = (assets[idx].ghiChu ? assets[idx].ghiChu + ' | ' : '') + `[Hỏng] ${note.trim()}`;
+    toast(`⚠️ Đã báo hỏng "${a.maTaiSan}"`, 'warn');
+  }
+
+  saveToStorage();
+  if(_msalAccount){
+    try{ await msalSpPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
+  } else if(SP_MODE && assets[idx]._spId){
+    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
+  }
+  applyFilters(true);
+  updateDashboard();
+}
+
+// ── Thu hồi về kho ────────────────────────────────────────────
+async function saRecall(id){
+  const idx = assets.findIndex(a => a.id === id);
+  if(idx < 0) return;
+  const a = assets[idx];
+
+  // Kiểm tra tài sản đã được bàn giao chưa
+  const hasBanGiao = a.trangThaiHienTai === 'Bàn giao'
+                   || (transfers[id] && transfers[id].length > 0)
+                   || !!a.nguoiDung;
+  if(!hasBanGiao){ toast('ℹ️ Tài sản chưa được cấp phát', 'info'); return; }
+
+  const nguoiCu = a.nguoiDung || '—';
+  const boPhanCu = a.boPhan || '—';
+  const ok = confirm(`Thu hồi "${a.tenTaiSan} — ${a.maTaiSan}" từ ${nguoiCu} (${boPhanCu})?\n\nTài sản sẽ được chuyển về kho.`);
+  if(!ok) return;
+
+  const now = new Date().toISOString().slice(0,10);
+
+  // Tạo bản ghi thu hồi trong lịch sử bàn giao
+  if(!transfers[id]) transfers[id] = [];
+  transfers[id].push({
+    from:     nguoiCu,
+    fromDept: boPhanCu,
+    to:       'Kho',
+    toDept:   '',
+    toEmail:  '',
+    date:     now,
+    condition: a.tinhTrang || '',
+    notes:    'Thu hồi về kho',
+  });
+  saveTransfers();
+
+  // Cập nhật tài sản
+  assets[idx].nguoiDung        = '';
+  assets[idx].email            = '';
+  assets[idx].boPhan           = '';
+  assets[idx].tinhTrang        = 'Lưu Kho';
+  assets[idx].trangThaiHienTai = 'Thu hồi';
+  assets[idx].ngaySuKien       = now;
+
+  saveToStorage();
+  if(_msalAccount){
+    try{ await msalSpPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
+  } else if(SP_MODE && assets[idx]._spId){
+    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
+  }
+  applyFilters(true);
+  updateDashboard();
+  renderEvents();
+  toast(`📦 Đã thu hồi "${a.maTaiSan}" về kho`, 'ok');
+}
+
+// Đóng khi click ngoài hoặc nhấn Escape
+document.addEventListener('click', e => {
+  const menu = document.getElementById('smart-action-menu');
+  if(!menu?.classList.contains('open')) return;
+  if(!menu.contains(e.target) && !e.target.closest('.sa-btn')) closeSmartAction();
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeSmartAction();
+});
+// ════════════════════════════════════════════════════════
 
 function openDelete(id){
   if(!can('delete')){ toast('🔒 Bạn không có quyền xóa','bad'); return; }
@@ -6288,10 +7351,19 @@ function fmtMoney(val, tienTe){
 }
 
 // ─── Data store ──────────────────────────────────────────────────
-const LIC_STORE_KEY = 'qlts_v14_licenses';
+const LIC_STORE_KEY        = 'qlts_v14_licenses';
+const LIC_ATTACH_TAGS_KEY  = 'qlts_v14_lic_attach_tags';
 let licenses = [];
 let _licSummaryCollapsed = false;
 let _licGoiCollapsed     = {}; // { goiIdx: bool }
+// Tag: { licId: ['file1.pdf', 'file2.pdf', ...] } — file nào thuộc dòng nào
+let _licAttachTags = {};
+// Chế độ attach hiện tại: 'lic' (lọc theo licId) | 'goi' (hiện tất cả)
+let _attachFilterMode  = 'goi';
+let _attachFilterLicId = null;
+
+function saveLicAttachTags(){ try{ localStorage.setItem(LIC_ATTACH_TAGS_KEY, JSON.stringify(_licAttachTags)); }catch(e){} }
+function loadLicAttachTags(){ try{ const d=localStorage.getItem(LIC_ATTACH_TAGS_KEY); if(d) _licAttachTags=JSON.parse(d); }catch(e){ _licAttachTags={}; } }
 
 function saveLicenses(){
   try{ localStorage.setItem(LIC_STORE_KEY, JSON.stringify(licenses)); }catch(e){}
@@ -6342,16 +7414,48 @@ function toggleLicGroup(){
 
 // ─── Render 1 license row ─────────────────────────────────────────
 // inGroup=true → trong chế độ nhóm theo gói, hợp đồng ở group header
+function _licTypeBadge(type){
+  const map = {
+    'Software': {icon:'ph-disc',        color:'#3B82F6', bg:'#EFF6FF'},
+    'Domain':   {icon:'ph-globe',       color:'#7C3AED', bg:'#F5F3FF'},
+    'Hosting':  {icon:'ph-hard-drives', color:'#059669', bg:'#F0FDF4'},
+    'Cloud':    {icon:'ph-cloud',       color:'#0284C7', bg:'#F0F9FF'},
+    'Internet': {icon:'ph-wifi-high',   color:'#DB2777', bg:'#FDF2F8'},
+    'Other':    {icon:'ph-file-text',   color:'#6B7280', bg:'#F9FAFB'},
+  };
+  const t = map[type] || map['Other'];
+  return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;background:${t.bg};color:${t.color};">
+    <i class="ph ${t.icon}" style="font-size:11px;"></i>${type||'Software'}
+  </span>`;
+}
+
 function _licRow(l, i, hideGoi, inGroup){
   const diff = licDiff(l.ngayHetHan);
   const keyMask = l.key ? (l.key.length>12 ? l.key.substring(0,8)+'…'+l.key.slice(-4) : l.key) : '—';
-  // Nút đính kèm: chỉ hiện ở flat mode (mỗi license độc lập)
-  const attachBtn = !inGroup
-    ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Hồ sơ & Đính kèm" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i></button>`
+  const attachBtn = inGroup
+    ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Phụ lục / Addendum của dòng này" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i> PL</button>`
+    : `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Hồ sơ & Đính kèm" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i></button>`;
+
+  // Highlight row khi sắp/đã hết hạn
+  const rowStyle = diff !== null && diff < 0
+    ? 'background:#FEF2F2;'
+    : diff !== null && diff <= 30
+      ? 'background:#FFFBEB;'
+      : '';
+
+  // Domain: hiện thêm DNS + auto-renew trong tooltip
+  const domainExtra = (l.type==='Domain'||l.type==='Hosting') && (l.dns||l.autoRenew||l.mucDich)
+    ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">
+        ${l.dns ? `<span>DNS: ${esc(l.dns)}</span>` : ''}
+        ${l.autoRenew ? ` · Auto-renew: ${l.autoRenew==='yes'?'✅':'❌'}` : ''}
+        ${l.mucDich ? ` · ${esc(l.mucDich)}` : ''}
+      </div>`
     : '';
-  return `<tr>
+
+  return `<tr style="${rowStyle}">
     <td style="color:var(--muted);font-size:11px;">${i}</td>
-    <td><strong>${esc(l.ten||'—')}</strong></td>
+    <td>${_licTypeBadge(l.type||'Software')}</td>
+    <td><strong>${esc(l.ten||'—')}</strong>${domainExtra}</td>
     <td style="font-size:11px;color:var(--accent2);">${hideGoi ? '' : esc(l.goi||'—')}</td>
     <td style="font-size:11px;font-weight:600;">${esc(l.congTy||'—')}</td>
     <td style="font-family:monospace;font-size:11px;" title="${esc(l.key||'')}">${esc(keyMask)}</td>
@@ -6359,13 +7463,14 @@ function _licRow(l, i, hideGoi, inGroup){
     <td>${seatBar(l.tongSeat, l.donVi)}</td>
     <td style="font-size:12px;text-align:right;">${fmtMoney(l.giaTri, l.tienTe)}</td>
     <td style="font-size:12px;">${l.ngayMua||'—'}</td>
-    <td style="font-size:12px;">${l.ngayHetHan||'—'}</td>
+    <td style="font-size:12px;font-weight:${diff!==null&&diff<=30?'700':'400'}">${l.ngayHetHan||'—'}</td>
     <td>${licStatusBadge(diff)}</td>
     <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(l.ghichu||'')}">${esc(l.ghichu||'')}</td>
     <td style="white-space:nowrap;">
-      <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
+      <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
+      <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#059669;" title="Gia hạn" onclick="quickRenewLicense('${l.id}')"><i class="ph ph-arrow-clockwise"></i></button>
       ${attachBtn}
-      <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
+      <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Xóa" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
       ${l.spId ? '<span title="Đã sync SP" style="font-size:12px;margin-left:2px;color:var(--accent2);"><i class="ph ph-cloud-check"></i></span>' : ''}
     </td>
   </tr>`;
@@ -6484,16 +7589,18 @@ function renderLicSummary(list){
 }
 
 function renderLicenses(){
-  const q    = (document.getElementById('lic-search')?.value||'').toLowerCase();
-  const fst  = document.getElementById('lic-filter-status')?.value||'';
-  const fcmp = document.getElementById('lic-filter-company')?.value||'';
-  const fgoi = document.getElementById('lic-filter-goi')?.value||'';
+  const q     = (document.getElementById('lic-search')?.value||'').toLowerCase();
+  const fst   = document.getElementById('lic-filter-status')?.value||'';
+  const fcmp  = document.getElementById('lic-filter-company')?.value||'';
+  const fgoi  = document.getElementById('lic-filter-goi')?.value||'';
+  const ftype = document.getElementById('lic-filter-type')?.value||'';
 
   let list = licenses.slice();
-  if(q)    list = list.filter(l=>(l.ten+l.key+l.ncc+l.ghichu+(l.congTy||'')+(l.goi||'')).toLowerCase().includes(q));
-  if(fst)  list = list.filter(l=> licStatusKey(licDiff(l.ngayHetHan))===fst);
-  if(fcmp) list = list.filter(l=> (l.congTy||'')===fcmp);
-  if(fgoi) list = list.filter(l=> (l.goi||'')===fgoi);
+  if(q)     list = list.filter(l=>(l.ten+l.key+l.ncc+l.ghichu+(l.congTy||'')+(l.goi||'')+(l.dns||'')+(l.mucDich||'')).toLowerCase().includes(q));
+  if(fst)   list = list.filter(l=> licStatusKey(licDiff(l.ngayHetHan))===fst);
+  if(fcmp)  list = list.filter(l=> (l.congTy||'')===fcmp);
+  if(fgoi)  list = list.filter(l=> (l.goi||'')===fgoi);
+  if(ftype) list = list.filter(l=> (l.type||'Software')===ftype);
 
   // KPI (luôn dựa trên toàn bộ licenses, không theo filter)
   document.getElementById('lic-kpi-total').textContent = licenses.length;
@@ -6507,7 +7614,7 @@ function renderLicenses(){
   const tbody = document.getElementById('lic-tbody');
   if(!tbody) return;
   if(!list.length){
-    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--muted);">Chưa có dữ liệu license</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--muted);">Chưa có dữ liệu license</td></tr>`;
     return;
   }
 
@@ -6562,23 +7669,23 @@ function renderLicenses(){
         moneyInfo = ` · 💰 ${totStr}`;
       }
 
-      // Group header row — nút đính kèm nằm ở đây (hợp đồng theo gói)
+      // Group header row — nút đính kèm HĐ khung (master agreement)
       const goiKey = goiName.replace(/'/g,"\\'");
       html += `<tr style="background:rgba(124,107,255,.10);border-top:2px solid rgba(124,107,255,.25);">
-        <td colspan="12" style="padding:7px 12px;font-size:12px;font-weight:700;color:var(--accent2);">
+        <td colspan="13" style="padding:7px 12px;font-size:12px;font-weight:700;color:var(--accent2);">
           <i class="ph ph-package"></i> ${esc(label)}
-          <span style="font-weight:400;color:var(--muted);margin-left:8px;">${grpList.length} license${seatInfo}${moneyInfo}${warnIcon}</span>
+          <span style="font-weight:400;color:var(--muted);margin-left:8px;">${grpList.length} hợp đồng${seatInfo}${moneyInfo}${warnIcon}</span>
         </td>
         <td style="padding:4px 8px;text-align:right;white-space:nowrap;">
-          <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);"
-                  title="Hợp đồng gói: ${esc(label)}"
+          <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--accent2);"
+                  title="HĐ khung / Master Agreement của gói ${esc(label)}"
                   onclick="openGoiAttachments('${goiKey}')">
-            <i class="ph ph-paperclip"></i> HĐ
+            <i class="ph ph-paperclip"></i> HĐ khung
           </button>
         </td>
       </tr>`;
-      // Rows trong nhóm — không có nút attach riêng (inGroup=true)
-      grpList.forEach(l=>{ html += _licRow(l, ++globalIdx, true, true); });
+      // Rows trong nhóm — mỗi dòng có nút đính kèm riêng (phụ lục / addendum)
+      grpList.forEach(l=>{ html += _licRow(l, ++globalIdx, true, false); });
     }
     tbody.innerHTML = html;
   } else {
@@ -6600,22 +7707,34 @@ function updateLicExpiry(){
   else { el.textContent='✅ Còn '+diff+' ngày'; el.style.color='var(--green)'; }
 }
 
+function onLicTypeChange(){
+  const type = document.getElementById('lf-type')?.value || 'Software';
+  const sec  = document.getElementById('lf-domain-section');
+  const lbl  = document.getElementById('lf-ten-label');
+  const isDomain = type === 'Domain' || type === 'Hosting';
+  if(sec) sec.style.display = isDomain ? '' : 'none';
+  if(lbl) lbl.textContent = isDomain ? 'Tên miền *' : 'Tên phần mềm / Dịch vụ *';
+}
+
+function _licFormReset(){
+  ['lf-id','lf-spid','lf-ten','lf-ncc','lf-key','lf-congty',
+   'lf-tongseat','lf-donvi','lf-giatri','lf-ngaymua','lf-ngayhethan',
+   'lf-ghichu','lf-goi','lf-dns','lf-mucdich'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const type  = document.getElementById('lf-type');
+  const tiente= document.getElementById('lf-tiente');
+  const ar    = document.getElementById('lf-autorenew');
+  if(type)   type.value   = 'Software';
+  if(tiente) tiente.value = 'VND';
+  if(ar)     ar.value     = '';
+  onLicTypeChange();
+}
+
 function openLicenseAdd(){
-  document.getElementById('lic-form-title').textContent = '＋ Thêm License';
-  document.getElementById('lf-id').value      = '';
-  document.getElementById('lf-spid').value    = '';
-  document.getElementById('lf-ten').value     = '';
-  document.getElementById('lf-ncc').value     = '';
-  document.getElementById('lf-key').value     = '';
-  document.getElementById('lf-congty').value  = '';
-  document.getElementById('lf-tongseat').value= '';
-  document.getElementById('lf-donvi').value   = '';
-  document.getElementById('lf-giatri').value  = '';
-  document.getElementById('lf-tiente').value  = 'VND';
-  document.getElementById('lf-ngaymua').value = '';
-  document.getElementById('lf-ngayhethan').value = '';
-  document.getElementById('lf-ghichu').value  = '';
-  document.getElementById('lf-goi').value     = '';
+  document.getElementById('lic-form-title').textContent = '＋ Thêm Contract';
+  _licFormReset();
   document.getElementById('btn-open-history').style.display = 'none';
   document.getElementById('lf-expiry-status').textContent = '—';
   document.getElementById('lf-expiry-status').style.color = 'var(--muted)';
@@ -6624,10 +7743,12 @@ function openLicenseAdd(){
 
 function openLicenseEdit(id){
   const l = licenses.find(x=>x.id===id);
-  if(!l){ toast('⚠️ Không tìm thấy license','bad'); return; }
-  document.getElementById('lic-form-title').textContent   = '✏️ Sửa License';
+  if(!l){ toast('⚠️ Không tìm thấy contract','bad'); return; }
+  document.getElementById('lic-form-title').textContent   = '✏️ Sửa Contract';
+  _licFormReset();
   document.getElementById('lf-id').value       = l.id;
   document.getElementById('lf-spid').value     = l.spId||'';
+  document.getElementById('lf-type').value     = l.type||'Software';
   document.getElementById('lf-ten').value      = l.ten||'';
   document.getElementById('lf-ncc').value      = l.ncc||'';
   document.getElementById('lf-key').value      = l.key||'';
@@ -6640,6 +7761,10 @@ function openLicenseEdit(id){
   document.getElementById('lf-ngayhethan').value = l.ngayHetHan||'';
   document.getElementById('lf-ghichu').value   = l.ghichu||'';
   document.getElementById('lf-goi').value      = l.goi||'';
+  document.getElementById('lf-autorenew').value= l.autoRenew||'';
+  document.getElementById('lf-dns').value      = l.dns||'';
+  document.getElementById('lf-mucdich').value  = l.mucDich||'';
+  onLicTypeChange();
   document.getElementById('btn-open-history').style.display = 'inline-flex';
   updateLicExpiry();
   openModal('modal-license');
@@ -6651,7 +7776,11 @@ async function saveLicense(){
   if(isNew && !can('add')){ toast('🔒 Bạn không có quyền thêm license','bad'); return; }
   if(!isNew && !can('edit')){ toast('🔒 Bạn không có quyền chỉnh sửa','bad'); return; }
   const ten = document.getElementById('lf-ten').value.trim();
-  if(!ten){ toast('⚠️ Vui lòng nhập tên phần mềm','bad'); return; }
+  const _typeVal = document.getElementById('lf-type')?.value || 'Software';
+  if(!ten){
+    const _tenLabel = ['Domain','Hosting'].includes(_typeVal) ? 'tên miền' : 'tên phần mềm / hợp đồng';
+    toast(`⚠️ Vui lòng nhập ${_tenLabel}`,'bad'); return;
+  }
 
   const id      = document.getElementById('lf-id').value || genId();
   const spId    = document.getElementById('lf-spid').value || null;
@@ -6660,6 +7789,7 @@ async function saveLicense(){
   const rec = {
     id,
     spId: spId ? parseInt(spId) : null,
+    type:      document.getElementById('lf-type')?.value || 'Software',
     ten,
     ncc:       document.getElementById('lf-ncc').value.trim(),
     key:       document.getElementById('lf-key').value.trim(),
@@ -6672,6 +7802,10 @@ async function saveLicense(){
     ngayMua:   document.getElementById('lf-ngaymua').value     || null,
     ngayHetHan:document.getElementById('lf-ngayhethan').value  || null,
     ghichu:    document.getElementById('lf-ghichu').value.trim(),
+    // Domain-specific
+    autoRenew: document.getElementById('lf-autorenew')?.value || '',
+    dns:       document.getElementById('lf-dns')?.value.trim() || '',
+    mucDich:   document.getElementById('lf-mucdich')?.value.trim() || '',
   };
 
   const idx = licenses.findIndex(x=>x.id===id);
@@ -6788,7 +7922,7 @@ async function msalSpLoadLicenses(){
         const donViVal  = donViField  ? (item[donViField]||'')   : '';
         const giaTrVal  = giaTrField  ? (item[giaTrField]!=null ? item[giaTrField] : null) : null;
         const tienTeVal = tienTeField ? (item[tienTeField]||'VND') : 'VND';
-        const rec = {
+        const spRec = {
           id:         localId,
           spId:       item.ID,
           ten:        item.Title||'',
@@ -6803,9 +7937,27 @@ async function msalSpLoadLicenses(){
           ngayMua:    item.NgayMua    ? item.NgayMua.substring(0,10)    : null,
           ngayHetHan: item.NgayHetHan ? item.NgayHetHan.substring(0,10) : null,
           ghichu:     item.GhiChu||'',
+          // Fields mới — đọc từ SP nếu có, giữ local nếu SP không có
+          type:       item.ContractType||null,
+          autoRenew:  item.AutoRenew||null,
+          dns:        item.DnsInfo||null,
+          mucDich:    item.MucDich||null,
         };
         const idx = licenses.findIndex(l=>l.spId===item.ID);
-        if(idx>=0) licenses[idx]=rec; else licenses.push(rec);
+        if(idx>=0){
+          // Merge: giữ lại field local nếu SP trả về null/empty
+          const local = licenses[idx];
+          const rec = { ...spRec };
+          if(!rec.type)      rec.type      = local.type      || 'Software';
+          if(!rec.autoRenew) rec.autoRenew = local.autoRenew || '';
+          if(!rec.dns)       rec.dns       = local.dns       || '';
+          if(!rec.mucDich)   rec.mucDich   = local.mucDich   || '';
+          licenses[idx] = rec;
+        } else {
+          const rec = { ...spRec };
+          if(!rec.type) rec.type = 'Software';
+          licenses.push(rec);
+        }
       });
       saveLicenses();
       populateCompanySelects();
@@ -6855,6 +8007,10 @@ async function msalSpPushLicense(id){
     if(tienTeField && l.tienTe)   b[tienTeField]    = l.tienTe;
     if(l.ngayMua)     b['NgayMua']     = l.ngayMua    + 'T00:00:00Z';
     if(l.ngayHetHan)  b['NgayHetHan']  = l.ngayHetHan + 'T00:00:00Z';
+    if(l.type)        b['ContractType'] = l.type;
+    if(l.autoRenew)   b['AutoRenew']   = l.autoRenew;
+    if(l.dns)         b['DnsInfo']     = l.dns;
+    if(l.mucDich)     b['MucDich']     = l.mucDich;
     return b;
   };
 
@@ -7208,6 +8364,11 @@ let _licHistory = {}; // { licenseId: [ {date, oldExpiry, newExpiry, oldVal, new
 
 function saveLicHistory(){ try{ localStorage.setItem('qlts_lich_su_license', JSON.stringify(_licHistory)); }catch(e){} }
 function loadLicHistory(){ try{ _licHistory = JSON.parse(localStorage.getItem('qlts_lich_su_license')||'{}'); }catch(e){ _licHistory={}; } }
+
+function quickRenewLicense(id){
+  // Mở thẳng modal gia hạn mà không cần qua edit form
+  openLicenseHistory(id);
+}
 
 async function openLicenseHistory(id){
   const l = licenses.find(x=>x.id===id);
