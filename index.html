@@ -4758,7 +4758,7 @@ async function bulkApplyStatus(){
     }
   }
 
-  saveAssets();
+  saveToStorage();
   document.getElementById('bulk-status-sel').value = '';
   clearBulkSelect();
   toast(`✅ Đã đổi trạng thái ${successCount} tài sản sang "${newStatus}"`, 'ok');
@@ -4813,7 +4813,7 @@ async function bulkDeleteSelected(){
       try{ await spDeleteAsset(spId); }catch(e){ console.warn('[BULK DEL] SP fail:', id); }
     }
   }
-  saveAssets();
+  saveToStorage();
   clearBulkSelect();
   toast(`🗑️ Đã xóa ${done} tài sản`, 'ok');
 }
@@ -5877,11 +5877,14 @@ async function saReportDamage(id){
     toast(`⚠️ Đã báo hỏng "${a.maTaiSan}"`, 'warn');
   }
 
-  saveAssets();
-  if(_msalAccount && assets[idx]._spId){
-    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail'); }
+  saveToStorage();
+  if(_msalAccount){
+    try{ await msalSpPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
+  } else if(SP_MODE && assets[idx]._spId){
+    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
   }
-  renderTable();
+  applyFilters(true);
+  updateDashboard();
 }
 
 // ── Thu hồi về kho ────────────────────────────────────────────
@@ -5925,11 +5928,14 @@ async function saRecall(id){
   assets[idx].trangThaiHienTai = 'Thu hồi';
   assets[idx].ngaySuKien       = now;
 
-  saveAssets();
-  if(_msalAccount && assets[idx]._spId){
-    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail'); }
+  saveToStorage();
+  if(_msalAccount){
+    try{ await msalSpPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
+  } else if(SP_MODE && assets[idx]._spId){
+    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
   }
-  renderTable();
+  applyFilters(true);
+  updateDashboard();
   renderEvents();
   toast(`📦 Đã thu hồi "${a.maTaiSan}" về kho`, 'ok');
 }
