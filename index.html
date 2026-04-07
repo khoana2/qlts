@@ -835,7 +835,7 @@ input[type=checkbox].row-cb{
   position:fixed;inset:0;z-index:9999;
   display:flex;align-items:stretch;
   transition:opacity .4s ease;
-  background: url('bg.jpg') center center/cover no-repeat;
+  background:#0A1628;
 }
 #login-screen.hiding{opacity:0;pointer-events:none;}
 
@@ -843,8 +843,9 @@ input[type=checkbox].row-cb{
 .lp-left{
   flex:1;display:flex;flex-direction:column;justify-content:center;
   padding:60px 64px;
-  background:linear-gradient(135deg,rgba(4,14,32,0.62) 0%,rgba(3,18,42,0.50) 100%);
-  backdrop-filter:blur(2px);
+  background:
+    linear-gradient(160deg,rgba(2,10,26,0.52) 0%,rgba(3,18,46,0.44) 60%,rgba(0,20,50,0.38) 100%),
+    url('bg.jpg') center center / cover no-repeat;
   position:relative;overflow:hidden;
 }
 .lp-left::after{
@@ -1468,7 +1469,8 @@ input[type=checkbox].row-cb{
       </select>
       <button class="btn primary btn-icon-ph" style="padding:7px 12px;" onclick="bulkApplyStatus()"><i class="ph ph-check"></i> Áp dụng</button>
       <div class="bulk-sep"></div>
-      <button class="btn success btn-icon-ph" onclick="bulkExportSelected()"><i class="ph ph-file-xls"></i> Xuất Excel</button>
+      <button class="btn success btn-icon-ph" onclick="bulkTransfer()"><i class="ph ph-arrows-left-right"></i> Bàn giao nhóm</button>
+      <button class="btn btn-icon-ph" style="background:var(--surface2);border:1px solid var(--border);" onclick="bulkExportSelected()"><i class="ph ph-file-xls"></i> Xuất Excel</button>
       <button class="btn danger btn-icon-ph" id="bulk-del-btn" onclick="bulkDeleteSelected()" style="display:none;"><i class="ph ph-trash"></i> Xóa</button>
       <button class="btn btn-icon-ph" onclick="clearBulkSelect()" style="margin-left:auto;"><i class="ph ph-x"></i> Bỏ chọn tất cả</button>
     </div>
@@ -2109,6 +2111,72 @@ input[type=checkbox].row-cb{
 
 <!-- ═══ PRINT AREA (hidden, only shown on print) ═══ -->
 <div id="print-area"></div>
+
+<!-- ══════════════ BULK TRANSFER MODAL ══════════════ -->
+<div class="modal-backdrop" id="modal-bulk-transfer" onclick="if(event.target===this)closeModal('modal-bulk-transfer')">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-head">
+      <div>
+        <h2><i class="ph ph-arrows-left-right"></i> Bàn Giao Nhóm Tài Sản</h2>
+        <p id="btr-subtitle" style="font-size:11px;color:var(--accent2);margin-top:3px;"></p>
+      </div>
+      <button class="btn icon-only" onclick="closeModal('modal-bulk-transfer')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Danh sách tài sản đã chọn -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">
+          Tài sản sẽ được bàn giao
+        </div>
+        <div id="btr-asset-list" style="display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto;padding:10px;background:rgba(37,99,235,.04);border:1px solid rgba(37,99,235,.15);border-radius:10px;"></div>
+      </div>
+
+      <div style="text-align:center;margin:12px 0;font-size:20px;color:var(--green);">↓ Bàn giao cho</div>
+
+      <div class="grid2">
+        <div class="field span2">
+          <label>Người nhận *</label>
+          <input type="text" id="btr-user" placeholder="Họ và tên người nhận"/>
+        </div>
+        <div class="field">
+          <label>Email người nhận</label>
+          <input type="email" id="btr-email" placeholder="email@ttgvn.com"/>
+        </div>
+        <div class="field">
+          <label>Bộ phận người nhận</label>
+          <select id="btr-dept">
+            <option value="">-- Chọn phòng ban --</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Ngày bàn giao *</label>
+          <input type="date" id="btr-date"/>
+        </div>
+        <div class="field">
+          <label>Tình trạng khi bàn giao</label>
+          <select id="btr-condition">
+            <option>Hoạt động tốt</option>
+            <option>Còn bảo hành</option>
+            <option>Hết bảo hành</option>
+            <option>Cần bảo trì nhẹ</option>
+          </select>
+        </div>
+        <div class="field span2">
+          <label>Ghi chú bàn giao</label>
+          <textarea id="btr-notes" placeholder="VD: Bàn giao bộ phụ kiện kèm laptop…" style="min-height:52px;"></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-bulk-transfer')">Hủy</button>
+      <button class="btn primary btn-icon-ph" onclick="confirmBulkTransfer()">
+        <i class="ph ph-arrows-left-right"></i> Xác nhận bàn giao
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════ AI HEALTH CHECK MODAL ══════════════ -->
 <div class="modal-backdrop" id="modal-ai" onclick="if(event.target===this)closeModal('modal-ai')">
@@ -4031,6 +4099,8 @@ function populateDeptSelects(){
   document.getElementById('f-boPhan').innerHTML = opts;
   const trDept = document.getElementById('tr-new-dept');
   if(trDept) trDept.innerHTML = opts;
+  const btrDept = document.getElementById('btr-dept');
+  if(btrDept) btrDept.innerHTML = opts;
 
   populateCompanySelects();
 }
@@ -6778,6 +6848,130 @@ async function confirmTransfer(){
   }
 }
 
+// ═══════════════════════ BULK TRANSFER (bàn giao nhóm) ═══════════════════════
+
+function bulkTransfer(){
+  if(!_selectedIds.size){ toast('⚠️ Chưa chọn tài sản nào','warn'); return; }
+
+  const ids = [..._selectedIds];
+  const selectedAssets = ids.map(id => assets.find(a => a.id === id)).filter(Boolean);
+
+  // Render danh sách tài sản đã chọn dưới dạng chip
+  const listEl = document.getElementById('btr-asset-list');
+  listEl.innerHTML = selectedAssets.map(a => `
+    <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+         background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);
+         border-radius:20px;font-size:11.5px;font-weight:600;color:var(--accent);">
+      <i class="ph ph-package" style="font-size:11px;"></i>
+      <span>${esc(a.maTaiSan||'?')}</span>
+      <span style="font-weight:400;color:var(--muted);">${esc(a.tenTaiSan||'')}</span>
+    </div>
+  `).join('');
+
+  // Subtitle
+  document.getElementById('btr-subtitle').textContent =
+    `${selectedAssets.length} tài sản đã chọn`;
+
+  // Reset form
+  document.getElementById('btr-user').value = '';
+  document.getElementById('btr-email').value = '';
+  document.getElementById('btr-notes').value = '';
+  document.getElementById('btr-date').value = new Date().toISOString().split('T')[0];
+  setSelect('btr-condition','Hoạt động tốt');
+  populateDeptSelects();
+  setSelect('btr-dept','');
+
+  openModal('modal-bulk-transfer');
+}
+
+async function confirmBulkTransfer(){
+  const newUser  = document.getElementById('btr-user').value.trim();
+  const date     = document.getElementById('btr-date').value;
+  const email    = document.getElementById('btr-email').value.trim();
+  const dept     = document.getElementById('btr-dept').value;
+  const cond     = document.getElementById('btr-condition').value;
+  const notes    = document.getElementById('btr-notes').value.trim();
+
+  if(!newUser){ toast('⚠️ Vui lòng nhập tên người nhận!','bad'); return; }
+  if(!date){    toast('⚠️ Vui lòng chọn ngày bàn giao!','bad'); return; }
+
+  const ids = [..._selectedIds];
+  if(!ids.length){ toast('⚠️ Không có tài sản nào được chọn','bad'); return; }
+
+  let count = 0;
+  const pushQueue = [];
+
+  for(const id of ids){
+    const idx = assets.findIndex(a => a.id === id);
+    if(idx < 0) continue;
+    const a = assets[idx];
+
+    // Ghi lịch sử bàn giao
+    if(!transfers[id]) transfers[id] = [];
+    const rec = {
+      from:     a.nguoiDung  || '',
+      fromDept: a.boPhan     || '',
+      to:       newUser,
+      toDept:   dept,
+      toEmail:  email,
+      date, condition: cond, notes,
+      ts: new Date().toISOString()
+    };
+    transfers[id].push(rec);
+
+    // Đồng bộ transfer lên SP
+    if(_msalAccount) msalSpPushTransfer(id, rec).catch(e => console.warn('[BULK-TR] push transfer:', id, e));
+
+    // Cập nhật tài sản
+    assets[idx].nguoiDung        = newUser;
+    assets[idx].email            = email || a.email;
+    assets[idx].boPhan           = dept  || a.boPhan;
+    assets[idx].tinhTrang        = 'Đang dùng';
+    assets[idx].trangThaiHienTai = 'Bàn giao';
+    assets[idx].ngaySuKien       = date;
+    assets[idx].updatedAt        = new Date().toISOString();
+
+    pushQueue.push(id);
+    count++;
+  }
+
+  saveTransfers();
+  saveToStorage();
+
+  closeModal('modal-bulk-transfer');
+  clearBulkSelect();
+
+  toast(`✅ Đã bàn giao ${count} tài sản cho ${newUser}!`, 'ok');
+
+  // Đẩy lên SharePoint sau khi đóng modal
+  if(_msalAccount && pushQueue.length){
+    msalSetBar(`⟳ Đang đồng bộ ${pushQueue.length} tài sản…`, 's-busy');
+    for(const id of pushQueue){
+      try{ await msalSpPushAsset(id); }catch(e){ console.warn('[BULK-TR] SP push fail:', id, e); }
+    }
+    msalSetBar(msalBarLabel(assets.length + ' TS'), 's-ok');
+  } else if(SP_MODE && pushQueue.length){
+    for(const id of pushQueue){
+      try{ await spPushAsset(id); }catch(e){ console.warn('[BULK-TR] SP push fail:', id, e); }
+    }
+  }
+
+  applyFilters(true);
+  updateDashboard();
+}
+
+// Helper: populate dept select cho bất kỳ select nào theo id
+function populateDeptSelectById(selId){
+  const sel = document.getElementById(selId);
+  if(!sel) return;
+  const depts = [...new Set(assets.map(a => a.boPhan).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- Chọn phòng ban --</option>'
+    + depts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  if(cur) sel.value = cur;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 function deleteTransfer(assetId, idx, btn){
   if(!confirm('Xóa dòng lịch sử bàn giao này?')) return;
   if(!transfers[assetId]) return;
