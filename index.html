@@ -284,21 +284,18 @@ tbody td{
   padding:10px 10px;font-size:12.5px;color:#1E293B;
   white-space:nowrap;vertical-align:middle;
 }
-/* ── CSS custom property cho màu nền row ──
-   Variable cascade từ tr → td (khác background:inherit không chạy trên sticky) */
-tbody tr           {--row-bg:#FFFFFF;}
-tbody tr:hover     {--row-bg:#EFF6FF;}
-tbody tr:hover td  {background:#EFF6FF;}
-tbody tr.selected  {--row-bg:#DBEAFE;}
-tbody tr.selected td{background:#DBEAFE!important;border-bottom-color:#BFDBFE;}
+/* Nền đặt ở <tr> để sticky cells có thể inherit — không bị bleed-through */
+tbody tr:hover{background:#EFF6FF;}
+tbody tr.selected{background:#DBEAFE!important;}
+tbody tr.selected td{border-bottom-color:#BFDBFE;}
 /* ROW HIGHLIGHT BY STATUS */
-tbody tr.row-kho   {--row-bg:#FFFBEB;}
-tbody tr.row-kho td{border-left:3px solid #F59E0B;background:#FFFBEB;}
-tbody tr.row-hong  {--row-bg:#FEF2F2;}
-tbody tr.row-hong td{border-left:3px solid #EF4444;background:#FEF2F2;}
-tbody tr.row-sua   {--row-bg:#FFF7ED;}
-tbody tr.row-sua td{border-left:3px solid #F97316;background:#FFF7ED;}
-tbody tr.row-thanh-ly td{opacity:.5;}
+tbody tr.row-kho{background:#FFFBEB;}
+tbody tr.row-kho td{border-left:3px solid #F59E0B;}
+tbody tr.row-hong{background:#FEF2F2;}
+tbody tr.row-hong td{border-left:3px solid #EF4444;}
+tbody tr.row-sua{background:#FFF7ED;}
+tbody tr.row-sua td{border-left:3px solid #F97316;}
+tbody tr.row-thanh-ly{opacity:.5;}
 /* COLUMN VISIBILITY */
 #assets-table th[data-col],#assets-table td[data-col]{}
 #assets-table.hide-model th[data-col="model"],#assets-table.hide-model td[data-col="model"]{display:none;}
@@ -309,25 +306,23 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 #assets-table.hide-ssd th[data-col="ssd"],#assets-table.hide-ssd td[data-col="ssd"]{display:none;}
 #assets-table.hide-depreciation th[data-col="depreciation"],#assets-table.hide-depreciation td[data-col="depreciation"]{display:none;}
 
-/* ── Sticky first columns ──
-   background: var(--row-bg) đọc từ CSS variable định nghĩa trên <tr>
-   → tự cập nhật khi hover/selected/status mà không cần override riêng */
-#assets-table tbody .cb-col,
-#assets-table tbody .sc-num,
-#assets-table tbody .sc-ma,
-#assets-table tbody .sc-ten{
+/* ── Sticky first columns (Mã TS + Tên TS) ── */
+#assets-table .cb-col,
+#assets-table .sc-num,
+#assets-table .sc-ma,
+#assets-table .sc-ten{
   position:sticky;z-index:2;
-  background:var(--row-bg,#FFFFFF);
+  background:inherit; /* kế thừa nền từ <tr> → tự động đổi màu theo hover/status/selected */
 }
 #assets-table .cb-col{left:0;}
 #assets-table .sc-num{left:38px;}
 #assets-table .sc-ma {left:74px;}
 #assets-table .sc-ten{left:190px;box-shadow:3px 0 8px -3px rgba(0,0,0,.12);}
-/* Thead sticky: nền cố định (không dùng variable) */
+/* Thead: cố định nền riêng (đè lên inherit) */
 #assets-table thead .cb-col,
 #assets-table thead .sc-num,
 #assets-table thead .sc-ma,
-#assets-table thead .sc-ten{position:sticky;z-index:11;background:#F8FAFC;}
+#assets-table thead .sc-ten{z-index:11;background:#F8FAFC;}
 /* COL TOGGLE DROPDOWN */
 .col-toggle-wrap{position:relative;display:inline-block;}
 .col-toggle-menu{
@@ -594,7 +589,7 @@ input[type=checkbox].row-cb{
 .empty-state .es-icon{font-size:48px;margin-bottom:12px;opacity:.4;}
 .empty-state p{font-size:14px;}
 .empty-state small{font-size:12px;opacity:.7;}
-.row-actions{display:flex;gap:6px;justify-content:center;}
+.row-actions{display:flex;gap:6px;}
 .action-btn{
   width:26px;height:26px;border-radius:7px;font-size:13px;
   border:1px solid #E2E8F0;background:#F8FAFC;
@@ -613,99 +608,6 @@ input[type=checkbox].row-cb{
 .action-btn.xfer-co{color:#7C3AED;font-size:13px;}
 .action-btn.xfer-co:hover{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.3);color:#7C3AED;}
 .action-btn.attach:hover{background:#FFF7ED;border-color:#FED7AA;color:#EA580C;}
-
-/* ══════════════ SMART ACTION ══════════════ */
-.sa-btn{
-  width:30px;height:30px;border-radius:8px;font-size:15px;
-  border:1px solid #E2E8F0;background:#F8FAFC;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:all .15s;color:var(--text);
-}
-.sa-btn:hover{background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-color:#C7D2FE;box-shadow:0 2px 8px rgba(99,102,241,.15);}
-/* Popover */
-#smart-action-menu{
-  position:fixed;z-index:9999;
-  background:#FFFFFF;border:1px solid var(--border);border-radius:14px;
-  box-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
-  min-width:210px;padding:6px;
-  display:none;
-  animation:saFadeIn .12s ease;
-}
-@keyframes saFadeIn{from{opacity:0;transform:scale(.95) translateY(-4px);}to{opacity:1;transform:scale(1) translateY(0);}}
-#smart-action-menu.open{display:block;}
-/* Header */
-.sa-header{
-  padding:9px 10px 7px;border-bottom:1px solid var(--border);margin-bottom:4px;
-}
-.sa-header-name{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}
-.sa-header-code{font-size:11px;color:var(--muted);margin-top:1px;}
-/* Section label */
-.sa-section{
-  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--muted);padding:6px 10px 2px;
-}
-/* Action item */
-.sa-item{
-  display:flex;align-items:center;gap:9px;
-  padding:7px 10px;border-radius:8px;cursor:pointer;
-  font-size:13px;color:var(--text);border:none;background:none;width:100%;text-align:left;
-  transition:background .1s;
-}
-.sa-item:hover{background:#F1F5F9;}
-.sa-item i.ph{font-size:15px;width:18px;text-align:center;flex-shrink:0;}
-.sa-item.danger{color:#DC2626;}
-.sa-item.danger:hover{background:#FEF2F2;}
-.sa-item.ai-item{color:var(--muted);cursor:default;opacity:.7;}
-.sa-item.ai-item:hover{background:none;}
-.sa-divider{height:1px;background:var(--border);margin:4px 0;}
-/* AI badge */
-.sa-ai-badge{
-  font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto;flex-shrink:0;
-  background:linear-gradient(135deg,#818CF8,#A78BFA);color:#fff;font-weight:600;
-}
-/* ══════════════ AI HEALTH CHECK MODAL ══════════════ */
-.ai-modal-body{padding:20px 18px;}
-.ai-asset-pill{
-  display:inline-flex;align-items:center;gap:7px;
-  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
-  border:1px solid #C7D2FE;border-radius:20px;
-  padding:5px 12px;font-size:12px;margin-bottom:14px;
-}
-.ai-loading{
-  display:flex;flex-direction:column;align-items:center;gap:12px;
-  padding:32px 0;color:var(--muted);font-size:13px;
-}
-.ai-spinner{
-  width:32px;height:32px;border:3px solid #E0E7FF;
-  border-top-color:#818CF8;border-radius:50%;
-  animation:aiSpin .8s linear infinite;
-}
-@keyframes aiSpin{to{transform:rotate(360deg);}}
-.ai-result{font-size:13.5px;line-height:1.7;color:var(--text);}
-.ai-result-box{
-  background:#FAFAFA;border:1px solid var(--border);
-  border-radius:10px;padding:14px 16px;margin-top:4px;
-}
-.ai-verdict{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:12px;
-}
-.ai-verdict.good {background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;}
-.ai-verdict.warn {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A;}
-.ai-verdict.bad  {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;}
-.ai-footer{
-  display:flex;align-items:center;gap:6px;
-  margin-top:14px;padding-top:12px;border-top:1px solid var(--border);
-  font-size:11px;color:var(--muted);
-}
-/* API key setup */
-.ai-setup{text-align:center;padding:24px 16px;}
-.ai-setup input{
-  width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;
-  font-size:13px;margin:10px 0;outline:none;
-}
-.ai-setup input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
-
 /* ── Attachment Modal ── */
 .attach-item{
   display:flex;align-items:center;gap:10px;
@@ -830,147 +732,107 @@ input[type=checkbox].row-cb{
 .fsb-mi.danger{color:var(--red);}
 .fsb-mi.danger:hover{background:rgba(248,113,113,.1);}
 
-/* ═══════════════════════ LOGIN SCREEN — TWO PANEL ═══════════════════════ */
+/* ═══════════════════════ LOGIN SCREEN ═══════════════════════ */
 #login-screen{
   position:fixed;inset:0;z-index:9999;
-  display:flex;align-items:stretch;
+  background:transparent;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;
   transition:opacity .4s ease;
-  background:#0A1628;
 }
 #login-screen.hiding{opacity:0;pointer-events:none;}
-
-/* ── Left panel: intro ── */
-.lp-left{
-  flex:1;display:flex;flex-direction:column;justify-content:center;
-  padding:60px 64px;
-  background:
-    linear-gradient(160deg,rgba(2,10,26,0.52) 0%,rgba(3,18,46,0.44) 60%,rgba(0,20,50,0.38) 100%),
-    url('bg.jpg') center center / cover no-repeat;
-  position:relative;overflow:hidden;
-}
-.lp-left::after{
-  content:'';position:absolute;bottom:-80px;left:-80px;
-  width:400px;height:400px;border-radius:50%;
-  background:radial-gradient(circle,rgba(37,99,235,.18) 0%,transparent 70%);
+/* gradient phía trên để card dễ đọc */
+#login-screen::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom,
+    rgba(245,240,232,.0) 0%,
+    rgba(245,240,232,.0) 40%,
+    rgba(245,240,232,.85) 65%,
+    rgba(245,240,232,1) 100%);
   pointer-events:none;
 }
-.lp-brand-row{display:flex;align-items:center;gap:14px;margin-bottom:48px;}
-.lp-logo{
-  width:56px;height:56px;border-radius:16px;
+.login-skyline{ display:none; }
+.login-card{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;
+  animation:loginFadeIn .6s ease-out both;
+  max-width:440px;width:100%;padding:32px 36px;
+  background:rgba(255,255,255,.88);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:24px;
+  box-shadow:0 8px 40px rgba(0,0,0,.12);
+  /* đẩy card lên trên để không bị che bởi skyline */
+  margin-bottom:32vh;
+}
+@keyframes loginFadeIn{
+  from{opacity:0;transform:translateY(20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.login-logo{
+  width:68px;height:68px;border-radius:18px;
   background:linear-gradient(135deg,#2563EB,#0EA5E9);
-  display:flex;align-items:center;justify-content:center;font-size:26px;
-  box-shadow:0 8px 24px rgba(37,99,235,.4);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;margin-bottom:16px;
+  box-shadow:0 8px 28px rgba(37,99,235,.3);
   animation:logoPulse 3s ease-in-out infinite;
 }
 @keyframes logoPulse{
-  0%,100%{box-shadow:0 8px 24px rgba(37,99,235,.35);}
-  50%{box-shadow:0 12px 32px rgba(37,99,235,.55);}
+  0%,100%{box-shadow:0 8px 28px rgba(37,99,235,.3);}
+  50%{box-shadow:0 12px 36px rgba(37,99,235,.5);}
 }
-.lp-brand-text .lp-company{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55);}
-.lp-brand-text .lp-appname{font-size:15px;font-weight:800;color:#fff;letter-spacing:.03em;}
-.lp-headline{
-  font-size:clamp(28px,3.5vw,44px);font-weight:900;line-height:1.15;
-  color:#fff;letter-spacing:-.02em;margin-bottom:16px;
+.login-brand{
+  font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:#8B7355;margin-bottom:5px;
 }
-.lp-headline span{
-  background:linear-gradient(90deg,#60A5FA,#22d3ee);
+.login-title{
+  font-size:24px;font-weight:900;color:#1E293B;
+  letter-spacing:-.02em;line-height:1.15;margin-bottom:6px;
+}
+.login-title span{
+  background:linear-gradient(90deg,#2563EB,#0EA5E9);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
-.lp-tagline{
-  font-size:14px;color:rgba(255,255,255,.65);line-height:1.7;
-  max-width:480px;margin-bottom:44px;
+.login-desc{
+  font-size:13px;color:#64748B;line-height:1.6;margin-bottom:28px;
 }
-.lp-features{display:flex;flex-direction:column;gap:14px;}
-.lp-feat{
-  display:flex;align-items:center;gap:13px;
-  font-size:13.5px;color:rgba(255,255,255,.85);font-weight:500;
-}
-.lp-feat-icon{
-  width:38px;height:38px;border-radius:10px;flex-shrink:0;
-  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
-  backdrop-filter:blur(6px);
-  display:flex;align-items:center;justify-content:center;
-  font-size:18px;color:#60A5FA;
-}
-.lp-feat-icon i.ph{font-size:18px;}
-.lp-feat-body .lp-feat-title{font-size:13px;font-weight:700;color:#fff;}
-.lp-feat-body .lp-feat-desc{font-size:11.5px;color:rgba(255,255,255,.5);}
-
-/* ── Right panel: login form ── */
-.lp-right{
-  width:460px;min-width:360px;
-  display:flex;align-items:center;justify-content:center;
-  padding:32px 40px;
-  background:rgba(255,255,255,.92);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  border-left:1px solid rgba(255,255,255,.5);
-}
-.lp-card{
-  width:100%;max-width:380px;
-  animation:loginFadeIn .5s ease-out both;
-}
-@keyframes loginFadeIn{
-  from{opacity:0;transform:translateX(16px);}
-  to{opacity:1;transform:translateX(0);}
-}
-.lp-card-header{text-align:center;margin-bottom:28px;}
-.lp-card-header h2{font-size:22px;font-weight:800;color:#0F172A;margin-bottom:5px;letter-spacing:-.01em;}
-.lp-card-header p{font-size:13px;color:#64748B;}
-
-/* Input fields */
-.lp-field{margin-bottom:16px;}
-.lp-field label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;letter-spacing:.01em;}
-.lp-input-wrap{
-  display:flex;align-items:center;gap:9px;
-  background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:10px;
-  padding:0 12px;transition:border-color .15s,box-shadow .15s;
-}
-.lp-input-wrap:focus-within{
-  border-color:#2563EB;
-  box-shadow:0 0 0 3px rgba(37,99,235,.1);
-}
-.lp-input-wrap i.ph{font-size:16px;color:#94A3B8;flex-shrink:0;}
-.lp-input-wrap input{
-  flex:1;background:transparent;border:none;outline:none;
-  font-size:13.5px;color:#0F172A;padding:11px 0;
-}
-.lp-input-wrap input::placeholder{color:#CBD5E1;}
-
-/* Divider */
-.lp-sep{
-  display:flex;align-items:center;gap:10px;margin:20px 0;
-}
-.lp-sep::before,.lp-sep::after{content:'';flex:1;height:1px;background:#E2E8F0;}
-.lp-sep span{font-size:11.5px;color:#94A3B8;white-space:nowrap;}
-
-/* Microsoft login button */
 .login-btn{
-  width:100%;padding:13px 20px;border-radius:11px;
+  width:100%;padding:13px 24px;border-radius:12px;
   background:linear-gradient(135deg,#0078d4,#106ebe);
   color:#fff;border:none;font-size:14px;font-weight:700;
   cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
-  transition:all .2s;box-shadow:0 4px 16px rgba(0,120,212,.28);
-  margin-top:6px;
+  transition:all .2s;box-shadow:0 4px 16px rgba(0,120,212,.3);
 }
 .login-btn:hover{
-  box-shadow:0 6px 24px rgba(0,120,212,.45);transform:translateY(-1px);
   background:linear-gradient(135deg,#106ebe,#005a9e);
+  box-shadow:0 6px 24px rgba(0,120,212,.45);transform:translateY(-1px);
 }
 .login-btn:active{transform:translateY(0);}
 .login-btn.loading{opacity:.65;cursor:not-allowed;pointer-events:none;}
 .login-btn svg{width:20px;height:20px;flex-shrink:0;}
-.login-note{margin-top:14px;font-size:11px;color:#94A3B8;text-align:center;line-height:1.6;}
-.login-footer{
-  text-align:center;font-size:10.5px;color:#94A3B8;margin-top:28px;
+.login-note{
+  margin-top:12px;font-size:11px;color:#94A3B8;
+  display:flex;align-items:center;justify-content:center;gap:5px;
 }
-
-/* Error + Loading */
+.login-divider{width:100%;height:1px;background:rgba(0,0,0,.08);margin:20px 0;}
+.login-features{display:flex;gap:22px;justify-content:center;}
+.lf-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.lf-icon{font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;}
+.lf-icon i.ph{font-size:22px;}
+.lf-label{font-size:10px;color:#94A3B8;white-space:nowrap;}
+.login-footer{
+  position:absolute;bottom:16px;left:0;right:0;text-align:center;
+  font-size:10.5px;color:#B5A898;
+}
+/* Error message trên login screen */
 .login-error{
   display:none;margin-top:10px;padding:8px 14px;border-radius:8px;
-  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);
-  color:#DC2626;font-size:12px;text-align:center;
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);
+  color:#DC2626;font-size:12px;text-align:center;width:100%;
 }
 .login-error.show{display:block;}
+/* Loading dots */
 .login-loading{display:none;flex-direction:column;align-items:center;gap:8px;margin-top:12px;}
 .login-loading.show{display:flex;}
 .ld-dots{display:flex;gap:6px;}
@@ -979,31 +841,6 @@ input[type=checkbox].row-cb{
 .ld-dot:nth-child(3){animation-delay:.3s;}
 @keyframes dotBounce{0%,80%,100%{transform:scale(0.7);opacity:.4;}40%{transform:scale(1);opacity:1;}}
 .ld-text{font-size:12px;color:#64748B;}
-.login-local-warn{display:none;margin-top:14px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#92400E;font-size:12px;line-height:1.5;}
-/* Eye toggle button */
-.lp-eye-btn{background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;flex-shrink:0;color:#94A3B8;}
-.lp-eye-btn:hover{color:#475569;}
-/* Local signin button */
-.lp-signin-btn{
-  width:100%;padding:13px 20px;border-radius:11px;
-  background:linear-gradient(135deg,#2563EB,#1D4ED8);
-  color:#fff;border:none;font-size:14px;font-weight:700;
-  cursor:pointer;transition:all .2s;
-  box-shadow:0 4px 16px rgba(37,99,235,.25);
-}
-.lp-signin-btn:hover{box-shadow:0 6px 22px rgba(37,99,235,.4);transform:translateY(-1px);}
-/* Secure note */
-.lp-secure-note{margin-top:16px;font-size:11px;color:#94A3B8;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;}
-.lp-secure-note i.ph{font-size:13px;color:#22C55E;}
-/* Left panel footer note */
-.lp-footer-note{margin-top:auto;padding-top:32px;font-size:11px;color:rgba(255,255,255,.35);}
-/* Responsive */
-@media(max-width:760px){
-  #login-screen{flex-direction:column;}
-  .lp-left{padding:40px 32px;flex:none;min-height:240px;justify-content:flex-end;}
-  .lp-right{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,.3);}
-  .lp-headline{font-size:26px;}
-}
 
 /* ═══════════════════════ LOGOUT SCREEN ═══════════════════════ */
 #logout-screen{
@@ -1076,126 +913,57 @@ input[type=checkbox].row-cb{
 
 <!-- ══════════════ LOGIN / SPLASH SCREEN ══════════════ -->
 <div id="login-screen">
+  <div class="login-skyline"></div>
 
-  <!-- ── Left panel: brand + features ── -->
-  <div class="lp-left">
-    <div class="lp-brand-row">
-      <div class="lp-logo">💻</div>
-      <div class="lp-brand-text">
-        <div class="lp-company">Trung Thuy Group</div>
-        <div class="lp-appname">QLTS CNTT</div>
+  <div class="login-card">
+    <div class="login-logo">💻</div>
+
+    <div class="login-brand">Trung Thuy Group</div>
+
+    <h1 class="login-title">Quản Lý <span>Tài Sản CNTT</span></h1>
+
+    <p class="login-desc">
+      Hệ thống quản lý tài sản công nghệ thông tin nội bộ.
+    </p>
+
+    <button class="login-btn" id="login-ms-btn" onclick="loginScreenSignIn()">
+      <svg viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+        <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+      </svg>
+      Đăng nhập với Microsoft
+    </button>
+
+    <div class="login-loading" id="login-loading">
+      <div class="ld-dots">
+        <div class="ld-dot"></div>
+        <div class="ld-dot"></div>
+        <div class="ld-dot"></div>
       </div>
+      <div class="ld-text" id="login-loading-text">Đang kết nối Microsoft 365…</div>
     </div>
 
-    <h1 class="lp-headline">Quản Lý<br><span>Tài Sản CNTT</span></h1>
-    <p class="lp-tagline">Hệ thống quản lý tài sản công nghệ thông tin tập trung — theo dõi, cấp phát và kiểm soát mọi thiết bị, phần mềm và hợp đồng trong tổ chức.</p>
+    <div class="login-note">Đăng nhập an toàn qua tài khoản Microsoft tổ chức</div>
+    <div class="login-error" id="login-error"></div>
 
-    <div class="lp-features">
-      <div class="lp-feat">
-        <div class="lp-feat-icon"><i class="ph ph-package"></i></div>
-        <div class="lp-feat-body">
-          <div class="lp-feat-title">Quản lý tài sản</div>
-          <div class="lp-feat-desc">Theo dõi toàn bộ thiết bị phần cứng & phần mềm</div>
-        </div>
-      </div>
-      <div class="lp-feat">
-        <div class="lp-feat-icon"><i class="ph ph-key"></i></div>
-        <div class="lp-feat-body">
-          <div class="lp-feat-title">Quản lý License</div>
-          <div class="lp-feat-desc">Kiểm soát bản quyền, domain và hosting</div>
-        </div>
-      </div>
-      <div class="lp-feat">
-        <div class="lp-feat-icon"><i class="ph ph-arrows-left-right"></i></div>
-        <div class="lp-feat-body">
-          <div class="lp-feat-title">Lịch sử bàn giao</div>
-          <div class="lp-feat-desc">Ghi nhận đầy đủ quá trình cấp phát & thu hồi</div>
-        </div>
-      </div>
-      <div class="lp-feat">
-        <div class="lp-feat-icon"><i class="ph ph-cloud-check"></i></div>
-        <div class="lp-feat-body">
-          <div class="lp-feat-title">Đồng bộ SharePoint</div>
-          <div class="lp-feat-desc">Lưu trữ & đính kèm tài liệu trên Microsoft 365</div>
-        </div>
-      </div>
+    <div class="login-divider"></div>
+    <div class="login-features">
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-package"></i></div><div class="lf-label">Tài Sản</div></div>
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-key"></i></div><div class="lf-label">License</div></div>
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-clock-counter-clockwise"></i></div><div class="lf-label">Lịch Sử</div></div>
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-chart-bar"></i></div><div class="lf-label">Dashboard</div></div>
+      <div class="lf-item"><div class="lf-icon"><i class="ph ph-cloud"></i></div><div class="lf-label">SharePoint</div></div>
     </div>
-
-    <div class="lp-footer-note">© 2026 Trung Thuy Group · QLTS CNTT v1.0</div>
-  </div>
-
-  <!-- ── Right panel: login form ── -->
-  <div class="lp-right">
-    <div class="lp-card">
-      <div class="lp-card-header">
-        <h2>Chào mừng trở lại</h2>
-        <p>Đăng nhập để truy cập hệ thống</p>
-      </div>
-
-      <!-- Email -->
-      <div class="lp-field">
-        <label>Email</label>
-        <div class="lp-input-wrap">
-          <i class="ph ph-envelope lp-input-icon"></i>
-          <input class="lp-input" id="lp-email" type="email" placeholder="email@trungthugroup.vn" autocomplete="username"/>
-        </div>
-      </div>
-
-      <!-- Password -->
-      <div class="lp-field">
-        <label>Mật khẩu</label>
-        <div class="lp-input-wrap">
-          <i class="ph ph-lock lp-input-icon"></i>
-          <input class="lp-input" id="lp-password" type="password" placeholder="••••••••" autocomplete="current-password"/>
-          <button class="lp-eye-btn" type="button" onclick="(function(b){const i=document.getElementById('lp-password');const show=i.type==='password';i.type=show?'text':'password';b.querySelector('i').className='ph ph-'+(show?'eye-slash':'eye');b.querySelector('i').className+=' lp-input-icon';})(this)" tabindex="-1">
-            <i class="ph ph-eye lp-input-icon"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Local-mode signin button (email/password — placeholder, shown in local mode) -->
-      <button class="lp-signin-btn" id="lp-local-btn" style="display:none;" onclick="loginScreenSignIn()">
-        Đăng nhập
-      </button>
-
-      <!-- Divider -->
-      <div class="lp-sep"><span>hoặc đăng nhập với</span></div>
-
-      <!-- Microsoft SSO -->
-      <button class="login-btn" id="login-ms-btn" onclick="loginScreenSignIn()">
-        <svg viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-          <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-          <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-        </svg>
-        Đăng nhập với Microsoft
-      </button>
-
-      <!-- Loading -->
-      <div class="login-loading" id="login-loading">
-        <div class="ld-dots">
-          <div class="ld-dot"></div>
-          <div class="ld-dot"></div>
-          <div class="ld-dot"></div>
-        </div>
-        <div class="ld-text" id="login-loading-text">Đang kết nối Microsoft 365…</div>
-      </div>
-
-      <!-- Error -->
-      <div class="login-error" id="login-error"></div>
-
-      <!-- Local file warning -->
-      <div class="login-local-warn" id="login-local-warn" style="display:none;">
-        ⚠️ <strong>Đang chạy local (file://)</strong><br>
-        Azure AD không hỗ trợ đăng nhập qua <code>file://</code>.<br>
-        Vui lòng deploy lên <strong>GitHub Pages</strong> hoặc dùng Live Server để test.
-      </div>
-
-      <div class="lp-secure-note"><i class="ph ph-shield-check"></i> Đăng nhập an toàn qua tài khoản Microsoft tổ chức</div>
+    <div class="login-local-warn" id="login-local-warn" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#92400E;font-size:12px;line-height:1.5;text-align:left;">
+      ⚠️ <strong>Đang chạy local (file://)</strong><br>
+      Azure AD không hỗ trợ đăng nhập qua <code>file://</code>.<br>
+      Vui lòng deploy lên <strong>GitHub Pages</strong> hoặc dùng Live Server để test.
     </div>
   </div>
 
+  <div class="login-footer">© 2026 Trung Thuy Group · QLTS CNTT v1.0</div>
 </div>
 <!-- ═══════════════════════════════════════════════════ -->
 
@@ -1277,7 +1045,7 @@ input[type=checkbox].row-cb{
           <span class="tab-icon"><i class="ph ph-clock-counter-clockwise"></i></span> Lịch Sử
         </button>
         <button class="nav-tab" onclick="switchTab('license')" id="tab-license">
-          <span class="tab-icon"><i class="ph ph-files"></i></span> Contracts
+          <span class="tab-icon"><i class="ph ph-key"></i></span> License
         </button>
         <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">
           <span class="tab-icon"><i class="ph ph-users-three"></i></span> Phân Quyền
@@ -1469,8 +1237,7 @@ input[type=checkbox].row-cb{
       </select>
       <button class="btn primary btn-icon-ph" style="padding:7px 12px;" onclick="bulkApplyStatus()"><i class="ph ph-check"></i> Áp dụng</button>
       <div class="bulk-sep"></div>
-      <button class="btn success btn-icon-ph" onclick="bulkTransfer()"><i class="ph ph-arrows-left-right"></i> Bàn giao nhóm</button>
-      <button class="btn btn-icon-ph" style="background:var(--surface2);border:1px solid var(--border);" onclick="bulkExportSelected()"><i class="ph ph-file-xls"></i> Xuất Excel</button>
+      <button class="btn success btn-icon-ph" onclick="bulkExportSelected()"><i class="ph ph-file-xls"></i> Xuất Excel</button>
       <button class="btn danger btn-icon-ph" id="bulk-del-btn" onclick="bulkDeleteSelected()" style="display:none;"><i class="ph ph-trash"></i> Xóa</button>
       <button class="btn btn-icon-ph" onclick="clearBulkSelect()" style="margin-left:auto;"><i class="ph ph-x"></i> Bỏ chọn tất cả</button>
     </div>
@@ -1513,7 +1280,7 @@ input[type=checkbox].row-cb{
               <th data-col="ssd">SSD</th>
               <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
-              <th style="width:80px;text-align:center;">Q.Action</th>
+              <th style="width:112px;">Hành động</th>
             </tr>
           </thead>
           <tbody id="assets-tbody"></tbody>
@@ -1586,10 +1353,10 @@ input[type=checkbox].row-cb{
   <!-- ══════════════ LICENSE VIEW ══════════════ -->
   <div class="view" id="view-license">
 
-    <!-- Stats bar gọn cho Contracts -->
+    <!-- Stats bar gọn cho License -->
     <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:6px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:6px 14px;">
-        <i class="ph ph-files" style="font-size:16px;color:#3B82F6;"></i>
+        <i class="ph ph-key" style="font-size:16px;color:#3B82F6;"></i>
         <span id="lic-kpi-total" style="font-size:20px;font-weight:800;color:#1D4ED8;line-height:1;">0</span>
         <span style="font-size:11px;color:#3B82F6;font-weight:600;">Tổng</span>
       </div>
@@ -1636,7 +1403,7 @@ input[type=checkbox].row-cb{
     <div class="filter-bar" style="margin-top:12px;">
       <div class="search-wrap">
         <i class="ph ph-magnifying-glass" style="font-size:14px;color:var(--muted);flex-shrink:0;"></i>
-        <input type="text" id="lic-search" placeholder="Tìm tên, số hợp đồng, nhà cung cấp, tên miền…" oninput="renderLicenses()"/>
+        <input type="text" id="lic-search" placeholder="Tìm tên phần mềm, số hợp đồng, nhà cung cấp…" oninput="renderLicenses()"/>
       </div>
       <select class="fsel" id="lic-filter-status" onchange="renderLicenses()">
         <option value="">📋 Tất cả trạng thái</option>
@@ -1645,17 +1412,8 @@ input[type=checkbox].row-cb{
         <option value="exp">❌ Đã hết hạn</option>
         <option value="nohd">— Không có hạn</option>
       </select>
-      <select class="fsel" id="lic-filter-type" onchange="renderLicenses()">
-        <option value="">🗂 Tất cả loại</option>
-        <option value="Software">💿 Software</option>
-        <option value="Domain">🌐 Domain</option>
-        <option value="Hosting">🖥 Hosting</option>
-        <option value="Cloud">☁️ Cloud</option>
-        <option value="Internet">📶 Internet</option>
-        <option value="Other">📄 Other</option>
-      </select>
       <select class="fsel" id="lic-filter-goi" onchange="renderLicenses()">
-        <option value="">📦 Gói / Nhóm</option>
+        <option value="">📦 Gói phần mềm</option>
       </select>
       <select class="fsel" id="lic-filter-company" onchange="renderLicenses()">
         <option value="">🏬 Công ty</option>
@@ -1665,7 +1423,7 @@ input[type=checkbox].row-cb{
         <button class="btn btn-icon-ph" id="lic-group-btn" onclick="toggleLicGroup()" title="Gom nhóm theo gói"><i class="ph ph-package"></i> Nhóm theo gói</button>
         <button class="btn btn-icon-ph" id="btn-export-lic" onclick="exportLicenseExcel()" title="Xuất Excel"><i class="ph ph-file-xls"></i> Export Excel</button>
         <button class="btn btn-icon-ph" id="lic-sync-btn" onclick="licSyncSP()" style="display:none"><i class="ph ph-arrows-clockwise"></i> Sync SP</button>
-        <button class="btn primary btn-icon-ph" id="btn-lic-add" onclick="openLicenseAdd()"><i class="ph ph-plus"></i> Thêm Contract</button>
+        <button class="btn primary btn-icon-ph" id="btn-lic-add" onclick="openLicenseAdd()"><i class="ph ph-plus"></i> Thêm License</button>
       </div>
     </div>
 
@@ -1675,8 +1433,7 @@ input[type=checkbox].row-cb{
           <thead>
             <tr>
               <th>#</th>
-              <th>Type</th>
-              <th>Tên / Tên miền</th>
+              <th>Tên phần mềm</th>
               <th>Gói</th>
               <th>Công ty</th>
               <th>Số hợp đồng</th>
@@ -2112,90 +1869,6 @@ input[type=checkbox].row-cb{
 <!-- ═══ PRINT AREA (hidden, only shown on print) ═══ -->
 <div id="print-area"></div>
 
-<!-- ══════════════ BULK TRANSFER MODAL ══════════════ -->
-<div class="modal-backdrop" id="modal-bulk-transfer" onclick="if(event.target===this)closeModal('modal-bulk-transfer')">
-  <div class="modal" style="max-width:620px;">
-    <div class="modal-head">
-      <div>
-        <h2><i class="ph ph-arrows-left-right"></i> Bàn Giao Nhóm Tài Sản</h2>
-        <p id="btr-subtitle" style="font-size:11px;color:var(--accent2);margin-top:3px;"></p>
-      </div>
-      <button class="btn icon-only" onclick="closeModal('modal-bulk-transfer')" style="border:none;font-size:18px;">✕</button>
-    </div>
-    <div class="modal-body">
-
-      <!-- Danh sách tài sản đã chọn -->
-      <div style="margin-bottom:14px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">
-          Tài sản sẽ được bàn giao
-        </div>
-        <div id="btr-asset-list" style="display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto;padding:10px;background:rgba(37,99,235,.04);border:1px solid rgba(37,99,235,.15);border-radius:10px;"></div>
-      </div>
-
-      <div style="text-align:center;margin:12px 0;font-size:20px;color:var(--green);">↓ Bàn giao cho</div>
-
-      <div class="grid2">
-        <div class="field span2">
-          <label>Người nhận *</label>
-          <input type="text" id="btr-user" placeholder="Họ và tên người nhận"/>
-        </div>
-        <div class="field">
-          <label>Email người nhận</label>
-          <input type="email" id="btr-email" placeholder="email@ttgvn.com"/>
-        </div>
-        <div class="field">
-          <label>Bộ phận người nhận</label>
-          <select id="btr-dept">
-            <option value="">-- Chọn phòng ban --</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Ngày bàn giao *</label>
-          <input type="date" id="btr-date"/>
-        </div>
-        <div class="field">
-          <label>Tình trạng khi bàn giao</label>
-          <select id="btr-condition">
-            <option>Hoạt động tốt</option>
-            <option>Còn bảo hành</option>
-            <option>Hết bảo hành</option>
-            <option>Cần bảo trì nhẹ</option>
-          </select>
-        </div>
-        <div class="field span2">
-          <label>Ghi chú bàn giao</label>
-          <textarea id="btr-notes" placeholder="VD: Bàn giao bộ phụ kiện kèm laptop…" style="min-height:52px;"></textarea>
-        </div>
-      </div>
-
-    </div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal('modal-bulk-transfer')">Hủy</button>
-      <button class="btn primary btn-icon-ph" onclick="confirmBulkTransfer()">
-        <i class="ph ph-arrows-left-right"></i> Xác nhận bàn giao
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════ AI HEALTH CHECK MODAL ══════════════ -->
-<div class="modal-backdrop" id="modal-ai" onclick="if(event.target===this)closeModal('modal-ai')">
-  <div class="modal" style="max-width:500px;">
-    <div class="modal-head">
-      <h2>✨ Smart Assistant</h2>
-      <button class="modal-close" onclick="closeModal('modal-ai')"><i class="ph ph-x"></i></button>
-    </div>
-    <div class="ai-modal-body" id="ai-modal-body"><!-- populated by JS --></div>
-    <div class="modal-foot" id="ai-modal-foot" style="display:none;">
-      <button class="btn" onclick="closeModal('modal-ai')">Đóng</button>
-      <button class="btn" style="color:var(--muted);font-size:12px;" onclick="aiClearKey()"><i class="ph ph-key"></i> Đổi API Key</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════ SMART ACTION POPOVER ══════════════ -->
-<div id="smart-action-menu" role="menu" aria-label="Q.Action"></div>
-
 <!-- ══════════════ HỒ SƠ & ĐÍNH KÈM ══════════════ -->
 <div class="modal-backdrop" id="modal-attach" onclick="if(event.target===this)closeModal('modal-attach')">
   <div class="modal" style="max-width:520px;">
@@ -2230,29 +1903,18 @@ input[type=checkbox].row-cb{
 <div class="modal-backdrop" id="modal-license">
   <div class="modal" style="max-width:620px;">
     <div class="modal-head">
-      <h2 id="lic-form-title">Thêm Contract</h2>
+      <h2 id="lic-form-title">Thêm License</h2>
       <button class="btn icon-only" onclick="closeModal('modal-license')" style="border:none;font-size:18px;">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="lf-id"/>
       <input type="hidden" id="lf-spid"/>
       <div class="grid3">
-        <div class="section-divider span3"><span><i class="ph ph-files"></i> Thông tin hợp đồng</span><hr/></div>
+        <div class="section-divider span3"><span><i class="ph ph-key"></i> Thông tin phần mềm</span><hr/></div>
 
-        <div class="field">
-          <label>Loại (Type)</label>
-          <select id="lf-type" onchange="onLicTypeChange()">
-            <option value="Software">💿 Software</option>
-            <option value="Domain">🌐 Domain</option>
-            <option value="Hosting">🖥 Hosting</option>
-            <option value="Cloud">☁️ Cloud</option>
-            <option value="Internet">📶 Internet</option>
-            <option value="Other">📄 Other</option>
-          </select>
-        </div>
         <div class="field span2">
-          <label id="lf-ten-label">Tên phần mềm / Tên miền *</label>
-          <input type="text" id="lf-ten" list="ten-datalist" placeholder="VD: Office E3 hoặc ttgvn.com"/>
+          <label>Tên phần mềm *</label>
+          <input type="text" id="lf-ten" list="ten-datalist" placeholder="VD: Office E3"/>
           <datalist id="ten-datalist">
             <option value="Office 365 Extra File Storage">
             <option value="Power Automate Premium">
@@ -2332,37 +1994,6 @@ input[type=checkbox].row-cb{
         <div class="field">
           <label>Trạng thái</label>
           <div id="lf-expiry-status" style="padding:8px 0;font-size:13px;color:var(--muted);">—</div>
-        </div>
-
-        <!-- Domain-specific fields: chỉ hiện khi Type = Domain/Hosting -->
-        <div id="lf-domain-section" style="display:none;grid-column:1/-1;">
-          <div class="grid3" style="margin:0;">
-            <div class="section-divider span3"><span><i class="ph ph-globe"></i> Thông tin Domain</span><hr/></div>
-            <div class="field">
-              <label>Auto-renew</label>
-              <select id="lf-autorenew">
-                <option value="">— Chưa rõ</option>
-                <option value="yes">✅ Có</option>
-                <option value="no">❌ Không</option>
-              </select>
-            </div>
-            <div class="field span2">
-              <label>DNS / Trỏ về</label>
-              <input type="text" id="lf-dns" placeholder="VD: Cloudflare, hosting PA, 103.x.x.x"/>
-            </div>
-            <div class="field span3">
-              <label>Mục đích</label>
-              <input type="text" id="lf-mucdich" list="mucdich-datalist" placeholder="VD: Website chính, Email, Redirect, Dự phòng"/>
-              <datalist id="mucdich-datalist">
-                <option value="Website chính">
-                <option value="Email hosting">
-                <option value="Redirect">
-                <option value="Dự phòng">
-                <option value="Landing page">
-                <option value="Nội bộ">
-              </datalist>
-            </div>
-          </div>
         </div>
 
         <div class="section-divider span3"><span><i class="ph ph-note-pencil"></i> Ghi chú</span><hr/></div>
@@ -3661,7 +3292,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadFromStorage();          // load localStorage trước → UI không trắng
   loadLicenses();             // load license data
   loadLicHistory();           // load lịch sử gia hạn
-  loadLicAttachTags();        // load tag file đính kèm theo dòng
   populateDeptSelects();
   applyFilters();
   updateDashboard();
@@ -4099,8 +3729,6 @@ function populateDeptSelects(){
   document.getElementById('f-boPhan').innerHTML = opts;
   const trDept = document.getElementById('tr-new-dept');
   if(trDept) trDept.innerHTML = opts;
-  const btrDept = document.getElementById('btr-dept');
-  if(btrDept) btrDept.innerHTML = opts;
 
   populateCompanySelects();
 }
@@ -4864,9 +4492,12 @@ function renderTable(){
         </td>
         <td>
           <div class="row-actions">
-            <button class="sa-btn" title="Q.Action" onclick="openSmartAction('${a.id}',this)" style="margin:0 auto;">
-              <span style="font-size:15px;pointer-events:none;line-height:1;">✨</span>
-            </button>
+            <button class="action-btn view" title="Xem chi tiết" onclick="viewDetail('${a.id}')"><i class="ph ph-eye"></i></button>
+            <button class="action-btn edit btn-edit-asset" title="Chỉnh sửa" onclick="openEdit('${a.id}')"><i class="ph ph-pencil-simple"></i></button>
+            <button class="action-btn transfer" title="Bàn giao cho người mới" onclick="openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i></button>
+            <button class="action-btn attach" title="Hồ sơ & Đính kèm" onclick="openAttachments('${a.id}')"><i class="ph ph-paperclip"></i></button>
+            ${(_userRole==='global_admin'||_userRole==='admin')?`<button class="action-btn xfer-co" title="Chuyển sang công ty khác" onclick="openXferCompany('${a.id}')"><i class="ph ph-buildings"></i></button>`:''}
+            <button class="action-btn del btn-del-asset" title="Xóa" onclick="openDelete('${a.id}')"><i class="ph ph-trash"></i></button>
           </div>
         </td>
       </tr>`;
@@ -4961,7 +4592,7 @@ async function bulkApplyStatus(){
     }
   }
 
-  saveToStorage();
+  saveAssets();
   document.getElementById('bulk-status-sel').value = '';
   clearBulkSelect();
   toast(`✅ Đã đổi trạng thái ${successCount} tài sản sang "${newStatus}"`, 'ok');
@@ -5016,7 +4647,7 @@ async function bulkDeleteSelected(){
       try{ await spDeleteAsset(spId); }catch(e){ console.warn('[BULK DEL] SP fail:', id); }
     }
   }
-  saveToStorage();
+  saveAssets();
   clearBulkSelect();
   toast(`🗑️ Đã xóa ${done} tài sản`, 'ok');
 }
@@ -5548,8 +5179,6 @@ async function openAttachments(assetId){
 
 // Mở hợp đồng theo gói — dùng license đầu tiên có spId làm đại diện
 async function openGoiAttachments(goiName){
-  _attachFilterMode  = 'goi';   // hiện TẤT CẢ file của group
-  _attachFilterLicId = null;
   _attachListName = MSAL_CONFIG.spLicenseList;
   const grpList = licenses.filter(l => (l.goi||'') === goiName);
   // Ưu tiên item đã sync SP
@@ -5589,8 +5218,6 @@ async function openGoiAttachments(goiName){
 }
 
 async function openLicenseAttachments(licId){
-  _attachFilterMode  = 'lic';   // chỉ hiện file của dòng này
-  _attachFilterLicId = licId;
   _attachAssetId  = licId;
   _attachListName = MSAL_CONFIG.spLicenseList;
   const l = licenses.find(x => x.id === licId);
@@ -5599,7 +5226,7 @@ async function openLicenseAttachments(licId){
   const titleEl = document.getElementById('attach-modal-title');
   const body    = document.getElementById('attach-body');
 
-  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm — <span style="color:var(--accent2);">${esc(l.ten||l.id)}</span>${l.congTy?` <span style="font-size:11px;color:var(--muted);">(${esc(l.congTy)})</span>`:''}${l.key?` <span style="font-size:10px;color:var(--muted);">· ${esc(l.key)}</span>`:''}`;
+  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm — <span style="color:var(--accent2);">${esc(l.tenPhanMem||l.id)}</span>`;
 
   if(!_msalAccount || !SP_MODE){
     body.innerHTML = `<div style="text-align:center;padding:32px 0;">
@@ -5634,51 +5261,7 @@ async function _refreshAttachments(spId){
     const files = data?.value || [];
     _renderAttachBody(spId, files);
   }catch(e){
-    const msg = e.message || '';
-    const isGone = msg.includes('Item does not exist') || msg.includes('-2147024809') || msg.includes('does not exist');
-    if(isGone && _attachFilterMode === 'lic' && _attachFilterLicId){
-      // SP item đã bị xóa — cho phép đồng bộ lại
-      const lid = _attachFilterLicId;
-      body.innerHTML = `<div style="text-align:center;padding:32px 16px;">
-        <i class="ph ph-warning-circle" style="font-size:32px;color:var(--yellow);"></i>
-        <p style="font-size:13px;color:var(--text);margin:10px 0 4px;font-weight:600;">Bản ghi SharePoint không còn tồn tại</p>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Item này có thể đã bị xóa khỏi SP.<br>Nhấn <strong>Đồng bộ lại</strong> để tạo mới và dùng đính kèm.</p>
-        <button class="btn primary btn-icon-ph" onclick="resyncLicenseAttach('${lid}')"><i class="ph ph-arrows-clockwise"></i> Đồng bộ lại</button>
-      </div>`;
-    } else if(isGone && _attachFilterMode === 'goi'){
-      body.innerHTML = `<div style="text-align:center;padding:32px 16px;">
-        <i class="ph ph-warning-circle" style="font-size:32px;color:var(--yellow);"></i>
-        <p style="font-size:13px;color:var(--text);margin:10px 0 4px;font-weight:600;">Bản ghi SharePoint không còn tồn tại</p>
-        <p style="font-size:12px;color:var(--muted);">Hãy vào từng dòng hợp đồng, nhấn Lưu để đồng bộ lại lên SP.</p>
-      </div>`;
-    } else {
-      body.innerHTML = `<p style="color:var(--red);font-size:13px;padding:12px;">❌ Lỗi tải danh sách: ${esc(msg)}</p>`;
-    }
-  }
-}
-
-// Xóa spId cũ và push lại để tạo bản ghi SP mới
-async function resyncLicenseAttach(licId){
-  const idx = licenses.findIndex(l => l.id === licId);
-  if(idx < 0) return;
-  const body = document.getElementById('attach-body');
-  body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">
-    <i class="ph ph-spinner-gap" style="font-size:22px;"></i><br>Đang đồng bộ lại…
-  </div>`;
-  // Clear spId cũ → msalSpPushLicense sẽ POST tạo item mới
-  licenses[idx].spId = null;
-  saveLicenses();
-  try{
-    await msalSpPushLicense(licId);
-    const l = licenses.find(x => x.id === licId);
-    if(l?.spId){
-      await _refreshAttachments(l.spId);
-      toast('✅ Đã đồng bộ lại, bạn có thể upload file', 'ok');
-    } else {
-      body.innerHTML = `<p style="color:var(--red);font-size:13px;padding:12px;">❌ Không lấy được ID mới từ SP. Hãy thử lưu lại license từ form.</p>`;
-    }
-  }catch(e){
-    body.innerHTML = `<p style="color:var(--red);font-size:13px;padding:12px;">❌ Lỗi đồng bộ: ${esc(e.message)}</p>`;
+    body.innerHTML = `<p style="color:var(--red);font-size:13px;padding:12px;">❌ Lỗi tải danh sách: ${esc(e.message)}</p>`;
   }
 }
 
@@ -5686,60 +5269,19 @@ function _renderAttachBody(spId, files){
   const body = document.getElementById('attach-body');
   const spOrigin = new URL(MSAL_CONFIG.spSite).origin;
 
-  // Lọc file theo mode
-  let visibleFiles = files;
-  if(_attachFilterMode === 'lic' && _attachFilterLicId){
-    const tagged = _licAttachTags[_attachFilterLicId] || [];
-    visibleFiles  = files.filter(f => tagged.includes(f.FileName));
-  }
-
-  // File chưa được tag nào (chỉ hiện ở HĐ khung)
-  const allTagged = Object.values(_licAttachTags).flat();
-  const untagged  = files.filter(f => !allTagged.includes(f.FileName));
-
-  const renderFile = (f, isUntagged=false) => {
-    const viewUrl = spOrigin + f.ServerRelativeUrl;
-    const untagNote = isUntagged ? `<span style="font-size:10px;color:var(--muted);margin-left:4px;">(chưa gán)</span>` : '';
-    return `<div class="attach-item">
-      <i class="ph ${_attachFileIcon(f.FileName)}" style="font-size:20px;color:var(--accent);flex-shrink:0;"></i>
-      <span class="attach-name" title="${esc(f.FileName)}">${esc(f.FileName)}${untagNote}</span>
-      <div style="display:flex;gap:4px;flex-shrink:0;">
-        <button class="action-btn view" title="Mở file" onclick="window.open('${esc(viewUrl)}','_blank')"><i class="ph ph-arrow-square-out"></i></button>
-        <button class="action-btn del" title="Xóa file" onclick="spDeleteAttach(${spId},'${esc(f.FileName).replace(/'/g,'\\\'') }')"><i class="ph ph-trash"></i></button>
-      </div>
-    </div>`;
-  };
-
-  let fileHTML = '';
-  if(_attachFilterMode === 'goi'){
-    // HĐ khung: hiện tất cả, nhóm theo licId
-    if(!files.length){
-      fileHTML = `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file đính kèm nào.</p>`;
-    } else {
-      // File đã được tag: nhóm theo dòng
-      const licIdsInGroup = Object.keys(_licAttachTags).filter(lid =>
-        (_licAttachTags[lid]||[]).some(fn => files.find(f=>f.FileName===fn))
-      );
-      licIdsInGroup.forEach(lid => {
-        const lic = licenses.find(x=>x.id===lid);
-        const label = lic ? `${lic.ten}${lic.key?' · '+lic.key:''}` : lid;
-        const taggedFiles = files.filter(f => (_licAttachTags[lid]||[]).includes(f.FileName));
-        if(!taggedFiles.length) return;
-        fileHTML += `<div style="font-size:11px;font-weight:700;color:var(--accent2);margin:10px 0 4px;padding-left:4px;border-left:3px solid var(--accent2);">${esc(label)}</div>`;
-        fileHTML += taggedFiles.map(f=>renderFile(f)).join('');
-      });
-      // File chưa tag
-      if(untagged.length){
-        fileHTML += `<div style="font-size:11px;font-weight:700;color:var(--muted);margin:10px 0 4px;padding-left:4px;border-left:3px solid var(--border);">Chưa gán vào dòng cụ thể</div>`;
-        fileHTML += untagged.map(f=>renderFile(f, true)).join('');
-      }
-    }
-  } else {
-    // Chế độ dòng: chỉ hiện file của licId này
-    fileHTML = visibleFiles.length
-      ? visibleFiles.map(f=>renderFile(f)).join('')
-      : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file nào cho dòng này.<br><span style="font-size:11px;">Upload file để gán vào dòng này.</span></p>`;
-  }
+  const fileHTML = files.length
+    ? files.map(f => {
+        const viewUrl = spOrigin + f.ServerRelativeUrl;
+        return `<div class="attach-item">
+          <i class="ph ${_attachFileIcon(f.FileName)}" style="font-size:20px;color:var(--accent);flex-shrink:0;"></i>
+          <span class="attach-name" title="${esc(f.FileName)}">${esc(f.FileName)}</span>
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            <button class="action-btn view" title="Mở file" onclick="window.open('${esc(viewUrl)}','_blank')"><i class="ph ph-arrow-square-out"></i></button>
+            <button class="action-btn del" title="Xóa file" onclick="spDeleteAttach(${spId},'${esc(f.FileName).replace(/'/g,'\\\'') }')"><i class="ph ph-trash"></i></button>
+          </div>
+        </div>`;
+      }).join('')
+    : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0 8px;">Chưa có file đính kèm nào.</p>`;
 
   body.innerHTML = `
     ${fileHTML}
@@ -5779,27 +5321,10 @@ async function _uploadAttachFiles(spId, files){
     try{
       const buf   = await file.arrayBuffer();
       const fname = encodeURIComponent(file.name);
-      try{
-        await msalSpReq(
-          `${_attachBase(spId)}/add(FileName='${fname}')`,
-          { method:'POST', headers:{'Content-Type':'application/octet-stream','Accept':'application/json;odata=nometadata'}, body: buf }
-        );
-      }catch(uploadErr){
-        const msg = uploadErr.message || '';
-        // File đã tồn tại trên SP (HTTP 409) — chỉ tag lại, không cần upload
-        if(msg.includes('409') || msg.includes('already exists') || msg.includes('duplicate')){
-          toast(`ℹ️ File đã tồn tại trên SP, đã gán vào dòng này: ${esc(file.name)}`, 'ok');
-        } else {
-          throw uploadErr; // lỗi khác thì re-throw
-        }
-      }
-      // Tag file vào licId nếu đang ở chế độ 'lic'
-      if(_attachFilterMode === 'lic' && _attachFilterLicId){
-        if(!_licAttachTags[_attachFilterLicId]) _licAttachTags[_attachFilterLicId] = [];
-        if(!_licAttachTags[_attachFilterLicId].includes(file.name))
-          _licAttachTags[_attachFilterLicId].push(file.name);
-        saveLicAttachTags();
-      }
+      await msalSpReq(
+        `${_attachBase(spId)}/add(FileName='${fname}')`,
+        { method:'POST', headers:{'Content-Type':'application/octet-stream','Accept':'application/json;odata=nometadata'}, body: buf }
+      );
       ok++;
     }catch(e){
       fail++;
@@ -5820,11 +5345,6 @@ async function spDeleteAttach(spId, filename){
       `${_attachBase(spId)}/getbyfilename('${fname}')`,
       { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' }
     );
-    // Bỏ tag file đã xóa khỏi tất cả licId
-    Object.keys(_licAttachTags).forEach(lid => {
-      _licAttachTags[lid] = (_licAttachTags[lid]||[]).filter(f => f !== filename);
-    });
-    saveLicAttachTags();
     toast('🗑 Đã xóa file', 'ok');
     await _refreshAttachments(spId);
   }catch(e){
@@ -5832,327 +5352,6 @@ async function spDeleteAttach(spId, filename){
   }
 }
 // ════════════════════════════════════════════════════════════════════════════
-
-// ═══════════════════════ SMART ASSISTANT — Azure Function ═══════════════════════
-// Điền URL Azure Function sau khi deploy
-const AI_FUNCTION_URL = 'https://qlts.khoa-na.workers.dev/';
-
-function aiClearKey(){
-  closeModal('modal-ai');
-}
-
-async function geminiHealthCheck(assetId){
-  const a = assets.find(x=>x.id===assetId);
-  if(!a) return;
-
-  const body = document.getElementById('ai-modal-body');
-  const foot = document.getElementById('ai-modal-foot');
-  foot.style.display = 'none';
-
-  // Kiểm tra Azure Function URL đã cấu hình chưa
-  if(AI_FUNCTION_URL.includes('<your-function-app>')){
-    body.innerHTML = `
-      <div class="ai-setup">
-        <div style="font-size:28px;margin-bottom:8px;">⚙️</div>
-        <p style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Chưa cấu hình Azure Function</p>
-        <p style="font-size:12px;color:var(--muted);line-height:1.6;">
-          Cần deploy Azure Function và điền URL vào biến <code>AI_FUNCTION_URL</code> trong file index.html.<br><br>
-          Xem hướng dẫn trong thư mục <code>azure-function/</code>.
-        </p>
-      </div>`;
-    foot.style.display = 'flex';
-    openModal('modal-ai');
-    return;
-  }
-
-  // Lấy Azure AD token (đã có sẵn từ MSAL)
-  let token = '';
-  try{ token = await msalGetToken(); }catch(e){ /* nếu chưa login thì bỏ qua */ }
-
-  // Hiện loading
-  body.innerHTML = `
-    <div class="ai-loading">
-      <div class="ai-spinner"></div>
-      <span>✨ Đang phân tích tài sản…</span>
-      <span style="font-size:11px;opacity:.6;">Powered by Google Gemini · gemini-2.5-flash</span>
-    </div>`;
-  openModal('modal-ai');
-
-  // Chuẩn bị dữ liệu gửi lên Azure Function
-  const depr = calcDepreciation(a);
-  const assetData = {
-    tenTaiSan: a.tenTaiSan, model: a.model, maTaiSan: a.maTaiSan,
-    ngayMua: a.ngayMua, giaTri: a.giaTri, tinhTrang: a.tinhTrang,
-    nguoiDung: a.nguoiDung, boPhan: a.boPhan, ghiChu: a.ghiChu,
-    depreciation: depr,
-  };
-
-  try{
-    const res = await fetch(AI_FUNCTION_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
-      },
-      body: JSON.stringify({ assetData }),
-    });
-
-    if(!res.ok){
-      const e = await res.json().catch(()=>({}));
-      throw new Error(e.error || `HTTP ${res.status}`);
-    }
-
-    const json = await res.json();
-    const vcls = json.verdict || 'warn';
-
-    body.innerHTML = `
-      <div class="ai-asset-pill">
-        <i class="ph ph-laptop" style="font-size:13px;color:#818CF8;"></i>
-        <strong>${esc(a.tenTaiSan||'Tài sản')}</strong>
-        <span style="color:var(--muted);">${esc(a.maTaiSan||'')}</span>
-      </div>
-      <span class="ai-verdict ${vcls}">
-        ${ vcls==='good'?'✅':vcls==='warn'?'⚠️':'🔴' } ${esc(json.verdict_label||vcls)}
-      </span>
-      <div class="ai-result-box">
-        <div class="ai-result">${esc(json.summary||'')}</div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Khuyến nghị</div>
-          <div class="ai-result" style="font-weight:600;">${esc(json.recommendation||'')}</div>
-        </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Lý do</div>
-          <div class="ai-result" style="color:var(--muted);">${esc(json.reason||'')}</div>
-        </div>
-      </div>
-      <div class="ai-footer">
-        <i class="ph ph-sparkle" style="font-size:13px;color:#818CF8;"></i>
-        Powered by Google Gemini · gemini-2.5-flash · qua Azure Function
-      </div>`;
-    foot.style.display = 'flex';
-
-  }catch(e){
-    const msg = e.message || '';
-    const isAuth  = msg.includes('401') || msg.includes('Unauthorized');
-    const isQuota = msg.includes('quota') || msg.includes('429');
-    body.innerHTML = `
-      <div style="text-align:center;padding:20px 0;">
-        <i class="ph ph-warning-circle" style="font-size:28px;color:var(--red);"></i>
-        <p style="font-size:13px;color:var(--red);margin-top:10px;font-weight:600;">
-          ${isAuth ? '❌ Chưa đăng nhập Azure AD' : isQuota ? '⚠️ Hết quota Gemini API' : '❌ Lỗi kết nối'}
-        </p>
-        <p style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5;">
-          ${isQuota
-            ? `Gemini free tier giới hạn 15 request/phút và 1.500 request/ngày.<br>
-               Vui lòng thử lại sau ít phút, hoặc vào
-               <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary);">AI Studio</a>
-               để kiểm tra quota.`
-            : esc(msg.substring(0,200))
-          }
-        </p>
-      </div>`;
-    foot.style.display = 'flex';
-  }
-}
-// ════════════════════════════════════════════════════════
-
-// ═══════════════════════ SMART ACTION ═══════════════════════
-let _saCurrentId = null;
-
-function openSmartAction(assetId, triggerEl){
-  const a = assets.find(x => x.id === assetId);
-  if(!a) return;
-  _saCurrentId = assetId;
-
-  const menu = document.getElementById('smart-action-menu');
-  const isAdmin = _userRole === 'global_admin' || _userRole === 'admin';
-
-  // ── Render nội dung menu ──
-  menu.innerHTML = `
-    <div class="sa-header">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-        <div class="sa-header-name"><i class="ph ph-laptop" style="font-size:12px;margin-right:4px;"></i>${esc(a.tenTaiSan||'Tài sản')}</div>
-        <span style="font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);white-space:nowrap;">Q.Action</span>
-      </div>
-      <div class="sa-header-code">${esc(a.maTaiSan||'—')} · ${esc(a.nguoiDung||'Chưa cấp phát')}</div>
-    </div>
-
-    <button class="sa-item" onclick="saAct('view')"><i class="ph ph-eye" style="color:var(--accent);"></i> Xem chi tiết</button>
-    <button class="sa-item" onclick="saAct('edit')"><i class="ph ph-pencil-simple" style="color:var(--accent2);"></i> Chỉnh sửa</button>
-
-    <div class="sa-divider"></div>
-    <div class="sa-section">Quản lý</div>
-    <button class="sa-item" onclick="saAct('transfer')"><i class="ph ph-arrows-left-right" style="color:#059669;"></i> Bàn giao</button>
-    <button class="sa-item" onclick="saAct('attach')"><i class="ph ph-paperclip" style="color:#EA580C;"></i> Hồ sơ & Đính kèm</button>
-    ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="color:#7C3AED;"></i> Chuyển công ty</button>` : ''}
-
-    <div class="sa-divider"></div>
-    <div class="sa-section">Trạng thái nhanh</div>
-    ${a.tinhTrang !== 'Hỏng' && a.tinhTrang !== 'Sửa chữa'
-      ? `<button class="sa-item" onclick="saAct('report-damage')" style="color:#DC2626;">
-           <i class="ph ph-warning" style="color:#DC2626;"></i> Báo hỏng
-         </button>`
-      : `<button class="sa-item" onclick="saAct('report-damage')" style="color:#059669;">
-           <i class="ph ph-wrench" style="color:#059669;"></i> Đang sửa chữa — đổi trạng thái
-         </button>`}
-    ${a.nguoiDung
-      ? `<button class="sa-item" onclick="saAct('recall')" style="color:#B45309;">
-           <i class="ph ph-package" style="color:#D97706;"></i> Thu hồi về kho
-         </button>`
-      : ''}
-
-    <div class="sa-divider"></div>
-    <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash"></i> Xóa tài sản</button>
-
-    <!-- AI Health Check — tạm ẩn, bật lại khi cần:
-    <div class="sa-divider"></div>
-    <div class="sa-section">✨ AI</div>
-    <button class="sa-item" onclick="saAct('ai-health')" style="background:linear-gradient(135deg,rgba(129,140,248,.08),rgba(167,139,250,.08));">
-      <i class="ph ph-sparkle" style="color:#818CF8;"></i>
-      <span>Asset Health Check</span>
-      <span class="sa-ai-badge">Gemini</span>
-    </button>
-    -->`;
-
-  // ── Vị trí popover: ngang hàng nút, mở sang trái ──
-  menu.classList.add('open');
-  const rect  = triggerEl.getBoundingClientRect();
-  const mw    = menu.offsetWidth  || 220;
-  const mh    = menu.offsetHeight || 280;
-  const vw    = window.innerWidth;
-  const vh    = window.innerHeight;
-
-  // Mặc định: top ngang với nút, left sát bên trái nút
-  let top  = rect.top;
-  let left = rect.left - mw - 6;
-
-  // Nếu tràn trái thì mở sang phải
-  if(left < 8) left = rect.right + 6;
-  // Nếu tràn phải thì kéo vào
-  if(left + mw > vw - 8) left = vw - mw - 8;
-  // Nếu tràn dưới thì đẩy lên
-  if(top + mh > vh - 12) top = vh - mh - 12;
-  // Không vượt quá đỉnh
-  if(top < 8) top = 8;
-
-  menu.style.top  = top  + 'px';
-  menu.style.left = left + 'px';
-}
-
-function saAct(action){
-  const id = _saCurrentId;  // ← lưu trước khi closeSmartAction reset về null
-  closeSmartAction();
-  if(!id) return;
-  if(action === 'view')      viewDetail(id);
-  if(action === 'edit')      openEdit(id);
-  if(action === 'transfer')  openTransfer(id);
-  if(action === 'attach')    openAttachments(id);
-  if(action === 'xfer-co')   openXferCompany(id);
-  if(action === 'delete')        openDelete(id);
-  if(action === 'report-damage') saReportDamage(id);
-  if(action === 'recall')        saRecall(id);
-  if(action === 'ai-health')     geminiHealthCheck(id);
-}
-
-function closeSmartAction(){
-  const menu = document.getElementById('smart-action-menu');
-  if(menu){ menu.classList.remove('open'); }
-  _saCurrentId = null;
-}
-
-// ── Báo hỏng ─────────────────────────────────────────────────
-async function saReportDamage(id){
-  const idx = assets.findIndex(a => a.id === id);
-  if(idx < 0) return;
-  const a = assets[idx];
-
-  // Nếu đang Hỏng/Sửa chữa thì cho phép đổi về Đang dùng
-  if(a.tinhTrang === 'Hỏng' || a.tinhTrang === 'Sửa chữa'){
-    const back = confirm(`"${a.tenTaiSan} — ${a.maTaiSan}" đang ở trạng thái "${a.tinhTrang}".\n\nĐổi về "Đang dùng"?`);
-    if(!back) return;
-    assets[idx].tinhTrang = 'Đang dùng';
-    toast(`✅ Đã cập nhật trạng thái về "Đang dùng"`, 'ok');
-  } else {
-    const note = prompt(`Báo hỏng: "${a.tenTaiSan} — ${a.maTaiSan}"\n\nNhập lý do hỏng (có thể để trống):`);
-    if(note === null) return; // user bấm Cancel
-    assets[idx].tinhTrang = 'Hỏng';
-    if(note.trim()) assets[idx].ghiChu = (assets[idx].ghiChu ? assets[idx].ghiChu + ' | ' : '') + `[Hỏng] ${note.trim()}`;
-    toast(`⚠️ Đã báo hỏng "${a.maTaiSan}"`, 'warn');
-  }
-
-  saveToStorage();
-  if(_msalAccount){
-    try{ await msalSpPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
-  } else if(SP_MODE && assets[idx]._spId){
-    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
-  }
-  applyFilters(true);
-  updateDashboard();
-}
-
-// ── Thu hồi về kho ────────────────────────────────────────────
-async function saRecall(id){
-  const idx = assets.findIndex(a => a.id === id);
-  if(idx < 0) return;
-  const a = assets[idx];
-
-  // Kiểm tra tài sản đã được bàn giao chưa
-  const hasBanGiao = a.trangThaiHienTai === 'Bàn giao'
-                   || (transfers[id] && transfers[id].length > 0)
-                   || !!a.nguoiDung;
-  if(!hasBanGiao){ toast('ℹ️ Tài sản chưa được cấp phát', 'info'); return; }
-
-  const nguoiCu = a.nguoiDung || '—';
-  const boPhanCu = a.boPhan || '—';
-  const ok = confirm(`Thu hồi "${a.tenTaiSan} — ${a.maTaiSan}" từ ${nguoiCu} (${boPhanCu})?\n\nTài sản sẽ được chuyển về kho.`);
-  if(!ok) return;
-
-  const now = new Date().toISOString().slice(0,10);
-
-  // Tạo bản ghi thu hồi trong lịch sử bàn giao
-  if(!transfers[id]) transfers[id] = [];
-  transfers[id].push({
-    from:     nguoiCu,
-    fromDept: boPhanCu,
-    to:       'Kho',
-    toDept:   '',
-    toEmail:  '',
-    date:     now,
-    condition: a.tinhTrang || '',
-    notes:    'Thu hồi về kho',
-  });
-  saveTransfers();
-
-  // Cập nhật tài sản
-  assets[idx].nguoiDung        = '';
-  assets[idx].email            = '';
-  assets[idx].boPhan           = '';
-  assets[idx].tinhTrang        = 'Lưu Kho';
-  assets[idx].trangThaiHienTai = 'Thu hồi';
-  assets[idx].ngaySuKien       = now;
-
-  saveToStorage();
-  if(_msalAccount){
-    try{ await msalSpPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
-  } else if(SP_MODE && assets[idx]._spId){
-    try{ await spPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
-  }
-  applyFilters(true);
-  updateDashboard();
-  renderEvents();
-  toast(`📦 Đã thu hồi "${a.maTaiSan}" về kho`, 'ok');
-}
-
-// Đóng khi click ngoài hoặc nhấn Escape
-document.addEventListener('click', e => {
-  const menu = document.getElementById('smart-action-menu');
-  if(!menu?.classList.contains('open')) return;
-  if(!menu.contains(e.target) && !e.target.closest('.sa-btn')) closeSmartAction();
-});
-document.addEventListener('keydown', e => {
-  if(e.key === 'Escape') closeSmartAction();
-});
-// ════════════════════════════════════════════════════════
 
 function openDelete(id){
   if(!can('delete')){ toast('🔒 Bạn không có quyền xóa','bad'); return; }
@@ -6848,130 +6047,6 @@ async function confirmTransfer(){
   }
 }
 
-// ═══════════════════════ BULK TRANSFER (bàn giao nhóm) ═══════════════════════
-
-function bulkTransfer(){
-  if(!_selectedIds.size){ toast('⚠️ Chưa chọn tài sản nào','warn'); return; }
-
-  const ids = [..._selectedIds];
-  const selectedAssets = ids.map(id => assets.find(a => a.id === id)).filter(Boolean);
-
-  // Render danh sách tài sản đã chọn dưới dạng chip
-  const listEl = document.getElementById('btr-asset-list');
-  listEl.innerHTML = selectedAssets.map(a => `
-    <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
-         background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);
-         border-radius:20px;font-size:11.5px;font-weight:600;color:var(--accent);">
-      <i class="ph ph-package" style="font-size:11px;"></i>
-      <span>${esc(a.maTaiSan||'?')}</span>
-      <span style="font-weight:400;color:var(--muted);">${esc(a.tenTaiSan||'')}</span>
-    </div>
-  `).join('');
-
-  // Subtitle
-  document.getElementById('btr-subtitle').textContent =
-    `${selectedAssets.length} tài sản đã chọn`;
-
-  // Reset form
-  document.getElementById('btr-user').value = '';
-  document.getElementById('btr-email').value = '';
-  document.getElementById('btr-notes').value = '';
-  document.getElementById('btr-date').value = new Date().toISOString().split('T')[0];
-  setSelect('btr-condition','Hoạt động tốt');
-  populateDeptSelects();
-  setSelect('btr-dept','');
-
-  openModal('modal-bulk-transfer');
-}
-
-async function confirmBulkTransfer(){
-  const newUser  = document.getElementById('btr-user').value.trim();
-  const date     = document.getElementById('btr-date').value;
-  const email    = document.getElementById('btr-email').value.trim();
-  const dept     = document.getElementById('btr-dept').value;
-  const cond     = document.getElementById('btr-condition').value;
-  const notes    = document.getElementById('btr-notes').value.trim();
-
-  if(!newUser){ toast('⚠️ Vui lòng nhập tên người nhận!','bad'); return; }
-  if(!date){    toast('⚠️ Vui lòng chọn ngày bàn giao!','bad'); return; }
-
-  const ids = [..._selectedIds];
-  if(!ids.length){ toast('⚠️ Không có tài sản nào được chọn','bad'); return; }
-
-  let count = 0;
-  const pushQueue = [];
-
-  for(const id of ids){
-    const idx = assets.findIndex(a => a.id === id);
-    if(idx < 0) continue;
-    const a = assets[idx];
-
-    // Ghi lịch sử bàn giao
-    if(!transfers[id]) transfers[id] = [];
-    const rec = {
-      from:     a.nguoiDung  || '',
-      fromDept: a.boPhan     || '',
-      to:       newUser,
-      toDept:   dept,
-      toEmail:  email,
-      date, condition: cond, notes,
-      ts: new Date().toISOString()
-    };
-    transfers[id].push(rec);
-
-    // Đồng bộ transfer lên SP
-    if(_msalAccount) msalSpPushTransfer(id, rec).catch(e => console.warn('[BULK-TR] push transfer:', id, e));
-
-    // Cập nhật tài sản
-    assets[idx].nguoiDung        = newUser;
-    assets[idx].email            = email || a.email;
-    assets[idx].boPhan           = dept  || a.boPhan;
-    assets[idx].tinhTrang        = 'Đang dùng';
-    assets[idx].trangThaiHienTai = 'Bàn giao';
-    assets[idx].ngaySuKien       = date;
-    assets[idx].updatedAt        = new Date().toISOString();
-
-    pushQueue.push(id);
-    count++;
-  }
-
-  saveTransfers();
-  saveToStorage();
-
-  closeModal('modal-bulk-transfer');
-  clearBulkSelect();
-
-  toast(`✅ Đã bàn giao ${count} tài sản cho ${newUser}!`, 'ok');
-
-  // Đẩy lên SharePoint sau khi đóng modal
-  if(_msalAccount && pushQueue.length){
-    msalSetBar(`⟳ Đang đồng bộ ${pushQueue.length} tài sản…`, 's-busy');
-    for(const id of pushQueue){
-      try{ await msalSpPushAsset(id); }catch(e){ console.warn('[BULK-TR] SP push fail:', id, e); }
-    }
-    msalSetBar(msalBarLabel(assets.length + ' TS'), 's-ok');
-  } else if(SP_MODE && pushQueue.length){
-    for(const id of pushQueue){
-      try{ await spPushAsset(id); }catch(e){ console.warn('[BULK-TR] SP push fail:', id, e); }
-    }
-  }
-
-  applyFilters(true);
-  updateDashboard();
-}
-
-// Helper: populate dept select cho bất kỳ select nào theo id
-function populateDeptSelectById(selId){
-  const sel = document.getElementById(selId);
-  if(!sel) return;
-  const depts = [...new Set(assets.map(a => a.boPhan).filter(Boolean))].sort();
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">-- Chọn phòng ban --</option>'
-    + depts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
-  if(cur) sel.value = cur;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
 function deleteTransfer(assetId, idx, btn){
   if(!confirm('Xóa dòng lịch sử bàn giao này?')) return;
   if(!transfers[assetId]) return;
@@ -7213,19 +6288,10 @@ function fmtMoney(val, tienTe){
 }
 
 // ─── Data store ──────────────────────────────────────────────────
-const LIC_STORE_KEY        = 'qlts_v14_licenses';
-const LIC_ATTACH_TAGS_KEY  = 'qlts_v14_lic_attach_tags';
+const LIC_STORE_KEY = 'qlts_v14_licenses';
 let licenses = [];
 let _licSummaryCollapsed = false;
 let _licGoiCollapsed     = {}; // { goiIdx: bool }
-// Tag: { licId: ['file1.pdf', 'file2.pdf', ...] } — file nào thuộc dòng nào
-let _licAttachTags = {};
-// Chế độ attach hiện tại: 'lic' (lọc theo licId) | 'goi' (hiện tất cả)
-let _attachFilterMode  = 'goi';
-let _attachFilterLicId = null;
-
-function saveLicAttachTags(){ try{ localStorage.setItem(LIC_ATTACH_TAGS_KEY, JSON.stringify(_licAttachTags)); }catch(e){} }
-function loadLicAttachTags(){ try{ const d=localStorage.getItem(LIC_ATTACH_TAGS_KEY); if(d) _licAttachTags=JSON.parse(d); }catch(e){ _licAttachTags={}; } }
 
 function saveLicenses(){
   try{ localStorage.setItem(LIC_STORE_KEY, JSON.stringify(licenses)); }catch(e){}
@@ -7276,48 +6342,16 @@ function toggleLicGroup(){
 
 // ─── Render 1 license row ─────────────────────────────────────────
 // inGroup=true → trong chế độ nhóm theo gói, hợp đồng ở group header
-function _licTypeBadge(type){
-  const map = {
-    'Software': {icon:'ph-disc',        color:'#3B82F6', bg:'#EFF6FF'},
-    'Domain':   {icon:'ph-globe',       color:'#7C3AED', bg:'#F5F3FF'},
-    'Hosting':  {icon:'ph-hard-drives', color:'#059669', bg:'#F0FDF4'},
-    'Cloud':    {icon:'ph-cloud',       color:'#0284C7', bg:'#F0F9FF'},
-    'Internet': {icon:'ph-wifi-high',   color:'#DB2777', bg:'#FDF2F8'},
-    'Other':    {icon:'ph-file-text',   color:'#6B7280', bg:'#F9FAFB'},
-  };
-  const t = map[type] || map['Other'];
-  return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;background:${t.bg};color:${t.color};">
-    <i class="ph ${t.icon}" style="font-size:11px;"></i>${type||'Software'}
-  </span>`;
-}
-
 function _licRow(l, i, hideGoi, inGroup){
   const diff = licDiff(l.ngayHetHan);
   const keyMask = l.key ? (l.key.length>12 ? l.key.substring(0,8)+'…'+l.key.slice(-4) : l.key) : '—';
-  const attachBtn = inGroup
-    ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Phụ lục / Addendum của dòng này" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i> PL</button>`
-    : `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Hồ sơ & Đính kèm" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i></button>`;
-
-  // Highlight row khi sắp/đã hết hạn
-  const rowStyle = diff !== null && diff < 0
-    ? 'background:#FEF2F2;'
-    : diff !== null && diff <= 30
-      ? 'background:#FFFBEB;'
-      : '';
-
-  // Domain: hiện thêm DNS + auto-renew trong tooltip
-  const domainExtra = (l.type==='Domain'||l.type==='Hosting') && (l.dns||l.autoRenew||l.mucDich)
-    ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">
-        ${l.dns ? `<span>DNS: ${esc(l.dns)}</span>` : ''}
-        ${l.autoRenew ? ` · Auto-renew: ${l.autoRenew==='yes'?'✅':'❌'}` : ''}
-        ${l.mucDich ? ` · ${esc(l.mucDich)}` : ''}
-      </div>`
+  // Nút đính kèm: chỉ hiện ở flat mode (mỗi license độc lập)
+  const attachBtn = !inGroup
+    ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);" title="Hồ sơ & Đính kèm" onclick="openLicenseAttachments('${l.id}')"><i class="ph ph-paperclip"></i></button>`
     : '';
-
-  return `<tr style="${rowStyle}">
+  return `<tr>
     <td style="color:var(--muted);font-size:11px;">${i}</td>
-    <td>${_licTypeBadge(l.type||'Software')}</td>
-    <td><strong>${esc(l.ten||'—')}</strong>${domainExtra}</td>
+    <td><strong>${esc(l.ten||'—')}</strong></td>
     <td style="font-size:11px;color:var(--accent2);">${hideGoi ? '' : esc(l.goi||'—')}</td>
     <td style="font-size:11px;font-weight:600;">${esc(l.congTy||'—')}</td>
     <td style="font-family:monospace;font-size:11px;" title="${esc(l.key||'')}">${esc(keyMask)}</td>
@@ -7325,14 +6359,13 @@ function _licRow(l, i, hideGoi, inGroup){
     <td>${seatBar(l.tongSeat, l.donVi)}</td>
     <td style="font-size:12px;text-align:right;">${fmtMoney(l.giaTri, l.tienTe)}</td>
     <td style="font-size:12px;">${l.ngayMua||'—'}</td>
-    <td style="font-size:12px;font-weight:${diff!==null&&diff<=30?'700':'400'}">${l.ngayHetHan||'—'}</td>
+    <td style="font-size:12px;">${l.ngayHetHan||'—'}</td>
     <td>${licStatusBadge(diff)}</td>
     <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(l.ghichu||'')}">${esc(l.ghichu||'')}</td>
     <td style="white-space:nowrap;">
-      <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
-      <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#059669;" title="Gia hạn" onclick="quickRenewLicense('${l.id}')"><i class="ph ph-arrow-clockwise"></i></button>
+      <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
       ${attachBtn}
-      <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Xóa" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
+      <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
       ${l.spId ? '<span title="Đã sync SP" style="font-size:12px;margin-left:2px;color:var(--accent2);"><i class="ph ph-cloud-check"></i></span>' : ''}
     </td>
   </tr>`;
@@ -7451,18 +6484,16 @@ function renderLicSummary(list){
 }
 
 function renderLicenses(){
-  const q     = (document.getElementById('lic-search')?.value||'').toLowerCase();
-  const fst   = document.getElementById('lic-filter-status')?.value||'';
-  const fcmp  = document.getElementById('lic-filter-company')?.value||'';
-  const fgoi  = document.getElementById('lic-filter-goi')?.value||'';
-  const ftype = document.getElementById('lic-filter-type')?.value||'';
+  const q    = (document.getElementById('lic-search')?.value||'').toLowerCase();
+  const fst  = document.getElementById('lic-filter-status')?.value||'';
+  const fcmp = document.getElementById('lic-filter-company')?.value||'';
+  const fgoi = document.getElementById('lic-filter-goi')?.value||'';
 
   let list = licenses.slice();
-  if(q)     list = list.filter(l=>(l.ten+l.key+l.ncc+l.ghichu+(l.congTy||'')+(l.goi||'')+(l.dns||'')+(l.mucDich||'')).toLowerCase().includes(q));
-  if(fst)   list = list.filter(l=> licStatusKey(licDiff(l.ngayHetHan))===fst);
-  if(fcmp)  list = list.filter(l=> (l.congTy||'')===fcmp);
-  if(fgoi)  list = list.filter(l=> (l.goi||'')===fgoi);
-  if(ftype) list = list.filter(l=> (l.type||'Software')===ftype);
+  if(q)    list = list.filter(l=>(l.ten+l.key+l.ncc+l.ghichu+(l.congTy||'')+(l.goi||'')).toLowerCase().includes(q));
+  if(fst)  list = list.filter(l=> licStatusKey(licDiff(l.ngayHetHan))===fst);
+  if(fcmp) list = list.filter(l=> (l.congTy||'')===fcmp);
+  if(fgoi) list = list.filter(l=> (l.goi||'')===fgoi);
 
   // KPI (luôn dựa trên toàn bộ licenses, không theo filter)
   document.getElementById('lic-kpi-total').textContent = licenses.length;
@@ -7476,7 +6507,7 @@ function renderLicenses(){
   const tbody = document.getElementById('lic-tbody');
   if(!tbody) return;
   if(!list.length){
-    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--muted);">Chưa có dữ liệu license</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--muted);">Chưa có dữ liệu license</td></tr>`;
     return;
   }
 
@@ -7531,23 +6562,23 @@ function renderLicenses(){
         moneyInfo = ` · 💰 ${totStr}`;
       }
 
-      // Group header row — nút đính kèm HĐ khung (master agreement)
+      // Group header row — nút đính kèm nằm ở đây (hợp đồng theo gói)
       const goiKey = goiName.replace(/'/g,"\\'");
       html += `<tr style="background:rgba(124,107,255,.10);border-top:2px solid rgba(124,107,255,.25);">
-        <td colspan="13" style="padding:7px 12px;font-size:12px;font-weight:700;color:var(--accent2);">
+        <td colspan="12" style="padding:7px 12px;font-size:12px;font-weight:700;color:var(--accent2);">
           <i class="ph ph-package"></i> ${esc(label)}
-          <span style="font-weight:400;color:var(--muted);margin-left:8px;">${grpList.length} hợp đồng${seatInfo}${moneyInfo}${warnIcon}</span>
+          <span style="font-weight:400;color:var(--muted);margin-left:8px;">${grpList.length} license${seatInfo}${moneyInfo}${warnIcon}</span>
         </td>
         <td style="padding:4px 8px;text-align:right;white-space:nowrap;">
-          <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--accent2);"
-                  title="HĐ khung / Master Agreement của gói ${esc(label)}"
+          <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--orange);"
+                  title="Hợp đồng gói: ${esc(label)}"
                   onclick="openGoiAttachments('${goiKey}')">
-            <i class="ph ph-paperclip"></i> HĐ khung
+            <i class="ph ph-paperclip"></i> HĐ
           </button>
         </td>
       </tr>`;
-      // Rows trong nhóm — mỗi dòng có nút đính kèm riêng (phụ lục / addendum)
-      grpList.forEach(l=>{ html += _licRow(l, ++globalIdx, true, false); });
+      // Rows trong nhóm — không có nút attach riêng (inGroup=true)
+      grpList.forEach(l=>{ html += _licRow(l, ++globalIdx, true, true); });
     }
     tbody.innerHTML = html;
   } else {
@@ -7569,34 +6600,22 @@ function updateLicExpiry(){
   else { el.textContent='✅ Còn '+diff+' ngày'; el.style.color='var(--green)'; }
 }
 
-function onLicTypeChange(){
-  const type = document.getElementById('lf-type')?.value || 'Software';
-  const sec  = document.getElementById('lf-domain-section');
-  const lbl  = document.getElementById('lf-ten-label');
-  const isDomain = type === 'Domain' || type === 'Hosting';
-  if(sec) sec.style.display = isDomain ? '' : 'none';
-  if(lbl) lbl.textContent = isDomain ? 'Tên miền *' : 'Tên phần mềm / Dịch vụ *';
-}
-
-function _licFormReset(){
-  ['lf-id','lf-spid','lf-ten','lf-ncc','lf-key','lf-congty',
-   'lf-tongseat','lf-donvi','lf-giatri','lf-ngaymua','lf-ngayhethan',
-   'lf-ghichu','lf-goi','lf-dns','lf-mucdich'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.value = '';
-  });
-  const type  = document.getElementById('lf-type');
-  const tiente= document.getElementById('lf-tiente');
-  const ar    = document.getElementById('lf-autorenew');
-  if(type)   type.value   = 'Software';
-  if(tiente) tiente.value = 'VND';
-  if(ar)     ar.value     = '';
-  onLicTypeChange();
-}
-
 function openLicenseAdd(){
-  document.getElementById('lic-form-title').textContent = '＋ Thêm Contract';
-  _licFormReset();
+  document.getElementById('lic-form-title').textContent = '＋ Thêm License';
+  document.getElementById('lf-id').value      = '';
+  document.getElementById('lf-spid').value    = '';
+  document.getElementById('lf-ten').value     = '';
+  document.getElementById('lf-ncc').value     = '';
+  document.getElementById('lf-key').value     = '';
+  document.getElementById('lf-congty').value  = '';
+  document.getElementById('lf-tongseat').value= '';
+  document.getElementById('lf-donvi').value   = '';
+  document.getElementById('lf-giatri').value  = '';
+  document.getElementById('lf-tiente').value  = 'VND';
+  document.getElementById('lf-ngaymua').value = '';
+  document.getElementById('lf-ngayhethan').value = '';
+  document.getElementById('lf-ghichu').value  = '';
+  document.getElementById('lf-goi').value     = '';
   document.getElementById('btn-open-history').style.display = 'none';
   document.getElementById('lf-expiry-status').textContent = '—';
   document.getElementById('lf-expiry-status').style.color = 'var(--muted)';
@@ -7605,12 +6624,10 @@ function openLicenseAdd(){
 
 function openLicenseEdit(id){
   const l = licenses.find(x=>x.id===id);
-  if(!l){ toast('⚠️ Không tìm thấy contract','bad'); return; }
-  document.getElementById('lic-form-title').textContent   = '✏️ Sửa Contract';
-  _licFormReset();
+  if(!l){ toast('⚠️ Không tìm thấy license','bad'); return; }
+  document.getElementById('lic-form-title').textContent   = '✏️ Sửa License';
   document.getElementById('lf-id').value       = l.id;
   document.getElementById('lf-spid').value     = l.spId||'';
-  document.getElementById('lf-type').value     = l.type||'Software';
   document.getElementById('lf-ten').value      = l.ten||'';
   document.getElementById('lf-ncc').value      = l.ncc||'';
   document.getElementById('lf-key').value      = l.key||'';
@@ -7623,10 +6640,6 @@ function openLicenseEdit(id){
   document.getElementById('lf-ngayhethan').value = l.ngayHetHan||'';
   document.getElementById('lf-ghichu').value   = l.ghichu||'';
   document.getElementById('lf-goi').value      = l.goi||'';
-  document.getElementById('lf-autorenew').value= l.autoRenew||'';
-  document.getElementById('lf-dns').value      = l.dns||'';
-  document.getElementById('lf-mucdich').value  = l.mucDich||'';
-  onLicTypeChange();
   document.getElementById('btn-open-history').style.display = 'inline-flex';
   updateLicExpiry();
   openModal('modal-license');
@@ -7638,11 +6651,7 @@ async function saveLicense(){
   if(isNew && !can('add')){ toast('🔒 Bạn không có quyền thêm license','bad'); return; }
   if(!isNew && !can('edit')){ toast('🔒 Bạn không có quyền chỉnh sửa','bad'); return; }
   const ten = document.getElementById('lf-ten').value.trim();
-  const _typeVal = document.getElementById('lf-type')?.value || 'Software';
-  if(!ten){
-    const _tenLabel = ['Domain','Hosting'].includes(_typeVal) ? 'tên miền' : 'tên phần mềm / hợp đồng';
-    toast(`⚠️ Vui lòng nhập ${_tenLabel}`,'bad'); return;
-  }
+  if(!ten){ toast('⚠️ Vui lòng nhập tên phần mềm','bad'); return; }
 
   const id      = document.getElementById('lf-id').value || genId();
   const spId    = document.getElementById('lf-spid').value || null;
@@ -7651,7 +6660,6 @@ async function saveLicense(){
   const rec = {
     id,
     spId: spId ? parseInt(spId) : null,
-    type:      document.getElementById('lf-type')?.value || 'Software',
     ten,
     ncc:       document.getElementById('lf-ncc').value.trim(),
     key:       document.getElementById('lf-key').value.trim(),
@@ -7664,10 +6672,6 @@ async function saveLicense(){
     ngayMua:   document.getElementById('lf-ngaymua').value     || null,
     ngayHetHan:document.getElementById('lf-ngayhethan').value  || null,
     ghichu:    document.getElementById('lf-ghichu').value.trim(),
-    // Domain-specific
-    autoRenew: document.getElementById('lf-autorenew')?.value || '',
-    dns:       document.getElementById('lf-dns')?.value.trim() || '',
-    mucDich:   document.getElementById('lf-mucdich')?.value.trim() || '',
   };
 
   const idx = licenses.findIndex(x=>x.id===id);
@@ -7784,7 +6788,7 @@ async function msalSpLoadLicenses(){
         const donViVal  = donViField  ? (item[donViField]||'')   : '';
         const giaTrVal  = giaTrField  ? (item[giaTrField]!=null ? item[giaTrField] : null) : null;
         const tienTeVal = tienTeField ? (item[tienTeField]||'VND') : 'VND';
-        const spRec = {
+        const rec = {
           id:         localId,
           spId:       item.ID,
           ten:        item.Title||'',
@@ -7799,27 +6803,9 @@ async function msalSpLoadLicenses(){
           ngayMua:    item.NgayMua    ? item.NgayMua.substring(0,10)    : null,
           ngayHetHan: item.NgayHetHan ? item.NgayHetHan.substring(0,10) : null,
           ghichu:     item.GhiChu||'',
-          // Fields mới — đọc từ SP nếu có, giữ local nếu SP không có
-          type:       item.ContractType||null,
-          autoRenew:  item.AutoRenew||null,
-          dns:        item.DnsInfo||null,
-          mucDich:    item.MucDich||null,
         };
         const idx = licenses.findIndex(l=>l.spId===item.ID);
-        if(idx>=0){
-          // Merge: giữ lại field local nếu SP trả về null/empty
-          const local = licenses[idx];
-          const rec = { ...spRec };
-          if(!rec.type)      rec.type      = local.type      || 'Software';
-          if(!rec.autoRenew) rec.autoRenew = local.autoRenew || '';
-          if(!rec.dns)       rec.dns       = local.dns       || '';
-          if(!rec.mucDich)   rec.mucDich   = local.mucDich   || '';
-          licenses[idx] = rec;
-        } else {
-          const rec = { ...spRec };
-          if(!rec.type) rec.type = 'Software';
-          licenses.push(rec);
-        }
+        if(idx>=0) licenses[idx]=rec; else licenses.push(rec);
       });
       saveLicenses();
       populateCompanySelects();
@@ -7869,10 +6855,6 @@ async function msalSpPushLicense(id){
     if(tienTeField && l.tienTe)   b[tienTeField]    = l.tienTe;
     if(l.ngayMua)     b['NgayMua']     = l.ngayMua    + 'T00:00:00Z';
     if(l.ngayHetHan)  b['NgayHetHan']  = l.ngayHetHan + 'T00:00:00Z';
-    if(l.type)        b['ContractType'] = l.type;
-    if(l.autoRenew)   b['AutoRenew']   = l.autoRenew;
-    if(l.dns)         b['DnsInfo']     = l.dns;
-    if(l.mucDich)     b['MucDich']     = l.mucDich;
     return b;
   };
 
@@ -8226,11 +7208,6 @@ let _licHistory = {}; // { licenseId: [ {date, oldExpiry, newExpiry, oldVal, new
 
 function saveLicHistory(){ try{ localStorage.setItem('qlts_lich_su_license', JSON.stringify(_licHistory)); }catch(e){} }
 function loadLicHistory(){ try{ _licHistory = JSON.parse(localStorage.getItem('qlts_lich_su_license')||'{}'); }catch(e){ _licHistory={}; } }
-
-function quickRenewLicense(id){
-  // Mở thẳng modal gia hạn mà không cần qua edit form
-  openLicenseHistory(id);
-}
 
 async function openLicenseHistory(id){
   const l = licenses.find(x=>x.id===id);
@@ -8600,4 +7577,3 @@ async function msalSpLoadTransfers(){
 
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
