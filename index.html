@@ -2359,16 +2359,19 @@ const DEFAULT_SP_XACNHAN_LIST     = MSAL_CONFIG.spXacNhanList;
 function buildConfirmUrl(rec, asset){
   const base = window.location.href.replace(/\/[^\/]*(\?.*)?$/, '');
   const q = new URLSearchParams({
-    id:    asset.id       || '',
-    ma:    asset.maTaiSan || '',
-    ts:    [asset.tenTaiSan, asset.model].filter(Boolean).join(' '),
-    sn:    asset.serial   || '',
-    to:    rec.to         || '',
-    email: rec.toEmail    || '',
-    date:  rec.date       || '',
-    cond:  rec.condition  || '',
-    from:  rec.from       || '',
-    notes: rec.notes      || '',
+    id:     asset.id       || '',
+    ma:     asset.maTaiSan || '',
+    ts:     [asset.tenTaiSan, asset.model].filter(Boolean).join(' '),
+    sn:     asset.serial   || '',
+    to:     rec.to         || '',
+    email:  rec.toEmail    || '',
+    date:   rec.date       || '',
+    cond:   rec.condition  || '',
+    from:   rec.from       || '',
+    notes:  rec.notes      || '',
+    // Truyền thêm SP site + list để PA flow ghi đúng chỗ
+    site:   MSAL_CONFIG.spSite    || '',
+    xnlist: MSAL_CONFIG.spXacNhanList || '',
   });
   return `${base}/confirm.html?${q.toString()}`;
 }
@@ -7526,6 +7529,15 @@ async function msalSpPushLicense(id){
   const giaTrField  = _licField('GiaTri', 'Giá trị', 'Gi_x00e1__x0020_tr_x1ecb_');
   const tienTeField = _licField('TienTe', 'Tiente', 'Tiền tệ', 'Ti_x1ec1_n_x0020_t_x1ec7_');
 
+  // Lookup cho các field tùy chọn — chỉ gửi nếu list thật sự có cột đó
+  const contractTypeField = _licField('ContractType', 'contractType');
+  const autoRenewField    = _licField('AutoRenew',    'autoRenew');
+  const dnsInfoField      = _licField('DnsInfo',      'dnsInfo', 'DNS');
+  const mucDichField      = _licField('MucDich',      'mucDich');
+  const tongSeatField     = _licField('TongSeat',     'tongSeat', 'SoLuong');
+  const ngayMuaField      = _licField('NgayMua',      'ngayMua');
+  const ngayHetHanField   = _licField('NgayHetHan',   'ngayHetHan');
+
   const _buildBody = () => {
     const b = {
       'Title':      l.ten||'',
@@ -7534,18 +7546,19 @@ async function msalSpPushLicense(id){
       'GhiChu':     l.ghichu||'',
     };
     // Chỉ gửi Công ty / Gói nếu biết internal name (tránh lỗi field not found)
-    if(congTyField && l.congTy) b[congTyField] = l.congTy;
-    if(goiField    && l.goi)    b[goiField]    = l.goi;
-    if(l.tongSeat != null)         b['TongSeat']     = l.tongSeat;
-    if(donViField  && l.donVi)    b[donViField]     = l.donVi;
-    if(giaTrField  && l.giaTri != null) b[giaTrField] = l.giaTri;
-    if(tienTeField && l.tienTe)   b[tienTeField]    = l.tienTe;
-    if(l.ngayMua)     b['NgayMua']     = l.ngayMua    + 'T00:00:00Z';
-    if(l.ngayHetHan)  b['NgayHetHan']  = l.ngayHetHan + 'T00:00:00Z';
-    if(l.type)        b['ContractType'] = l.type;
-    if(l.autoRenew)   b['AutoRenew']   = l.autoRenew;
-    if(l.dns)         b['DnsInfo']     = l.dns;
-    if(l.mucDich)     b['MucDich']     = l.mucDich;
+    if(congTyField && l.congTy)          b[congTyField]   = l.congTy;
+    if(goiField    && l.goi)             b[goiField]      = l.goi;
+    if(tongSeatField && l.tongSeat != null) b[tongSeatField] = l.tongSeat;
+    if(donViField  && l.donVi)           b[donViField]    = l.donVi;
+    if(giaTrField  && l.giaTri != null)  b[giaTrField]    = l.giaTri;
+    if(tienTeField && l.tienTe)          b[tienTeField]   = l.tienTe;
+    if(ngayMuaField    && l.ngayMua)     b[ngayMuaField]    = l.ngayMua    + 'T00:00:00Z';
+    if(ngayHetHanField && l.ngayHetHan)  b[ngayHetHanField] = l.ngayHetHan + 'T00:00:00Z';
+    // Các field tùy chọn — chỉ gửi nếu list đích có cột tương ứng
+    if(contractTypeField && l.type)      b[contractTypeField] = l.type;
+    if(autoRenewField    && l.autoRenew) b[autoRenewField]    = l.autoRenew;
+    if(dnsInfoField      && l.dns)       b[dnsInfoField]      = l.dns;
+    if(mucDichField      && l.mucDich)   b[mucDichField]      = l.mucDich;
     return b;
   };
 
@@ -8160,15 +8173,10 @@ async function msalSpPushTransfer(assetId, rec){
 // ─── Load xác nhận bàn giao từ Quan_Ly_XacNhan_BanGiao ───────────────────────
 async function msalSpLoadXacNhan(){
   if(!_msalAccount) return;
-  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spXacNhanList}')/items`
-    + `?$select=*&$top=2000&$orderby=Created desc`;
-  try{
-    const data = await msalSpReq(url);
-    _xacNhanMap = {};
-    // Debug: log raw item đầu tiên để xem tên field thực tế
-    if(data.value?.length) console.log('[XACNHAN] Raw item sample:', JSON.stringify(data.value[0]));
 
-    for(const item of (data.value||[])){
+  // Helper: parse items từ 1 SP list vào _xacNhanMap
+  const _parseXacNhanItems = (items) => {
+    for(const item of (items||[])){
       const g = (names) => names.map(n=>item[n]).find(v => v != null && v !== '') ?? '';
       const rec = {
         nguoiNhan: g(['NguoiNhan','nguoiNhan','Nguoinhan','nguoi_nhan']),
@@ -8176,20 +8184,43 @@ async function msalSpLoadXacNhan(){
         ghiChu:    g(['GhiChuNguoiNhan','ghiChuNguoiNhan','GhiChu','ghiChu']),
         trangThai: g(['TrangThai','trangThai','trangthai']) || 'Đã xác nhận',
       };
-      // Index theo AssetId (local id) — thử nhiều tên field
       const aid = g(['AssetId','assetId','Assetid','asset_id']);
       if(aid && !_xacNhanMap[aid]) _xacNhanMap[aid] = rec;
 
-      // Index thêm theo MaTaiSan — fallback khi PA map sang Title hoặc field khác
       const ma = g(['MaTaiSan','maTaiSan','Title','mataisanfield']);
       if(ma && !_xacNhanMap[ma]) _xacNhanMap[ma] = rec;
     }
-    console.log(`[XACNHAN] Map keys (${Object.keys(_xacNhanMap).length}):`, Object.keys(_xacNhanMap));
-    applyFilters(); // refresh badge trên bảng
+  };
+
+  _xacNhanMap = {};
+
+  // 1. Load từ list của công ty hiện tại
+  try{
+    const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spXacNhanList}')/items`
+      + `?$select=*&$top=2000&$orderby=Created desc`;
+    const data = await msalSpReq(url);
+    if(data.value?.length) console.log('[XACNHAN] Sample (company list):', JSON.stringify(data.value[0]));
+    _parseXacNhanItems(data.value);
+    console.log(`[XACNHAN] Loaded ${data.value?.length||0} from ${MSAL_CONFIG.spXacNhanList}`);
   } catch(e){
-    // List chưa tạo hoặc không có quyền — bỏ qua, không crash app
-    console.warn('[XACNHAN] Không load được Quan_Ly_XacNhan_BanGiao:', e.message);
+    console.warn(`[XACNHAN] Không load được ${MSAL_CONFIG.spXacNhanList}:`, e.message);
   }
+
+  // 2. Nếu list công ty khác default → cũng load thêm từ default để bắt data PA flow cũ ghi nhầm
+  if(MSAL_CONFIG.spXacNhanList !== DEFAULT_SP_XACNHAN_LIST){
+    try{
+      const urlDef = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${DEFAULT_SP_XACNHAN_LIST}')/items`
+        + `?$select=*&$top=2000&$orderby=Created desc`;
+      const dataDef = await msalSpReq(urlDef);
+      _parseXacNhanItems(dataDef.value);
+      console.log(`[XACNHAN] Fallback loaded ${dataDef.value?.length||0} from ${DEFAULT_SP_XACNHAN_LIST}`);
+    } catch(e){
+      console.warn(`[XACNHAN] Fallback load ${DEFAULT_SP_XACNHAN_LIST}:`, e.message);
+    }
+  }
+
+  console.log(`[XACNHAN] Map keys (${Object.keys(_xacNhanMap).length}):`, Object.keys(_xacNhanMap));
+  applyFilters(); // refresh badge trên bảng
 }
 
 async function msalSpLoadTransfers(){
