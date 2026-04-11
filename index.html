@@ -2712,7 +2712,17 @@ input[type=checkbox].row-cb{
 
       <!-- Tài khoản thụ hưởng -->
       <div style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:10px;text-transform:uppercase;">🏦 Tài khoản thụ hưởng</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;">🏦 Tài khoản thụ hưởng</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <select id="dntt-vendor-quick" class="fsel" style="font-size:11px;min-width:160px;"
+              onchange="dnttFillVendor(this.value)" title="Chọn NCC đã lưu để điền tự động">
+              <option value="">⚡ NCC đã lưu…</option>
+            </select>
+            <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:var(--red);"
+              onclick="dnttDeleteVendor()" title="Xóa NCC đang chọn khỏi sổ địa chỉ"><i class="ph ph-trash"></i></button>
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <label style="font-size:11px;color:var(--muted);">Tên tài khoản</label>
@@ -2729,6 +2739,12 @@ input[type=checkbox].row-cb{
           <div>
             <label style="font-size:11px;color:var(--muted);">Headcode</label>
             <input type="text" id="dntt-f-headcode" class="finput" placeholder="Ví dụ: 17091100" style="width:100%;">
+          </div>
+          <div style="grid-column:1/-1;display:flex;align-items:center;gap:6px;margin-top:2px;">
+            <input type="checkbox" id="dntt-save-vendor" checked style="cursor:pointer;">
+            <label for="dntt-save-vendor" style="font-size:11px;color:var(--muted);cursor:pointer;">
+              Lưu thông tin NCC này vào sổ địa chỉ (dùng lại lần sau)
+            </label>
           </div>
         </div>
       </div>
@@ -3973,6 +3989,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadLicHistory();           // load lịch sử gia hạn
   loadLicAttachTags();        // load tag file đính kèm theo dòng
   loadDNTT();                 // load danh sách đề nghị thanh toán
+  loadDNTTVendors();          // load sổ địa chỉ NCC
   populateDeptSelects();
   applyFilters();
   updateDashboard();
@@ -8998,10 +9015,9 @@ function openDNTTForm(prefill){
 
   // Datalist công ty
   _fillDNTTCongtyList();
-  // License dropdown
   _fillDNTTLicList(prefill?.id || '');
-  // Chọn công ty hiện tại
   if(prefill?.congTy) setV('dntt-f-congty', prefill.congTy);
+  _refreshVendorQuickList('');
 
   dnttPreviewBangChu();
   openModal('modal-dntt-form');
@@ -9033,6 +9049,7 @@ function openDNTTEdit(id){
   document.querySelectorAll('input[name="dntt-f-sheet"]').forEach(r => r.checked = r.value === (d.loaiMau||'PR (van hanh) '));
   _fillDNTTCongtyList();
   _fillDNTTLicList(d.licenseId || '');
+  _refreshVendorQuickList(d.ncc || '');
   dnttPreviewBangChu();
   openModal('modal-dntt-form');
 }
@@ -9098,13 +9115,16 @@ async function saveDNTTForm(draftOnly){
     createdAt: existingId ? (dnttList.find(x=>x.id===existingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
   };
 
+  // Lưu thông tin NCC vào sổ địa chỉ nếu được chọn
+  dnttSaveVendorIfChecked(rec.ncc, rec.tenTKNH, rec.soTKNH, rec.nganHang, rec.headcode);
+
   const idx = dnttList.findIndex(x=>x.id===id);
   if(idx>=0) dnttList[idx]=rec; else dnttList.push(rec);
   saveDNTT();
   closeModal('modal-dntt-form');
 
   if(!draftOnly){
-    await _generateDNTTExcel(rec);
+    _generateDNTTExcel(rec);
   } else {
     toast('💾 Đã lưu phiếu ĐNTT','ok');
   }
@@ -9123,10 +9143,10 @@ function deleteDNTTRecord(id){
 }
 
 // ── Xuất Excel từ row ──
-async function downloadDNTTById(id){
+function downloadDNTTById(id){
   const d = dnttList.find(x=>x.id===id);
   if(!d){ toast('⚠️ Không tìm thấy phiếu','bad'); return; }
-  await _generateDNTTExcel(d);
+  _generateDNTTExcel(d);
 }
 
 // ── Shortcut từ License row ──
@@ -9155,57 +9175,67 @@ function exportDNTTListExcel(){
   toast('✅ Đã xuất danh sách ĐNTT','ok');
 }
 
-// ── Core: sinh file Excel từ template ──
-async function _generateDNTTExcel(d){
+// ══════════════════ SỔ ĐỊA CHỈ NCC (Vendor Address Book) ══════════════════
+let _dnttVendors = {};  // { nccName: { tenTKNH, soTKNH, nganHang, headcode } }
+const DNTT_VENDOR_KEY = 'qlts_dntt_vendors_v1';
+
+function saveDNTTVendors(){ try{ localStorage.setItem(DNTT_VENDOR_KEY, JSON.stringify(_dnttVendors)); }catch(e){} }
+function loadDNTTVendors(){ try{ _dnttVendors = JSON.parse(localStorage.getItem(DNTT_VENDOR_KEY)||'{}'); }catch(e){ _dnttVendors={}; } }
+
+function _refreshVendorQuickList(selectedNcc){
+  const sel = document.getElementById('dntt-vendor-quick');
+  if(!sel) return;
+  const names = Object.keys(_dnttVendors).sort();
+  sel.innerHTML = '<option value="">⚡ NCC đã lưu…</option>' +
+    names.map(n=>`<option value="${esc(n)}"${n===selectedNcc?' selected':''}>${esc(n)}</option>`).join('');
+}
+
+function dnttFillVendor(nccName){
+  if(!nccName) return;
+  const v = _dnttVendors[nccName];
+  if(!v) return;
+  const setV = (id,val) => { const el=document.getElementById(id); if(el && val) el.value=val; };
+  setV('dntt-f-ncc',     nccName);
+  setV('dntt-f-tentknh', v.tenTKNH);
+  setV('dntt-f-sotknh',  v.soTKNH);
+  setV('dntt-f-nganhang',v.nganHang);
+  setV('dntt-f-headcode',v.headcode);
+  toast(`⚡ Đã điền thông tin NCC "${nccName}"`, 'ok');
+}
+
+function dnttSaveVendorIfChecked(ncc, tenTKNH, soTKNH, nganHang, headcode){
+  const shouldSave = document.getElementById('dntt-save-vendor')?.checked;
+  if(!shouldSave || !ncc) return;
+  _dnttVendors[ncc] = { tenTKNH, soTKNH, nganHang, headcode };
+  saveDNTTVendors();
+}
+
+function dnttDeleteVendor(){
+  const sel = document.getElementById('dntt-vendor-quick');
+  const name = sel?.value;
+  if(!name){ toast('Chưa chọn NCC nào trong danh sách','warn'); return; }
+  if(!confirm(`Xóa "${name}" khỏi sổ địa chỉ?`)) return;
+  delete _dnttVendors[name];
+  saveDNTTVendors();
+  _refreshVendorQuickList('');
+  toast(`🗑️ Đã xóa NCC "${name}"`, 'ok');
+}
+
+// ══════════════════ EXCEL BUILDER (không cần fetch file) ══════════════════
+function _generateDNTTExcel(d){
   try{
-    const resp = await fetch('payment_template.xlsx');
-    if(!resp.ok) throw new Error('Không tải được file mẫu (HTTP '+resp.status+')');
-    const ab = await resp.arrayBuffer();
-    const wb = XLSX.read(ab, { type:'array', cellNF:true, cellFormula:true });
-
-    const sheetName = d.loaiMau || 'PR (van hanh) ';
-    const ws = wb.Sheets[sheetName];
-    if(!ws) throw new Error(`Không tìm thấy sheet "${sheetName}"`);
-
-    const set = (addr, val) => {
-      if(val === null || val === undefined || val === '') return;
-      if(!ws[addr]) ws[addr] = {};
-      ws[addr].v = val;
-      ws[addr].t = typeof val === 'number' ? 'n' : 's';
-      delete ws[addr].f;
-    };
-
+    const wb = XLSX.utils.book_new();
     const bangChu = soTienBangChu(d.soTien, d.tienTe);
+    const soTienNum = d.soTien ? Number(d.soTien) : null;
+    const isDuAn = d.loaiMau && d.loaiMau.includes('du an');
 
-    if(sheetName === 'PR (van hanh)' || sheetName === 'PR (van hanh) '){
-      set('D3', d.nguoiLap);
-      set('D4', d.congTy);
-      set('D5', d.phongBan);
-      set('D6', d.noidung);
-      set('D7', d.ngayLap);
-      set('D10', bangChu);
-      set('D12', d.tenTKNH);
-      set('I12', d.soTKNH);
-      set('D13', d.nganHang);
-      if(d.headcode){ set('A17', d.headcode); set('D17', d.headcode); }
-      set('F23', d.ncc);
-      set('E23', d.ngayLap);
-      if(d.soTien) set('J23', d.soTien);
-      set('C23', 'Hóa đơn GTGT');
-      set('H23', 'x');
-
-    } else if(sheetName === 'PR (du an)' || sheetName === 'PR (du an_Song ngu'){
-      set('B4', d.nguoiLap);
-      set('G4', d.phongBan);
-      set('F3', d.ngayLap);
-      set('C6', d.congTy);
-      set('B7', d.soHD);
-      set('B8', d.ncc);
-      if(d.headcode) set('C9', d.headcode);
-      set('G15', d.tienTe);
-      if(d.soTien) set('F18', d.soTien);
-      set('B12', d.noidung);
-      set('B36', bangChu);
+    let ws;
+    if(isDuAn){
+      ws = _buildWsDuAn(d, bangChu, soTienNum);
+      XLSX.utils.book_append_sheet(wb, ws, 'PR (du an)');
+    } else {
+      ws = _buildWsVanHanh(d, bangChu, soTienNum);
+      XLSX.utils.book_append_sheet(wb, ws, 'PR (van hanh)');
     }
 
     const safeNcc = (d.ncc||'DNTT').replace(/[\\/:\*\?"<>|]/g,'_').replace(/\s+/g,'_');
@@ -9216,6 +9246,210 @@ async function _generateDNTTExcel(d){
     console.error('[ĐNTT]', err);
     toast('❌ Lỗi xuất Excel: ' + err.message, 'bad');
   }
+}
+
+// ── PR Vận hành sheet builder ──
+function _buildWsVanHanh(d, bangChu, soTienNum){
+  const _ = ''; // empty cell shorthand
+  const tt = d.tienTe || 'VND';
+  const moneyFmt = soTienNum ? soTienNum.toLocaleString('vi-VN') + ' ' + tt : _;
+
+  // 10 columns A–J, matching original template column positions
+  // Row index 0 = Row 1 in Excel → column index 3 = column D
+  const rows = [
+    // R1: tiêu đề
+    [d.congTy||_, _,_, 'PHIẾU ĐỀ NGHỊ THANH TOÁN',_,_,_,_,_,_],
+    // R2: số phiếu + ngày
+    ['Số:', d.soPhieu||_, _, 'Ngày yêu cầu:', d.ngayLap||_,_,_,_,_,_],
+    // R3: Người đề nghị (D3 trong template gốc)
+    ['Người đề nghị:', _,_, d.nguoiLap||_,_,_,_,_,_,_],
+    // R4: Công ty (D4)
+    ['Công ty:', _,_, d.congTy||_,_,_,_,_,_,_],
+    // R5: Phòng ban (D5 = mã, I5 = tên)
+    ['Phòng ban:', _,_, d.phongBan||_,_,_,_,_, d.phongBan||_,_],
+    // R6: Nội dung (D6)
+    ['Nội dung:', _,_, d.noidung||_,_,_,_,_,_,_],
+    // R7: Ngày lập (D7)
+    ['Ngày lập phiếu:', _,_, d.ngayLap||_,_,_,_,_,_,_],
+    // R8: blank
+    [_,_,_,_,_,_,_,_,_,_],
+    // R9: Tổng số tiền (D9 = giá trị, J9 = amount for detail sum)
+    ['Kính đề nghị thanh toán:', _,_, soTienNum||_, _,_,_,_,_, soTienNum||_],
+    // R10: Bằng chữ (D10)
+    ['Bằng chữ:', _,_, bangChu||_,_,_,_,_,_,_],
+    // R11: blank
+    [_,_,_,_,_,_,_,_,_,_],
+    // R12: TK thụ hưởng (D12 = tên TK, I12 = số TK)
+    ['Tên tài khoản:', _,_, d.tenTKNH||_,_,_,_,_, d.soTKNH||_,_],
+    // R13: Ngân hàng (D13)
+    ['Ngân hàng:', _,_, d.nganHang||_,_,_,_,_,_,_],
+    // R14-16: blank (3 rows để khớp template gốc)
+    [_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_],
+    // R17: Headcode (A17 = tên/label, D17 = mã số)
+    [d.headcode ? 'Headcode:' : _, _,_, d.headcode||_,_,_,_,_,_,_],
+    // R18-20: blank
+    [_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_],
+    // R21: header bảng chứng từ
+    ['Headcode', _, 'Loại CT', 'Đơn vị/NCC', 'Ngày', _, 'Hình thức', 'Gốc', 'Sao', 'Số tiền'],
+    // R22: sub-header
+    [_,_,_,_,_,_,_,'(Gốc)','(Sao)', tt],
+    // R23: dòng chứng từ đầu tiên (A23=headcode auto, C23=loại, F23=NCC, H23=gốc, J23=tiền)
+    [d.headcode||_, _, 'Hóa đơn GTGT', d.ncc||_, d.ngayLap||_, _, d.ghichu||_, 'x', _, soTienNum||_],
+    // R24-26: dòng trống cho thêm chứng từ
+    [_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_],
+    // R27: dòng tổng cộng
+    ['Tổng cộng', _,_,_,_,_,_,_,_, soTienNum||_],
+    // R28: blank
+    [_,_,_,_,_,_,_,_,_,_],
+    // R29: blank
+    [_,_,_,_,_,_,_,_,_,_],
+    // R30: chữ ký
+    ['Người đề nghị', _, 'Kế toán', _, 'KT trưởng / CFO', _, 'Giám đốc / TGĐ', _,_,_],
+    // R31: họ tên
+    [d.nguoiLap||_, _,_,_,_,_,_,_,_,_],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Cột rộng
+  ws['!cols'] = [
+    {wch:18}, // A
+    {wch:5},  // B
+    {wch:14}, // C
+    {wch:24}, // D
+    {wch:12}, // E
+    {wch:22}, // F
+    {wch:8},  // G
+    {wch:10}, // H
+    {wch:20}, // I
+    {wch:16}, // J
+  ];
+
+  // Merge cells cho tiêu đề và nội dung dài
+  ws['!merges'] = [
+    {s:{r:0,c:0},e:{r:0,c:2}},   // A1:C1 — tên công ty
+    {s:{r:0,c:3},e:{r:0,c:9}},   // D1:J1 — tiêu đề phiếu
+    {s:{r:2,c:3},e:{r:2,c:9}},   // D3:J3 — người đề nghị
+    {s:{r:3,c:3},e:{r:3,c:9}},   // D4:J4 — công ty
+    {s:{r:5,c:3},e:{r:5,c:9}},   // D6:J6 — nội dung
+    {s:{r:9,c:3},e:{r:9,c:9}},   // D10:J10 — bằng chữ
+    {s:{r:11,c:3},e:{r:11,c:7}}, // D12:H12 — tên TK
+    {s:{r:12,c:3},e:{r:12,c:9}}, // D13:J13 — ngân hàng
+    {s:{r:15,c:3},e:{r:15,c:9}}, // D17:J17 — headcode
+    {s:{r:20,c:0},e:{r:20,c:1}}, // A21:B21 — header Headcode
+    {s:{r:26,c:0},e:{r:26,c:8}}, // A27:I27 — tổng cộng label
+    {s:{r:29,c:0},e:{r:29,c:1}}, // A30:B30 — chữ ký 1
+    {s:{r:29,c:2},e:{r:29,c:3}}, // C30:D30 — chữ ký 2
+    {s:{r:29,c:4},e:{r:29,c:5}}, // E30:F30 — chữ ký 3
+    {s:{r:29,c:6},e:{r:29,c:9}}, // G30:J30 — chữ ký 4
+  ];
+
+  // Đánh số cell type đúng cho các ô số
+  if(soTienNum){
+    ['I9','J9','J23','J27'].forEach(addr => {
+      if(ws[addr]){ ws[addr].t='n'; ws[addr].z='#,##0'; }
+    });
+  }
+
+  return ws;
+}
+
+// ── PR Dự án sheet builder ──
+function _buildWsDuAn(d, bangChu, soTienNum){
+  const _ = '';
+  const tt = d.tienTe || 'VND';
+
+  const rows = [
+    // R1
+    [_,_,'PHIẾU ĐỀ NGHỊ THANH TOÁN',_,_,_,_,_],
+    // R2: blank
+    [_,_,_,_,_,_,_,_],
+    // R3: Số phiếu + ngày
+    ['Số:', d.soPhieu||_, 'Ngày yêu cầu:', d.ngayLap||_, _, 'Kỳ thanh toán:', _,_],
+    // R4: Người đề nghị (B4) + Đơn vị (G4)
+    ['Người đề nghị:', d.nguoiLap||_,_,_,_,'Đơn vị:', d.phongBan||_,_],
+    // R5: Tên dự án (C5 via vlookup C6 — ta dùng noidung) + Mã dự án
+    ['Tên dự án:', _, d.noidung||_,_,_,'Mã dự án:',_,_],
+    // R6: Công ty (C6)
+    ['Công ty:', _, d.congTy||_,_,_,'Gói thầu số:',_,_],
+    // R7: Hợp đồng (B7)
+    ['Hợp đồng số / Contract No:', d.soHD||_,_,_,_,'Ngày hợp đồng:',_,_],
+    // R8: NCC (B8)
+    ['Nhà cung cấp:', d.ncc||_,_,_,_,'Giai đoạn:',_,_],
+    // R9: Headcode (C9)
+    ['Headcode:', _, d.headcode||_,_,_,'Tên headcode:',_,_],
+    // R10-11: blank
+    [_,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_],
+    // R12: Công việc (B12)
+    ['Công việc:', d.noidung||_,_,_,_,_,_,_],
+    // R13: Số HĐ + ngày HĐ
+    ['Số hóa đơn:', d.soHD||_,_,'Ngày hóa đơn:', d.ngayLap||_,_,'Hạn thanh toán:',_],
+    // R14: Giai đoạn
+    ['Giai đoạn:',_,_,_,_,'Tình trạng HĐ:','Hợp đồng đã ký',_],
+    // R15: Phương thức + tiền tệ
+    ['Phương thức TT:','Chuyển khoản',_,_,_,'Loại tiền tệ:', tt,_],
+    // R16: blank
+    [_,_,_,_,_,_,_,_],
+    // R17: header bảng tài chính
+    ['TT','Nội dung','',_,'Trước VAT','% VAT','Sau VAT',_],
+    // R18: [1] Giá HĐ ban đầu (F18 = soTienNum)
+    ['[1]','Giá Hợp đồng Ban đầu',_,_, soTienNum||0, 0, soTienNum||0,_],
+    // R19-21: phát sinh, tổng, hoàn thành
+    ['[2]','Phát sinh được duyệt (+/-)',_,_,0,0,0,_],
+    ['[3]','Tổng giá trị hợp đồng hiện tại',_,_, soTienNum||0,0, soTienNum||0,_],
+    ['[4]','Tổng giá trị công việc đã hoàn thành',_,_, soTienNum||0,0, soTienNum||0,_],
+    ['[5]','Tổng giá trị công việc còn lại',_,_,0,0,0,_],
+    // R22: blank
+    [_,_,_,_,_,_,_,_],
+    // R23: TÓM TẮT header
+    ['TÓM TẮT THÔNG TIN TÀI CHÍNH',_,_,_,'Tổng cộng dồn','Trừ cộng dồn tháng trước','Thanh toán tháng này',_],
+    // R24: [6]
+    ['[6] Giá trị công việc HĐ hoàn thành',_,_,_, soTienNum||0,0, soTienNum||0,_],
+    // R25: [7]-[10]
+    ['[7] Giá trị hoàn thành phát sinh',_,_,_,0,0,0,_],
+    ['[8] Tổng hoàn thành',_,_,_, soTienNum||0,0, soTienNum||0,_],
+    ['[9] VAT',_,_,_,0,0,0,_],
+    ['[10] Tổng sau VAT',_,_,_, soTienNum||0,0, soTienNum||0,_],
+    ['[11] Trừ tiền giữ lại',_,_,_,0,0,0,_],
+    ['[12] Giảm trừ khác',_,_,_,0,0,0,_],
+    ['[13] Tiền tạm ứng',_,_,_,0,0,0,_],
+    ['[14] Tiền tạm ứng đã hoàn trả',_,_,_,0,0,0,_],
+    ['[15] Tiền tạm ứng thực trả',_,_,_,0,0,0,_],
+    // R35: Tổng thanh toán
+    ['Tổng số tiền thanh toán:',_,_,_, soTienNum||0,0, soTienNum||0,_],
+    // R36: Bằng chữ (B36)
+    ['Viết bằng chữ:', bangChu||_,_,_,_,_,_,_],
+    // R37: blank
+    [_,_,_,_,_,_,_,_],
+    // R38: chữ ký
+    ['Người đề nghị','Kế toán',_,'KT trưởng / CFO',_,'Giám đốc / TGĐ',_,_],
+    // R39: tên
+    [d.nguoiLap||_,_,_,_,_,_,_,_],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    {wch:34},{wch:18},{wch:10},{wch:10},{wch:16},{wch:18},{wch:18},{wch:10}
+  ];
+  ws['!merges'] = [
+    {s:{r:0,c:2},e:{r:0,c:6}},   // C1:G1 — tiêu đề
+    {s:{r:4,c:2},e:{r:4,c:4}},   // C5:E5 — tên dự án
+    {s:{r:5,c:2},e:{r:5,c:4}},   // C6:E6 — công ty
+    {s:{r:11,c:1},e:{r:11,c:7}}, // B12:H12 — công việc
+    {s:{r:35,c:1},e:{r:35,c:7}}, // B36:H36 — bằng chữ
+    {s:{r:22,c:0},e:{r:22,c:3}}, // A23:D23 — tóm tắt header
+    {s:{r:37,c:0},e:{r:37,c:1}}, // A38:B38 — ký 1
+    {s:{r:37,c:3},e:{r:37,c:4}}, // D38:E38 — ký 2
+    {s:{r:37,c:5},e:{r:37,c:7}}, // F38:H38 — ký 3
+  ];
+  return ws;
 }
 
 // ── Số tiền bằng chữ (tiếng Việt) ──
