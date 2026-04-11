@@ -809,6 +809,230 @@ input[type=checkbox].row-cb{
 .tr-meta .date{color:var(--text);font-weight:600;}
 
 /* ═══════════════════════════ PRINT HANDOVER ═══════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — max-width: 768px
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Hamburger button (chỉ hiện trên mobile) ── */
+.btn-hamburger{
+  display:none;
+  width:38px;height:38px;border-radius:10px;
+  background:transparent;border:1px solid var(--border);
+  cursor:pointer;align-items:center;justify-content:center;
+  flex-shrink:0;color:var(--text);font-size:18px;
+  transition:background .15s;
+}
+.btn-hamburger:hover{ background:#F1F5F9; }
+
+/* ── Sidebar overlay backdrop ── */
+.sidebar-backdrop{
+  display:none;
+  position:fixed;inset:0;z-index:149;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+.sidebar-backdrop.open{ display:block; }
+
+/* ── Bottom navigation bar ── */
+.bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  z-index:140;
+  background:#fff;
+  border-top:1px solid var(--border);
+  box-shadow:0 -4px 20px rgba(0,0,0,.08);
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  justify-content:space-around;
+  align-items:center;
+}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:4px 2px;
+  background:none;border:none;cursor:pointer;
+  color:var(--muted);font-size:9px;font-weight:600;
+  letter-spacing:.01em;transition:color .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.bn-item i.ph{ font-size:20px;line-height:1; }
+.bn-item.active{ color:var(--accent); }
+.bn-item.active i.ph{ font-weight:700; }
+
+@media (max-width:768px){
+  /* ── HTML/Body ── */
+  html{ font-size:15px; }
+  body{ padding-bottom:70px; } /* chừa chỗ cho bottom nav */
+
+  /* ── Hamburger button ── */
+  .btn-hamburger{ display:flex; }
+
+  /* ── Bottom nav ── */
+  .bottom-nav{ display:flex; }
+
+  /* ── Topbar ── */
+  .topbar{
+    padding:8px 12px;
+    gap:8px;
+  }
+  .brand-text h1{ font-size:12px; }
+  .brand-text p{ display:none; } /* ẩn subtitle */
+  .top-actions{ gap:5px; }
+
+  /* Ẩn text trên nút topbar, chỉ giữ icon */
+  #btn-import-asset .btn-label,
+  #btn-export-asset .btn-label,
+  #btn-add-asset .btn-label{ display:none; }
+  #btn-import-asset, #btn-export-asset{
+    padding:7px 8px;font-size:0; /* ẩn text node */
+  }
+  #btn-import-asset i.ph, #btn-export-asset i.ph{
+    font-size:16px;margin:0;
+  }
+  #btn-add-asset{
+    padding:7px 10px;
+    font-size:12px;
+  }
+  /* Ẩn sync bars trên topbar — quá nhỏ */
+  #file-sync-bar{ display:none!important; }
+  #msal-bar span{ display:none; }
+  #msal-bar{ padding:6px 8px;font-size:14px; }
+
+  /* ── Sidebar → Drawer ── */
+  .sidebar{
+    position:fixed;
+    top:0;left:0;bottom:0;
+    z-index:150;
+    width:260px;min-width:0;
+    height:100vh;
+    transform:translateX(-100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:4px 0 24px rgba(0,0,0,.15);
+  }
+  .sidebar.mobile-open{
+    transform:translateX(0);
+  }
+
+  /* ── Main layout ── */
+  .main-layout{ display:block; }
+  .main-content, .content-area{ width:100%; }
+
+  /* ── Page content padding ── */
+  .tab-pane{ padding:12px; }
+
+  /* ── Tables ── */
+  .table-card{ border-radius:10px;overflow:hidden; }
+  .table-wrap{ overflow-x:auto;-webkit-overflow-scrolling:touch; }
+  .data-table th, .data-table td{ font-size:11.5px;padding:8px 8px; }
+  /* Ẩn bớt cột ít quan trọng trên mobile */
+  [data-col="cpu"],
+  [data-col="ram"],
+  [data-col="ssd"],
+  [data-col="depreciation"]{ display:none; }
+  .cb-col{ width:32px;min-width:32px; }
+
+  /* ── Filters ── */
+  .filter-bar{
+    flex-wrap:wrap;
+    gap:6px;
+    padding:8px 10px;
+  }
+  .filter-bar .fsel{ flex:1;min-width:120px;font-size:12px; }
+  .qf-chips{ padding:6px 10px 0;gap:4px; }
+  .qf-chip{ font-size:11px;padding:4px 8px; }
+
+  /* ── Bulk bar ── */
+  .bulk-bar{
+    flex-wrap:wrap;
+    gap:5px;
+    padding:8px 10px;
+    font-size:12px;
+  }
+  .bulk-bar .btn{ font-size:11.5px;padding:5px 9px; }
+
+  /* ── KPI cards ── */
+  .kpi-grid{ grid-template-columns:repeat(2,1fr);gap:8px; }
+  .kpi-card{ padding:12px; }
+  .kpi-val{ font-size:22px; }
+
+  /* ── Dashboard grid ── */
+  .dash-grid,.dash-grid-wide{ grid-template-columns:1fr;gap:10px; }
+
+  /* ── Modals → Full screen ── */
+  .modal-backdrop{
+    padding:0;
+    align-items:flex-end;
+  }
+  .modal{
+    max-width:100%!important;
+    width:100%;
+    margin:0;
+    border-radius:18px 18px 0 0;
+    max-height:92dvh;
+  }
+  .modal-body{ max-height:60dvh; }
+  .modal-head{ padding:14px 16px 12px; }
+  .modal-foot{ padding:10px 14px; }
+
+  /* ── Detail modal ── */
+  .detail-grid{ grid-template-columns:1fr!important; }
+
+  /* ── Grid forms ── */
+  .grid2,.grid3{ grid-template-columns:1fr; }
+  .span2,.span3{ grid-column:span 1; }
+
+  /* ── Login screen ── */
+  #login-screen{ flex-direction:column; }
+  .lp-left{
+    padding:32px 24px 20px;
+    min-height:auto;
+    flex:none;
+  }
+  .lp-headline{ font-size:22px; }
+  .lp-features{ display:none; } /* ẩn feature list để gọn */
+  .lp-tagline{ display:none; }
+  .lp-right{
+    width:100%;flex:1;
+    border-left:none;border-top:1px solid rgba(255,255,255,.2);
+    padding:24px 20px;
+    border-radius:0;
+  }
+  .lp-footer-note{ display:none; }
+
+  /* ── Smart action menu ── */
+  #smart-action-menu{
+    left:50%!important;
+    transform:translateX(-50%);
+    width:280px;
+  }
+}
+
+/* ── FAB (Floating Action Button) — nút thêm nhanh trên mobile ── */
+.fab-add{
+  display:none;
+  position:fixed;
+  bottom:calc(68px + env(safe-area-inset-bottom));
+  right:16px;
+  z-index:139;
+  width:52px;height:52px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;
+  font-size:24px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(37,99,235,.45);
+  align-items:center;justify-content:center;
+  transition:transform .15s,box-shadow .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.fab-add:active{ transform:scale(.93); }
+@media(max-width:768px){ .fab-add{ display:flex; } }
+
+/* ── Extra small (≤ 480px) ── */
+@media (max-width:480px){
+  .kpi-grid{ grid-template-columns:1fr 1fr; }
+  .modal{ max-height:95dvh; }
+  .topbar{ padding:7px 10px; }
+  .brand-icon{ width:30px;height:30px;font-size:15px; }
+  .brand-text h1{ font-size:11px; }
+}
+
 @media print{
   body *{visibility:hidden;}
   #print-area, #print-area *{visibility:visible;}
@@ -1127,6 +1351,10 @@ input[type=checkbox].row-cb{
 
   <!-- ══════════════ TOP BAR ══════════════ -->
   <div class="topbar">
+    <!-- Hamburger (mobile only) -->
+    <button class="btn-hamburger" onclick="toggleMobileSidebar()" aria-label="Menu">
+      <i class="ph ph-list"></i>
+    </button>
     <div class="brand">
       <div class="brand-icon">💻</div>
       <div class="brand-text">
@@ -1150,6 +1378,33 @@ input[type=checkbox].row-cb{
       <button class="btn primary btn-icon-ph" id="btn-add-asset" onclick="openAdd()"><i class="ph ph-plus"></i> Thêm Tài Sản</button>
     </div>
   </div>
+
+  <!-- Sidebar backdrop (mobile overlay) -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
+
+  <!-- Bottom navigation bar (mobile only) -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bn-item active" id="bn-dashboard" onclick="switchTab('dashboard');setBottomNav('dashboard')">
+      <i class="ph ph-chart-bar"></i>
+      <span>Dashboard</span>
+    </button>
+    <button class="bn-item" id="bn-assets" onclick="switchTab('assets');setBottomNav('assets')">
+      <i class="ph ph-package"></i>
+      <span>Tài Sản</span>
+    </button>
+    <button class="bn-item" id="bn-events" onclick="switchTab('events');setBottomNav('events')">
+      <i class="ph ph-clock-counter-clockwise"></i>
+      <span>Lịch Sử</span>
+    </button>
+    <button class="bn-item" id="bn-license" onclick="switchTab('license');setBottomNav('license')">
+      <i class="ph ph-files"></i>
+      <span>Contracts</span>
+    </button>
+    <button class="bn-item" id="bn-menu" onclick="toggleMobileSidebar()">
+      <i class="ph ph-list"></i>
+      <span>Menu</span>
+    </button>
+  </nav>
 
   <!-- ══════════════ MAIN LAYOUT ══════════════ -->
   <div class="main-layout">
@@ -1653,6 +1908,11 @@ input[type=checkbox].row-cb{
       <br/>Mặc định cho user chưa có trong danh sách: <strong>Viewer</strong>.
     </div>
   </div>
+
+  <!-- FAB: Thêm tài sản nhanh (mobile only) -->
+  <button class="fab-add" onclick="openAdd()" title="Thêm tài sản">
+    <i class="ph ph-plus"></i>
+  </button>
 
 </div><!-- end .app -->
 
@@ -4306,6 +4566,38 @@ function switchTab(t){
   if(t==='events')   renderEvents();
   if(t==='license')  renderLicenses();
   if(t==='roles')    renderRolesTable();
+  // Sync bottom nav
+  setBottomNav(t);
+  // Đóng sidebar drawer trên mobile sau khi chọn tab
+  closeMobileSidebar();
+}
+
+// ══════════════ MOBILE SIDEBAR DRAWER ══════════════
+function toggleMobileSidebar(){
+  const sidebar   = document.querySelector('.sidebar');
+  const backdrop  = document.getElementById('sidebar-backdrop');
+  const isOpen    = sidebar?.classList.contains('mobile-open');
+  if(isOpen) closeMobileSidebar();
+  else       openMobileSidebar();
+}
+function openMobileSidebar(){
+  document.querySelector('.sidebar')?.classList.add('mobile-open');
+  document.getElementById('sidebar-backdrop')?.classList.add('open');
+  document.body.style.overflow = 'hidden'; // prevent background scroll
+}
+function closeMobileSidebar(){
+  document.querySelector('.sidebar')?.classList.remove('mobile-open');
+  document.getElementById('sidebar-backdrop')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ══════════════ BOTTOM NAV SYNC ══════════════
+function setBottomNav(tab){
+  const tabs = ['dashboard','assets','events','license'];
+  tabs.forEach(t => {
+    const el = document.getElementById('bn-'+t);
+    if(el) el.classList.toggle('active', t === tab);
+  });
 }
 
 // ═══════════════════════ DASHBOARD ═══════════════════════
