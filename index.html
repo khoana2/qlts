@@ -7390,11 +7390,18 @@ async function deleteLicense(id){
 // Lưu { 'displayName': 'internalName' } để tránh bị lỗi internal name khác nhau
 let _licFieldMap = {};   // { 'Công ty': 'C_x00f4_ng_ty', ... }
 let _licFieldMapLoaded = false;
+let _licFieldMapList   = '';   // tên list đã load — reset khi đổi công ty
 
 // Các display name của optional fields trong Quan_Ly_License
 const _LIC_OPT_DISPLAY = ['Công ty', 'CongTy'];  // thử cả 2 cách viết
 
 async function _licEnsureFieldMap(){
+  // Reset cache nếu list đã thay đổi (đổi công ty / đổi site)
+  if(_licFieldMapLoaded && _licFieldMapList !== MSAL_CONFIG.spLicenseList){
+    console.log(`[LIC] List changed (${_licFieldMapList} → ${MSAL_CONFIG.spLicenseList}), resetting field map`);
+    _licFieldMapLoaded = false;
+    _licFieldMap = {};
+  }
   if(_licFieldMapLoaded) return;
   try{
     const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spLicenseList}')`;
@@ -7405,8 +7412,9 @@ async function _licEnsureFieldMap(){
       if(f.InternalName) _licFieldMap[f.InternalName] = f.InternalName; // self-map
     }
     _licFieldMapLoaded = true;
-    console.log('[LIC] Field map loaded. CongTy variants:',
-      Object.entries(_licFieldMap).filter(([k])=>k.toLowerCase().includes('cong')||k.toLowerCase().includes('ty')));
+    _licFieldMapList   = MSAL_CONFIG.spLicenseList;   // ghi nhớ đã load cho list nào
+    console.log(`[LIC] Field map loaded for "${MSAL_CONFIG.spLicenseList}". Keys:`,
+      Object.keys(_licFieldMap).filter(k => !k.startsWith('_') && k.length < 30).slice(0,20));
   }catch(e){
     console.warn('[LIC] Could not load field map:', e.message);
   }
