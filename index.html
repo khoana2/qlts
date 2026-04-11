@@ -32,6 +32,7 @@
 </script>
 <title>QUẢN LÝ TÀI SẢN CNTT — TTG</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
@@ -9221,235 +9222,363 @@ function dnttDeleteVendor(){
   toast(`🗑️ Đã xóa NCC "${name}"`, 'ok');
 }
 
-// ══════════════════ EXCEL BUILDER (không cần fetch file) ══════════════════
-function _generateDNTTExcel(d){
+// ══════════════════ EXCEL BUILDER — ExcelJS (full styling) ══════════════════
+async function _generateDNTTExcel(d){
   try{
-    const wb = XLSX.utils.book_new();
-    const bangChu = soTienBangChu(d.soTien, d.tienTe);
-    const soTienNum = d.soTien ? Number(d.soTien) : null;
+    if(typeof ExcelJS === 'undefined') throw new Error('ExcelJS chưa tải xong, vui lòng thử lại.');
     const isDuAn = d.loaiMau && d.loaiMau.includes('du an');
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'QLTS CNTT'; wb.created = new Date();
 
-    let ws;
-    if(isDuAn){
-      ws = _buildWsDuAn(d, bangChu, soTienNum);
-      XLSX.utils.book_append_sheet(wb, ws, 'PR (du an)');
-    } else {
-      ws = _buildWsVanHanh(d, bangChu, soTienNum);
-      XLSX.utils.book_append_sheet(wb, ws, 'PR (van hanh)');
-    }
+    if(isDuAn) await _excelBuildDuAn(wb, d);
+    else       await _excelBuildVanHanh(wb, d);
 
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
     const safeNcc = (d.ncc||'DNTT').replace(/[\\/:\*\?"<>|]/g,'_').replace(/\s+/g,'_');
-    const fn = `${d.soPhieu||'DNTT'}_${safeNcc}_${d.ngayLap||'ngay'}.xlsx`;
-    XLSX.writeFile(wb, fn);
-    toast(`✅ Đã xuất "${fn}"`, 'ok');
+    a.download = `${d.soPhieu||'DNTT'}_${safeNcc}_${d.ngayLap||'ngay'}.xlsx`;
+    a.href = url; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+    toast(`✅ Đã xuất "${a.download}"`, 'ok');
   }catch(err){
     console.error('[ĐNTT]', err);
     toast('❌ Lỗi xuất Excel: ' + err.message, 'bad');
   }
 }
 
-// ── PR Vận hành sheet builder ──
-function _buildWsVanHanh(d, bangChu, soTienNum){
-  const _ = ''; // empty cell shorthand
+// ─── Helpers style ────────────────────────────────────────────────
+const _EX = {
+  // Border thin all sides
+  border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} },
+  // Border only bottom (for signature lines)
+  borderB: { bottom:{style:'thin'} },
+  // Border only bottom + top
+  borderTB: { top:{style:'thin'}, bottom:{style:'thin'} },
+
+  fill(argb){ return { type:'pattern', pattern:'solid', fgColor:{argb} }; },
+
+  font(bold=false, size=10, color='FF000000'){
+    return { name:'Times New Roman', size, bold, color:{argb:color} };
+  },
+
+  align(h='left', v='middle', wrap=false){
+    return { horizontal:h, vertical:v, wrapText:wrap };
+  },
+
+  // Style a cell shorthand
+  cell(ws, addr, val, opts={}){
+    const c = ws.getCell(addr);
+    if(val !== undefined) c.value = val;
+    if(opts.fill)   c.fill   = opts.fill;
+    if(opts.font)   c.font   = opts.font;
+    if(opts.align)  c.alignment = opts.align;
+    if(opts.border) c.border = opts.border;
+    if(opts.numFmt) c.numFmt = opts.numFmt;
+    return c;
+  },
+
+  // Apply border to a range (row by row)
+  rangeBorder(ws, r1,c1,r2,c2, style='thin'){
+    for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){
+      const cell = ws.getCell(r,c);
+      cell.border = { top:{style}, left:{style}, bottom:{style}, right:{style} };
+    }
+  },
+};
+
+// ─── PR Vận Hành ────────────────────────────────────────────────
+async function _excelBuildVanHanh(wb, d){
+  const ws = wb.addWorksheet('Phiếu ĐNTT', { pageSetup:{ paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, margins:{left:0.5,right:0.5,top:0.75,bottom:0.75,header:0.3,footer:0.3} } });
+
+  // Cột: A-J
+  ws.columns = [
+    {width:5},   // A: STT/số nhỏ
+    {width:14},  // B
+    {width:14},  // C
+    {width:20},  // D: label chính
+    {width:20},  // E: value
+    {width:18},  // F
+    {width:10},  // G
+    {width:10},  // H: gốc/sao
+    {width:20},  // I: số TK
+    {width:16},  // J: số tiền
+  ];
+
+  const C = (addr, val, opts) => _EX.cell(ws, addr, val, opts);
+  const fillHdr   = _EX.fill('FF1B3A6B');  // xanh đậm
+  const fillSub   = _EX.fill('FFD6E4F7');  // xanh nhạt
+  const fillLbl   = _EX.fill('FFF0F4FA');  // xám xanh nhạt (label)
+  const fillTotal = _EX.fill('FFFFFACD');  // vàng nhạt (tổng)
+  const fillSig   = _EX.fill('FFF9F9F9');  // trắng ngà (chữ ký)
+  const fontHdr   = _EX.font(true, 13, 'FFFFFFFF');
+  const fontSub   = _EX.font(true, 10, 'FF1B3A6B');
+  const fontLbl   = _EX.font(true, 9);
+  const fontVal   = _EX.font(false, 10);
+  const fontTitle = _EX.font(true, 14, 'FFFFFFFF');
+  const numFmt    = '#,##0';
+
   const tt = d.tienTe || 'VND';
-  const moneyFmt = soTienNum ? soTienNum.toLocaleString('vi-VN') + ' ' + tt : _;
+  const soTien = d.soTien ? Number(d.soTien) : null;
+  const bangChu = soTienBangChu(d.soTien, d.tienTe);
 
-  // 10 columns A–J, matching original template column positions
-  // Row index 0 = Row 1 in Excel → column index 3 = column D
-  const rows = [
-    // R1: tiêu đề
-    [d.congTy||_, _,_, 'PHIẾU ĐỀ NGHỊ THANH TOÁN',_,_,_,_,_,_],
-    // R2: số phiếu + ngày
-    ['Số:', d.soPhieu||_, _, 'Ngày yêu cầu:', d.ngayLap||_,_,_,_,_,_],
-    // R3: Người đề nghị (D3 trong template gốc)
-    ['Người đề nghị:', _,_, d.nguoiLap||_,_,_,_,_,_,_],
-    // R4: Công ty (D4)
-    ['Công ty:', _,_, d.congTy||_,_,_,_,_,_,_],
-    // R5: Phòng ban (D5 = mã, I5 = tên)
-    ['Phòng ban:', _,_, d.phongBan||_,_,_,_,_, d.phongBan||_,_],
-    // R6: Nội dung (D6)
-    ['Nội dung:', _,_, d.noidung||_,_,_,_,_,_,_],
-    // R7: Ngày lập (D7)
-    ['Ngày lập phiếu:', _,_, d.ngayLap||_,_,_,_,_,_,_],
-    // R8: blank
-    [_,_,_,_,_,_,_,_,_,_],
-    // R9: Tổng số tiền (D9 = giá trị, J9 = amount for detail sum)
-    ['Kính đề nghị thanh toán:', _,_, soTienNum||_, _,_,_,_,_, soTienNum||_],
-    // R10: Bằng chữ (D10)
-    ['Bằng chữ:', _,_, bangChu||_,_,_,_,_,_,_],
-    // R11: blank
-    [_,_,_,_,_,_,_,_,_,_],
-    // R12: TK thụ hưởng (D12 = tên TK, I12 = số TK)
-    ['Tên tài khoản:', _,_, d.tenTKNH||_,_,_,_,_, d.soTKNH||_,_],
-    // R13: Ngân hàng (D13)
-    ['Ngân hàng:', _,_, d.nganHang||_,_,_,_,_,_,_],
-    // R14-16: blank (3 rows để khớp template gốc)
-    [_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_],
-    // R17: Headcode (A17 = tên/label, D17 = mã số)
-    [d.headcode ? 'Headcode:' : _, _,_, d.headcode||_,_,_,_,_,_,_],
-    // R18-20: blank
-    [_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_],
-    // R21: header bảng chứng từ
-    ['Headcode', _, 'Loại CT', 'Đơn vị/NCC', 'Ngày', _, 'Hình thức', 'Gốc', 'Sao', 'Số tiền'],
-    // R22: sub-header
-    [_,_,_,_,_,_,_,'(Gốc)','(Sao)', tt],
-    // R23: dòng chứng từ đầu tiên (A23=headcode auto, C23=loại, F23=NCC, H23=gốc, J23=tiền)
-    [d.headcode||_, _, 'Hóa đơn GTGT', d.ncc||_, d.ngayLap||_, _, d.ghichu||_, 'x', _, soTienNum||_],
-    // R24-26: dòng trống cho thêm chứng từ
-    [_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_],
-    // R27: dòng tổng cộng
-    ['Tổng cộng', _,_,_,_,_,_,_,_, soTienNum||_],
-    // R28: blank
-    [_,_,_,_,_,_,_,_,_,_],
-    // R29: blank
-    [_,_,_,_,_,_,_,_,_,_],
-    // R30: chữ ký
-    ['Người đề nghị', _, 'Kế toán', _, 'KT trưởng / CFO', _, 'Giám đốc / TGĐ', _,_,_],
-    // R31: họ tên
-    [d.nguoiLap||_, _,_,_,_,_,_,_,_,_],
-  ];
+  // ── ROW 1: TIÊU ĐỀ ──
+  ws.getRow(1).height = 36;
+  ws.mergeCells('A1:C1'); ws.mergeCells('D1:J1');
+  C('A1', d.congTy||'', { fill:fillHdr, font:_EX.font(true,11,'FFFFFFFF'), align:_EX.align('center','middle') });
+  C('D1', 'PHIẾU ĐỀ NGHỊ THANH TOÁN', { fill:fillHdr, font:fontTitle, align:_EX.align('center','middle') });
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // ── ROW 2: Số phiếu / Ngày ──
+  ws.getRow(2).height = 18;
+  ws.mergeCells('A2:C2'); ws.mergeCells('D2:F2'); ws.mergeCells('G2:J2');
+  C('A2','',{fill:fillSub});
+  C('D2',`Số phiếu: ${d.soPhieu||''}`, { fill:fillSub, font:fontSub, align:_EX.align('left','middle') });
+  C('G2',`Ngày: ${d.ngayLap||''}`,     { fill:fillSub, font:fontSub, align:_EX.align('right','middle') });
 
-  // Cột rộng
-  ws['!cols'] = [
-    {wch:18}, // A
-    {wch:5},  // B
-    {wch:14}, // C
-    {wch:24}, // D
-    {wch:12}, // E
-    {wch:22}, // F
-    {wch:8},  // G
-    {wch:10}, // H
-    {wch:20}, // I
-    {wch:16}, // J
-  ];
-
-  // Merge cells cho tiêu đề và nội dung dài
-  ws['!merges'] = [
-    {s:{r:0,c:0},e:{r:0,c:2}},   // A1:C1 — tên công ty
-    {s:{r:0,c:3},e:{r:0,c:9}},   // D1:J1 — tiêu đề phiếu
-    {s:{r:2,c:3},e:{r:2,c:9}},   // D3:J3 — người đề nghị
-    {s:{r:3,c:3},e:{r:3,c:9}},   // D4:J4 — công ty
-    {s:{r:5,c:3},e:{r:5,c:9}},   // D6:J6 — nội dung
-    {s:{r:9,c:3},e:{r:9,c:9}},   // D10:J10 — bằng chữ
-    {s:{r:11,c:3},e:{r:11,c:7}}, // D12:H12 — tên TK
-    {s:{r:12,c:3},e:{r:12,c:9}}, // D13:J13 — ngân hàng
-    {s:{r:15,c:3},e:{r:15,c:9}}, // D17:J17 — headcode
-    {s:{r:20,c:0},e:{r:20,c:1}}, // A21:B21 — header Headcode
-    {s:{r:26,c:0},e:{r:26,c:8}}, // A27:I27 — tổng cộng label
-    {s:{r:29,c:0},e:{r:29,c:1}}, // A30:B30 — chữ ký 1
-    {s:{r:29,c:2},e:{r:29,c:3}}, // C30:D30 — chữ ký 2
-    {s:{r:29,c:4},e:{r:29,c:5}}, // E30:F30 — chữ ký 3
-    {s:{r:29,c:6},e:{r:29,c:9}}, // G30:J30 — chữ ký 4
-  ];
-
-  // Đánh số cell type đúng cho các ô số
-  if(soTienNum){
-    ['I9','J9','J23','J27'].forEach(addr => {
-      if(ws[addr]){ ws[addr].t='n'; ws[addr].z='#,##0'; }
-    });
+  // ── Helper dòng label-value ──
+  function labelRow(rowNum, label, val, height=18){
+    ws.getRow(rowNum).height = height;
+    ws.mergeCells(`A${rowNum}:C${rowNum}`); ws.mergeCells(`D${rowNum}:J${rowNum}`);
+    C(`A${rowNum}`, label, { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
+    C(`D${rowNum}`, val,   { font:fontVal, align:_EX.align('left','middle','wrap'), border:_EX.border });
   }
 
-  return ws;
+  labelRow(3, 'Người đề nghị:', d.nguoiLap||'');
+  labelRow(4, 'Công ty:',       d.congTy||'');
+  labelRow(5, 'Phòng ban:',     d.phongBan||'');
+  labelRow(6, 'Nội dung thanh toán:', d.noidung||'', 30);
+  labelRow(7, 'Ngày lập phiếu:', d.ngayLap||'');
+
+  // ── ROW 8: KHOẢNG TRỐNG ──
+  ws.getRow(8).height = 6;
+
+  // ── ROW 9: SỐ TIỀN ──
+  ws.getRow(9).height = 22;
+  ws.mergeCells('A9:C9'); ws.mergeCells('D9:I9');
+  C('A9','Kính đề nghị thanh toán:', { fill:fillTotal, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
+  C('D9', soTien, { fill:fillTotal, font:_EX.font(true,12), align:_EX.align('left','middle'), border:_EX.border, numFmt });
+  C('J9', tt,     { fill:fillTotal, font:fontSub, align:_EX.align('center','middle'), border:_EX.border });
+
+  // ── ROW 10: BẰNG CHỮ ──
+  ws.getRow(10).height = 22;
+  ws.mergeCells('A10:C10'); ws.mergeCells('D10:J10');
+  C('A10','Bằng chữ:', { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
+  C('D10', bangChu||'', { font:_EX.font(true,10,'FF1B3A6B'), align:_EX.align('left','middle',true), border:_EX.border });
+
+  // ── ROW 11: KHOẢNG TRỐNG ──
+  ws.getRow(11).height = 6;
+
+  // ── ROW 12: TÀI KHOẢN THỤ HƯỞNG header ──
+  ws.getRow(12).height = 16;
+  ws.mergeCells('A12:J12');
+  C('A12','TÀI KHOẢN THỤ HƯỞNG', { fill:fillSub, font:fontSub, align:_EX.align('center','middle') });
+
+  function tkRow(rowNum, label, val, label2='', val2=''){
+    ws.getRow(rowNum).height = 18;
+    if(label2){
+      ws.mergeCells(`A${rowNum}:B${rowNum}`); ws.mergeCells(`C${rowNum}:E${rowNum}`);
+      ws.mergeCells(`F${rowNum}:G${rowNum}`); ws.mergeCells(`H${rowNum}:J${rowNum}`);
+      C(`A${rowNum}`, label,  { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
+      C(`C${rowNum}`, val,    { font:fontVal, align:_EX.align('left','middle'), border:_EX.border });
+      C(`F${rowNum}`, label2, { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
+      C(`H${rowNum}`, val2,   { font:fontVal, align:_EX.align('left','middle'), border:_EX.border });
+    } else {
+      ws.mergeCells(`A${rowNum}:C${rowNum}`); ws.mergeCells(`D${rowNum}:J${rowNum}`);
+      C(`A${rowNum}`, label, { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
+      C(`D${rowNum}`, val,   { font:fontVal, align:_EX.align('left','middle'), border:_EX.border });
+    }
+  }
+  tkRow(13, 'Tên tài khoản:',  d.tenTKNH||'', 'Số tài khoản:', d.soTKNH||'');
+  tkRow(14, 'Ngân hàng:',      d.nganHang||'');
+  tkRow(15, 'Headcode:',       d.headcode||'');
+
+  // ── ROW 16: KHOẢNG TRỐNG ──
+  ws.getRow(16).height = 6;
+
+  // ── ROW 17: BẢNG CHỨNG TỪ header ──
+  ws.getRow(17).height = 16;
+  ws.mergeCells('A17:J17');
+  C('A17','CHỨNG TỪ KÈM THEO', { fill:fillSub, font:fontSub, align:_EX.align('center','middle') });
+
+  // ── ROW 18: Table column headers ──
+  ws.getRow(18).height = 18;
+  ws.mergeCells('A18:B18');
+  ['A18','C18','D18','E18','F18','G18','H18','I18','J18'].forEach(a=>
+    ws.getCell(a).border = _EX.border
+  );
+  [
+    ['A18','Headcode'], ['C18','Loại CT'], ['D18','Đơn vị / NCC'],
+    ['E18','Ngày CT'], ['F18','Nội dung'], ['G18','HT'],
+    ['H18','Gốc'], ['I18','Sao'], ['J18','Số tiền ('+tt+')']
+  ].forEach(([a,v]) => C(a, v, { fill:fillSub, font:fontSub, align:_EX.align('center','middle'), border:_EX.border }));
+
+  // ── ROW 19: Dòng chứng từ đầu ──
+  ws.getRow(19).height = 18;
+  ws.mergeCells('A19:B19');
+  [
+    ['A19', d.headcode||''], ['C19','Hóa đơn GTGT'], ['D19', d.ncc||''],
+    ['E19', d.ngayLap||''],  ['F19', d.noidung||''], ['G19','CK'],
+    ['H19','x'],             ['I19',''],              ['J19', soTien]
+  ].forEach(([a,v]) => {
+    const opts = { font:fontVal, align:_EX.align('center','middle'), border:_EX.border };
+    if(a==='D19'||a==='F19') opts.align = _EX.align('left','middle');
+    if(a==='J19') opts.numFmt = numFmt;
+    C(a, v, opts);
+  });
+
+  // ── ROW 20-22: Dòng trống để thêm chứng từ ──
+  for(let r=20;r<=22;r++){
+    ws.getRow(r).height=18;
+    ws.mergeCells(`A${r}:B${r}`);
+    for(let c=1;c<=10;c++) ws.getCell(r,c).border=_EX.border;
+  }
+
+  // ── ROW 23: TỔNG CỘNG ──
+  ws.getRow(23).height = 20;
+  ws.mergeCells('A23:I23');
+  C('A23','Tổng cộng', { fill:fillTotal, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
+  C('J23', soTien,     { fill:fillTotal, font:_EX.font(true,11), align:_EX.align('right','middle'), border:_EX.border, numFmt });
+
+  // ── ROW 24: Ghi chú ──
+  if(d.ghichu){
+    ws.getRow(24).height=18; ws.mergeCells('A24:J24');
+    C('A24','Ghi chú: '+d.ghichu, { font:_EX.font(false,9,'FF666666'), align:_EX.align('left','middle',true) });
+  }
+
+  // ── ROW 25: khoảng trống ──
+  ws.getRow(25).height = 10;
+
+  // ── ROW 26: Chữ ký header ──
+  ws.getRow(26).height = 14;
+  ws.mergeCells('A26:B26'); ws.mergeCells('C26:D26'); ws.mergeCells('E26:G26'); ws.mergeCells('H26:J26');
+  [['A26','Người đề nghị'],['C26','Kế toán'],['E26','KT trưởng / CFO'],['H26','Giám đốc / TGĐ']].forEach(([a,v])=>
+    C(a, v, { fill:fillSig, font:fontSub, align:_EX.align('center','middle') })
+  );
+
+  // ── ROW 27-30: Khu vực ký ──
+  for(let r=27;r<=30;r++){
+    ws.getRow(r).height=14;
+    ws.mergeCells(`A${r}:B${r}`); ws.mergeCells(`C${r}:D${r}`); ws.mergeCells(`E${r}:G${r}`); ws.mergeCells(`H${r}:J${r}`);
+    ['A','C','E','H'].forEach(col => ws.getCell(`${col}${r}`).fill=fillSig);
+  }
+
+  // ── ROW 31: Tên người ký ──
+  ws.getRow(31).height = 16;
+  ws.mergeCells('A31:B31'); ws.mergeCells('C31:D31'); ws.mergeCells('E31:G31'); ws.mergeCells('H31:J31');
+  C('A31', d.nguoiLap||'', { fill:fillSig, font:fontSub, align:_EX.align('center','middle'), border:_EX.borderB });
+  ['C31','E31','H31'].forEach(a => C(a,'', { fill:fillSig, border:_EX.borderB }));
+  // Border bottom cho khu vực ký row 30
+  ['A30','C30','E30','H30'].forEach(a => ws.getCell(a).border=_EX.borderB);
 }
 
-// ── PR Dự án sheet builder ──
-function _buildWsDuAn(d, bangChu, soTienNum){
-  const _ = '';
-  const tt = d.tienTe || 'VND';
+// ─── PR Dự Án ────────────────────────────────────────────────
+async function _excelBuildDuAn(wb, d){
+  const ws = wb.addWorksheet('Phiếu ĐNTT', { pageSetup:{ paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0 } });
+  ws.columns = [
+    {width:28},{width:20},{width:12},{width:10},{width:14},{width:14},{width:14},{width:10}
+  ];
+  const C = (addr, val, opts) => _EX.cell(ws, addr, val, opts);
+  const fillHdr   = _EX.fill('FF1B3A6B');
+  const fillSub   = _EX.fill('FFD6E4F7');
+  const fillLbl   = _EX.fill('FFF0F4FA');
+  const fillTotal = _EX.fill('FFFFFACD');
+  const fillSig   = _EX.fill('FFF9F9F9');
+  const fontHdr   = _EX.font(true,13,'FFFFFFFF');
+  const fontSub   = _EX.font(true,10,'FF1B3A6B');
+  const fontLbl   = _EX.font(true,9);
+  const fontVal   = _EX.font(false,10);
+  const numFmt    = '#,##0';
+  const tt  = d.tienTe || 'VND';
+  const soTien = d.soTien ? Number(d.soTien) : null;
+  const bangChu = soTienBangChu(d.soTien, d.tienTe);
 
-  const rows = [
-    // R1
-    [_,_,'PHIẾU ĐỀ NGHỊ THANH TOÁN',_,_,_,_,_],
-    // R2: blank
-    [_,_,_,_,_,_,_,_],
-    // R3: Số phiếu + ngày
-    ['Số:', d.soPhieu||_, 'Ngày yêu cầu:', d.ngayLap||_, _, 'Kỳ thanh toán:', _,_],
-    // R4: Người đề nghị (B4) + Đơn vị (G4)
-    ['Người đề nghị:', d.nguoiLap||_,_,_,_,'Đơn vị:', d.phongBan||_,_],
-    // R5: Tên dự án (C5 via vlookup C6 — ta dùng noidung) + Mã dự án
-    ['Tên dự án:', _, d.noidung||_,_,_,'Mã dự án:',_,_],
-    // R6: Công ty (C6)
-    ['Công ty:', _, d.congTy||_,_,_,'Gói thầu số:',_,_],
-    // R7: Hợp đồng (B7)
-    ['Hợp đồng số / Contract No:', d.soHD||_,_,_,_,'Ngày hợp đồng:',_,_],
-    // R8: NCC (B8)
-    ['Nhà cung cấp:', d.ncc||_,_,_,_,'Giai đoạn:',_,_],
-    // R9: Headcode (C9)
-    ['Headcode:', _, d.headcode||_,_,_,'Tên headcode:',_,_],
-    // R10-11: blank
-    [_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_],
-    // R12: Công việc (B12)
-    ['Công việc:', d.noidung||_,_,_,_,_,_,_],
-    // R13: Số HĐ + ngày HĐ
-    ['Số hóa đơn:', d.soHD||_,_,'Ngày hóa đơn:', d.ngayLap||_,_,'Hạn thanh toán:',_],
-    // R14: Giai đoạn
-    ['Giai đoạn:',_,_,_,_,'Tình trạng HĐ:','Hợp đồng đã ký',_],
-    // R15: Phương thức + tiền tệ
-    ['Phương thức TT:','Chuyển khoản',_,_,_,'Loại tiền tệ:', tt,_],
-    // R16: blank
-    [_,_,_,_,_,_,_,_],
-    // R17: header bảng tài chính
-    ['TT','Nội dung','',_,'Trước VAT','% VAT','Sau VAT',_],
-    // R18: [1] Giá HĐ ban đầu (F18 = soTienNum)
-    ['[1]','Giá Hợp đồng Ban đầu',_,_, soTienNum||0, 0, soTienNum||0,_],
-    // R19-21: phát sinh, tổng, hoàn thành
-    ['[2]','Phát sinh được duyệt (+/-)',_,_,0,0,0,_],
-    ['[3]','Tổng giá trị hợp đồng hiện tại',_,_, soTienNum||0,0, soTienNum||0,_],
-    ['[4]','Tổng giá trị công việc đã hoàn thành',_,_, soTienNum||0,0, soTienNum||0,_],
-    ['[5]','Tổng giá trị công việc còn lại',_,_,0,0,0,_],
-    // R22: blank
-    [_,_,_,_,_,_,_,_],
-    // R23: TÓM TẮT header
-    ['TÓM TẮT THÔNG TIN TÀI CHÍNH',_,_,_,'Tổng cộng dồn','Trừ cộng dồn tháng trước','Thanh toán tháng này',_],
-    // R24: [6]
-    ['[6] Giá trị công việc HĐ hoàn thành',_,_,_, soTienNum||0,0, soTienNum||0,_],
-    // R25: [7]-[10]
-    ['[7] Giá trị hoàn thành phát sinh',_,_,_,0,0,0,_],
-    ['[8] Tổng hoàn thành',_,_,_, soTienNum||0,0, soTienNum||0,_],
-    ['[9] VAT',_,_,_,0,0,0,_],
-    ['[10] Tổng sau VAT',_,_,_, soTienNum||0,0, soTienNum||0,_],
-    ['[11] Trừ tiền giữ lại',_,_,_,0,0,0,_],
-    ['[12] Giảm trừ khác',_,_,_,0,0,0,_],
-    ['[13] Tiền tạm ứng',_,_,_,0,0,0,_],
-    ['[14] Tiền tạm ứng đã hoàn trả',_,_,_,0,0,0,_],
-    ['[15] Tiền tạm ứng thực trả',_,_,_,0,0,0,_],
-    // R35: Tổng thanh toán
-    ['Tổng số tiền thanh toán:',_,_,_, soTienNum||0,0, soTienNum||0,_],
-    // R36: Bằng chữ (B36)
-    ['Viết bằng chữ:', bangChu||_,_,_,_,_,_,_],
-    // R37: blank
-    [_,_,_,_,_,_,_,_],
-    // R38: chữ ký
-    ['Người đề nghị','Kế toán',_,'KT trưởng / CFO',_,'Giám đốc / TGĐ',_,_],
-    // R39: tên
-    [d.nguoiLap||_,_,_,_,_,_,_,_],
-  ];
+  function lRow(r, lbl, val, lbl2='', val2='', h=18){
+    ws.getRow(r).height=h;
+    if(lbl2){
+      ws.mergeCells(`C${r}:D${r}`); ws.mergeCells(`G${r}:H${r}`);
+      C(`A${r}`,lbl,  {fill:fillLbl,font:fontLbl,align:_EX.align('right','middle'),border:_EX.border});
+      C(`C${r}`,val,  {font:fontVal,align:_EX.align('left','middle'),border:_EX.border});
+      C(`E${r}`,lbl2, {fill:fillLbl,font:fontLbl,align:_EX.align('right','middle'),border:_EX.border});
+      C(`G${r}`,val2, {font:fontVal,align:_EX.align('left','middle'),border:_EX.border});
+      ws.mergeCells(`E${r}:F${r}`);
+    } else {
+      ws.mergeCells(`B${r}:H${r}`);
+      C(`A${r}`,lbl,{fill:fillLbl,font:fontLbl,align:_EX.align('right','middle'),border:_EX.border});
+      C(`B${r}`,val,{font:fontVal,align:_EX.align('left','middle',true),border:_EX.border});
+    }
+  }
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [
-    {wch:34},{wch:18},{wch:10},{wch:10},{wch:16},{wch:18},{wch:18},{wch:10}
-  ];
-  ws['!merges'] = [
-    {s:{r:0,c:2},e:{r:0,c:6}},   // C1:G1 — tiêu đề
-    {s:{r:4,c:2},e:{r:4,c:4}},   // C5:E5 — tên dự án
-    {s:{r:5,c:2},e:{r:5,c:4}},   // C6:E6 — công ty
-    {s:{r:11,c:1},e:{r:11,c:7}}, // B12:H12 — công việc
-    {s:{r:35,c:1},e:{r:35,c:7}}, // B36:H36 — bằng chữ
-    {s:{r:22,c:0},e:{r:22,c:3}}, // A23:D23 — tóm tắt header
-    {s:{r:37,c:0},e:{r:37,c:1}}, // A38:B38 — ký 1
-    {s:{r:37,c:3},e:{r:37,c:4}}, // D38:E38 — ký 2
-    {s:{r:37,c:5},e:{r:37,c:7}}, // F38:H38 — ký 3
-  ];
-  return ws;
+  // Row 1: Tiêu đề
+  ws.getRow(1).height=32; ws.mergeCells('A1:H1');
+  C('A1','PHIẾU ĐỀ NGHỊ THANH TOÁN – DỰ ÁN', {fill:fillHdr,font:fontHdr,align:_EX.align('center','middle')});
+
+  // Row 2: Số phiếu + ngày
+  ws.getRow(2).height=16; ws.mergeCells('A2:D2'); ws.mergeCells('E2:H2');
+  C('A2',`Số phiếu: ${d.soPhieu||''}`,{fill:fillSub,font:fontSub,align:_EX.align('left','middle')});
+  C('E2',`Ngày: ${d.ngayLap||''}`,{fill:fillSub,font:fontSub,align:_EX.align('right','middle')});
+
+  lRow(3,'Người đề nghị:',d.nguoiLap||'','Đơn vị:',d.phongBan||'');
+  lRow(4,'Tên dự án / Công việc:',d.noidung||'','','',22);
+  lRow(5,'Công ty:',d.congTy||'','Gói thầu số:','');
+  lRow(6,'Hợp đồng số:',d.soHD||'','Ngày hợp đồng:',d.ngayLap||'');
+  lRow(7,'Nhà cung cấp:',d.ncc||'','Giai đoạn:','');
+  lRow(8,'Headcode:',d.headcode||'','Loại tiền tệ:',tt);
+
+  // Row 9: blank
+  ws.getRow(9).height=8;
+
+  // Row 10: Bảng tài chính header
+  ws.getRow(10).height=16; ws.mergeCells('A10:H10');
+  C('A10','TÓM TẮT TÀI CHÍNH',{fill:fillSub,font:fontSub,align:_EX.align('center','middle')});
+
+  // Table headers row 11
+  ws.getRow(11).height=18;
+  ws.mergeCells('A11:D11');
+  [['A11','Nội dung'],['E11','Trước VAT'],['F11','% VAT'],['G11','Sau VAT'],['H11','Ghi chú']].forEach(([a,v])=>
+    C(a,v,{fill:fillSub,font:fontSub,align:_EX.align('center','middle'),border:_EX.border})
+  );
+
+  const moneyRow=(r,lbl,val,bold=false,fillOv=null)=>{
+    ws.getRow(r).height=17; ws.mergeCells(`A${r}:D${r}`);
+    const f=fillOv||null;
+    C(`A${r}`,lbl,{fill:f||fillLbl,font:fontLbl,align:_EX.align('left','middle'),border:_EX.border});
+    C(`E${r}`,val,{fill:f,font:_EX.font(bold,10),align:_EX.align('right','middle'),border:_EX.border,numFmt});
+    C(`F${r}`,0,  {fill:f,font:fontVal,align:_EX.align('right','middle'),border:_EX.border,numFmt:'0%'});
+    C(`G${r}`,val,{fill:f,font:_EX.font(bold,10),align:_EX.align('right','middle'),border:_EX.border,numFmt});
+    C(`H${r}`,'', {fill:f,font:fontVal,align:_EX.align('left','middle'),border:_EX.border});
+  };
+  moneyRow(12,'[1] Giá Hợp đồng Ban đầu', soTien);
+  moneyRow(13,'[2] Phát sinh được duyệt (+/−)', 0);
+  moneyRow(14,'[3] Tổng giá trị HĐ hiện tại [1]+[2]', soTien);
+  moneyRow(15,'[4] Tổng giá trị đã hoàn thành', soTien);
+  moneyRow(16,'[5] Giá trị còn lại [3]−[4]', 0);
+  ws.getRow(17).height=6;
+  moneyRow(18,'[6] Tổng thanh toán tháng này', soTien, true, _EX.fill('FFFFFACD'));
+
+  // Row 19: blank
+  ws.getRow(19).height=8;
+
+  // Bằng chữ
+  ws.getRow(20).height=22; ws.mergeCells('A20:H20');
+  C('A20','Bằng chữ: '+bangChu,{fill:_EX.fill('FFF0FFF0'),font:_EX.font(true,10,'FF166534'),align:_EX.align('left','middle',true),border:_EX.border});
+
+  // Ghi chú
+  if(d.ghichu){ ws.getRow(21).height=16; ws.mergeCells('A21:H21');
+    C('A21','Ghi chú: '+d.ghichu,{font:_EX.font(false,9,'FF666666'),align:_EX.align('left','middle',true)}); }
+
+  // Chữ ký
+  ws.getRow(23).height=14; ws.mergeCells('A23:B23'); ws.mergeCells('C23:D23'); ws.mergeCells('E23:F23'); ws.mergeCells('G23:H23');
+  [['A23','Người đề nghị'],['C23','Kế toán'],['E23','KT trưởng / CFO'],['G23','Giám đốc / TGĐ']].forEach(([a,v])=>
+    C(a,v,{fill:fillSig,font:fontSub,align:_EX.align('center','middle')})
+  );
+  for(let r=24;r<=27;r++){
+    ws.getRow(r).height=14; ws.mergeCells(`A${r}:B${r}`); ws.mergeCells(`C${r}:D${r}`); ws.mergeCells(`E${r}:F${r}`); ws.mergeCells(`G${r}:H${r}`);
+    ['A','C','E','G'].forEach(col=>ws.getCell(`${col}${r}`).fill=fillSig);
+  }
+  ws.getRow(28).height=16; ws.mergeCells('A28:B28'); ws.mergeCells('C28:D28'); ws.mergeCells('E28:F28'); ws.mergeCells('G28:H28');
+  C('A28',d.nguoiLap||'',{fill:fillSig,font:fontSub,align:_EX.align('center','middle'),border:_EX.borderB});
+  ['C28','E28','G28'].forEach(a=>C(a,'',{fill:fillSig,border:_EX.borderB}));
 }
 
 // ── Số tiền bằng chữ (tiếng Việt) ──
