@@ -2545,6 +2545,119 @@ input[type=checkbox].row-cb{
   </div>
 </div>
 
+<!-- ══════════════ MODAL: TẠO ĐỀ NGHỊ THANH TOÁN ══════════════ -->
+<div class="modal-backdrop" id="modal-dntt" onclick="if(event.target===this)closeModal('modal-dntt')" style="display:none;">
+  <div class="modal" style="max-width:700px;max-height:92vh;overflow-y:auto;">
+    <div class="modal-head">
+      <span><i class="ph ph-money"></i> Tạo Đề Nghị Thanh Toán</span>
+      <button class="btn icon-only" onclick="closeModal('modal-dntt')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <!-- Loại mẫu -->
+      <div class="span2" style="grid-column:1/-1;">
+        <label style="font-weight:600;font-size:12px;color:var(--muted);">LOẠI MẪU THANH TOÁN</label>
+        <div style="display:flex;gap:10px;margin-top:6px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="radio" name="dntt-sheet" value="PR (van hanh) " checked onchange="dnttSheetChange(this.value)"> Vận hành (Operational)
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="radio" name="dntt-sheet" value="PR (du an)" onchange="dnttSheetChange(this.value)"> Dự án (Project)
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="radio" name="dntt-sheet" value="PR (du an_Song ngu" onchange="dnttSheetChange(this.value)"> Dự án Song ngữ
+          </label>
+        </div>
+      </div>
+
+      <!-- Thông tin chung -->
+      <div style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:8px;text-transform:uppercase;">📋 Thông tin chung</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Công ty</label>
+            <input type="text" id="dntt-congty" class="finput" placeholder="Tên công ty" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Phòng ban</label>
+            <input type="text" id="dntt-dept" class="finput" placeholder="Phòng ban" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Người đề nghị</label>
+            <input type="text" id="dntt-requester" class="finput" placeholder="Họ tên người lập" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Ngày</label>
+            <input type="date" id="dntt-date" class="finput" style="width:100%;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Nội dung thanh toán -->
+      <div style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:8px;text-transform:uppercase;">💰 Nội dung thanh toán</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="grid-column:1/-1;">
+            <label style="font-size:11px;color:var(--muted);">Nội dung thanh toán / Mô tả</label>
+            <textarea id="dntt-noidung" class="finput" rows="2" placeholder="Ví dụ: Thanh toán gia hạn Microsoft 365 Business năm 2026" style="width:100%;resize:vertical;"></textarea>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Nhà cung cấp (Vendor)</label>
+            <input type="text" id="dntt-ncc" class="finput" placeholder="Tên nhà cung cấp" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Số hợp đồng</label>
+            <input type="text" id="dntt-soct" class="finput" placeholder="Số HĐ / số tham chiếu" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Số tiền (VND / USD / ...)</label>
+            <input type="number" id="dntt-sotien" class="finput" placeholder="0" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Đơn vị tiền tệ</label>
+            <select id="dntt-tiente" class="fsel" style="width:100%;">
+              <option>VND</option><option>USD</option><option>EUR</option><option>SGD</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thông tin tài khoản -->
+      <div style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:8px;text-transform:uppercase;">🏦 Tài khoản thụ hưởng</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Tên tài khoản</label>
+            <input type="text" id="dntt-tentknh" class="finput" placeholder="Tên chủ tài khoản" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Số tài khoản</label>
+            <input type="text" id="dntt-sotknh" class="finput" placeholder="Số tài khoản ngân hàng" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Ngân hàng</label>
+            <input type="text" id="dntt-nganhang" class="finput" placeholder="Tên ngân hàng & chi nhánh" style="width:100%;">
+          </div>
+          <div id="dntt-headcode-wrap">
+            <label style="font-size:11px;color:var(--muted);">Headcode</label>
+            <input type="text" id="dntt-headcode" class="finput" placeholder="Ví dụ: IT.001" style="width:100%;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Ghi chú -->
+      <div style="grid-column:1/-1;">
+        <label style="font-size:11px;color:var(--muted);">Ghi chú thêm</label>
+        <textarea id="dntt-ghichu" class="finput" rows="2" placeholder="Ghi chú, điều khoản, số hóa đơn…" style="width:100%;resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot" style="gap:10px;">
+      <span style="font-size:11px;color:var(--muted);flex:1;"><i class="ph ph-info"></i> File sẽ được tải xuống dưới dạng .xlsx</span>
+      <button class="btn" onclick="closeModal('modal-dntt')">Hủy</button>
+      <button class="btn primary btn-icon-ph" onclick="generateDNTT()"><i class="ph ph-download-simple"></i> Tải xuống ĐNTT</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════ TOASTS ══════════════ -->
 
     </div><!-- /content -->
@@ -7335,6 +7448,7 @@ function _licRow(l, i, hideGoi, inGroup){
       <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
       <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#059669;" title="Gia hạn" onclick="quickRenewLicense('${l.id}')"><i class="ph ph-arrow-clockwise"></i></button>
       ${attachBtn}
+      <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#7c3aed;" title="Tạo Đề Nghị Thanh Toán" onclick="openDNTT('${l.id}')"><i class="ph ph-money"></i></button>
       <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Xóa" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
       ${l.spId ? '<span title="Đã sync SP" style="font-size:12px;margin-left:2px;color:var(--accent2);"><i class="ph ph-cloud-check"></i></span>' : ''}
     </td>
@@ -8636,6 +8750,219 @@ async function msalSpLoadTransfers(){
     </div>
   </div>
 </div>
+
+
+<script>
+// ═══════════════════════ ĐỀ NGHỊ THANH TOÁN (ĐNTT) ═══════════════════════
+
+let _dnttSheet = 'PR (van hanh) '; // sheet đang chọn (trailing space matches actual xlsx sheet name)
+
+function dnttSheetChange(val){
+  _dnttSheet = val;
+}
+
+function openDNTT(licId){
+  const l = licenses.find(x => x.id === licId);
+  if(!l){ toast('⚠️ Không tìm thấy contract', 'bad'); return; }
+
+  // Pre-fill từ license record
+  const today = new Date().toISOString().slice(0,10);
+
+  // Reset sheet selection
+  _dnttSheet = 'PR (van hanh) ';
+  document.querySelectorAll('input[name="dntt-sheet"]').forEach(r => {
+    r.checked = r.value === 'PR (van hanh) ';
+  });
+
+  // Công ty
+  const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v || ''; };
+
+  setVal('dntt-congty',   l.congTy || currentCompanyCtx() || '');
+  setVal('dntt-dept',     '');
+  setVal('dntt-requester', _msalAccount?.name || _msalAccount?.username || '');
+  setVal('dntt-date',     today);
+
+  // Nội dung
+  const typeLabel = l.type === 'Domain' ? 'tên miền' : l.type === 'Hosting' ? 'hosting' : 'phần mềm / dịch vụ';
+  const desc = `Thanh toán ${typeLabel} ${esc(l.ten||'')}${l.ngayHetHan ? ' - gia hạn đến ' + l.ngayHetHan : ''}`;
+  setVal('dntt-noidung',  desc);
+  setVal('dntt-ncc',      l.ncc || '');
+  setVal('dntt-soct',     l.key || '');
+
+  if(l.giaTri != null) setVal('dntt-sotien', l.giaTri);
+  else                 setVal('dntt-sotien', '');
+  setVal('dntt-tiente',   l.tienTe || 'VND');
+
+  // Bank (blank — user fills)
+  setVal('dntt-tentknh',  '');
+  setVal('dntt-sotknh',   '');
+  setVal('dntt-nganhang', '');
+  setVal('dntt-headcode', '');
+  setVal('dntt-ghichu',   l.ghichu || '');
+
+  openModal('modal-dntt');
+}
+
+/* Đọc currentCompanyCtx từ filter sidebar nếu có */
+function currentCompanyCtx(){
+  const sel = document.getElementById('company-filter') || document.getElementById('filter-company');
+  return sel ? (sel.value !== 'all' ? sel.value : '') : '';
+}
+
+/* Số tiền bằng chữ (tiếng Việt, đơn vị đồng) */
+function soTienBangChu(num, tienTe){
+  if(!num || isNaN(num)) return '';
+  try{
+    const ones = ['','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
+    const teens = ['mười','mười một','mười hai','mười ba','mười bốn','mười lăm','mười sáu','mười bảy','mười tám','mười chín'];
+    const tens  = ['','mười','hai mươi','ba mươi','bốn mươi','năm mươi','sáu mươi','bảy mươi','tám mươi','chín mươi'];
+
+    function readBlock(n){
+      if(n===0) return '';
+      let s = '';
+      const h = Math.floor(n/100), t = Math.floor((n%100)/10), o = n%10;
+      if(h>0){ s+=ones[h]+' trăm '; }
+      if(t===1){ s+=teens[o]+' '; }
+      else if(t>1){ s+=tens[t]; if(o>0) s+=(o===5?' lăm ':' '+ones[o]); s+=' '; }
+      else if(o>0 && h>0){ s+='lẻ '+ones[o]+' '; }
+      else if(o>0){ s+=ones[o]+' '; }
+      return s;
+    }
+
+    const n = Math.round(Number(num));
+    if(n===0) return 'Không đồng';
+    const tỷ   = Math.floor(n/1e9);
+    const tr    = Math.floor((n%1e9)/1e6);
+    const ng    = Math.floor((n%1e6)/1e3);
+    const dv    = n%1e3;
+
+    let str = '';
+    if(tỷ>0) str += readBlock(tỷ)+'tỷ ';
+    if(tr>0) str += readBlock(tr)+'triệu ';
+    if(ng>0) str += readBlock(ng)+'nghìn ';
+    if(dv>0) str += readBlock(dv);
+
+    const unit = tienTe === 'USD' ? 'đô la Mỹ' : tienTe === 'EUR' ? 'euro' : 'đồng';
+    return str.trim().charAt(0).toUpperCase() + str.trim().slice(1) + ' ' + unit + ' chẵn';
+  }catch(e){ return ''; }
+}
+
+async function generateDNTT(){
+  const v = id => (document.getElementById(id)?.value || '').trim();
+  const congty    = v('dntt-congty');
+  const noidung   = v('dntt-noidung');
+  const sotien    = parseFloat(v('dntt-sotien')) || 0;
+  const tiente    = v('dntt-tiente') || 'VND';
+  const ncc       = v('dntt-ncc');
+  const soct      = v('dntt-soct');
+  const requester = v('dntt-requester');
+  const date      = v('dntt-date');
+  const dept      = v('dntt-dept');
+  const tentknh   = v('dntt-tentknh');
+  const sotknh    = v('dntt-sotknh');
+  const nganhang  = v('dntt-nganhang');
+  const headcode  = v('dntt-headcode');
+  const ghichu    = v('dntt-ghichu');
+
+  if(!noidung){ toast('⚠️ Vui lòng nhập nội dung thanh toán', 'bad'); return; }
+
+  const btn = document.querySelector('#modal-dntt .btn.primary');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner"></i> Đang tạo…'; }
+
+  try{
+    // Fetch template
+    const resp = await fetch('payment_template.xlsx');
+    if(!resp.ok) throw new Error('Không tải được file mẫu payment_template.xlsx (HTTP '+resp.status+')');
+    const ab   = await resp.arrayBuffer();
+    const wb   = XLSX.read(ab, { type:'array', cellNF:true, cellFormula:true });
+
+    const sheetName = _dnttSheet;
+    const ws = wb.Sheets[sheetName];
+    if(!ws){ throw new Error(`Không tìm thấy sheet "${sheetName}" trong mẫu`); }
+
+    /* ── Helper ghi cell (giữ style nếu có) ── */
+    function setCell(addr, val){
+      if(!ws[addr]) ws[addr] = {};
+      ws[addr].v = val;
+      ws[addr].t = typeof val === 'number' ? 'n' : 's';
+      delete ws[addr].f; // xóa formula cũ nếu có
+    }
+
+    const bangChu = soTienBangChu(sotien, tiente);
+
+    if(sheetName === 'PR (van hanh)' || sheetName === 'PR (van hanh) '){
+      // ── PR vận hành mapping (based on actual template cell positions) ──
+      // D3 = người đề nghị (requester)
+      // D4 = tên công ty
+      // D5 = mã phòng ban (dept code)
+      // D6 = nội dung thanh toán
+      // D7 = ngày lập phiếu
+      // D10 = số tiền bằng chữ (D9 = formula =J23+J24, preserve)
+      // D12 = tên tài khoản thụ hưởng, I12 = số tài khoản
+      // D13 = ngân hàng
+      // A17 = tên headcode (text), D17 = mã headcode
+      // Row 23: F23=NCC, E23=ngày CT, J23=số tiền (D9 formula sums J23+J24)
+      if(requester) setCell('D3', requester);
+      if(congty)    setCell('D4', congty);
+      if(dept)      setCell('D5', dept);
+      if(noidung)   setCell('D6', noidung);
+      if(date)      setCell('D7', date);
+      if(bangChu)   setCell('D10', bangChu);
+      if(tentknh)   setCell('D12', tentknh);
+      if(sotknh)    setCell('I12', sotknh);
+      if(nganhang)  setCell('D13', nganhang);
+      if(headcode){
+        setCell('A17', headcode);   // tên headcode
+        setCell('D17', headcode);   // mã headcode
+      }
+      // Dòng chi tiết hóa đơn đầu tiên (row 23)
+      // A23 = formula =D17 (auto), C23 = loại CT, E23 = ngày, F23 = vendor, H23 = Gốc, J23 = số tiền
+      if(ncc)      setCell('F23', ncc);
+      if(date)     setCell('E23', date);
+      if(sotien>0) setCell('J23', sotien);  // D9 formula will sum this
+      if(ghichu)   setCell('C23', ghichu || 'Hóa đơn GTGT');
+      else         setCell('C23', 'Hóa đơn GTGT');
+      setCell('H23', 'x');  // gốc
+
+    } else if(sheetName === 'PR (du an)' || sheetName === 'PR (du an_Song ngu'){
+      // ── PR dự án mapping (based on actual template cell positions) ──
+      // Row 3: ngày gần C3 label → E3 or F3
+      // Row 4: A4="Người đề nghị:", B4=value, F4="Đơn vị:", G4=value
+      // Row 5: A5="Tên dự án:", C5=vlookup(C6), F5="Mã dự án:", G5=vlookup
+      // Row 6: A6="Công ty:", C6=company value, F6="Gói thầu số:"
+      // Row 7: A7=label, B7=hợp đồng value
+      // Row 8: A8=label, B8=NCC value
+      // Row 9: A9=label, C9=headcode value
+      // Row 15: G15=loại tiền tệ
+      // Row 18: F18=giá hợp đồng ban đầu (before VAT)
+      // Row 36: A36="Viết bằng chữ:", B36=value
+      if(requester) setCell('B4', requester);
+      if(dept)      setCell('G4', dept);
+      if(date)      setCell('F3', date);
+      if(congty)    setCell('C6', congty);
+      if(soct)      setCell('B7', soct);
+      if(ncc)       setCell('B8', ncc);
+      if(headcode)  setCell('C9', headcode);
+      if(tiente)    setCell('G15', tiente);
+      if(sotien>0)  setCell('F18', sotien);
+      if(bangChu)   setCell('B36', bangChu);
+      // Nội dung công việc / mô tả hợp đồng
+      if(noidung)   setCell('B12', noidung);
+    }
+
+    // Tải file
+    const fn = `DNTT_${(ncc||'NCC').replace(/\s+/g,'_')}_${date||'ngay'}.xlsx`;
+    XLSX.writeFile(wb, fn);
+    toast('✅ Đã tạo và tải ĐNTT thành công!', 'ok');
+    closeModal('modal-dntt');
+  }catch(err){
+    console.error('[ĐNTT]', err);
+    toast('❌ Lỗi: ' + err.message, 'bad');
+  } finally {
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-download-simple"></i> Tải xuống ĐNTT'; }
+  }
+}
+</script>
 
 </body>
 </html>
