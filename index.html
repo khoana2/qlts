@@ -3,6 +3,33 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script>
+// ── Auto DPI Scale — chạy trước khi render để tránh flash ──────────────────
+(function(){
+  function applyDpiScale(){
+    const dpr = window.devicePixelRatio || 1;
+    const vw  = window.screen.width;   // độ phân giải màn hình vật lý (px)
+    const lw  = window.innerWidth;     // viewport logic (sau Windows scaling)
+    // Chỉ can thiệp khi: màn hình ≥ 2560px VÀ Windows scaling thấp (dpr < 1.5)
+    // Tức là user đang dùng 4K/2K nhưng chưa bật HiDPI scaling đủ
+    let zoom = 1;
+    if(lw >= 3000 && dpr < 1.5){
+      // 4K tại 100% Windows scaling → scale lên 1.5x
+      zoom = Math.round((lw / 2200) * 10) / 10;
+      zoom = Math.min(Math.max(zoom, 1.3), 2.0); // clamp 1.3 – 2.0
+    } else if(lw >= 2300 && lw < 3000 && dpr < 1.3){
+      // 2K/QHD tại 100% scaling → scale nhẹ
+      zoom = 1.2;
+    }
+    if(zoom !== 1){
+      document.documentElement.style.zoom = String(zoom);
+      console.log(`[DPI] vw=${lw} dpr=${dpr} → zoom=${zoom}`);
+    }
+  }
+  applyDpiScale();
+  window.addEventListener('resize', applyDpiScale);
+})();
+</script>
 <title>QUẢN LÝ TÀI SẢN CNTT — TTG</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -28,6 +55,14 @@ body{
 ::-webkit-scrollbar{width:6px;height:6px;}
 ::-webkit-scrollbar-track{background:#F1F5F9;}
 ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px;}
+
+/* ── HiDPI / 4K auto-scale (khi Windows Scaling < 150%) ── */
+@media (min-width: 3200px) and (-webkit-max-device-pixel-ratio: 1.4) {
+  html { zoom: 1.5; }
+}
+@media (min-width: 2400px) and (max-width: 3199px) and (-webkit-max-device-pixel-ratio: 1.2) {
+  html { zoom: 1.2; }
+}
 ::-webkit-scrollbar-thumb:hover{background:#94A3B8;}
 
 /* ═══════════════════════════ APP SHELL — SIDEBAR LAYOUT ═══════════════════════════ */
