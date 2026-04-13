@@ -2741,6 +2741,21 @@ input[type=checkbox].row-cb{
             <label style="font-size:11px;color:var(--muted);">Headcode</label>
             <input type="text" id="dntt-f-headcode" class="finput" placeholder="Ví dụ: 17091100" style="width:100%;">
           </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Tên Headcode (danh mục chi)</label>
+            <input type="text" id="dntt-f-tenheadcode" class="finput" placeholder="Ví dụ: Máy móc, thiết bị" style="width:100%;">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:11px;color:var(--muted);">Hình thức thanh toán</label>
+            <div style="display:flex;gap:16px;margin-top:4px;">
+              <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+                <input type="radio" name="dntt-f-hinhthuc" value="CK" checked> Chuyển khoản
+              </label>
+              <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+                <input type="radio" name="dntt-f-hinhthuc" value="TM"> Tiền mặt
+              </label>
+            </div>
+          </div>
           <div style="grid-column:1/-1;display:flex;align-items:center;gap:6px;margin-top:2px;">
             <input type="checkbox" id="dntt-save-vendor" checked style="cursor:pointer;">
             <label for="dntt-save-vendor" style="font-size:11px;color:var(--muted);cursor:pointer;">
@@ -8997,6 +9012,8 @@ function openDNTTForm(prefill){
   setV('dntt-f-sotknh','');
   setV('dntt-f-nganhang','');
   setV('dntt-f-headcode','');
+  setV('dntt-f-tenheadcode','');
+  document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => r.checked = r.value === 'CK');
   setV('dntt-f-ghichu','');
   document.getElementById('dntt-f-trangthai').value = 'draft';
   document.getElementById('dntt-f-tiente').value = 'VND';
@@ -9044,6 +9061,8 @@ function openDNTTEdit(id){
   setV('dntt-f-sotknh', d.soTKNH);
   setV('dntt-f-nganhang', d.nganHang);
   setV('dntt-f-headcode', d.headcode);
+  setV('dntt-f-tenheadcode', d.tenHeadcode||'');
+  document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => r.checked = r.value === (d.hinhThuc||'CK'));
   setV('dntt-f-ghichu', d.ghichu);
   document.getElementById('dntt-f-trangthai').value = d.trangThai || 'draft';
   document.getElementById('dntt-f-tiente').value = d.tienTe || 'VND';
@@ -9109,7 +9128,9 @@ async function saveDNTTForm(draftOnly){
     tenTKNH:  v('dntt-f-tentknh'),
     soTKNH:   v('dntt-f-sotknh'),
     nganHang: v('dntt-f-nganhang'),
-    headcode: v('dntt-f-headcode'),
+    headcode:    v('dntt-f-headcode'),
+    tenHeadcode: v('dntt-f-tenheadcode'),
+    hinhThuc:    [...document.querySelectorAll('input[name="dntt-f-hinhthuc"]')].find(r=>r.checked)?.value || 'CK',
     ghichu:   v('dntt-f-ghichu'),
     licenseId:document.getElementById('dntt-f-licid').value||null,
     trangThai:document.getElementById('dntt-f-trangthai').value||'draft',
@@ -9290,186 +9311,263 @@ const _EX = {
 
 // ─── PR Vận Hành ────────────────────────────────────────────────
 async function _excelBuildVanHanh(wb, d){
-  const ws = wb.addWorksheet('Phiếu ĐNTT', { pageSetup:{ paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, margins:{left:0.5,right:0.5,top:0.75,bottom:0.75,header:0.3,footer:0.3} } });
+  const ws = wb.addWorksheet('Phieu DNTT', { pageSetup:{ paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.2,footer:0.2} } });
 
-  // Cột: A-J
+  // ── 9 cột (A–I) khớp với bảng ngân sách ──
   ws.columns = [
-    {width:5},   // A: STT/số nhỏ
-    {width:14},  // B
-    {width:14},  // C
-    {width:20},  // D: label chính
-    {width:20},  // E: value
-    {width:18},  // F
-    {width:10},  // G
-    {width:10},  // H: gốc/sao
-    {width:20},  // I: số TK
-    {width:16},  // J: số tiền
+    {width:24},  // A – nhãn / Tên Headcode
+    {width:13},  // B – Headcode
+    {width:11},  // C – Số NS / Loại CT
+    {width:11},  // D – Đã SD / Ngày
+    {width:13},  // E – Còn lại / Đơn vị (phần 1)
+    {width:14},  // F – Số TT đề nghị / Đơn vị (phần 2)
+    {width:11},  // G – Số phát sinh / Gốc
+    {width:11},  // H – Số bổ sung / Sao
+    {width:14},  // I – Ghi chú / Số tiền nếu có
   ];
 
   const C = (addr, val, opts) => _EX.cell(ws, addr, val, opts);
-  const fillHdr   = _EX.fill('FF1B3A6B');  // xanh đậm
-  const fillSub   = _EX.fill('FFD6E4F7');  // xanh nhạt
-  const fillLbl   = _EX.fill('FFF0F4FA');  // xám xanh nhạt (label)
-  const fillTotal = _EX.fill('FFFFFACD');  // vàng nhạt (tổng)
-  const fillSig   = _EX.fill('FFF9F9F9');  // trắng ngà (chữ ký)
-  const fontHdr   = _EX.font(true, 13, 'FFFFFFFF');
-  const fontSub   = _EX.font(true, 10, 'FF1B3A6B');
-  const fontLbl   = _EX.font(true, 9);
-  const fontVal   = _EX.font(false, 10);
-  const fontTitle = _EX.font(true, 14, 'FFFFFFFF');
-  const numFmt    = '#,##0';
 
-  const tt = d.tienTe || 'VND';
-  const soTien = d.soTien ? Number(d.soTien) : null;
+  /* ── màu sắc ── */
+  const fillYellow = _EX.fill('FFFFFF99');   // vàng nhạt – ô nhập liệu
+  const fillTeal   = _EX.fill('FF4BACC6');   // xanh ngọc – header bảng
+  const fillTealDk = _EX.fill('FF17375E');   // xanh đậm  – header chính
+  const fillWhite  = _EX.fill('FFFFFFFF');
+  const noFill     = null;
+
+  /* ── font ── */
+  const fN  = (b=false,s=10,c='FF000000') => _EX.font(b,s,c);
+  const fIt = (s=9) => ({ name:'Times New Roman', size:s, italic:true, color:{argb:'FF000000'} });
+  const fItU= (s=9) => ({ name:'Times New Roman', size:s, italic:true, underline:true, bold:true, color:{argb:'FF000000'} });
+  const fTH = fN(true,9,'FFFFFFFF');   // table header – trắng đậm
+  const numFmt = '#,##0';
+
+  /* ── dữ liệu ── */
+  const tt      = d.tienTe || 'VND';
+  const soTien  = d.soTien ? Number(d.soTien) : null;
   const bangChu = soTienBangChu(d.soTien, d.tienTe);
+  const ngay    = d.ngayLap || '';
+  const hinhThuc= d.hinhThuc || 'CK';
+  const ckMark  = hinhThuc==='CK' ? '☑' : '☐';
+  const tmMark  = hinhThuc==='TM' ? '☑' : '☐';
 
-  // ── ROW 1: TIÊU ĐỀ ──
-  ws.getRow(1).height = 36;
-  ws.mergeCells('A1:C1'); ws.mergeCells('D1:J1');
-  C('A1', d.congTy||'', { fill:fillHdr, font:_EX.font(true,11,'FFFFFFFF'), align:_EX.align('center','middle') });
-  C('D1', 'PHIẾU ĐỀ NGHỊ THANH TOÁN', { fill:fillHdr, font:fontTitle, align:_EX.align('center','middle') });
+  /* ══ ROW 1 – HEADER CHÍNH ══ */
+  ws.getRow(1).height = 38;
+  ws.mergeCells('A1:B1');            // trái: tên công ty
+  ws.mergeCells('C1:F1');            // giữa: tiêu đề
+  ws.mergeCells('G1:I1');            // phải: địa chỉ
+  C('A1', (d.congTy||'').toUpperCase(),
+      { font:fN(true,10), align:_EX.align('left','middle',true), border:_EX.border });
+  C('C1', 'PHIẾU ĐỀ NGHỊ THANH TOÁN',
+      { font:fN(true,14), align:_EX.align('center','middle'), border:_EX.border });
+  C('G1', '',
+      { font:fN(false,8), align:_EX.align('right','middle',true), border:_EX.border });
 
-  // ── ROW 2: Số phiếu / Ngày ──
-  ws.getRow(2).height = 18;
-  ws.mergeCells('A2:C2'); ws.mergeCells('D2:F2'); ws.mergeCells('G2:J2');
-  C('A2','',{fill:fillSub});
-  C('D2',`Số phiếu: ${d.soPhieu||''}`, { fill:fillSub, font:fontSub, align:_EX.align('left','middle') });
-  C('G2',`Ngày: ${d.ngayLap||''}`,     { fill:fillSub, font:fontSub, align:_EX.align('right','middle') });
+  /* ══ ROW 2 – SỐ PHIẾU ══ */
+  ws.getRow(2).height = 15;
+  ws.mergeCells('A2:I2');
+  C('A2', `Số:  ${d.soPhieu||'.....................'}`,
+      { font:fN(false,10), align:_EX.align('left','middle') });
 
-  // ── Helper dòng label-value ──
-  function labelRow(rowNum, label, val, height=18){
-    ws.getRow(rowNum).height = height;
-    ws.mergeCells(`A${rowNum}:C${rowNum}`); ws.mergeCells(`D${rowNum}:J${rowNum}`);
-    C(`A${rowNum}`, label, { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
-    C(`D${rowNum}`, val,   { font:fontVal, align:_EX.align('left','middle','wrap'), border:_EX.border });
-  }
+  /* ── helper: dòng 1 nhãn – 1 giá trị (nhãn=A, giá trị=B:I, nền vàng) ── */
+  const rowSimple = (r, lbl, val, h=18, bold=false) => {
+    ws.getRow(r).height = h;
+    ws.mergeCells(`B${r}:I${r}`);
+    C(`A${r}`, lbl, { font:fN(true,9), align:_EX.align('left','middle'), border:_EX.border });
+    C(`B${r}`, val, { fill:fillYellow, font:fN(bold,10), align:_EX.align('left','middle',true), border:_EX.border });
+  };
 
-  labelRow(3, 'Người đề nghị:', d.nguoiLap||'');
-  labelRow(4, 'Công ty:',       d.congTy||'');
-  labelRow(5, 'Phòng ban:',     d.phongBan||'');
-  labelRow(6, 'Nội dung thanh toán:', d.noidung||'', 30);
-  labelRow(7, 'Ngày lập phiếu:', d.ngayLap||'');
+  /* ── helper: dòng 2 nhãn–giá trị (A=lbl1, B–D=val1, E–F=lbl2, G–I=val2) ── */
+  const rowSplit = (r, lbl1, val1, lbl2, val2, h=18) => {
+    ws.getRow(r).height = h;
+    ws.mergeCells(`B${r}:D${r}`);
+    ws.mergeCells(`E${r}:F${r}`);
+    ws.mergeCells(`G${r}:I${r}`);
+    C(`A${r}`, lbl1, { font:fN(true,9), align:_EX.align('left','middle',true), border:_EX.border });
+    C(`B${r}`, val1, { fill:fillYellow, font:fN(false,10), align:_EX.align('center','middle'), border:_EX.border });
+    C(`E${r}`, lbl2, { font:fN(true,9),  align:_EX.align('left','middle',true), border:_EX.border });
+    C(`G${r}`, val2, { fill:fillYellow, font:fN(false,10), align:_EX.align('center','middle'), border:_EX.border });
+  };
 
-  // ── ROW 8: KHOẢNG TRỐNG ──
-  ws.getRow(8).height = 6;
+  /* ══ ROWS 3–10 – THÔNG TIN PHIẾU ══ */
+  rowSimple(3, 'Người đề nghị thanh toán:', d.nguoiLap||'');
+  rowSimple(4, 'Công ty:', (d.congTy||'').toUpperCase(), 18, true);
+  rowSplit (5, 'Mã phòng ban sử dụng ngân sách:', d.phongBan||'',
+               'Tên phòng ban sử dụng ngân sách', d.phongBan||'', 22);
+  rowSimple(6, 'Nội dung thanh toán:', d.noidung||'', 22, true);
+  rowSplit (7, 'Ngày đề nghị:', ngay, 'Thời hạn thanh toán:', '');
 
-  // ── ROW 9: SỐ TIỀN ──
-  ws.getRow(9).height = 22;
-  ws.mergeCells('A9:C9'); ws.mergeCells('D9:I9');
-  C('A9','Kính đề nghị thanh toán:', { fill:fillTotal, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
-  C('D9', soTien, { fill:fillTotal, font:_EX.font(true,12), align:_EX.align('left','middle'), border:_EX.border, numFmt });
-  C('J9', tt,     { fill:fillTotal, font:fontSub, align:_EX.align('center','middle'), border:_EX.border });
+  /* ── Hình thức thanh toán ── */
+  ws.getRow(8).height = 18;
+  ws.mergeCells('B8:I8');
+  C('A8', 'Hình thức thanh toán:', { font:fN(true,9), align:_EX.align('left','middle'), border:_EX.border });
+  C('B8', `${ckMark}  Chuyển khoản                    ${tmMark}  Tiền mặt`,
+      { font:fN(false,10), align:_EX.align('left','middle'), border:_EX.border });
 
-  // ── ROW 10: BẰNG CHỮ ──
-  ws.getRow(10).height = 22;
-  ws.mergeCells('A10:C10'); ws.mergeCells('D10:J10');
-  C('A10','Bằng chữ:', { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
-  C('D10', bangChu||'', { font:_EX.font(true,10,'FF1B3A6B'), align:_EX.align('left','middle',true), border:_EX.border });
+  /* ── Số tiền ── */
+  ws.getRow(9).height = 20;
+  ws.mergeCells('B9:H9');
+  C('A9', 'Số tiền đề nghị thanh toán:', { font:fN(true,9), align:_EX.align('left','middle'), border:_EX.border });
+  C('B9', soTien, { fill:fillYellow, font:fN(true,11), align:_EX.align('right','middle'), border:_EX.border, numFmt });
+  C('I9', tt,     { fill:fillYellow, font:fN(true,10), align:_EX.align('center','middle'), border:_EX.border });
 
-  // ── ROW 11: KHOẢNG TRỐNG ──
-  ws.getRow(11).height = 6;
+  /* ── Bằng chữ ── */
+  ws.getRow(10).height = 18;
+  ws.mergeCells('B10:I10');
+  C('A10', 'Bằng chữ:', { font:fN(true,9), align:_EX.align('left','middle'), border:_EX.border });
+  C('B10', bangChu||'', { font:fIt(10), align:_EX.align('left','middle',true), border:_EX.border });
 
-  // ── ROW 12: TÀI KHOẢN THỤ HƯỞNG header ──
-  ws.getRow(12).height = 16;
-  ws.mergeCells('A12:J12');
-  C('A12','TÀI KHOẢN THỤ HƯỞNG', { fill:fillSub, font:fontSub, align:_EX.align('center','middle') });
+  /* ══ ROW 11 – PHẦN CHUYỂN KHOẢN (tiêu đề in nghiêng) ══ */
+  ws.getRow(11).height = 16;
+  ws.mergeCells('A11:I11');
+  const c11 = ws.getCell('A11');
+  c11.value = 'Phần dành cho thanh toán chuyển khoản:';
+  c11.font  = fItU(9);
+  c11.alignment = _EX.align('left','middle');
 
-  function tkRow(rowNum, label, val, label2='', val2=''){
-    ws.getRow(rowNum).height = 18;
-    if(label2){
-      ws.mergeCells(`A${rowNum}:B${rowNum}`); ws.mergeCells(`C${rowNum}:E${rowNum}`);
-      ws.mergeCells(`F${rowNum}:G${rowNum}`); ws.mergeCells(`H${rowNum}:J${rowNum}`);
-      C(`A${rowNum}`, label,  { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
-      C(`C${rowNum}`, val,    { font:fontVal, align:_EX.align('left','middle'), border:_EX.border });
-      C(`F${rowNum}`, label2, { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
-      C(`H${rowNum}`, val2,   { font:fontVal, align:_EX.align('left','middle'), border:_EX.border });
-    } else {
-      ws.mergeCells(`A${rowNum}:C${rowNum}`); ws.mergeCells(`D${rowNum}:J${rowNum}`);
-      C(`A${rowNum}`, label, { fill:fillLbl, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
-      C(`D${rowNum}`, val,   { font:fontVal, align:_EX.align('left','middle'), border:_EX.border });
-    }
-  }
-  tkRow(13, 'Tên tài khoản:',  d.tenTKNH||'', 'Số tài khoản:', d.soTKNH||'');
-  tkRow(14, 'Ngân hàng:',      d.nganHang||'');
-  tkRow(15, 'Headcode:',       d.headcode||'');
+  /* ── Chủ TK / Số TK ── */
+  rowSplit(12, 'Chủ tài khoản:', d.tenTKNH||'', 'Số tài khoản:', d.soTKNH||'');
+  rowSimple(13, 'Tên ngân hàng:', d.nganHang||'');
 
-  // ── ROW 16: KHOẢNG TRỐNG ──
-  ws.getRow(16).height = 6;
+  /* ══ ROW 14 – PHẦN NGÂN SÁCH (tiêu đề in nghiêng) ══ */
+  ws.getRow(14).height = 16;
+  ws.mergeCells('A14:I14');
+  const c14 = ws.getCell('A14');
+  c14.value = 'Phần dành cho kiểm tra ngân sách:';
+  c14.font  = fItU(9);
+  c14.alignment = _EX.align('left','middle');
 
-  // ── ROW 17: BẢNG CHỨNG TỪ header ──
-  ws.getRow(17).height = 16;
-  ws.mergeCells('A17:J17');
-  C('A17','CHỨNG TỪ KÈM THEO', { fill:fillSub, font:fontSub, align:_EX.align('center','middle') });
+  /* ══ ROW 15–16 – HEADER BẢNG NGÂN SÁCH (2 dòng) ══ */
+  ws.getRow(15).height = 24;
+  ws.getRow(16).height = 30;
+  // merge dọc cho cột Tên Headcode, Headcode, Ghi chú
+  ws.mergeCells('A15:A16');
+  ws.mergeCells('B15:B16');
+  ws.mergeCells('I15:I16');
+  // merge ngang nhóm "Số ngân sách" và "Ngân sách thanh toán"
+  ws.mergeCells('C15:E15');
+  ws.mergeCells('F15:H15');
 
-  // ── ROW 18: Table column headers ──
-  ws.getRow(18).height = 18;
-  ws.mergeCells('A18:B18');
-  ['A18','C18','D18','E18','F18','G18','H18','I18','J18'].forEach(a=>
-    ws.getCell(a).border = _EX.border
-  );
-  [
-    ['A18','Headcode'], ['C18','Loại CT'], ['D18','Đơn vị / NCC'],
-    ['E18','Ngày CT'], ['F18','Nội dung'], ['G18','HT'],
-    ['H18','Gốc'], ['I18','Sao'], ['J18','Số tiền ('+tt+')']
-  ].forEach(([a,v]) => C(a, v, { fill:fillSub, font:fontSub, align:_EX.align('center','middle'), border:_EX.border }));
+  const tH = (a,v) => C(a,v,{fill:fillTeal,font:fTH,align:_EX.align('center','middle',true),border:_EX.border});
+  tH('A15','Tên Headcode');
+  tH('B15','Headcode');
+  tH('C15','Số ngân sách (theo KH ngân sách tháng)');
+  tH('F15','Ngân sách thanh toán');
+  tH('I15','Ghi chú');
+  tH('C16','Số ngân\nsách');
+  tH('D16','Đã sử\ndụng');
+  tH('E16','Còn lại\n(chưa gồm lần này)');
+  tH('F16','Số tiền đề nghị\nthanh toán');
+  tH('G16','Số phát\nsinh');
+  tH('H16','Số bổ\nsung');
 
-  // ── ROW 19: Dòng chứng từ đầu ──
-  ws.getRow(19).height = 18;
-  ws.mergeCells('A19:B19');
-  [
-    ['A19', d.headcode||''], ['C19','Hóa đơn GTGT'], ['D19', d.ncc||''],
-    ['E19', d.ngayLap||''],  ['F19', d.noidung||''], ['G19','CK'],
-    ['H19','x'],             ['I19',''],              ['J19', soTien]
-  ].forEach(([a,v]) => {
-    const opts = { font:fontVal, align:_EX.align('center','middle'), border:_EX.border };
-    if(a==='D19'||a==='F19') opts.align = _EX.align('left','middle');
-    if(a==='J19') opts.numFmt = numFmt;
-    C(a, v, opts);
-  });
+  /* ══ ROW 17–19 – DỮ LIỆU BẢNG NGÂN SÁCH ══ */
+  const nsRow = (r, tenHC, hc, soTienDN) => {
+    ws.getRow(r).height = 17;
+    const brd = { font:fN(false,9), border:_EX.border };
+    C(`A${r}`, tenHC,   { ...brd, align:_EX.align('left','middle') });
+    C(`B${r}`, hc,      { ...brd, align:_EX.align('center','middle') });
+    C(`C${r}`, null,    brd);
+    C(`D${r}`, null,    brd);
+    C(`E${r}`, null,    brd);
+    C(`F${r}`, soTienDN,{ ...brd, align:_EX.align('right','middle'), numFmt });
+    C(`G${r}`, null,    brd);
+    C(`H${r}`, null,    brd);
+    C(`I${r}`, null,    brd);
+  };
+  nsRow(17, d.tenHeadcode||'', d.headcode||'', soTien);
+  nsRow(18, '', '', null);
+  nsRow(19, '', '', null);
 
-  // ── ROW 20-22: Dòng trống để thêm chứng từ ──
-  for(let r=20;r<=22;r++){
-    ws.getRow(r).height=18;
+  /* ══ ROW 20–21 – HEADER BẢNG CHỨNG TỪ (2 dòng) ══ */
+  ws.getRow(20).height = 20;
+  ws.getRow(21).height = 18;
+  // merge dọc: Headcode (A-B), Đơn vị (E-F), Số tiền (I)
+  ws.mergeCells('A20:B21');
+  ws.mergeCells('E20:F21');
+  ws.mergeCells('I20:I21');
+  // merge ngang: Chứng từ kèm theo (C-D), Hình thức (G-H)
+  ws.mergeCells('C20:D20');
+  ws.mergeCells('G20:H20');
+
+  tH('A20','Headcode');
+  tH('C20','Chứng từ kèm theo gồm:');
+  tH('E20','Đơn vị');
+  tH('G20','Hình thức');
+  tH('I20','Số tiền\n(nếu có)');
+  tH('C21','Loại CT');
+  tH('D21','Ngày');
+  tH('G21','Gốc');
+  tH('H21','Sao');
+
+  /* ══ ROW 22–24 – DỮ LIỆU CHỨNG TỪ ══ */
+  const ctRow = (r, hc, loai, ngayCT, donvi, goc, sao) => {
+    ws.getRow(r).height = 18;
     ws.mergeCells(`A${r}:B${r}`);
-    for(let c=1;c<=10;c++) ws.getCell(r,c).border=_EX.border;
-  }
+    ws.mergeCells(`E${r}:F${r}`);
+    const brd = { font:fN(false,9), border:_EX.border };
+    C(`A${r}`, hc,     { ...brd, align:_EX.align('center','middle') });
+    C(`C${r}`, loai,   { ...brd, align:_EX.align('center','middle') });
+    C(`D${r}`, ngayCT, { ...brd, align:_EX.align('center','middle') });
+    C(`E${r}`, donvi,  { ...brd, align:_EX.align('left','middle',true) });
+    C(`G${r}`, goc,    { ...brd, align:_EX.align('center','middle') });
+    C(`H${r}`, sao,    { ...brd, align:_EX.align('center','middle') });
+    C(`I${r}`, null,   { ...brd, align:_EX.align('right','middle'), numFmt });
+  };
+  ctRow(22, d.headcode||'', d.soHD?'Hóa đơn':'', ngay, d.ncc||'', 'x', '');
+  ctRow(23, '', '', '', '', '', '');
+  ctRow(24, '', '', '', '', '', '');
 
-  // ── ROW 23: TỔNG CỘNG ──
-  ws.getRow(23).height = 20;
-  ws.mergeCells('A23:I23');
-  C('A23','Tổng cộng', { fill:fillTotal, font:fontLbl, align:_EX.align('right','middle'), border:_EX.border });
-  C('J23', soTien,     { fill:fillTotal, font:_EX.font(true,11), align:_EX.align('right','middle'), border:_EX.border, numFmt });
+  /* ══ ROW 25 – QUYẾT TOÁN TẠM ỨNG ══ */
+  ws.getRow(25).height = 16;
+  ws.mergeCells('A25:I25');
+  C('A25', '☐  Phần Quyết toán tạm ứng (nếu có tạm ứng)',
+      { font:fN(true,9), align:_EX.align('left','middle') });
 
-  // ── ROW 24: Ghi chú ──
-  if(d.ghichu){
-    ws.getRow(24).height=18; ws.mergeCells('A24:J24');
-    C('A24','Ghi chú: '+d.ghichu, { font:_EX.font(false,9,'FF666666'), align:_EX.align('left','middle',true) });
-  }
+  const qtRow = (r, stt, lbl) => {
+    ws.getRow(r).height = 17;
+    ws.mergeCells(`B${r}:G${r}`);
+    ws.mergeCells(`H${r}:I${r}`);
+    C(`A${r}`, stt, { font:fN(false,9), align:_EX.align('center','middle'), border:_EX.border });
+    C(`B${r}`, lbl, { font:fN(false,9), align:_EX.align('left','middle'),   border:_EX.border });
+    C(`H${r}`, '',  { font:fN(false,9), border:_EX.border });
+  };
+  qtRow(26, '1', 'Số tiền đã tạm ứng');
+  qtRow(27, '2', 'Số tiền quyết toán (hoàn ứng/ chi thêm)');
 
-  // ── ROW 25: khoảng trống ──
-  ws.getRow(25).height = 10;
+  /* ══ ROW 28 – NGÀY KÝ ══ */
+  ws.getRow(28).height = 16;
+  ws.mergeCells('A28:I28');
+  C('A28', `Ngày ${ngay}`, { font:fN(false,10), align:_EX.align('right','middle') });
 
-  // ── ROW 26: Chữ ký header ──
-  ws.getRow(26).height = 14;
-  ws.mergeCells('A26:B26'); ws.mergeCells('C26:D26'); ws.mergeCells('E26:G26'); ws.mergeCells('H26:J26');
-  [['A26','Người đề nghị'],['C26','Kế toán'],['E26','KT trưởng / CFO'],['H26','Giám đốc / TGĐ']].forEach(([a,v])=>
-    C(a, v, { fill:fillSig, font:fontSub, align:_EX.align('center','middle') })
+  /* ══ ROW 29 – HEADER CHỮ KÝ ══ */
+  ws.getRow(29).height = 14;
+  ws.mergeCells('A29:B29'); ws.mergeCells('C29:D29');
+  ws.mergeCells('E29:G29'); ws.mergeCells('H29:I29');
+  [['A29','Người đề nghị'],['C29','Trưởng đơn vị'],
+   ['E29','Kế toán trưởng'],['H29','Phê duyệt']].forEach(([a,v])=>
+    C(a, v, { font:fN(true,9), align:_EX.align('center','middle') })
   );
 
-  // ── ROW 27-30: Khu vực ký ──
-  for(let r=27;r<=30;r++){
-    ws.getRow(r).height=14;
-    ws.mergeCells(`A${r}:B${r}`); ws.mergeCells(`C${r}:D${r}`); ws.mergeCells(`E${r}:G${r}`); ws.mergeCells(`H${r}:J${r}`);
-    ['A','C','E','H'].forEach(col => ws.getCell(`${col}${r}`).fill=fillSig);
+  /* ══ ROW 30–34 – KHOẢNG ĐỂ KÝ ══ */
+  for(let r=30;r<=34;r++){
+    ws.getRow(r).height = 14;
+    ws.mergeCells(`A${r}:B${r}`); ws.mergeCells(`C${r}:D${r}`);
+    ws.mergeCells(`E${r}:G${r}`); ws.mergeCells(`H${r}:I${r}`);
   }
 
-  // ── ROW 31: Tên người ký ──
-  ws.getRow(31).height = 16;
-  ws.mergeCells('A31:B31'); ws.mergeCells('C31:D31'); ws.mergeCells('E31:G31'); ws.mergeCells('H31:J31');
-  C('A31', d.nguoiLap||'', { fill:fillSig, font:fontSub, align:_EX.align('center','middle'), border:_EX.borderB });
-  ['C31','E31','H31'].forEach(a => C(a,'', { fill:fillSig, border:_EX.borderB }));
-  // Border bottom cho khu vực ký row 30
-  ['A30','C30','E30','H30'].forEach(a => ws.getCell(a).border=_EX.borderB);
+  /* ══ ROW 35 – TÊN NGƯỜI KÝ ══ */
+  ws.getRow(35).height = 14;
+  ws.mergeCells('A35:B35'); ws.mergeCells('C35:D35');
+  ws.mergeCells('E35:G35'); ws.mergeCells('H35:I35');
+  C('A35', d.nguoiLap||'', { font:fN(true,9), align:_EX.align('center','middle'), border:_EX.borderB });
+  ['C35','E35','H35'].forEach(a => C(a,'',{ font:fN(false,9), border:_EX.borderB }));
+
+  /* ── border dưới khu vực ký ── */
+  ['A34','C34','E34','H34'].forEach(a => {
+    const cell = ws.getCell(a);
+    cell.border = { bottom:{style:'thin'} };
+  });
 }
 
 // ─── PR Dự Án ────────────────────────────────────────────────
