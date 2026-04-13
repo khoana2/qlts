@@ -641,6 +641,18 @@ input[type=checkbox].row-cb{
 .kpi-icon i.ph{font-size:24px;line-height:1;}
 .btn-icon-ph{display:inline-flex;align-items:center;gap:5px;}
 .btn-icon-ph i.ph{font-size:14px;line-height:1;}
+/* ── Row action dropdown ── */
+.row-actions{display:inline-flex;align-items:center;gap:3px;}
+.row-more-wrap{position:relative;display:inline-block;}
+.row-more-btn{padding:3px 6px!important;font-size:13px!important;color:var(--muted)!important;line-height:1;border:1px solid transparent!important;border-radius:5px!important;background:transparent!important;cursor:pointer;}
+.row-more-btn:hover{background:var(--surface2)!important;border-color:var(--border)!important;color:var(--fg)!important;}
+.row-more-menu{display:none;position:absolute;right:0;top:calc(100% + 2px);background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:140px;z-index:9999;padding:4px 0;}
+.row-more-menu.open{display:block;}
+.row-more-menu button{display:flex;align-items:center;gap:7px;width:100%;padding:7px 12px;background:none;border:none;cursor:pointer;font-size:12px;color:var(--fg);white-space:nowrap;text-align:left;}
+.row-more-menu button:hover{background:var(--surface2);}
+.row-more-menu button.danger{color:#DC2626;}
+.row-more-menu button.danger:hover{background:#FEF2F2;}
+.row-more-menu .menu-sep{border:none;border-top:1px solid var(--border);margin:3px 0;}
 .action-btn:hover{background:#F1F5F9;border-color:#CBD5E1;}
 .action-btn.edit:hover{background:#EFF6FF;border-color:#BFDBFE;color:#2563EB;}
 .action-btn.del:hover{background:#FEF2F2;border-color:#FECACA;color:#DC2626;}
@@ -7580,18 +7592,46 @@ function _licRow(l, i, hideGoi, inGroup){
     <td>${licStatusBadge(diff)}</td>
     <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(l.ghichu||'')}">${esc(l.ghichu||'')}</td>
     <td style="white-space:nowrap;">
-      <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i></button>
-      <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#059669;" title="Gia hạn" onclick="quickRenewLicense('${l.id}')"><i class="ph ph-arrow-clockwise"></i></button>
-      ${attachBtn}
-      <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#7c3aed;" title="Tạo Đề Nghị Thanh Toán" onclick="openDNTTFromLicense('${l.id}')"><i class="ph ph-receipt"></i></button>
-      <button class="btn danger btn-del-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Xóa" onclick="confirmDeleteLicense('${l.id}')"><i class="ph ph-trash"></i></button>
-      ${l.spId ? '<span title="Đã sync SP" style="font-size:12px;margin-left:2px;color:var(--accent2);"><i class="ph ph-cloud-check"></i></span>' : ''}
+      <div class="row-actions">
+        <button class="btn btn-edit-lic btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openLicenseEdit('${l.id}')"><i class="ph ph-pencil-simple"></i> Sửa</button>
+        <div class="row-more-wrap">
+          <button class="row-more-btn" onclick="toggleRowMenu(this)" title="Thêm hành động">···</button>
+          <div class="row-more-menu">
+            <button onclick="quickRenewLicense('${l.id}');closeRowMenus()">
+              <i class="ph ph-arrow-clockwise" style="color:#059669;"></i> Gia hạn
+            </button>
+            <button onclick="openLicenseAttachments('${l.id}');closeRowMenus()">
+              <i class="ph ph-paperclip" style="color:var(--orange);"></i> ${inGroup ? 'Phụ lục' : 'Đính kèm'}
+            </button>
+            <hr class="menu-sep">
+            <button class="danger" onclick="confirmDeleteLicense('${l.id}');closeRowMenus()">
+              <i class="ph ph-trash"></i> Xóa
+            </button>
+          </div>
+        </div>
+        ${l.spId ? '<span title="Đã sync SP" style="font-size:12px;color:var(--accent2);"><i class="ph ph-cloud-check"></i></span>' : ''}
+      </div>
     </td>
   </tr>`;
 }
 
 // ─── Render table ─────────────────────────────────────────────────
 // ─── Toggle toàn bộ bảng summary ─────────────────────────────────
+// ── Dropdown menu cho action row ──────────────────────────────────────
+function toggleRowMenu(btn){
+  const menu = btn.nextElementSibling;
+  const isOpen = menu.classList.contains('open');
+  closeRowMenus();
+  if(!isOpen) menu.classList.add('open');
+}
+function closeRowMenus(){
+  document.querySelectorAll('.row-more-menu.open').forEach(m => m.classList.remove('open'));
+}
+// Đóng menu khi click ra ngoài
+document.addEventListener('click', e => {
+  if(!e.target.closest('.row-more-wrap')) closeRowMenus();
+}, true);
+
 function toggleLicSummary(){
   _licSummaryCollapsed = !_licSummaryCollapsed;
   const body = document.getElementById('lic-summary-body');
