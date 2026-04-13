@@ -1878,7 +1878,30 @@ input[type=checkbox].row-cb{
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-icon-ph" onclick="exportDNTTListExcel()" title="Xuất danh sách ra Excel"><i class="ph ph-file-xls"></i> Xuất DS</button>
+        <button class="btn btn-icon-ph" onclick="openDNTTTemplatePanel()" title="Cài đặt template Excel" id="dntt-tpl-btn"
+          style="border-color:var(--border);"><i class="ph ph-file-arrow-up"></i> <span id="dntt-tpl-btn-label">Template</span></button>
         <button class="btn primary btn-icon-ph" onclick="openDNTTForm()"><i class="ph ph-plus"></i> Tạo ĐNTT</button>
+      </div>
+    </div>
+
+    <!-- Template panel (ẩn mặc định) -->
+    <div id="dntt-tpl-panel" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;"><i class="ph ph-file-xls"></i> Template Excel công ty</div>
+        <button onclick="document.getElementById('dntt-tpl-panel').style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;">✕</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+        Upload file Excel template của công ty (file gốc chưa điền). Khi xuất phiếu, app sẽ tự điền dữ liệu vào đúng ô và giữ nguyên định dạng.
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div id="dntt-tpl-status" style="font-size:12px;flex:1;"></div>
+        <button class="btn success btn-icon-ph" onclick="dnttUploadTemplate()"><i class="ph ph-upload-simple"></i> Upload template (.xlsx)</button>
+        <button class="btn btn-icon-ph" id="dntt-tpl-clear-btn" onclick="dnttClearTemplate()" style="display:none;color:var(--red);"><i class="ph ph-trash"></i> Xóa template</button>
+      </div>
+      <div id="dntt-tpl-mapping" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;">Cấu hình ô điền (tùy chỉnh nếu template có layout khác)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;font-size:11px;" id="dntt-tpl-map-fields"></div>
+        <button class="btn btn-icon-ph" style="margin-top:8px;font-size:11px;" onclick="dnttSaveMapping()"><i class="ph ph-floppy-disk"></i> Lưu cấu hình ô</button>
       </div>
     </div>
 
@@ -4824,7 +4847,7 @@ function switchTab(t){
   if(t==='dashboard') updateDashboard();
   if(t==='events')   renderEvents();
   if(t==='license')  renderLicenses();
-  if(t==='dntt')     renderDNTT();
+  if(t==='dntt'){    renderDNTT(); _dnttUpdateTplUI(); }
   if(t==='roles')    renderRolesTable();
   // Sync bottom nav
   setBottomNav(t);
@@ -9283,26 +9306,225 @@ function dnttDeleteVendor(){
   toast(`🗑️ Đã xóa NCC "${name}"`, 'ok');
 }
 
+// ══════════════════ TEMPLATE UPLOAD ══════════════════
+const DNTT_TPL_KEY     = 'qlts_dntt_tpl_v1';
+const DNTT_TPL_MAP_KEY = 'qlts_dntt_tpl_map_v1';
+
+// Mapping mặc định: tên trường → địa chỉ ô trong template
+// (khớp với bố cục chuẩn phiếu ĐNTT vận hành 9 cột A–I)
+const _TPL_DEFAULT_MAP = {
+  soPhieu:     'B2',   // Số phiếu
+  nguoiLap:    'B3',   // Người đề nghị
+  congTy:      'B4',   // Công ty
+  phongBan:    'B5',   // Mã phòng ban
+  phongBanTen: 'G5',   // Tên phòng ban
+  noidung:     'B6',   // Nội dung thanh toán
+  ngayLap:     'B7',   // Ngày đề nghị
+  hinhThuc:    'B8',   // Hình thức thanh toán (text)
+  soTien:      'B9',   // Số tiền
+  tienTe:      'I9',   // Tiền tệ
+  bangChu:     'B10',  // Bằng chữ
+  tenTKNH:     'B12',  // Chủ tài khoản
+  soTKNH:      'G12',  // Số tài khoản
+  nganHang:    'B13',  // Tên ngân hàng
+  // Bảng ngân sách - dòng 1
+  ns_tenHC:    'A17',  // Tên Headcode
+  ns_hc:       'B17',  // Headcode
+  ns_soTien:   'F17',  // Số tiền đề nghị TT
+  // Bảng chứng từ - dòng 1
+  ct_hc:       'A22',  // Headcode
+  ct_loai:     'C22',  // Loại CT
+  ct_ngay:     'D22',  // Ngày CT
+  ct_donvi:    'E22',  // Đơn vị / NCC
+  ct_goc:      'G22',  // Gốc
+};
+
+const _TPL_FIELD_LABELS = {
+  soPhieu:'Số phiếu', nguoiLap:'Người đề nghị', congTy:'Công ty',
+  phongBan:'Mã phòng ban', phongBanTen:'Tên phòng ban', noidung:'Nội dung',
+  ngayLap:'Ngày đề nghị', hinhThuc:'Hình thức TT', soTien:'Số tiền',
+  tienTe:'Tiền tệ', bangChu:'Bằng chữ', tenTKNH:'Chủ tài khoản',
+  soTKNH:'Số tài khoản', nganHang:'Ngân hàng',
+  ns_tenHC:'[NS] Tên Headcode', ns_hc:'[NS] Headcode', ns_soTien:'[NS] Số tiền',
+  ct_hc:'[CT] Headcode', ct_loai:'[CT] Loại CT', ct_ngay:'[CT] Ngày',
+  ct_donvi:'[CT] Đơn vị/NCC', ct_goc:'[CT] Gốc',
+};
+
+function _getTplMap(){
+  try{ return Object.assign({}, _TPL_DEFAULT_MAP, JSON.parse(localStorage.getItem(DNTT_TPL_MAP_KEY)||'{}')); }
+  catch(e){ return {..._TPL_DEFAULT_MAP}; }
+}
+
+function openDNTTTemplatePanel(){
+  const panel = document.getElementById('dntt-tpl-panel');
+  panel.style.display = panel.style.display==='none' ? '' : 'none';
+  _dnttUpdateTplUI();
+}
+
+function _dnttUpdateTplUI(){
+  const raw   = localStorage.getItem(DNTT_TPL_KEY);
+  const hasTpl = !!raw;
+  const statusEl = document.getElementById('dntt-tpl-status');
+  const clearBtn  = document.getElementById('dntt-tpl-clear-btn');
+  const mapDiv    = document.getElementById('dntt-tpl-mapping');
+  const btnLabel  = document.getElementById('dntt-tpl-btn-label');
+
+  if(statusEl) statusEl.innerHTML = hasTpl
+    ? '<i class="ph ph-check-circle" style="color:var(--green);"></i> <b>Template đã upload</b> — khi xuất phiếu sẽ dùng file này'
+    : '<i class="ph ph-warning" style="color:var(--orange);"></i> Chưa có template — sẽ tạo phiếu theo định dạng mặc định';
+
+  if(clearBtn)  clearBtn.style.display = hasTpl ? '' : 'none';
+  if(btnLabel)  btnLabel.textContent   = hasTpl ? '✅ Template' : 'Template';
+  if(mapDiv && hasTpl){
+    mapDiv.style.display = '';
+    _dnttRenderMapFields();
+  } else if(mapDiv){
+    mapDiv.style.display = 'none';
+  }
+}
+
+function _dnttRenderMapFields(){
+  const map = _getTplMap();
+  const container = document.getElementById('dntt-tpl-map-fields');
+  if(!container) return;
+  container.innerHTML = Object.entries(_TPL_FIELD_LABELS).map(([k,lbl])=>`
+    <label style="display:flex;flex-direction:column;gap:2px;">
+      <span style="color:var(--muted);font-size:10px;">${lbl}</span>
+      <input class="finput" style="font-size:11px;padding:3px 6px;" value="${map[k]||''}"
+        data-tpl-field="${k}" placeholder="ví dụ: B3">
+    </label>`).join('');
+}
+
+function dnttSaveMapping(){
+  const inputs = document.querySelectorAll('[data-tpl-field]');
+  const map = {};
+  inputs.forEach(el => { if(el.value.trim()) map[el.dataset.tplField] = el.value.trim().toUpperCase(); });
+  localStorage.setItem(DNTT_TPL_MAP_KEY, JSON.stringify(map));
+  toast('✅ Đã lưu cấu hình ô', 'ok');
+}
+
+function dnttUploadTemplate(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.xlsx';
+  inp.onchange = async e => {
+    const file = e.target.files[0]; if(!file) return;
+    if(!file.name.endsWith('.xlsx')){ toast('⚠️ Chỉ hỗ trợ file .xlsx','bad'); return; }
+    try{
+      const buf  = await file.arrayBuffer();
+      const arr  = new Uint8Array(buf);
+      // chunk-safe btoa
+      let b64 = '';
+      for(let i=0;i<arr.length;i+=8192) b64 += String.fromCharCode(...arr.subarray(i,i+8192));
+      localStorage.setItem(DNTT_TPL_KEY, btoa(b64));
+      toast('✅ Đã upload template: '+file.name,'ok');
+      _dnttUpdateTplUI();
+    }catch(err){
+      toast('❌ Lỗi: '+err.message,'bad');
+    }
+  };
+  inp.click();
+}
+
+function dnttClearTemplate(){
+  if(!confirm('Xóa template đã upload? App sẽ dùng lại định dạng mặc định.')) return;
+  localStorage.removeItem(DNTT_TPL_KEY);
+  localStorage.removeItem(DNTT_TPL_MAP_KEY);
+  _dnttUpdateTplUI();
+  toast('Đã xóa template','ok');
+}
+
+// ── Fill dữ liệu vào template đã upload ──────────────────────────────
+async function _generateFromTemplate(d){
+  const raw = localStorage.getItem(DNTT_TPL_KEY);
+  if(!raw) return null;
+  try{
+    const buf = Uint8Array.from(atob(raw), c=>c.charCodeAt(0));
+    const wb  = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf.buffer);
+    const ws  = wb.worksheets[0];
+    if(!ws) throw new Error('Không tìm thấy sheet trong template');
+
+    const map = _getTplMap();
+    const tt  = d.tienTe||'VND';
+    const soTien = d.soTien ? Number(d.soTien) : null;
+    const bangChu = soTienBangChu(d.soTien, d.tienTe);
+    const hinhThuc= d.hinhThuc||'CK';
+    const ckMark  = hinhThuc==='CK'?'☑':'☐';
+    const tmMark  = hinhThuc==='TM'?'☑':'☐';
+
+    const set = (addr, val, numFmt) => {
+      if(!addr) return;
+      try{
+        const cell = ws.getCell(addr);
+        cell.value = val;
+        if(numFmt) cell.numFmt = numFmt;
+      }catch(e){}
+    };
+
+    set(map.soPhieu,     d.soPhieu||'');
+    set(map.nguoiLap,    d.nguoiLap||'');
+    set(map.congTy,      (d.congTy||'').toUpperCase());
+    set(map.phongBan,    d.phongBan||'');
+    set(map.phongBanTen, d.phongBan||'');
+    set(map.noidung,     d.noidung||'');
+    set(map.ngayLap,     d.ngayLap||'');
+    set(map.hinhThuc,    `${ckMark}  Chuyển khoản              ${tmMark}  Tiền mặt`);
+    set(map.soTien,      soTien, '#,##0');
+    set(map.tienTe,      tt);
+    set(map.bangChu,     bangChu||'');
+    set(map.tenTKNH,     d.tenTKNH||'');
+    set(map.soTKNH,      d.soTKNH||'');
+    set(map.nganHang,    d.nganHang||'');
+    set(map.ns_tenHC,    d.tenHeadcode||'');
+    set(map.ns_hc,       d.headcode ? String(d.headcode) : '', '@');
+    set(map.ns_soTien,   soTien, '#,##0');
+    set(map.ct_hc,       d.headcode ? String(d.headcode) : '', '@');
+    set(map.ct_loai,     d.soHD ? 'Hóa đơn' : '');
+    set(map.ct_ngay,     d.ngayLap ? String(d.ngayLap) : '', '@');
+    set(map.ct_donvi,    d.ncc||'');
+    set(map.ct_goc,      'x');
+
+    return wb;
+  }catch(err){
+    console.error('[TPL]', err);
+    toast('⚠️ Lỗi đọc template: '+err.message+'. Dùng định dạng mặc định.','warn');
+    return null;
+  }
+}
+
 // ══════════════════ EXCEL BUILDER — ExcelJS (full styling) ══════════════════
 async function _generateDNTTExcel(d){
   try{
     if(typeof ExcelJS === 'undefined') throw new Error('ExcelJS chưa tải xong, vui lòng thử lại.');
+
+    const safeNcc = (d.ncc||'DNTT').replace(/[\\/:\*\?"<>|]/g,'_').replace(/\s+/g,'_');
+    const fileName = `${d.soPhieu||'DNTT'}_${safeNcc}_${d.ngayLap||'ngay'}.xlsx`;
+
+    // ── Ưu tiên dùng template đã upload ──
+    const hasTpl = !!localStorage.getItem(DNTT_TPL_KEY);
     const isDuAn = d.loaiMau && d.loaiMau.includes('du an');
-    const wb = new ExcelJS.Workbook();
-    wb.creator = 'QLTS CNTT'; wb.created = new Date();
+    let wb = null;
 
-    if(isDuAn) await _excelBuildDuAn(wb, d);
-    else       await _excelBuildVanHanh(wb, d);
+    if(hasTpl && !isDuAn){
+      wb = await _generateFromTemplate(d);   // null nếu lỗi → fallback
+    }
 
-    const buf = await wb.xlsx.writeBuffer();
+    if(!wb){
+      // Fallback: tạo từ đầu
+      wb = new ExcelJS.Workbook();
+      wb.creator = 'QLTS CNTT'; wb.created = new Date();
+      if(isDuAn) await _excelBuildDuAn(wb, d);
+      else       await _excelBuildVanHanh(wb, d);
+    }
+
+    const buf  = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    const safeNcc = (d.ncc||'DNTT').replace(/[\\/:\*\?"<>|]/g,'_').replace(/\s+/g,'_');
-    a.download = `${d.soPhieu||'DNTT'}_${safeNcc}_${d.ngayLap||'ngay'}.xlsx`;
-    a.href = url; document.body.appendChild(a); a.click();
+    a.download = fileName; a.href = url;
+    document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
-    toast(`✅ Đã xuất "${a.download}"`, 'ok');
+    toast(`✅ Đã xuất "${fileName}"${hasTpl&&!isDuAn?' (dùng template)':''}`, 'ok');
   }catch(err){
     console.error('[ĐNTT]', err);
     toast('❌ Lỗi xuất Excel: ' + err.message, 'bad');
