@@ -2645,7 +2645,7 @@ input[type=checkbox].row-cb{
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <label style="font-size:11px;color:var(--muted);">Số phiếu</label>
-            <input type="text" id="dntt-f-sophieu" class="finput" placeholder="Tự sinh nếu để trống" style="width:100%;">
+            <input type="text" id="dntt-f-sophieu" class="finput" placeholder="Để trống nếu chưa có số" style="width:100%;">
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);">Ngày lập <span style="color:var(--red)">*</span></label>
@@ -9114,7 +9114,7 @@ async function saveDNTTForm(draftOnly){
 
   const rec = {
     id,
-    soPhieu:  v('dntt-f-sophieu') || genDNTTSoPhieu(),
+    soPhieu:  v('dntt-f-sophieu') || '',
     ngayLap:  ngay,
     congTy:   congty,
     phongBan: v('dntt-f-phongban'),
