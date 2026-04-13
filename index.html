@@ -9311,19 +9311,28 @@ const _EX = {
 
 // ─── PR Vận Hành ────────────────────────────────────────────────
 async function _excelBuildVanHanh(wb, d){
-  const ws = wb.addWorksheet('Phieu DNTT', { pageSetup:{ paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.2,footer:0.2} } });
+  const ws = wb.addWorksheet('Phieu DNTT', {
+    pageSetup:{
+      paperSize: 9,              // A4
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins:{ left:0.39, right:0.39, top:0.59, bottom:0.59, header:0.2, footer:0.2 }
+    }
+  });
 
-  // ── 9 cột (A–I) khớp với bảng ngân sách ──
+  // ── 9 cột A–I: tổng width ~128 → vừa A4 portrait ──
   ws.columns = [
-    {width:24},  // A – nhãn / Tên Headcode
-    {width:13},  // B – Headcode
-    {width:11},  // C – Số NS / Loại CT
-    {width:11},  // D – Đã SD / Ngày
-    {width:13},  // E – Còn lại / Đơn vị (phần 1)
-    {width:14},  // F – Số TT đề nghị / Đơn vị (phần 2)
+    {width:26},  // A – nhãn / Tên Headcode
+    {width:15},  // B – Headcode          (đủ cho 8+ ký tự)
+    {width:12},  // C – Số NS / Loại CT
+    {width:13},  // D – Đã SD / Ngày      (đủ cho dd/mm/yyyy)
+    {width:13},  // E – Còn lại / Đơn vị 1
+    {width:14},  // F – Số TT / Đơn vị 2
     {width:11},  // G – Số phát sinh / Gốc
     {width:11},  // H – Số bổ sung / Sao
-    {width:14},  // I – Ghi chú / Số tiền nếu có
+    {width:13},  // I – Ghi chú / Số tiền
   ];
 
   const C = (addr, val, opts) => _EX.cell(ws, addr, val, opts);
@@ -9466,7 +9475,7 @@ async function _excelBuildVanHanh(wb, d){
     ws.getRow(r).height = 17;
     const brd = { font:fN(false,9), border:_EX.border };
     C(`A${r}`, tenHC,   { ...brd, align:_EX.align('left','middle') });
-    C(`B${r}`, hc,      { ...brd, align:_EX.align('center','middle') });
+    C(`B${r}`, hc ? String(hc) : '', { ...brd, align:_EX.align('center','middle'), numFmt:'@' });
     C(`C${r}`, null,    brd);
     C(`D${r}`, null,    brd);
     C(`E${r}`, null,    brd);
@@ -9508,7 +9517,7 @@ async function _excelBuildVanHanh(wb, d){
     const brd = { font:fN(false,9), border:_EX.border };
     C(`A${r}`, hc,     { ...brd, align:_EX.align('center','middle') });
     C(`C${r}`, loai,   { ...brd, align:_EX.align('center','middle') });
-    C(`D${r}`, ngayCT, { ...brd, align:_EX.align('center','middle') });
+    C(`D${r}`, ngayCT ? String(ngayCT) : '', { ...brd, align:_EX.align('center','middle'), numFmt:'@' });
     C(`E${r}`, donvi,  { ...brd, align:_EX.align('left','middle',true) });
     C(`G${r}`, goc,    { ...brd, align:_EX.align('center','middle') });
     C(`H${r}`, sao,    { ...brd, align:_EX.align('center','middle') });
@@ -9568,11 +9577,15 @@ async function _excelBuildVanHanh(wb, d){
     const cell = ws.getCell(a);
     cell.border = { bottom:{style:'thin'} };
   });
+
+  /* ── print area = toàn bộ nội dung, đảm bảo in vừa A4 ── */
+  ws.pageSetup.printArea = 'A1:I35';
+  ws.pageSetup.horizontalCentered = true;
 }
 
 // ─── PR Dự Án ────────────────────────────────────────────────
 async function _excelBuildDuAn(wb, d){
-  const ws = wb.addWorksheet('Phiếu ĐNTT', { pageSetup:{ paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0 } });
+  const ws = wb.addWorksheet('Phieu DNTT DuAn', { pageSetup:{ paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, margins:{left:0.39,right:0.39,top:0.59,bottom:0.59,header:0.2,footer:0.2} } });
   ws.columns = [
     {width:28},{width:20},{width:12},{width:10},{width:14},{width:14},{width:14},{width:10}
   ];
