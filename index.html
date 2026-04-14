@@ -1900,8 +1900,15 @@ input[type=checkbox].row-cb{
       </div>
       <div id="dntt-tpl-mapping" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
         <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;">Cấu hình ô điền (tùy chỉnh nếu template có layout khác)</div>
+        <div style="background:#FFF3CD;border:1px solid #FFC107;border-radius:6px;padding:8px 10px;font-size:11px;color:#856404;margin-bottom:8px;">
+          ⚠️ <b>Quan trọng:</b> Hãy upload file template <b>trống</b> (chưa điền số tiền). Nếu template đã có số tiền cũ, hãy dùng nút <b>Scan ô số tiền</b> để tìm đúng địa chỉ ô rồi cập nhật cấu hình bên dưới.
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;font-size:11px;" id="dntt-tpl-map-fields"></div>
-        <button class="btn btn-icon-ph" style="margin-top:8px;font-size:11px;" onclick="dnttSaveMapping()"><i class="ph ph-floppy-disk"></i> Lưu cấu hình ô</button>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-icon-ph" style="font-size:11px;" onclick="dnttSaveMapping()"><i class="ph ph-floppy-disk"></i> Lưu cấu hình ô</button>
+          <button class="btn btn-icon-ph" style="font-size:11px;color:var(--accent2);" onclick="dnttScanAmountCells()"><i class="ph ph-magnifying-glass"></i> Scan ô số tiền</button>
+        </div>
+        <div id="dntt-tpl-scan-result" style="display:none;margin-top:8px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:8px 10px;font-size:11px;"></div>
       </div>
     </div>
 
@@ -9444,6 +9451,74 @@ function dnttSaveMapping(){
   toast('✅ Đã lưu cấu hình ô', 'ok');
 }
 
+// Scan template — liệt kê tất cả ô có giá trị số lớn (> 1,000)
+// Giúp user tìm đúng địa chỉ ô số tiền trong template
+async function dnttScanAmountCells(){
+  const raw = localStorage.getItem(DNTT_TPL_KEY);
+  if(!raw){ toast('Chưa upload template','warn'); return; }
+  const resultEl = document.getElementById('dntt-tpl-scan-result');
+  if(resultEl){ resultEl.style.display=''; resultEl.innerHTML = '⏳ Đang quét template…'; }
+  try{
+    const buf = Uint8Array.from(atob(raw), c=>c.charCodeAt(0));
+    const wb  = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf.buffer);
+    const ws  = wb.worksheets[0];
+    if(!ws) throw new Error('Không tìm thấy sheet');
+
+    const found = [];
+    ws.eachRow((row, rIdx) => {
+      row.eachCell({ includeEmpty:false }, (cell) => {
+        const v = cell.value;
+        const num = typeof v === 'number' ? v
+                  : (typeof v === 'string' && /^[\d,. ]+$/.test(v.trim())) ? parseFloat(v.replace(/[,. ]/g,'')) : null;
+        if(num !== null && num >= 1000 && num < 1e10 && !(num >= 2000 && num <= 2100)){
+          found.push({ addr: cell.address, val: num });
+        }
+      });
+    });
+
+    if(!found.length){
+      if(resultEl) resultEl.innerHTML = '✅ Không tìm thấy ô số tiền nào trong template (template đã sạch).';
+      return;
+    }
+
+    // Sort by row then col
+    found.sort((a,b) => {
+      const ra = parseInt(a.addr.replace(/[A-Z]/g,''));
+      const rb = parseInt(b.addr.replace(/[A-Z]/g,''));
+      return ra - rb;
+    });
+
+    let html = '<b>📍 Các ô chứa số tiền tìm thấy trong template:</b><br><br>';
+    html += '<table style="border-collapse:collapse;width:100%;">';
+    html += '<tr style="background:#DBEAFE;"><th style="padding:4px 8px;text-align:left;">Địa chỉ ô</th><th style="padding:4px 8px;text-align:right;">Giá trị</th><th style="padding:4px 8px;">Hành động</th></tr>';
+    found.forEach(({addr,val}) => {
+      html += `<tr style="border-top:1px solid #BFDBFE;">
+        <td style="padding:4px 8px;font-weight:700;color:var(--accent);">${addr}</td>
+        <td style="padding:4px 8px;text-align:right;">${val.toLocaleString('vi-VN')}</td>
+        <td style="padding:4px 8px;">
+          <button class="btn btn-icon-ph" style="font-size:10px;padding:2px 7px;"
+            onclick="dnttSetAmountCell('${addr}')">Dùng ô này cho Số tiền</button>
+        </td>
+      </tr>`;
+    });
+    html += '</table><div style="margin-top:8px;color:var(--muted);">Nhấn "Dùng ô này" để cập nhật cấu hình mapping, sau đó nhấn <b>Lưu cấu hình ô</b>.</div>';
+    if(resultEl){ resultEl.style.display=''; resultEl.innerHTML = html; }
+  }catch(e){
+    if(resultEl) resultEl.innerHTML = '❌ Lỗi scan: ' + e.message;
+  }
+}
+
+// Cập nhật địa chỉ ô "Số tiền" trong mapping UI
+function dnttSetAmountCell(addr){
+  // Cập nhật input field soTien và ns_soTien
+  document.querySelectorAll('[data-tpl-field="soTien"],[data-tpl-field="ns_soTien"]').forEach(el => {
+    el.value = addr.toUpperCase();
+    el.style.background = '#FEF9C3';
+  });
+  toast(`✅ Đã cập nhật ô Số tiền → ${addr}. Nhấn "Lưu cấu hình ô" để lưu lại.`, 'ok');
+}
+
 function dnttUploadTemplate(){
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = '.xlsx';
@@ -9547,6 +9622,37 @@ async function _generateFromTemplate(d){
     set(map.ct_ngay,     d.ngayLap ? String(d.ngayLap) : '', '@');
     set(map.ct_donvi,    d.ncc||'');
     set(map.ct_goc,      'x');
+
+    // ── Fallback scan: tìm ô nào trong template còn chứa số tiền cũ (khác soTien mới)
+    // rồi thay thế — xử lý trường hợp mapping địa chỉ sai
+    if(soTien > 0){
+      const written = new Set(); // theo dõi các ô đã ghi đúng
+      if(map.soTien)   written.add(map.soTien.toUpperCase());
+      if(map.ns_soTien) written.add(map.ns_soTien.toUpperCase());
+
+      ws.eachRow((row) => {
+        row.eachCell({ includeEmpty: false }, (cell) => {
+          const addr = cell.address ? cell.address.toUpperCase() : '';
+          if(written.has(addr)) return; // bỏ qua ô đã ghi
+          const v = cell.value;
+          const num = typeof v === 'number' ? v
+                    : (typeof v === 'string' && /^\d[\d,. ]*$/.test(v)) ? parseFloat(v.replace(/[,. ]/g,'')) : null;
+          // Nếu ô chứa số > 10,000 và khác soTien mới → có thể là ô số tiền cũ bị sót
+          if(num !== null && num > 10000 && Math.abs(num - soTien) > 1){
+            console.warn('[TPL fallback] Phát hiện số tiền cũ', num, 'tại', addr, '→ sẽ thay bằng', soTien);
+            // Chỉ thay thế nếu đây rõ ràng là ô tiền (không phải ngày, headcode dài, v.v.)
+            // Điều kiện an toàn: num > 10000, không phải năm (< 2100), không phải headcode (< 99999999)
+            if(num >= 10000 && num < 1e10 && !(num >= 2000 && num <= 2100)){
+              let target = cell;
+              if(target.isMerged && target.master && target.master !== target) target = target.master;
+              target.value = soTien;
+              target.numFmt = '#,##0';
+              written.add(addr);
+            }
+          }
+        });
+      });
+    }
 
     return wb;
   }catch(err){
