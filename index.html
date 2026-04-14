@@ -9704,15 +9704,15 @@ async function msalSpProvisionDNTTList(){
   const site = MSAL_CONFIG.spSite;
   const listName = MSAL_CONFIG.spDNTTList;
   const base = `${site}/_api/web/lists`;
+  const fieldBase = `${base}/getbytitle('${listName}')/fields`;
+  const typeMap = { Text: 2, Note: 3, Number: 9 };
+
   let listExists = false;
   try{
-    const check = await msalSpReq(`${base}/getbytitle('${listName}')?$select=Title,Id`);
+    await msalSpReq(`${base}/getbytitle('${listName}')?$select=Title,Id`);
     listExists = true;
-    const listUrl = `${site}/Lists/${listName}/AllItems.aspx`;
-    console.log('[DNTT-SP] ✅ List đã tồn tại:', listName, '| URL:', listUrl);
-    toast(`ℹ️ List "${listName}" đã tồn tại. Xem tại: ${listUrl}`, 'ok');
+    console.log('[DNTT-SP] ✅ List đã tồn tại:', listName);
   }catch(e){
-    // 404 = list chưa có → tạo mới
     console.log('[DNTT-SP] List chưa tồn tại, đang tạo mới:', listName);
   }
 
@@ -9724,39 +9724,59 @@ async function msalSpProvisionDNTTList(){
         Title: listName,
         BaseTemplate: 100,
         Description: 'Danh sách Đề Nghị Thanh Toán CNTT',
-        OnQuickLaunch: true,   // hiện trong navigation trái
+        OnQuickLaunch: true,
       })
     });
     console.log('[DNTT-SP] ✅ Đã tạo list, ID:', created?.Id);
+  }
 
-    // Thêm từng cột
-    const fieldBase = `${base}/getbytitle('${listName}')/fields`;
-    const typeMap = { Text: 2, Note: 3, Number: 9 };
-    for(const f of _DNTT_SP_FIELDS){
-      try{
-        await msalSpReq(fieldBase, {
-          method:'POST',
-          body: JSON.stringify({
-            '__metadata': { 'type': 'SP.Field' },
-            Title: f.name,
-            FieldTypeKind: typeMap[f.type]||2,
-          })
-        });
-      }catch(fe){ console.warn('[DNTT-SP] Bỏ qua cột lỗi:', f.name, fe.message); }
+  // Lấy danh sách cột hiện có trên SP
+  const existingFields = new Set();
+  try{
+    const fdata = await msalSpReq(`${fieldBase}?$select=Title&$top=200`);
+    (fdata?.value||[]).forEach(f => existingFields.add(f.Title));
+    console.log('[DNTT-SP] Cột hiện có:', [...existingFields].join(', '));
+  }catch(e){ console.warn('[DNTT-SP] Không đọc được cột hiện có:', e.message); }
+
+  // Thêm các cột còn thiếu
+  let added = 0;
+  for(const f of _DNTT_SP_FIELDS){
+    if(existingFields.has(f.name)){
+      console.log('[DNTT-SP] Cột đã có, bỏ qua:', f.name);
+      continue;
     }
+    try{
+      await msalSpReq(fieldBase, {
+        method:'POST',
+        body: JSON.stringify({
+          '__metadata': { 'type': 'SP.Field' },
+          Title: f.name,
+          FieldTypeKind: typeMap[f.type]||2,
+        })
+      });
+      console.log('[DNTT-SP] ✅ Đã thêm cột:', f.name);
+      added++;
+    }catch(fe){ console.warn('[DNTT-SP] Bỏ qua cột lỗi:', f.name, fe.message); }
+  }
 
-    // Thêm cột vào default view
+  // Thêm cột mới vào default view
+  if(added > 0){
     try{
       const viewUrl = `${base}/getbytitle('${listName}')/DefaultView/ViewFields`;
       for(const f of _DNTT_SP_FIELDS){
-        await msalSpReq(`${viewUrl}/addViewField('${f.name}')`, { method:'POST', body:'{}' });
+        if(!existingFields.has(f.name)){
+          await msalSpReq(`${viewUrl}/addViewField('${f.name}')`, { method:'POST', body:'{}' });
+        }
       }
     }catch(ve){ console.warn('[DNTT-SP] View fields:', ve.message); }
-
-    const listUrl = `${site}/Lists/${listName}/AllItems.aspx`;
-    console.log('[DNTT-SP] 🎉 Hoàn tất. URL:', listUrl);
-    toast(`✅ Đã tạo SharePoint List "${listName}"`, 'ok');
   }
+
+  const listUrl = `${site}/Lists/${listName}/AllItems.aspx`;
+  const msg = listExists
+    ? (added > 0 ? `✅ Đã thêm ${added} cột mới vào "${listName}"` : `ℹ️ List "${listName}" đã đầy đủ`)
+    : `✅ Đã tạo SharePoint List "${listName}"`;
+  console.log('[DNTT-SP] 🎉', msg, '| URL:', listUrl);
+  toast(msg, 'ok');
 }
 
 // Load tất cả ĐNTT từ SP → merge vào dnttList
