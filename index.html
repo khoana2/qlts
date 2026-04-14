@@ -9360,7 +9360,8 @@ const _TPL_DEFAULT_MAP = {
   phongBanTen: 'G5',   // Tên phòng ban
   noidung:     'B6',   // Nội dung thanh toán
   ngayLap:     'B7',   // Ngày đề nghị
-  hinhThuc:    'B8',   // Hình thức thanh toán (text)
+  hinhThuc:    'B8',   // Hình thức TT — ô Chuyển khoản
+  hinhThucTM:  'F8',   // Hình thức TT — ô Tiền mặt
   soTien:      'B9',   // Số tiền
   tienTe:      'I9',   // Tiền tệ
   bangChu:     'B10',  // Bằng chữ
@@ -9382,7 +9383,7 @@ const _TPL_DEFAULT_MAP = {
 const _TPL_FIELD_LABELS = {
   soPhieu:'Số phiếu', nguoiLap:'Người đề nghị', congTy:'Công ty',
   phongBan:'Mã phòng ban', phongBanTen:'Tên phòng ban', noidung:'Nội dung',
-  ngayLap:'Ngày đề nghị', hinhThuc:'Hình thức TT', soTien:'Số tiền',
+  ngayLap:'Ngày đề nghị', hinhThuc:'Hình thức TT (ô CK)', hinhThucTM:'Hình thức TT (ô TM)', soTien:'Số tiền',
   tienTe:'Tiền tệ', bangChu:'Bằng chữ', tenTKNH:'Chủ tài khoản',
   soTKNH:'Số tài khoản', nganHang:'Ngân hàng',
   ns_tenHC:'[NS] Tên Headcode', ns_hc:'[NS] Headcode', ns_soTien:'[NS] Số tiền',
@@ -9517,7 +9518,21 @@ async function _generateFromTemplate(d){
     set(map.phongBanTen, d.phongBan||'');
     set(map.noidung,     d.noidung||'');
     set(map.ngayLap,     d.ngayLap||'');
-    set(map.hinhThuc,    `${ckMark}  Chuyển khoản              ${tmMark}  Tiền mặt`);
+    // Hình thức thanh toán: 2 ô riêng, tô màu ô được chọn
+    const _applyHinhThucCell = (addr, mark, label, isSelected) => {
+      if(!addr) return;
+      try{
+        let cell = ws.getCell(addr);
+        if(cell.isMerged && cell.master && cell.master !== cell) cell = cell.master;
+        cell.value = `${mark}  ${label}`;
+        cell.alignment = { horizontal:'center', vertical:'middle' };
+        cell.font = { bold: isSelected, size:10, color:{ argb: isSelected ? 'FF006100' : 'FF888888' } };
+        cell.fill = { type:'pattern', pattern:'solid',
+          fgColor:{ argb: isSelected ? 'FFC6EFCE' : 'FFF2F2F2' } };
+      }catch(e){}
+    };
+    _applyHinhThucCell(map.hinhThuc,   ckMark, 'Chuyển khoản', hinhThuc==='CK');
+    _applyHinhThucCell(map.hinhThucTM, tmMark, 'Tiền mặt',     hinhThuc==='TM');
     set(map.soTien,      soTien, '#,##0');
     set(map.tienTe,      tt);
     set(map.bangChu,     bangChu||'');
@@ -9717,12 +9732,18 @@ async function _excelBuildVanHanh(wb, d){
   rowSimple(6, 'Nội dung thanh toán:', d.noidung||'', 22, true);
   rowSplit (7, 'Ngày đề nghị:', ngay, 'Thời hạn thanh toán:', '');
 
-  /* ── Hình thức thanh toán ── */
-  ws.getRow(8).height = 18;
-  ws.mergeCells('B8:I8');
+  /* ── Hình thức thanh toán — 2 ô riêng, ô được chọn nền xanh ── */
+  ws.getRow(8).height = 20;
+  ws.mergeCells('B8:E8');   // Chuyển khoản
+  ws.mergeCells('F8:I8');   // Tiền mặt
   C('A8', 'Hình thức thanh toán:', { font:fN(true,9), align:_EX.align('left','middle'), border:_EX.border });
-  C('B8', `${ckMark}  Chuyển khoản                    ${tmMark}  Tiền mặt`,
-      { font:fN(false,10), align:_EX.align('left','middle'), border:_EX.border });
+  // Fill màu: được chọn → xanh lá (#C6EFCE / text #006100), không chọn → xám nhạt (#F2F2F2)
+  const fillCK  = hinhThuc==='CK' ? _EX.fill('C6EFCE') : _EX.fill('F2F2F2');
+  const fillTM  = hinhThuc==='TM' ? _EX.fill('C6EFCE') : _EX.fill('F2F2F2');
+  const fontCK  = hinhThuc==='CK' ? { ...fN(true,10),  color:{argb:'FF006100'} } : { ...fN(false,10), color:{argb:'FF888888'} };
+  const fontTM  = hinhThuc==='TM' ? { ...fN(true,10),  color:{argb:'FF006100'} } : { ...fN(false,10), color:{argb:'FF888888'} };
+  C('B8', `${ckMark}  Chuyển khoản`, { fill:fillCK, font:fontCK, align:_EX.align('center','middle'), border:_EX.border });
+  C('F8', `${tmMark}  Tiền mặt`,     { fill:fillTM, font:fontTM, align:_EX.align('center','middle'), border:_EX.border });
 
   /* ── Số tiền ── */
   ws.getRow(9).height = 20;
