@@ -2133,6 +2133,10 @@ input[type=checkbox].row-cb{
             <option>🏢 Bàn giao dự án</option>
           </select>
         </div>
+        <div class="field" id="f-ncc-wrap" style="display:none;">
+          <label>Nhà cung cấp</label>
+          <input type="text" id="f-ncc" placeholder="VD: Công ty TNHH ABC"/>
+        </div>
         <div class="field" id="f-congTyNguon-wrap" style="display:none;">
           <label>Công ty nguồn</label>
           <input type="text" id="f-congTyNguon" placeholder="VD: TTG HCM → TTG HN"/>
@@ -5272,7 +5276,7 @@ function renderTable(){
           ${warrantyBadge(a)}
           ${xacNhanBadge(a.id)}
         </td>
-        <td>
+        <td style="position:relative;z-index:3;">
           <div class="row-actions">
             <button class="sa-btn" title="Q.Action" onclick="openSmartAction('${a.id}',this)" style="margin:0 auto;">
               <span style="font-size:15px;pointer-events:none;line-height:1;">✨</span>
@@ -5753,7 +5757,7 @@ async function resyncDetail(){
 function clearForm(){
   ['f-id','f-maTaiSan','f-model','f-serial','f-nguoiDung','f-email',
    'f-cpu','f-ram','f-ssd','f-gpu','f-manHinh','f-noiDung','f-ketQua','f-suaChua','f-ghiChu',
-   'f-ngaySuKien','f-ngayMua','f-ngayHetBH','f-congTy']
+   'f-ngaySuKien','f-ngayMua','f-ngayHetBH','f-congTy','f-ncc','f-congTyNguon','f-soHoaDon','f-giaTri']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const ws = document.getElementById('f-warranty-status');
   if(ws){ ws.textContent='—'; ws.style.color='var(--muted)'; }
@@ -5800,6 +5804,8 @@ function fillForm(a){
   setSelect('f-tinhTrang', a.tinhTrang||'Đang dùng');
   setSelect('f-trangThaiHienTai', a.trangThaiHienTai);
   setSelect('f-nguonThietBi', a.nguonThietBi);
+  const elNcc = document.getElementById('f-ncc');
+  if(elNcc) elNcc.value = a.ncc||'';
   const elCTN = document.getElementById('f-congTyNguon');
   if(elCTN) elCTN.value = a.congTyNguon||'';
   const elHD = document.getElementById('f-soHoaDon');
@@ -5817,13 +5823,16 @@ function setSelect(id, val){
 
 function onNguonChange(){
   const v = document.getElementById('f-nguonThietBi')?.value||'';
+  const showNcc    = v.includes('Mua mới') || v.includes('Thuê') || v.includes('Leasing');
   const showCty    = v.includes('Điều chuyển');
   const showHoaDon = v.includes('Mua mới') || v.includes('Thuê') || v.includes('Leasing');
-  const showGia    = v !== '';  // Hiện Giá trị cho mọi nguồn đã chọn
+  const showGia    = v !== '';
+  const wNcc  = document.getElementById('f-ncc-wrap');
   const wCty  = document.getElementById('f-congTyNguon-wrap');
   const wHD   = document.getElementById('f-soHoaDon-wrap');
   const wGia  = document.getElementById('f-giaTri-wrap');
   const lblGia = document.getElementById('f-giaTri-label');
+  if(wNcc)  wNcc.style.display  = showNcc    ? '' : 'none';
   if(wCty)  wCty.style.display  = showCty    ? '' : 'none';
   if(wHD)   wHD.style.display   = showHoaDon ? '' : 'none';
   if(wGia)  wGia.style.display  = showGia    ? '' : 'none';
@@ -5869,6 +5878,7 @@ async function saveAsset(){
     ghiChu:document.getElementById('f-ghiChu').value,
     congTy:(document.getElementById('f-congTy')?.value||'').trim(),
     nguonThietBi: document.getElementById('f-nguonThietBi')?.value||'',
+    ncc:          (document.getElementById('f-ncc')?.value||'').trim(),
     congTyNguon:  (document.getElementById('f-congTyNguon')?.value||'').trim(),
     soHoaDon:     (document.getElementById('f-soHoaDon')?.value||'').trim(),
     giaTri:       document.getElementById('f-giaTri')?.value ? Number(document.getElementById('f-giaTri').value) : '',
