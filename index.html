@@ -9623,9 +9623,32 @@ async function _generateFromTemplate(d){
     set(map.ct_donvi,    d.ncc||'');
     set(map.ct_goc,      'x');
 
-    // ── Fallback scan 1: quét toàn bộ worksheet (rows 1–30)
-    // Ghi đè soTien vào MỌI ô chứa số tiền lớn (>= 10,000) — bao gồm cả số trùng
-    // → xử lý trường hợp mapping sai địa chỉ hoặc template có số tiền cũ
+    // ── Helper: lấy giá trị thực từ ô (xử lý cả formula cell) ──
+    const getCellNum = (cell) => {
+      const v = cell.value;
+      if(typeof v === 'number') return v;
+      // Formula cell: {formula:'...', result:450000} hoặc {sharedFormula:'...', result:450000}
+      if(v && typeof v === 'object' && typeof v.result === 'number') return v.result;
+      // String có thể là số (ít gặp)
+      if(typeof v === 'string' && /^[\d]+$/.test(v.trim())) return parseFloat(v);
+      return null;
+    };
+    const getCellText = (cell) => {
+      const v = cell.value;
+      if(typeof v === 'string') return v.toLowerCase();
+      if(v && typeof v === 'object' && typeof v.result === 'string') return v.result.toLowerCase();
+      return '';
+    };
+    const overwriteCell = (cell, newVal, numFmt) => {
+      let target = cell;
+      if(target.isMerged && target.master && target.master !== target) target = target.master;
+      // Xóa formula nếu có, ghi giá trị mới
+      target.value = newVal;
+      if(numFmt) target.numFmt = numFmt;
+    };
+
+    // ── Fallback scan 1: ghi đè soTien vào MỌI ô chứa số >= 10,000 (rows 1–30)
+    // Bao gồm formula cell, xử lý cả trường hợp mapping sai địa chỉ
     if(soTien > 0){
       const writtenFB = new Set();
       [map.soTien, map.ns_soTien].filter(Boolean).forEach(a => writtenFB.add(a.toUpperCase()));
@@ -9633,36 +9656,32 @@ async function _generateFromTemplate(d){
       ws.eachRow((row, rIdx) => {
         if(rIdx < 1 || rIdx > 30) return;
         row.eachCell({ includeEmpty: false }, (cell) => {
-          const addr = cell.address ? cell.address.toUpperCase() : '';
+          const addr = (cell.address||'').toUpperCase();
           if(writtenFB.has(addr)) return;
-          const v = cell.value;
-          const num = typeof v === 'number' ? v : null;
+          const num = getCellNum(cell);
+          // Thay thế ô số >= 10,000, không phải năm (2000-2100), không phải headcode dài
           if(num !== null && num >= 10000 && num < 1e9 && !(num >= 2000 && num <= 2100)){
-            console.log('[TPL fallback-num] Ghi đè', num, '→', soTien, 'tại', addr);
-            let target = cell;
-            if(target.isMerged && target.master && target.master !== target) target = target.master;
-            target.value = soTien;
-            target.numFmt = '#,##0';
+            console.log('[TPL fb-num] Ghi đè', num, '→', soTien, '@', addr);
+            overwriteCell(cell, soTien, '#,##0');
             writtenFB.add(addr);
           }
         });
       });
     }
 
-    // ── Fallback scan 2: ghi đè bangChu vào ô nào chứa text "nghìn đồng" / "triệu đồng" cũ
+    // ── Fallback scan 2: ghi đè bangChu vào ô chứa text "đồng" (bằng chữ cũ)
     if(bangChu){
       const writtenBC = new Set([map.bangChu].filter(Boolean).map(a => a.toUpperCase()));
       ws.eachRow((row, rIdx) => {
         if(rIdx < 1 || rIdx > 30) return;
         row.eachCell({ includeEmpty: false }, (cell) => {
-          const addr = cell.address ? cell.address.toUpperCase() : '';
+          const addr = (cell.address||'').toUpperCase();
           if(writtenBC.has(addr)) return;
-          const v = typeof cell.value === 'string' ? cell.value.toLowerCase() : '';
-          if(v.includes('nghìn đồng') || v.includes('triệu đồng') || v.includes('đồng chẵn')){
-            console.log('[TPL fallback-bc] Ghi đè bangChu tại', addr);
-            let target = cell;
-            if(target.isMerged && target.master && target.master !== target) target = target.master;
-            target.value = bangChu;
+          const txt = getCellText(cell);
+          if(txt.includes('nghìn đồng') || txt.includes('triệu đồng') ||
+             txt.includes('trăm đồng')  || txt.includes('đồng chẵn')){
+            console.log('[TPL fb-bc] Ghi đè bangChu @', addr);
+            overwriteCell(cell, bangChu);
             writtenBC.add(addr);
           }
         });
