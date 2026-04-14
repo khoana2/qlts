@@ -1880,6 +1880,9 @@ input[type=checkbox].row-cb{
         <button class="btn btn-icon-ph" onclick="exportDNTTListExcel()" title="Xuất danh sách ra Excel"><i class="ph ph-file-xls"></i> Xuất DS</button>
         <button class="btn btn-icon-ph" onclick="openDNTTTemplatePanel()" title="Cài đặt template Excel" id="dntt-tpl-btn"
           style="border-color:var(--border);"><i class="ph ph-file-arrow-up"></i> <span id="dntt-tpl-btn-label">Template</span></button>
+        <button id="dntt-sp-sync-btn" class="btn btn-icon-ph" onclick="syncAllDNTTToSP()"
+          title="Đồng bộ tất cả ĐNTT lên SharePoint" style="display:none;border-color:#0078d4;color:#0078d4;">
+          <i class="ph ph-cloud-arrow-up"></i> Sync SP</button>
         <button class="btn primary btn-icon-ph" onclick="openDNTTForm()"><i class="ph ph-plus"></i> Tạo ĐNTT</button>
       </div>
     </div>
@@ -2902,6 +2905,7 @@ const MSAL_CONFIG = {
   spLicenseHistList: 'Quan_Ly_LicenseHistory',   // list lịch sử gia hạn mặc định (TTG)
   spTransferList:    'Quan_Ly_TransferHistory',   // list lịch sử bàn giao mặc định (TTG)
   spXacNhanList:     'Quan_Ly_XacNhan_BanGiao',   // list xác nhận bàn giao mặc định (TTG)
+  spDNTTList:        'Quan_Ly_DNTT',              // list đề nghị thanh toán mặc định (TTG)
   redirectUri: window.location.origin + window.location.pathname,  // tự động
   scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Write', 'Mail.Send', 'User.Read'],
 };
@@ -2939,6 +2943,9 @@ const COMPANY_TRANSFER_MAP = {
 const COMPANY_XACNHAN_MAP = {
   'LLM-member': 'Quan_Ly_XacNhan_BanGiao_LLM',
 };
+const COMPANY_DNTT_MAP = {
+  // 'LLM-member': 'Quan_Ly_DNTT_LLM',
+};
 const COMPANY_GROUP_LABEL = {
   'LLM-member': 'Lancaster Legacy Management',
 };
@@ -2947,6 +2954,7 @@ const DEFAULT_SP_LICENSE_LIST     = MSAL_CONFIG.spLicenseList;
 const DEFAULT_SP_LICENSE_HIST_LIST= MSAL_CONFIG.spLicenseHistList;
 const DEFAULT_SP_TRANSFER_LIST    = MSAL_CONFIG.spTransferList;
 const DEFAULT_SP_XACNHAN_LIST     = MSAL_CONFIG.spXacNhanList;
+const DEFAULT_SP_DNTT_LIST        = MSAL_CONFIG.spDNTTList;
 // ════════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════ CONFIRM FORM CONFIG ════════════════════════════════
@@ -3218,6 +3226,7 @@ async function detectUserCompany(){
   MSAL_CONFIG.spLicenseHistList = DEFAULT_SP_LICENSE_HIST_LIST;
   MSAL_CONFIG.spTransferList    = DEFAULT_SP_TRANSFER_LIST;
   MSAL_CONFIG.spXacNhanList     = DEFAULT_SP_XACNHAN_LIST;
+  MSAL_CONFIG.spDNTTList        = DEFAULT_SP_DNTT_LIST;
   const hasMaps = Object.keys(COMPANY_GROUP_MAP).length || Object.keys(COMPANY_ADMIN_GROUP_MAP).length;
   if(!hasMaps) return;
   try {
@@ -3237,6 +3246,7 @@ async function detectUserCompany(){
       MSAL_CONFIG.spLicenseHistList = COMPANY_LICENSE_HIST_MAP[grp] || DEFAULT_SP_LICENSE_HIST_LIST;
       MSAL_CONFIG.spTransferList    = COMPANY_TRANSFER_MAP[grp]     || DEFAULT_SP_TRANSFER_LIST;
       MSAL_CONFIG.spXacNhanList     = COMPANY_XACNHAN_MAP[grp]      || DEFAULT_SP_XACNHAN_LIST;
+      MSAL_CONFIG.spDNTTList        = COMPANY_DNTT_MAP[grp]         || DEFAULT_SP_DNTT_LIST;
     }
 
     // 1. Kiểm tra COMPANY_ADMIN_GROUP_MAP (cấu hình tường minh)
@@ -3401,6 +3411,10 @@ async function msalSpLoad(){
     await msalSpLoadLicenses();
     await msalSpLoadTransfers();
     await msalSpLoadXacNhan();
+    // Hiện nút Sync SP ở tab ĐNTT + load ĐNTT
+    const dnttBtn = document.getElementById('dntt-sp-sync-btn');
+    if(dnttBtn) dnttBtn.style.display = can('sync') ? 'inline-flex' : 'none';
+    await msalSpLoadDNTT();
   }catch(e){
     console.error('[MSAL] load error:', e);
     msalSetBar('⚠️ Lỗi tải SP: ' + e.message,'s-err');
@@ -9052,8 +9066,11 @@ function renderDNTT(){
     const licBadge = linkedLic
       ? `<span style="font-size:11px;color:var(--accent2);" title="${esc(linkedLic.ten||'')}"><i class="ph ph-link"></i> ${esc(linkedLic.ten||'').slice(0,20)}</span>`
       : '<span style="color:var(--muted);font-size:11px;">—</span>';
+    const spBadge = d._spId
+      ? `<span title="Đã đồng bộ SharePoint (ID: ${d._spId})" style="font-size:13px;cursor:default;">☁️</span>`
+      : (msalEnabled() ? `<span title="Chưa đồng bộ SharePoint" style="font-size:13px;cursor:default;opacity:.4;">☁️</span>` : '');
     return `<tr>
-      <td style="color:var(--muted);font-size:11px;">${i+1}</td>
+      <td style="color:var(--muted);font-size:11px;">${i+1} ${spBadge}</td>
       <td style="font-family:monospace;font-size:11px;font-weight:600;">${esc(d.soPhieu||'—')}</td>
       <td style="font-size:11px;">${d.ngayLap||'—'}</td>
       <td style="font-size:11px;font-weight:600;">${esc(d.congTy||'—')}</td>
@@ -9250,10 +9267,21 @@ async function saveDNTTForm(draftOnly){
   // Lưu thông tin NCC vào sổ địa chỉ nếu được chọn
   dnttSaveVendorIfChecked(rec.ncc, rec.tenTKNH, rec.soTKNH, rec.nganHang, rec.headcode);
 
+  // Giữ lại _spId nếu đang edit record đã có SP
+  if(existingId){
+    const old = dnttList.find(x=>x.id===existingId);
+    if(old?._spId) rec._spId = old._spId;
+  }
+
   const idx = dnttList.findIndex(x=>x.id===id);
   if(idx>=0) dnttList[idx]=rec; else dnttList.push(rec);
   saveDNTT();
   closeModal('modal-dntt-form');
+
+  // Sync lên SharePoint nền (không block UI)
+  if(msalEnabled()){
+    msalSpPushDNTT(rec.id).then(()=>renderDNTT()).catch(e=>console.warn('[DNTT SP push]',e));
+  }
 
   if(!draftOnly){
     _generateDNTTExcel(rec);
@@ -9264,7 +9292,7 @@ async function saveDNTTForm(draftOnly){
 }
 
 // ── Xóa ──
-function deleteDNTTRecord(id){
+async function deleteDNTTRecord(id){
   const d = dnttList.find(x=>x.id===id);
   if(!d) return;
   if(!confirm(`Xóa phiếu "${d.soPhieu||d.id}"?\nThao tác này không thể hoàn tác.`)) return;
@@ -9272,6 +9300,10 @@ function deleteDNTTRecord(id){
   saveDNTT();
   renderDNTT();
   toast('🗑️ Đã xóa phiếu ĐNTT','ok');
+  // Xóa trên SharePoint nền nếu có _spId
+  if(d._spId && msalEnabled()){
+    msalSpDeleteDNTT(d._spId).catch(e=>console.warn('[DNTT SP delete]',e));
+  }
 }
 
 // ── Xuất Excel từ row ──
@@ -9305,6 +9337,216 @@ function exportDNTTListExcel(){
   XLSX.utils.book_append_sheet(wb, ws, 'Danh sách ĐNTT');
   XLSX.writeFile(wb, `DanhSach_DNTT_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast('✅ Đã xuất danh sách ĐNTT','ok');
+}
+
+// ══════════════════ SHAREPOINT SYNC — ĐNTT ══════════════════
+
+// Cấu trúc cột SP List "Quan_Ly_DNTT" (tạo tự động nếu chưa có)
+const _DNTT_SP_FIELDS = [
+  { name:'NgayLap',     type:'Text'   },
+  { name:'CongTy',      type:'Text'   },
+  { name:'PhongBan',    type:'Text'   },
+  { name:'NguoiLap',    type:'Text'   },
+  { name:'LoaiMau',     type:'Text'   },
+  { name:'NoiDung',     type:'Note'   },
+  { name:'NCC',         type:'Text'   },
+  { name:'SoHD',        type:'Text'   },
+  { name:'SoTien',      type:'Number' },
+  { name:'TienTe',      type:'Text'   },
+  { name:'TenTKNH',     type:'Text'   },
+  { name:'SoTKNH',      type:'Text'   },
+  { name:'NganHang',    type:'Text'   },
+  { name:'Headcode',    type:'Text'   },
+  { name:'TenHeadcode', type:'Text'   },
+  { name:'HinhThuc',    type:'Text'   },
+  { name:'GhiChu',      type:'Note'   },
+  { name:'LicenseId',   type:'Text'   },
+  { name:'TrangThai',   type:'Text'   },
+  { name:'LocalId',     type:'Text'   },  // lưu id local để map ngược
+];
+
+// Chuyển record local → SP item body
+function dnttToSpItem(rec){
+  return {
+    Title:       rec.soPhieu || '',
+    NgayLap:     rec.ngayLap || '',
+    CongTy:      rec.congTy  || '',
+    PhongBan:    rec.phongBan|| '',
+    NguoiLap:    rec.nguoiLap|| '',
+    LoaiMau:     rec.loaiMau || '',
+    NoiDung:     rec.noidung || '',
+    NCC:         rec.ncc     || '',
+    SoHD:        rec.soHD    || '',
+    SoTien:      rec.soTien  ? Number(rec.soTien) : null,
+    TienTe:      rec.tienTe  || 'VND',
+    TenTKNH:     rec.tenTKNH || '',
+    SoTKNH:      rec.soTKNH  || '',
+    NganHang:    rec.nganHang|| '',
+    Headcode:    rec.headcode|| '',
+    TenHeadcode: rec.tenHeadcode||'',
+    HinhThuc:    rec.hinhThuc|| 'CK',
+    GhiChu:      rec.ghichu  || '',
+    LicenseId:   rec.licenseId||'',
+    TrangThai:   rec.trangThai||'draft',
+    LocalId:     rec.id      || '',
+  };
+}
+
+// Chuyển SP item → record local
+function spItemToDntt(item){
+  return {
+    id:          item.LocalId  || ('sp_'+item.ID),
+    _spId:       item.ID,
+    soPhieu:     item.Title    || '',
+    ngayLap:     item.NgayLap  || '',
+    congTy:      item.CongTy   || '',
+    phongBan:    item.PhongBan || '',
+    nguoiLap:    item.NguoiLap || '',
+    loaiMau:     item.LoaiMau  || '',
+    noidung:     item.NoiDung  || '',
+    ncc:         item.NCC      || '',
+    soHD:        item.SoHD     || '',
+    soTien:      item.SoTien   || null,
+    tienTe:      item.TienTe   || 'VND',
+    tenTKNH:     item.TenTKNH  || '',
+    soTKNH:      item.SoTKNH   || '',
+    nganHang:    item.NganHang || '',
+    headcode:    item.Headcode || '',
+    tenHeadcode: item.TenHeadcode||'',
+    hinhThuc:    item.HinhThuc || 'CK',
+    ghichu:      item.GhiChu   || '',
+    licenseId:   item.LicenseId|| null,
+    trangThai:   item.TrangThai|| 'draft',
+    createdAt:   item.Created  || new Date().toISOString(),
+  };
+}
+
+// Tự động tạo SP List nếu chưa tồn tại
+async function msalSpProvisionDNTTList(){
+  const site = MSAL_CONFIG.spSite;
+  const listName = MSAL_CONFIG.spDNTTList;
+  const base = `${site}/_api/web/lists`;
+  try{
+    // Kiểm tra list đã tồn tại chưa
+    await msalSpReq(`${base}/getbytitle('${listName}')?$select=Title`);
+    console.log('[DNTT-SP] List đã tồn tại:', listName);
+  }catch(e){
+    // List chưa có → tạo mới
+    console.log('[DNTT-SP] Tạo mới list:', listName);
+    await msalSpReq(base, {
+      method:'POST',
+      body: JSON.stringify({ Title: listName, BaseTemplate: 100,
+        Description: 'Danh sách Đề Nghị Thanh Toán CNTT' })
+    });
+    // Thêm từng cột
+    const fieldBase = `${base}/getbytitle('${listName}')/fields`;
+    const typeMap = { Text: 2, Note: 3, Number: 9 };
+    for(const f of _DNTT_SP_FIELDS){
+      try{
+        await msalSpReq(fieldBase, {
+          method:'POST',
+          body: JSON.stringify({ Title: f.name, FieldTypeKind: typeMap[f.type]||2 })
+        });
+      }catch(fe){ console.warn('[DNTT-SP] Bỏ qua cột lỗi:', f.name, fe.message); }
+    }
+    // Thêm các cột vào default view
+    try{
+      const viewUrl = `${base}/getbytitle('${listName}')/DefaultView/ViewFields`;
+      for(const f of _DNTT_SP_FIELDS){
+        await msalSpReq(`${viewUrl}/addViewField('${f.name}')`, { method:'POST', body:'{}' });
+      }
+    }catch(ve){ console.warn('[DNTT-SP] View fields:', ve.message); }
+    toast('✅ Đã tạo SharePoint List "'+listName+'"', 'ok');
+  }
+}
+
+// Load tất cả ĐNTT từ SP → merge vào dnttList
+async function msalSpLoadDNTT(){
+  const site = MSAL_CONFIG.spSite;
+  const listName = MSAL_CONFIG.spDNTTList;
+  if(!msalEnabled()) return;
+  try{
+    const url = `${site}/_api/web/lists/getbytitle('${listName}')/items`
+              + `?$top=500&$orderby=ID desc`;
+    const data = await msalSpReq(url);
+    const items = data?.value || [];
+    // Merge: SP là nguồn sự thật, ghi đè local nếu có cùng LocalId
+    const spRecs = items.map(spItemToDntt);
+    const localOnlyRecs = dnttList.filter(loc =>
+      !loc._spId && !spRecs.find(sp => sp.id === loc.id)
+    );
+    dnttList = [...spRecs, ...localOnlyRecs];
+    saveDNTT(); // cập nhật localStorage
+    console.log(`[DNTT-SP] Đã tải ${spRecs.length} phiếu từ SharePoint`);
+    return spRecs.length;
+  }catch(e){
+    console.warn('[DNTT-SP] Load lỗi:', e.message);
+    return 0;
+  }
+}
+
+// Lưu/cập nhật 1 ĐNTT lên SP
+async function msalSpPushDNTT(id){
+  const rec = dnttList.find(x=>x.id===id);
+  if(!rec) return;
+  if(!msalEnabled()) return;
+  const site = MSAL_CONFIG.spSite;
+  const listName = MSAL_CONFIG.spDNTTList;
+  const base = `${site}/_api/web/lists/getbytitle('${listName}')/items`;
+  try{
+    const body = dnttToSpItem(rec);
+    if(rec._spId){
+      // Update
+      await msalSpReq(`${base}(${rec._spId})`, {
+        method:'POST',
+        headers:{ 'X-HTTP-Method':'MERGE', 'IF-MATCH':'*' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      // Create
+      const res = await msalSpReq(base, { method:'POST', body: JSON.stringify(body) });
+      if(res?.ID){
+        rec._spId = res.ID;
+        if(!rec.id || rec.id === id) rec.id = 'sp_' + res.ID;
+        saveDNTT();
+      }
+    }
+    console.log('[DNTT-SP] ✅ Đã đồng bộ phiếu:', rec.soPhieu||rec.id);
+  }catch(e){
+    console.warn('[DNTT-SP] Push lỗi:', e.message);
+    toast('⚠️ Không sync được SP: '+e.message, 'warn');
+  }
+}
+
+// Xóa 1 ĐNTT khỏi SP
+async function msalSpDeleteDNTT(spId){
+  if(!spId || !msalEnabled()) return;
+  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spDNTTList}')/items(${spId})`;
+  try{
+    await msalSpReq(url, { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
+    console.log('[DNTT-SP] 🗑️ Đã xóa SP item:', spId);
+  }catch(e){ console.warn('[DNTT-SP] Delete lỗi:', e.message); }
+}
+
+// Sync thủ công toàn bộ ĐNTT lên SP (dùng cho nút "Sync SP")
+async function syncAllDNTTToSP(){
+  if(!msalEnabled()){ toast('Chưa đăng nhập Microsoft','warn'); return; }
+  const btn = document.getElementById('dntt-sp-sync-btn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner"></i> Đang sync…'; }
+  try{
+    await msalSpProvisionDNTTList();
+    let count=0;
+    for(const rec of dnttList){
+      await msalSpPushDNTT(rec.id);
+      count++;
+    }
+    toast(`☁️ Đã sync ${count} phiếu lên SharePoint`, 'ok');
+    renderDNTT();
+  }catch(e){
+    toast('❌ Sync lỗi: '+e.message, 'bad');
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-cloud-arrow-up"></i> Sync SP'; }
+  }
 }
 
 // ══════════════════ SỔ ĐỊA CHỈ NCC (Vendor Address Book) ══════════════════
