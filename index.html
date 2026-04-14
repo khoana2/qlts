@@ -2788,11 +2788,13 @@ input[type=checkbox].row-cb{
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);">Headcode</label>
-            <input type="text" id="dntt-f-headcode" class="finput" placeholder="Ví dụ: 17091100" style="width:100%;">
+            <input type="text" id="dntt-f-headcode" class="finput" placeholder="Gõ mã hoặc tên..." style="width:100%;"
+              list="dntt-headcode-list" oninput="dnttHeadcodeLookup(this.value)" autocomplete="off">
+            <datalist id="dntt-headcode-list"></datalist>
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);">Tên Headcode (danh mục chi)</label>
-            <input type="text" id="dntt-f-tenheadcode" class="finput" placeholder="Ví dụ: Máy móc, thiết bị" style="width:100%;">
+            <input type="text" id="dntt-f-tenheadcode" class="finput" placeholder="Tự động điền khi chọn headcode" style="width:100%;">
           </div>
           <div style="grid-column:1/-1;">
             <label style="font-size:11px;color:var(--muted);">Hình thức thanh toán</label>
@@ -9004,6 +9006,163 @@ async function msalSpLoadTransfers(){
 <script>
 // ═══════════════════════ ĐỀ NGHỊ THANH TOÁN (ĐNTT) MODULE ═══════════════════════
 
+// ── Headcode map ──
+const HEADCODE_MAP = {
+  '11010099':'CP xác định sản phẩm khác','11010100':'Báo cáo Nghiên cứu Khả Thi',
+  '11010200':'Đánh giá tác động môi trường','11010300':'CP cho các phương án Khả Thi',
+  '11010400':'CP chuyên gia tư vấn sản phẩm','11010500':'CP thẩm định phương án Khả Thi',
+  '11020099':'CP pháp lý kỹ thuật khác','11020100':'Thẩm tra hiệu quả/khả thi DA',
+  '11020200':'Đo vẽ','11020300':'Khảo sát địa hình/hiện trạng',
+  '11020400':'CP nghiệm thu PCCC','11020500':'CP nghiệm thu công trình XD',
+  '11030099':'CP khác liên quan đến đất','11030100':'CP mua đất (không VAT)',
+  '11030200':'Bồi thường - GPMB','11030300':'Hỗ trợ bồi thường-GPMB khác',
+  '11030400':'Thuế chuyển quyền sử dụng đất','11030500':'Thuế trước bạ + công chứng đất',
+  '11030600':'Chi phí mua đất (có VAT)',
+  '12010099':'C.tác chuẩn bị mặt bằng khác','12010100':'KS bom mìn và chất độc hại',
+  '12010200':'CP phá hủy c.trình cũ, vật cản','12010300':'CP phí dọn dẹp mặt bằng',
+  '12010400':'CP di dời vật sản','12010500':'CP khảo sát địa chất & san lấp',
+  '12020099':'Chi phí tường vay khác','12020100':'CP thử cọc',
+  '12020400':'CP cọc đại trà & tường vay',
+  '12030099':'Chi phí xây dựng hầm khác','12030100':'CP đào xới đất',
+  '12030200':'CP xây dựng hầm thô','12030300':'Khung & sàn kết cấu (hầm)',
+  '12030400':'CP Kingpost','12030500':'Biện pháp thi công móng & hầm','12030600':'Chi phí móng',
+  '12040099':'Xây dựng phần thân khác','12040100':'CP xây thô từng tầng',
+  '12040200':'CP xây dựng phần mái','12040300':'Khung & sàn kết cấu (thân)',
+  '12040400':'Tường ngoài','12040500':'Cửa ngoài, cửa sổ & nhôm Kính',
+  '12040600':'Công tác chống thấm','12040700':'Ram dốc & cầu thang',
+  '12040800':'Các công tác bên ngoài','12040900':'Các yêu cầu chung',
+  '12050099':'Hoàn thiện trong khác','12050100':'Tường và vách ngăn',
+  '12050200':'Công tác cửa gỗ','12050300':'Công tác cửa sắt','12050310':'Công tác đá',
+  '12050320':'Tủ kệ bếp và tủ nhà vệ sinh','12050330':'Thiết bị bếp',
+  '12050400':'Phụ kiện cửa','12050500':'Hoàn thiện tường nội thất',
+  '12050600':'Hoàn thiện sàn nội thất','12050700':'Hoàn thiện trần nội thất',
+  '12050800':'Bảng hiệu,bảng chỉ dẫn,vạch sơ',
+  '12060099':'Đồ nội thất khác','12060100':'Thiết bị vệ sinh (căn hộ)',
+  '12060200':'Đồ nội thất cố định (căn hộ)',
+  '12070099':'Thiết bị, n.thất h.thiện khác','12070100':'Trang thiết bị KV chung & QLTN',
+  '12070200':'Thiết bị vệ sinh khu công cộng','12070300':'Trang thiết bị KV t. ích c.dân',
+  '12070400':'Hệ thống ống thải rác','12070500':'Thiết bị phòng gym',
+  '12070600':'Thiết bị vui chơi trẻ em','12070700':'Nội thât rời cho khu lễ tân và',
+  '12080099':'Các HT cơ điện khác','12080110':'HT thang máy đứng',
+  '12080120':'HT thanh cuốn, thang trượt','12080130':'HT vận chuyển hàng hóa',
+  '12080140':'HT trung chuyển khác','12080200':'Hệ thống cấp thoát nước',
+  '12080210':'Thiết bị cấp thoát nước','12080220':'HT cung cấp nước sạch',
+  '12080230':'HT thoát & xử lý nước thải SH','12080240':'HT thoát nước mưa',
+  '12080250':'HT xử lý  nước hồ bơi','12080260':'HT cấp thoát nước chuyên dụng',
+  '12080270':'HT cấp thoát nước khác','12080300':'Hệ thống điều hòa không khí',
+  '12080310':'Nguồn điện cho HTTT & ĐHKK','12080320':'HT sưởi ấm',
+  '12080330':'HT máy lạnh/ĐHKK','12080340':'HT thông thoáng khí',
+  '12080350':'HT quan sát & đ.khiển cho HVAC','12080400':'Hệ thống PCCC',
+  '12080410':'HT vòi phun tự động','12080420':'HT ống phun nước chữa cháy',
+  '12080430':'Các HT chữa cháy chuyên dụng','12080440':'Các kệ thống chữa cháy khác',
+  '12080500':'Hệ thống điện','12080510':'HT cấp & truyền tải điện',
+  '12080520':'HT chiếu sáng','12080530':'HT liên lạc & bảo vệ',
+  '12080540':'Các HT điện chuyên dụng','12080550':'HT V.thông thông tin liên lạc',
+  '12080600':'Công tác chuẩn bị','12080700':'Phí quản lý của nhà thầu chính',
+  '12080800':'Hệ thống khí gas hóa lỏng LPG',
+  '12090099':'CP đấu nối h.tầng c.quan khác','12090110':'Đường xe chạy nội bộ',
+  '12090120':'Bãi đậu xe ngoài trời','12090130':'Đường đi bộ nội khu',
+  '12090140':'CP cảnh quan & t.bị ngoại thất','12090150':'B.hiệu, c.dẫn, HT ng.trời khác',
+  '12090210':'Đấu nối đường điện (nổi, ngầm','12090220':'Đấu nối HT chiếu sáng',
+  '12090230':'Đấu nối viễn thông & liên lạc','12090240':'Đấu nối đường cấp thoát nước',
+  '12090310':'Cung cấp điện phục vụ thi công','12090320':'Cung cấp nước phục vụ thi công',
+  '12100099':'CP nhà mẫu khác','12100100':'CP thiết kế, tư vấn NM',
+  '12100200':'CP thiết kế cơ điện nhà mẫu','12100300':'CP xây dựng nhà mẫu',
+  '12100400':'CP nội thất rời','12100500':'Trang trí nhà mẫu (POSM)',
+  '12100600':'Sa bàn, bảng chỉ dẫn','12100700':'CP quản lý xây dựng nhà mẫu',
+  '12100800':'CP fitout nhà mẫu','12100900':'Chi phí thuê VP làm nhà mẫu',
+  '12110099':'Tư vấn khác','12110100':'TV QLDA & giám sát thi công',
+  '12110200':'Tư vấn chi phí cho dự án','12110300':'Thiết kế kiến trúc',
+  '12110400':'Thiết kế kết cấu','12110500':'Thiết kế cơ điện (gồm PCCC)',
+  '12110600':'Tư vấn thẩm tra thiết kế','12110700':'Thiết kế cảnh quan',
+  '12110800':'Thiết kế nội thất','12110900':'Tư vấn kiến trúc địa phương',
+  '12111000':'Tư vấn BIM','12111100':'Tư vấn thiết kế ánh sáng',
+  '12111200':'Tư vấn kế cấu mặt dựng','12111300':'TV thẩm tra thiết kế kết cấu',
+  '12111400':'CP bảo hiểm công trình XD','12111500':'CP quản lý thiết kế',
+  '12111600':'CP quản lý nhà thầu phụ','12999999':'CP xây dựng cần bốc tách',
+  '13010000':'CP lãi vay ngân hàng','13020000':'CP lãi vay chủ sở hữu',
+  '13030000':'Phát hành B.lãnh thanh toán XD','13040000':'Phát hành bảo hiểm T.hiện DA',
+  '13050099':'CP tài chính khác','13060000':'CP đánh giá chênh lệch TG',
+  '14010099':'CP content marketing khác','14010100':'Film 3D, VR, Teaser/TVC, video',
+  '14010200':'Photography, CGI, Flycam',
+  '14020099':'CP POSM khác','14020100':'Thiết kế hình ảnh POSM','14020200':'CP in ấn POSM',
+  '14030099':'Digital marketing - Khác','14030100':'Non Digital - Báo giấy',
+  '14030200':'Non Digital - OOH','14030300':'Digital marketing - Fix banner',
+  '14030400':'Digital marketing - PR article','14030500':'Digi marketing - Social media',
+  '14040099':'CP Event khác','14040100':'VIP Event','14040200':'Event công bố dự án',
+  '14040300':'Event khai trương nhà mẫu','14040400':'Event mở bán',
+  '14040500':'Event tri ân khách hàng','14040600':'Event bán hàng',
+  '14050099':'CP khác p.triển thương hiệu DA','14050200':'Truyền thông nội bộ',
+  '14050300':'Truyền thông đối ngoại & PR','14050400':'CP đo lường thương hiệu dự án',
+  '14060099':'CP Trading khác','14060100':'Driect mailing',
+  '14060200':'Digital - Facebook','14060300':'Digital - Display network',
+  '14070099':'CP nghiên cứu thị trường khác','14070100':'Nghiên cứu thị trường',
+  '15010099':'CP kinh doanh khác','15010100':'Hoa hồng (môi giới)',
+  '15010200':'Hoa hồng (giới thiệu)','15010300':'Hoa hồng (nhân viên nội bộ)',
+  '15010400':'Hoa hồng (nhân viên sales)','15010500':'Chi bồi thường hợp đồng',
+  '15010600':'Hoa hồng (hướng dẫn viên)','15010700':'Hoa hồng (Promoter)',
+  '15010800':'Hoa hồng (môi giới du lịch)','15010900':'Hoa hồng (tài xế)',
+  '15011000':'Hoa hồng (tiếp tân)','15020000':'Chiết khấu giảm giá bằng tiền',
+  '15030000':'CP khuyến mại','15040000':'CP quà tặng',
+  '15050000':'Hổ trợ LS cho KH vay mua CH','16010000':'CP bàn giao căn hộ',
+  '17010099':'CP nhân viên khác','17010101':'Lương và các khoản phụ cấp',
+  '17010102':'Các khoản trích theo lương','17010201':'Thưởng',
+  '17010202':'Lương tháng 13','17010203':'Lương phụ',
+  '17010300':'Bảo hiểm sức khỏe','17010400':'Thuê nhà cho quản lý',
+  '17020099':'CP đi lại khác','17020101':'CP xăng dầu lệ phí khác',
+  '17020102':'CP bảo trì sửa chữa xe quản lý','17020200':'Vé máy bay, xe lửa, tàu thủy',
+  '17020300':'Thuê xe, chi phí taxi','17030000':'Công tác phí',
+  '17040100':'Văn phòng phẩm','17040200':'Thiết bị văn phòng',
+  '17040300':'Điện','17040400':'Nước sinh hoạt','17040500':'Nước uống, đồ ăn nhẹ',
+  '17040600':'Điện thọai, fax','17040700':'Internet','17040800':'Gửi thư, bưu phẩm',
+  '17040900':'Photocopy, in ấn, mực in','17041000':'Truyền hình cáp','17041100':'Vệ sinh',
+  '17041200':'CP hoa-cây cảnh-sách báo,tạp c','17049999':'CP Vật tư,VP,và tiện ích khác',
+  '17050000':'CP khấu hao TSCĐ','17060000':'CP tuyển dụng & đào tạo',
+  '17070100':'CP Hội nghị và họp nội bộ','17070200':'Team Building',
+  '17090100':'Kết nối cao cấp','17090200':'Kiểm toán','17090300':'Tư vấn luật',
+  '17090400':'Thẩm định giá…','17090500':'Chi phí thuê (VP,kho bãi,MMTB)',
+  '17090600':'Thuê an ninh, bảo vệ','17090700':'Bảo trì nhà làm việc',
+  '17090800':'Bảo trì máy móc thiết bị','17090900':'Sữa chữa, bảo dưỡng nhỏ',
+  '17091000':'Chi phí giám sát môi trường','17091100':'Chi phí tiếp khách',
+  '17091200':'Quà biếu, tặng, ủng hộ…','17091300':'Chi phí dịch vụ mua ngoài khác',
+  '17091400':'Phí ngân hàng','17110100':'Thuế, phí và lệ phí',
+  '17120000':'Phân bổ chi phí, CCDC',
+  '17130100':'Nhà cửa, vật kiến trúc','17130200':'Máy móc, thiết bị',
+  '17130300':'Phương tiện vận tải truyền dẫn','17130400':'Thiết bị, dụng cụ quản lý',
+  '17130500':'Tài sản hữu hình khác','17130600':'Phí bản quyền',
+  '17130700':'Chi phí triển khai phần mềm','17130800':'Phí bảo trì',
+  '17130900':'Tài sản vô hình khác','19010100':'Chi phí thanh lý tài sản',
+  '19020200':'CP phạt vi phạm hợp đồng','19030300':'CP phạt vi phạm hành chính',
+  '19040400':'Chi phí khác','19171000':'DT KD BĐS đầu tư','19172000':'DT bán Dự án BĐS',
+};
+
+// Build datalist options một lần khi trang load
+function _buildHeadcodeDatalist(){
+  const dl = document.getElementById('dntt-headcode-list');
+  if(!dl) return;
+  dl.innerHTML = Object.entries(HEADCODE_MAP)
+    .map(([code, name]) => `<option value="${code}">${code} – ${name}</option>`)
+    .join('');
+}
+
+// Lookup: khi nhập mã → tự điền tên; khi nhập tên (tìm kiếm) → không xóa tên cũ
+function dnttHeadcodeLookup(val){
+  const v = (val||'').trim();
+  const nameEl = document.getElementById('dntt-f-tenheadcode');
+  if(!nameEl) return;
+  // Nếu gõ đúng mã số → điền tên
+  if(HEADCODE_MAP[v]){
+    nameEl.value = HEADCODE_MAP[v];
+    return;
+  }
+  // Nếu chọn từ datalist dạng "17130200 – Máy móc, thiết bị"
+  const codeMatch = v.match(/^(\d{8})/);
+  if(codeMatch && HEADCODE_MAP[codeMatch[1]]){
+    document.getElementById('dntt-f-headcode').value = codeMatch[1];
+    nameEl.value = HEADCODE_MAP[codeMatch[1]];
+  }
+}
+
 // ── State ──
 let dnttList = [];
 const DNTT_KEY = 'qlts_dntt_v1';
@@ -9157,6 +9316,7 @@ function openDNTTForm(prefill){
 
   dnttPreviewBangChu();
   dnttUpdateHinhThucUI();
+  _buildHeadcodeDatalist();
   openModal('modal-dntt-form');
 }
 
@@ -9192,6 +9352,7 @@ function openDNTTEdit(id){
   _refreshVendorQuickList(d.ncc || '');
   dnttPreviewBangChu();
   dnttUpdateHinhThucUI();
+  _buildHeadcodeDatalist();
   openModal('modal-dntt-form');
 }
 
