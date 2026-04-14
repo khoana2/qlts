@@ -2701,13 +2701,27 @@ input[type=checkbox].row-cb{
             <input type="date" id="dntt-f-ngay" class="finput" style="width:100%;">
           </div>
           <div>
+            <label style="font-size:11px;color:var(--muted);">Mã đơn vị</label>
+            <input type="text" id="dntt-f-madv" class="finput" placeholder="Vd: IT, ACC, HR…" style="width:100%;text-transform:uppercase;"
+              list="dntt-dept-list" oninput="dnttDonViLookup(this.value)" autocomplete="off">
+            <datalist id="dntt-dept-list"></datalist>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Phòng ban</label>
+            <input type="text" id="dntt-f-phongban" class="finput" placeholder="Tự điền khi chọn mã đơn vị" style="width:100%;">
+          </div>
+          <div>
             <label style="font-size:11px;color:var(--muted);">Công ty <span style="color:var(--red)">*</span></label>
             <input type="text" id="dntt-f-congty" class="finput" placeholder="Tên công ty" style="width:100%;" list="dntt-congty-list">
             <datalist id="dntt-congty-list"></datalist>
           </div>
           <div>
-            <label style="font-size:11px;color:var(--muted);">Phòng ban</label>
-            <input type="text" id="dntt-f-phongban" class="finput" placeholder="Ví dụ: CNTT, Kế toán…" style="width:100%;">
+            <label style="font-size:11px;color:var(--muted);">Tên dự án</label>
+            <input type="text" id="dntt-f-tenda" class="finput" placeholder="Tự điền khi chọn mã đơn vị" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Mã dự án</label>
+            <input type="text" id="dntt-f-mada" class="finput" placeholder="Vd: M01, TTG…" style="width:100%;">
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);">Người đề nghị</label>
@@ -9006,6 +9020,75 @@ async function msalSpLoadTransfers(){
 <script>
 // ═══════════════════════ ĐỀ NGHỊ THANH TOÁN (ĐNTT) MODULE ═══════════════════════
 
+// ── Bảng Đơn vị / Công ty / Dự án ──
+const DEPT_MAP = {
+  'ACC':{ ten:'P. Kế toán',                       congTy:'CÔNG TY CỔ PHẦN TRUNG THỦY LANCASTER',              tenDA:'LANCASTER',      maDA:'M01'   },
+  'ADM':{ ten:'P. HCQT',                           congTy:'CÔNG TY CỔ PHẦN ĐỊA ỐC TRUNG THỦY',                tenDA:'TTLAND',         maDA:'TTLAND'},
+  'APM':{ ten:'P. Khai thác quản lý TS BĐS',       congTy:'CÔNG TY CỔ PHẦN TẬP ĐOÀN TRUNG THỦY',             tenDA:'TTG',            maDA:'TTG'   },
+  'ASS':{ ten:'Văn phòng Tập đoàn',                congTy:'CÔNG TY CỔ PHẦN TÂN PHÚ LONG',                     tenDA:'LUMINAIRE',      maDA:'M04'   },
+  'BID':{ ten:'P. Đấu thầu',                       congTy:'CÔNG TY TNHH HUSH CREATIVE',                       tenDA:'EDEN',           maDA:'V01'   },
+  'BOD':{ ten:'HĐQT',                              congTy:'CÔNG TY CỔ PHẦN TRUNG THỦY ĐÀ NẴNG',              tenDA:'NAMO',           maDA:'R02'   },
+  'BOM':{ ten:'Ban Tổng Giám Đốc',                 congTy:'CÔNG TY TNHH ĐẦU TƯ BĐS T.N.T TRUNG THỦY',        tenDA:'LEGACY',         maDA:'M02'   },
+  'BS' :{ ten:'Chiến lược kinh doanh mảng DV',     congTy:'CÔNG TY CỔ PHẦN BẤT ĐỘNG SẢN EMPIRE LAND',        tenDA:'EMPIRE LAND',    maDA:'EML'   },
+  'CAP':{ ten:'P. Nguồn vốn',                      congTy:'CÔNG TY CP ĐẦU TƯ BẤT ĐỘNG SẢN TRUNG TÍN',        tenDA:'TRUNGTIN',       maDA:'TRT'   },
+  'CLE':{ ten:'Pháp lý doanh nghiệp',              congTy:'CÔNG TY CP TRUNG THỦY BÌNH THUẬN',                 tenDA:'BINHTHUAN',      maDA:'TTBT'  },
+  'CNC':{ ten:'Dự toán và quản lý hợp đồng',       congTy:'CÔNG TY TNHH BĐS MAVERICK AVENUE',                tenDA:'MAVERICK',       maDA:'MVR'   },
+  'CS' :{ ten:'P. CSKH',                           congTy:'CÔNG TY CP BẤT ĐỘNG SẢN TÍN NGHĨA',               tenDA:'TIN NGHIA',      maDA:'TNG'   },
+  'CSH':{ ten:'CSH thuộc nhà 26',                  congTy:'CÔNG TY CP ĐẦU TƯ AN THÙY ANH',                    tenDA:'ATA',            maDA:''      },
+  'DES':{ ten:'P. Thiết kế',                       congTy:'CÔNG TY CP TRẠM DỪNG DU LỊCH XANH',               tenDA:'MKTG',           maDA:''      },
+  'HR' :{ ten:'Nhân sự',                           congTy:'CÔNG TY CP SÀI GÒN-ĐỒNG NAI',                      tenDA:'MKLT',           maDA:''      },
+  'IA' :{ ten:'Ban kiểm toán nội bộ',              congTy:'CÔNG TY CỔ PHẦN QUẢN LÝ LANCASTER',                tenDA:'LM',             maDA:''      },
+  'INV':{ ten:'Đầu tư',                            congTy:'CÔNG TY CỔ PHẦN BĐS TRUNG NGHĨA',                  tenDA:'TRUNG NGHIA',    maDA:''      },
+  'IT' :{ ten:'IT',                                congTy:'CÔNG TY CỔ PHẦN NEW FRONTIER',                     tenDA:'NEW FRONTIER',   maDA:''      },
+  'LEG':{ ten:'Pháp lý dự án',                     congTy:'CÔNG TY CỔ PHẦN WEST YORKSHIRE',                   tenDA:'WEST YORKSHIRE', maDA:''      },
+  'MAR':{ ten:'Marketing',                         congTy:'CÔNG TY CỔ PHẦN ĐẦU TƯ XÂY DỰNG BUILD DEMAND',   tenDA:'BUILD DEMAND',   maDA:''      },
+  'PB' :{ ten:'P. Kế hoạch ngân sách',             congTy:'CÔNG TY CỔ PHẦN NÔNG NGHIỆP CỦ CHI',              tenDA:'CU CHI',         maDA:''      },
+  'PMO':{ ten:'P. Quản lý dự án',                  congTy:'CÔNG TY CỔ PHẦN EGODATA',                          tenDA:'EGODATA',        maDA:''      },
+  'SAL':{ ten:'Kinh doanh',                        congTy:'CÔNG TY TNHH MINH KHANG',                          tenDA:'MINH KHANG',     maDA:''      },
+  'SI' :{ ten:'Phòng lập quy',                     congTy:'CÔNG TY TNHH LANCASTER TÂN THUẬN',                 tenDA:'TAN THUAN',      maDA:''      },
+  'TR' :{ ten:'Ngân quỹ',                          congTy:'CÔNG TY TNHH BẤT ĐỘNG SẢN EMPIRE',                 tenDA:'EMPIRE',         maDA:''      },
+};
+// Danh sách công ty không gắn với đơn vị cụ thể
+const EXTRA_COMPANIES = [
+  'CÔNG TY TNHH ĐẦU TƯ THƯƠNG MẠI PHÚ MỸ',
+  'CÔNG TY TNHH DỊCH VỤ SEN SPA',
+  'CÔNG TY TNHH TRUNG THỦY SÀI GÒN',
+  'CÔNG TY TNHH ĐẦU TƯ THƯƠNG MẠI ĐỒNG TIẾN',
+  'CÔNG TY TNHH ĐẦU TƯ THƯƠNG MẠI DỊCH VỤ MÉT VUÔNG',
+  'CÔNG TY TNHH XỬ LÝ BÙN THẢI TRUNG THỦY HÀ NỘI',
+  'CÔNG TY TNHH ĐẦU TƯ BĐS TRUNG THỦY HÀ NỘI',
+  'CÔNG TY CP BĐS MANHATTAN AVENUE',
+  'CÔNG TY CP BẤT ĐỘNG SẢN BOARDWALK',
+  'CHỦ SỞ HỮU',
+];
+
+function _buildDeptDatalist(){
+  const dl = document.getElementById('dntt-dept-list');
+  if(!dl) return;
+  dl.innerHTML = Object.entries(DEPT_MAP)
+    .map(([code,d]) => `<option value="${code}">${code} – ${d.ten} (${d.congTy})</option>`)
+    .join('');
+}
+
+function dnttDonViLookup(val){
+  const v = (val||'').trim().toUpperCase();
+  const d = DEPT_MAP[v];
+  if(!d) return;
+  const setV = (id,value) => { const el=document.getElementById(id); if(el) el.value=value; };
+  setV('dntt-f-phongban', d.ten);
+  setV('dntt-f-congty',   d.congTy);
+  setV('dntt-f-tenda',    d.tenDA);
+  setV('dntt-f-mada',     d.maDA);
+}
+
+function _buildCongtyDatalist(){
+  const dl = document.getElementById('dntt-congty-list');
+  if(!dl) return;
+  const fromDept = Object.values(DEPT_MAP).map(d=>d.congTy);
+  const all = [...new Set([...fromDept, ...EXTRA_COMPANIES])].sort();
+  dl.innerHTML = all.map(c=>`<option value="${c}">`).join('');
+}
+
 // ── Headcode map ──
 const HEADCODE_MAP = {
   '11010099':'CP xác định sản phẩm khác','11010100':'Báo cáo Nghiên cứu Khả Thi',
@@ -9287,6 +9370,9 @@ function openDNTTForm(prefill){
   setV('dntt-f-tentknh','');
   setV('dntt-f-sotknh','');
   setV('dntt-f-nganhang','');
+  setV('dntt-f-madv','');
+  setV('dntt-f-tenda','');
+  setV('dntt-f-mada','');
   setV('dntt-f-headcode','');
   setV('dntt-f-tenheadcode','');
   document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => r.checked = r.value === 'CK');
@@ -9317,6 +9403,8 @@ function openDNTTForm(prefill){
   dnttPreviewBangChu();
   dnttUpdateHinhThucUI();
   _buildHeadcodeDatalist();
+  _buildDeptDatalist();
+  _buildCongtyDatalist();
   openModal('modal-dntt-form');
 }
 
@@ -9339,6 +9427,9 @@ function openDNTTEdit(id){
   setV('dntt-f-tentknh', d.tenTKNH);
   setV('dntt-f-sotknh', d.soTKNH);
   setV('dntt-f-nganhang', d.nganHang);
+  setV('dntt-f-madv', d.maDonVi||'');
+  setV('dntt-f-tenda', d.tenDA||'');
+  setV('dntt-f-mada', d.maDA||'');
   setV('dntt-f-headcode', d.headcode);
   setV('dntt-f-tenheadcode', d.tenHeadcode||'');
   document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => r.checked = r.value === (d.hinhThuc||'CK'));
@@ -9348,6 +9439,8 @@ function openDNTTEdit(id){
   document.getElementById('dntt-f-tiente').value = d.tienTe || 'VND';
   document.querySelectorAll('input[name="dntt-f-sheet"]').forEach(r => r.checked = r.value === (d.loaiMau||'PR (van hanh) '));
   _fillDNTTCongtyList();
+  _buildDeptDatalist();
+  _buildCongtyDatalist();
   _fillDNTTLicList(d.licenseId || '');
   _refreshVendorQuickList(d.ncc || '');
   dnttPreviewBangChu();
@@ -9360,6 +9453,8 @@ function _fillDNTTCongtyList(){
   const dl = document.getElementById('dntt-congty-list');
   if(!dl) return;
   const companies = [...new Set([
+    ...Object.values(DEPT_MAP).map(d=>d.congTy),
+    ...EXTRA_COMPANIES,
     ...assets.map(a=>a.congTy),
     ...licenses.map(l=>l.congTy),
     ...dnttList.map(d=>d.congTy)
@@ -9426,6 +9521,9 @@ async function saveDNTTForm(draftOnly){
     tenTKNH:  v('dntt-f-tentknh'),
     soTKNH:   v('dntt-f-sotknh'),
     nganHang: v('dntt-f-nganhang'),
+    maDonVi:  v('dntt-f-madv'),
+    tenDA:    v('dntt-f-tenda'),
+    maDA:     v('dntt-f-mada'),
     headcode:    v('dntt-f-headcode'),
     tenHeadcode: v('dntt-f-tenheadcode'),
     hinhThuc:    [...document.querySelectorAll('input[name="dntt-f-hinhthuc"]')].find(r=>r.checked)?.value || 'CK',
@@ -9515,8 +9613,11 @@ function exportDNTTListExcel(){
 // Cấu trúc cột SP List "Quan_Ly_DNTT" (tạo tự động nếu chưa có)
 const _DNTT_SP_FIELDS = [
   { name:'NgayLap',     type:'Text'   },
+  { name:'MaDonVi',     type:'Text'   },
   { name:'CongTy',      type:'Text'   },
   { name:'PhongBan',    type:'Text'   },
+  { name:'TenDA',       type:'Text'   },
+  { name:'MaDA',        type:'Text'   },
   { name:'NguoiLap',    type:'Text'   },
   { name:'LoaiMau',     type:'Text'   },
   { name:'NoiDung',     type:'Note'   },
@@ -9541,8 +9642,11 @@ function dnttToSpItem(rec){
   return {
     Title:       rec.soPhieu || '',
     NgayLap:     rec.ngayLap || '',
+    MaDonVi:     rec.maDonVi || '',
     CongTy:      rec.congTy  || '',
     PhongBan:    rec.phongBan|| '',
+    TenDA:       rec.tenDA   || '',
+    MaDA:        rec.maDA    || '',
     NguoiLap:    rec.nguoiLap|| '',
     LoaiMau:     rec.loaiMau || '',
     NoiDung:     rec.noidung || '',
@@ -9570,8 +9674,11 @@ function spItemToDntt(item){
     _spId:       item.ID,
     soPhieu:     item.Title    || '',
     ngayLap:     item.NgayLap  || '',
+    maDonVi:     item.MaDonVi  || '',
     congTy:      item.CongTy   || '',
     phongBan:    item.PhongBan || '',
+    tenDA:       item.TenDA    || '',
+    maDA:        item.MaDA     || '',
     nguoiLap:    item.NguoiLap || '',
     loaiMau:     item.LoaiMau  || '',
     noidung:     item.NoiDung  || '',
