@@ -2663,7 +2663,7 @@ input[type=checkbox].row-cb{
 </div>
 
 <!-- ══════════════ MODAL: FORM ĐNTT (Tạo/Sửa) ══════════════ -->
-<div class="modal-backdrop" id="modal-dntt-form" onclick="if(event.target===this)closeModal('modal-dntt-form')" style="display:none;">
+<div class="modal-backdrop" id="modal-dntt-form" style="display:none;">
   <div class="modal" style="max-width:720px;max-height:94vh;overflow-y:auto;">
     <div class="modal-head">
       <span id="dntt-form-title"><i class="ph ph-receipt"></i> Tạo Đề Nghị Thanh Toán</span>
@@ -7188,9 +7188,15 @@ function closeModal(id){
   el.classList.remove('open');
   el.style.display='none';
 }
+// Danh sách modal FORM — KHÔNG đóng khi click ngoài để tránh mất dữ liệu
+const _FORM_MODALS = new Set([
+  'modal-form', 'modal-transfer', 'modal-license', 'modal-dntt-form',
+  'modal-import', 'modal-xfer-company',
+]);
 document.addEventListener('click',e=>{
-  if(e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open'))
-    closeModal(e.target.id);
+  if(e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')){
+    if(!_FORM_MODALS.has(e.target.id)) closeModal(e.target.id);
+  }
 });
 
 // ═══════════════════════ TOAST ═══════════════════════
