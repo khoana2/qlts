@@ -9720,7 +9720,6 @@ async function msalSpProvisionDNTTList(){
     const created = await msalSpReq(base, {
       method:'POST',
       body: JSON.stringify({
-        '__metadata': { 'type': 'SP.List' },
         Title: listName,
         BaseTemplate: 100,
         Description: 'Danh sách Đề Nghị Thanh Toán CNTT',
@@ -9749,7 +9748,6 @@ async function msalSpProvisionDNTTList(){
       await msalSpReq(fieldBase, {
         method:'POST',
         body: JSON.stringify({
-          '__metadata': { 'type': 'SP.Field' },
           Title: f.name,
           FieldTypeKind: typeMap[f.type]||2,
         })
@@ -9805,7 +9803,7 @@ async function msalSpLoadDNTT(){
 }
 
 // Lưu/cập nhật 1 ĐNTT lên SP
-async function msalSpPushDNTT(id){
+async function msalSpPushDNTT(id, _retried){
   const rec = dnttList.find(x=>x.id===id);
   if(!rec) return;
   if(!_msalAccount) return;
@@ -9815,14 +9813,12 @@ async function msalSpPushDNTT(id){
   try{
     const body = dnttToSpItem(rec);
     if(rec._spId){
-      // Update
       await msalSpReq(`${base}(${rec._spId})`, {
         method:'POST',
         headers:{ 'X-HTTP-Method':'MERGE', 'IF-MATCH':'*' },
         body: JSON.stringify(body)
       });
     } else {
-      // Create
       const res = await msalSpReq(base, { method:'POST', body: JSON.stringify(body) });
       if(res?.ID){
         rec._spId = res.ID;
@@ -9832,6 +9828,12 @@ async function msalSpPushDNTT(id){
     }
     console.log('[DNTT-SP] ✅ Đã đồng bộ phiếu:', rec.soPhieu||rec.id);
   }catch(e){
+    // Nếu lỗi "property does not exist" → cột chưa có → provision rồi retry 1 lần
+    if(!_retried && e.message && e.message.includes('does not exist on type')){
+      console.warn('[DNTT-SP] Cột thiếu, đang provision rồi retry…');
+      await msalSpProvisionDNTTList();
+      return msalSpPushDNTT(id, true);
+    }
     console.warn('[DNTT-SP] Push lỗi:', e.message);
     toast('⚠️ Không sync được SP: '+e.message, 'warn');
   }
