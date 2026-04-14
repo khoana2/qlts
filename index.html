@@ -9668,51 +9668,49 @@ async function _generateFromTemplate(d){
       if(numFmt) target.numFmt = numFmt;
     };
 
-    // ── Fallback scan 1: ghi đè soTien vào ô số tiền thực sự trong vùng form
-    // Chỉ scan rows 1–15 (vùng header form), không scan bảng ngân sách/headcode bên dưới
-    // Bỏ qua headcode (số 8 chữ số bắt đầu bằng 1x, 2x) và số tài khoản ngân hàng dài
+    // ══ DEEP SCAN: quét TẤT CẢ sheets để tìm ô nguồn chứa số tiền cũ ══
+    // Template có thể có ô "data entry" ẩn ở sheet khác, các ô hiển thị dùng formula tham chiếu
+    // → cần thay thế ô nguồn (raw value), không chỉ ô hiển thị
     if(soTien > 0){
-      const writtenFB = new Set();
-      [map.soTien, map.ns_soTien].filter(Boolean).forEach(a => writtenFB.add(a.toUpperCase()));
+      const isAmountLike = (num) => {
+        if(num === null || num < 1000) return false;
+        const s = String(Math.round(Math.abs(num)));
+        const isYear     = num >= 2000 && num <= 2100;
+        const isHeadcode = s.length >= 7 && s.length <= 9 && /^[1-9]/.test(s);
+        const isBankAcc  = s.length >= 10;
+        return !isYear && !isHeadcode && !isBankAcc && num < 1e9;
+      };
 
-      ws.eachRow((row, rIdx) => {
-        if(rIdx < 1 || rIdx > 15) return; // chỉ vùng form header
-        row.eachCell({ includeEmpty: false }, (cell) => {
-          const addr = (cell.address||'').toUpperCase();
-          if(writtenFB.has(addr)) return;
-          const num = getCellNum(cell);
-          if(num === null) return;
-          const s = String(Math.round(num));
-          // Bỏ qua: năm (2000-2100), headcode 8 chữ số (1xxxxxxx), số TK ngân hàng > 9 chữ số
-          const isYear     = num >= 2000 && num <= 2100;
-          const isHeadcode = s.length === 8 && (s.startsWith('1') || s.startsWith('2'));
-          const isBankAcc  = s.length >= 9;
-          if(!isYear && !isHeadcode && !isBankAcc && num >= 10000 && num < 1e8){
-            console.log('[TPL fb-num] Ghi đè', num, '→', soTien, '@', addr);
-            overwriteCell(cell, soTien, '#,##0');
-            writtenFB.add(addr);
-          }
+      for(const sheet of wb.worksheets){
+        sheet.eachRow((row, rIdx) => {
+          row.eachCell({ includeEmpty: false }, (cell) => {
+            const v = cell.value;
+            // Chỉ thay RAW NUMBER (không phải formula) — đây là ô nguồn thực sự
+            if(typeof v === 'number' && isAmountLike(v)){
+              const addr = (cell.address||'').toUpperCase();
+              console.log(`[TPL deep] sheet="${sheet.name}" @${addr} raw=${v} → ${soTien}`);
+              overwriteCell(cell, soTien, '#,##0');
+            }
+          });
         });
-      });
+      }
     }
 
-    // ── Fallback scan 2: ghi đè bangChu vào ô chứa text "đồng" (bằng chữ cũ)
+    // ── Fallback bangChu: quét tất cả sheets tìm ô text "đồng" để thay bằng chữ mới
     if(bangChu){
-      const writtenBC = new Set([map.bangChu].filter(Boolean).map(a => a.toUpperCase()));
-      ws.eachRow((row, rIdx) => {
-        if(rIdx < 1 || rIdx > 30) return;
-        row.eachCell({ includeEmpty: false }, (cell) => {
-          const addr = (cell.address||'').toUpperCase();
-          if(writtenBC.has(addr)) return;
-          const txt = getCellText(cell);
-          if(txt.includes('nghìn đồng') || txt.includes('triệu đồng') ||
-             txt.includes('trăm đồng')  || txt.includes('đồng chẵn')){
-            console.log('[TPL fb-bc] Ghi đè bangChu @', addr);
-            overwriteCell(cell, bangChu);
-            writtenBC.add(addr);
-          }
+      for(const sheet of wb.worksheets){
+        sheet.eachRow((row, rIdx) => {
+          row.eachCell({ includeEmpty: false }, (cell) => {
+            const txt = getCellText(cell);
+            if(txt.includes('nghìn đồng') || txt.includes('triệu đồng') ||
+               txt.includes('trăm đồng')  || txt.includes('đồng chẵn')){
+              const addr = (cell.address||'').toUpperCase();
+              console.log(`[TPL deep-bc] sheet="${sheet.name}" @${addr} → bangChu`);
+              overwriteCell(cell, bangChu);
+            }
+          });
         });
-      });
+      }
     }
 
     return wb;
