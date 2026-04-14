@@ -9360,21 +9360,21 @@ const DNTT_TPL_MAP_KEY = 'qlts_dntt_tpl_map_v1';
 // Mapping mặc định: tên trường → địa chỉ ô trong template
 // (khớp với bố cục chuẩn phiếu ĐNTT vận hành 9 cột A–I)
 const _TPL_DEFAULT_MAP = {
-  soPhieu:     'B2',   // Số phiếu
-  nguoiLap:    'B3',   // Người đề nghị
-  congTy:      'B4',   // Công ty
-  phongBan:    'B5',   // Mã phòng ban
-  phongBanTen: 'G5',   // Tên phòng ban
-  noidung:     'B6',   // Nội dung thanh toán
-  ngayLap:     'B7',   // Ngày đề nghị
-  hinhThuc:    'B8',   // Hình thức TT — ô Chuyển khoản
-  hinhThucTM:  'F8',   // Hình thức TT — ô Tiền mặt
-  soTien:      'B9',   // Số tiền
+  soPhieu:     'C2',   // Số phiếu
+  nguoiLap:    'G3',   // Người đề nghị (bên phải)
+  congTy:      'C4',   // Công ty
+  phongBan:    'C5',   // Mã phòng ban
+  phongBanTen: 'H5',   // Tên phòng ban
+  noidung:     'C6',   // Nội dung thanh toán
+  ngayLap:     'C7',   // Ngày đề nghị
+  hinhThuc:    'C8',   // Hình thức TT — ô Chuyển khoản
+  hinhThucTM:  'G8',   // Hình thức TT — ô Tiền mặt
+  soTien:      'G9',   // Số tiền (cột G, bên phải)
   tienTe:      'I9',   // Tiền tệ
-  bangChu:     'B10',  // Bằng chữ
-  tenTKNH:     'B12',  // Chủ tài khoản
+  bangChu:     'C10',  // Bằng chữ
+  tenTKNH:     'C12',  // Chủ tài khoản
   soTKNH:      'G12',  // Số tài khoản
-  nganHang:    'B13',  // Tên ngân hàng
+  nganHang:    'C13',  // Tên ngân hàng
   // Bảng ngân sách - dòng 1
   ns_tenHC:    'A17',  // Tên Headcode
   ns_hc:       'B17',  // Headcode
@@ -9623,32 +9623,47 @@ async function _generateFromTemplate(d){
     set(map.ct_donvi,    d.ncc||'');
     set(map.ct_goc,      'x');
 
-    // ── Fallback scan: tìm ô nào trong template còn chứa số tiền cũ (khác soTien mới)
-    // rồi thay thế — xử lý trường hợp mapping địa chỉ sai
+    // ── Fallback scan 1: quét toàn bộ worksheet (rows 1–30)
+    // Ghi đè soTien vào MỌI ô chứa số tiền lớn (>= 10,000) — bao gồm cả số trùng
+    // → xử lý trường hợp mapping sai địa chỉ hoặc template có số tiền cũ
     if(soTien > 0){
-      const written = new Set(); // theo dõi các ô đã ghi đúng
-      if(map.soTien)   written.add(map.soTien.toUpperCase());
-      if(map.ns_soTien) written.add(map.ns_soTien.toUpperCase());
+      const writtenFB = new Set();
+      [map.soTien, map.ns_soTien].filter(Boolean).forEach(a => writtenFB.add(a.toUpperCase()));
 
-      ws.eachRow((row) => {
+      ws.eachRow((row, rIdx) => {
+        if(rIdx < 1 || rIdx > 30) return;
         row.eachCell({ includeEmpty: false }, (cell) => {
           const addr = cell.address ? cell.address.toUpperCase() : '';
-          if(written.has(addr)) return; // bỏ qua ô đã ghi
+          if(writtenFB.has(addr)) return;
           const v = cell.value;
-          const num = typeof v === 'number' ? v
-                    : (typeof v === 'string' && /^\d[\d,. ]*$/.test(v)) ? parseFloat(v.replace(/[,. ]/g,'')) : null;
-          // Nếu ô chứa số > 10,000 và khác soTien mới → có thể là ô số tiền cũ bị sót
-          if(num !== null && num > 10000 && Math.abs(num - soTien) > 1){
-            console.warn('[TPL fallback] Phát hiện số tiền cũ', num, 'tại', addr, '→ sẽ thay bằng', soTien);
-            // Chỉ thay thế nếu đây rõ ràng là ô tiền (không phải ngày, headcode dài, v.v.)
-            // Điều kiện an toàn: num > 10000, không phải năm (< 2100), không phải headcode (< 99999999)
-            if(num >= 10000 && num < 1e10 && !(num >= 2000 && num <= 2100)){
-              let target = cell;
-              if(target.isMerged && target.master && target.master !== target) target = target.master;
-              target.value = soTien;
-              target.numFmt = '#,##0';
-              written.add(addr);
-            }
+          const num = typeof v === 'number' ? v : null;
+          if(num !== null && num >= 10000 && num < 1e9 && !(num >= 2000 && num <= 2100)){
+            console.log('[TPL fallback-num] Ghi đè', num, '→', soTien, 'tại', addr);
+            let target = cell;
+            if(target.isMerged && target.master && target.master !== target) target = target.master;
+            target.value = soTien;
+            target.numFmt = '#,##0';
+            writtenFB.add(addr);
+          }
+        });
+      });
+    }
+
+    // ── Fallback scan 2: ghi đè bangChu vào ô nào chứa text "nghìn đồng" / "triệu đồng" cũ
+    if(bangChu){
+      const writtenBC = new Set([map.bangChu].filter(Boolean).map(a => a.toUpperCase()));
+      ws.eachRow((row, rIdx) => {
+        if(rIdx < 1 || rIdx > 30) return;
+        row.eachCell({ includeEmpty: false }, (cell) => {
+          const addr = cell.address ? cell.address.toUpperCase() : '';
+          if(writtenBC.has(addr)) return;
+          const v = typeof cell.value === 'string' ? cell.value.toLowerCase() : '';
+          if(v.includes('nghìn đồng') || v.includes('triệu đồng') || v.includes('đồng chẵn')){
+            console.log('[TPL fallback-bc] Ghi đè bangChu tại', addr);
+            let target = cell;
+            if(target.isMerged && target.master && target.master !== target) target = target.master;
+            target.value = bangChu;
+            writtenBC.add(addr);
           }
         });
       });
