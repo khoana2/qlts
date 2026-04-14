@@ -9078,7 +9078,7 @@ function renderDNTT(){
       : '<span style="color:var(--muted);font-size:11px;">—</span>';
     const spBadge = d._spId
       ? `<span title="Đã đồng bộ SharePoint (ID: ${d._spId})" style="font-size:13px;cursor:default;">☁️</span>`
-      : (msalEnabled() ? `<span title="Chưa đồng bộ SharePoint" style="font-size:13px;cursor:default;opacity:.4;">☁️</span>` : '');
+      : (!!_msalAccount ? `<span title="Chưa đồng bộ SharePoint" style="font-size:13px;cursor:default;opacity:.4;">☁️</span>` : '');
     return `<tr>
       <td style="color:var(--muted);font-size:11px;">${i+1} ${spBadge}</td>
       <td style="font-family:monospace;font-size:11px;font-weight:600;">${esc(d.soPhieu||'—')}</td>
@@ -9289,7 +9289,7 @@ async function saveDNTTForm(draftOnly){
   closeModal('modal-dntt-form');
 
   // Sync lên SharePoint nền (không block UI)
-  if(msalEnabled()){
+  if(!!_msalAccount){
     msalSpPushDNTT(rec.id).then(()=>renderDNTT()).catch(e=>console.warn('[DNTT SP push]',e));
   }
 
@@ -9311,7 +9311,7 @@ async function deleteDNTTRecord(id){
   renderDNTT();
   toast('🗑️ Đã xóa phiếu ĐNTT','ok');
   // Xóa trên SharePoint nền nếu có _spId
-  if(d._spId && msalEnabled()){
+  if(d._spId && !!_msalAccount){
     msalSpDeleteDNTT(d._spId).catch(e=>console.warn('[DNTT SP delete]',e));
   }
 }
@@ -9474,7 +9474,7 @@ async function msalSpProvisionDNTTList(){
 async function msalSpLoadDNTT(){
   const site = MSAL_CONFIG.spSite;
   const listName = MSAL_CONFIG.spDNTTList;
-  if(!msalEnabled()) return;
+  if(!_msalAccount) return;
   try{
     const url = `${site}/_api/web/lists/getbytitle('${listName}')/items`
               + `?$top=500&$orderby=ID desc`;
@@ -9499,7 +9499,7 @@ async function msalSpLoadDNTT(){
 async function msalSpPushDNTT(id){
   const rec = dnttList.find(x=>x.id===id);
   if(!rec) return;
-  if(!msalEnabled()) return;
+  if(!_msalAccount) return;
   const site = MSAL_CONFIG.spSite;
   const listName = MSAL_CONFIG.spDNTTList;
   const base = `${site}/_api/web/lists/getbytitle('${listName}')/items`;
@@ -9530,7 +9530,7 @@ async function msalSpPushDNTT(id){
 
 // Xóa 1 ĐNTT khỏi SP
 async function msalSpDeleteDNTT(spId){
-  if(!spId || !msalEnabled()) return;
+  if(!spId || !_msalAccount) return;
   const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spDNTTList}')/items(${spId})`;
   try{
     await msalSpReq(url, { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
@@ -9540,7 +9540,7 @@ async function msalSpDeleteDNTT(spId){
 
 // Sync thủ công toàn bộ ĐNTT lên SP (dùng cho nút "Sync SP")
 async function syncAllDNTTToSP(){
-  if(!msalEnabled()){ toast('Chưa đăng nhập Microsoft','warn'); return; }
+  if(!_msalAccount){ toast('Chưa đăng nhập Microsoft','warn'); return; }
   const btn = document.getElementById('dntt-sp-sync-btn');
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner"></i> Đang sync…'; }
   try{
