@@ -9696,7 +9696,7 @@ async function _generateFromTemplate(d){
       }
     }
 
-    // ── Fallback bangChu: quét tất cả sheets tìm ô text "đồng" để thay bằng chữ mới
+    // ── Deep scan bangChu: tìm ô text "đồng" ở tất cả sheets → thay bằng chữ mới
     if(bangChu){
       for(const sheet of wb.worksheets){
         sheet.eachRow((row, rIdx) => {
@@ -9711,6 +9711,32 @@ async function _generateFromTemplate(d){
           });
         });
       }
+    }
+
+    // ── Deep scan hình thức thanh toán: tìm ô "Chuyển khoản" / "Tiền mặt" → thêm ☑/☐
+    // Quét tất cả sheets, tìm ô text chứa tên hình thức → ghi đè với ký hiệu tick phù hợp
+    for(const sheet of wb.worksheets){
+      sheet.eachRow((row, rIdx) => {
+        row.eachCell({ includeEmpty: false }, (cell) => {
+          const rawVal = cell.value;
+          // Lấy text gốc (không lowercase để giữ định dạng khi ghi lại)
+          const txt = typeof rawVal === 'string' ? rawVal
+                    : (rawVal?.result && typeof rawVal.result === 'string' ? rawVal.result : null);
+          if(!txt) return;
+          const lo = txt.toLowerCase().trim();
+          // Nếu ô chứa đúng "chuyển khoản" hoặc "tiền mặt" (không kèm ký hiệu cũ)
+          // → thêm ☑/☐ vào đầu
+          const isCK = lo === 'chuyển khoản' || lo === 'chuyen khoan';
+          const isTM = lo === 'tiền mặt'     || lo === 'tien mat';
+          if(isCK || isTM){
+            const mark   = isCK ? ckMark : tmMark;
+            const newTxt = `${mark}  ${txt.trim()}`;
+            const addr   = (cell.address||'').toUpperCase();
+            console.log(`[TPL deep-ht] @${addr} "${txt}" → "${newTxt}"`);
+            overwriteCell(cell, newTxt);
+          }
+        });
+      });
     }
 
     return wb;
