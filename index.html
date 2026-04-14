@@ -5228,6 +5228,16 @@ function applyFilters(keepPage = false){
       const bv = (b[sortCol]||'').toLowerCase();
       return av < bv ? -sortDir : av > bv ? sortDir : 0;
     });
+  } else {
+    // Mặc định: mới nhất → cũ nhất theo ngày mua (assets không có ngày xuống cuối)
+    filtered.sort((a,b)=>{
+      const da = a.ngayMua || '';
+      const db = b.ngayMua || '';
+      if(!da && !db) return 0;
+      if(!da) return 1;   // không có ngày → xuống cuối
+      if(!db) return -1;
+      return db.localeCompare(da);   // chuỗi YYYY-MM-DD so sánh được trực tiếp
+    });
   }
 
   document.getElementById('filter-count').textContent =
