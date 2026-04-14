@@ -9557,7 +9557,28 @@ async function _generateFromTemplate(d){
     const buf = Uint8Array.from(atob(raw), c=>c.charCodeAt(0));
     const wb  = new ExcelJS.Workbook();
     await wb.xlsx.load(buf.buffer);
-    const ws  = wb.worksheets[0];
+
+    // ── Tìm đúng sheet chứa PHIẾU ĐỀ NGHỊ THANH TOÁN ──
+    // Template có thể có nhiều sheet (danh mục headcode, form ĐNTT, v.v.)
+    // Tìm sheet có tiêu đề "PHIẾU ĐỀ NGHỊ" hoặc "THANH TOÁN" trong 5 dòng đầu
+    let ws = wb.worksheets[0];
+    for(const sheet of wb.worksheets){
+      let found = false;
+      try{
+        sheet.eachRow((row, rIdx) => {
+          if(rIdx > 5 || found) return;
+          row.eachCell({ includeEmpty:false }, (cell) => {
+            const v = typeof cell.value === 'string' ? cell.value.toUpperCase()
+                    : (cell.value?.result && typeof cell.value.result === 'string'
+                       ? cell.value.result.toUpperCase() : '');
+            if(v.includes('PH') && v.includes('NGH') || v.includes('THANH TO')){
+              found = true;
+            }
+          });
+        });
+      }catch(e){}
+      if(found){ ws = sheet; console.log('[TPL] Dùng sheet:', sheet.name); break; }
+    }
     if(!ws) throw new Error('Không tìm thấy sheet trong template');
 
     const map = _getTplMap();
@@ -9647,20 +9668,26 @@ async function _generateFromTemplate(d){
       if(numFmt) target.numFmt = numFmt;
     };
 
-    // ── Fallback scan 1: ghi đè soTien vào MỌI ô chứa số >= 10,000 (rows 1–30)
-    // Bao gồm formula cell, xử lý cả trường hợp mapping sai địa chỉ
+    // ── Fallback scan 1: ghi đè soTien vào ô số tiền thực sự trong vùng form
+    // Chỉ scan rows 1–15 (vùng header form), không scan bảng ngân sách/headcode bên dưới
+    // Bỏ qua headcode (số 8 chữ số bắt đầu bằng 1x, 2x) và số tài khoản ngân hàng dài
     if(soTien > 0){
       const writtenFB = new Set();
       [map.soTien, map.ns_soTien].filter(Boolean).forEach(a => writtenFB.add(a.toUpperCase()));
 
       ws.eachRow((row, rIdx) => {
-        if(rIdx < 1 || rIdx > 30) return;
+        if(rIdx < 1 || rIdx > 15) return; // chỉ vùng form header
         row.eachCell({ includeEmpty: false }, (cell) => {
           const addr = (cell.address||'').toUpperCase();
           if(writtenFB.has(addr)) return;
           const num = getCellNum(cell);
-          // Thay thế ô số >= 10,000, không phải năm (2000-2100), không phải headcode dài
-          if(num !== null && num >= 10000 && num < 1e9 && !(num >= 2000 && num <= 2100)){
+          if(num === null) return;
+          const s = String(Math.round(num));
+          // Bỏ qua: năm (2000-2100), headcode 8 chữ số (1xxxxxxx), số TK ngân hàng > 9 chữ số
+          const isYear     = num >= 2000 && num <= 2100;
+          const isHeadcode = s.length === 8 && (s.startsWith('1') || s.startsWith('2'));
+          const isBankAcc  = s.length >= 9;
+          if(!isYear && !isHeadcode && !isBankAcc && num >= 10000 && num < 1e8){
             console.log('[TPL fb-num] Ghi đè', num, '→', soTien, '@', addr);
             overwriteCell(cell, soTien, '#,##0');
             writtenFB.add(addr);
