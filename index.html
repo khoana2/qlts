@@ -2786,12 +2786,22 @@ input[type=checkbox].row-cb{
           </div>
           <div style="grid-column:1/-1;">
             <label style="font-size:11px;color:var(--muted);">Hình thức thanh toán</label>
-            <div style="display:flex;gap:16px;margin-top:4px;">
-              <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
-                <input type="radio" name="dntt-f-hinhthuc" value="CK" checked> Chuyển khoản
+            <div style="display:flex;gap:12px;margin-top:6px;">
+              <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;
+                background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;
+                transition:border-color .15s;user-select:none;">
+                <input type="radio" name="dntt-f-hinhthuc" value="CK" checked
+                  style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;"
+                  onchange="dnttUpdateHinhThucUI()">
+                <span>☑ Chuyển khoản</span>
               </label>
-              <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
-                <input type="radio" name="dntt-f-hinhthuc" value="TM"> Tiền mặt
+              <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;
+                background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;
+                transition:border-color .15s;user-select:none;">
+                <input type="radio" name="dntt-f-hinhthuc" value="TM"
+                  style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;"
+                  onchange="dnttUpdateHinhThucUI()">
+                <span>☐ Tiền mặt</span>
               </label>
             </div>
           </div>
@@ -9087,6 +9097,7 @@ function openDNTTForm(prefill){
   setV('dntt-f-headcode','');
   setV('dntt-f-tenheadcode','');
   document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => r.checked = r.value === 'CK');
+  dnttUpdateHinhThucUI();
   setV('dntt-f-ghichu','');
   document.getElementById('dntt-f-trangthai').value = 'draft';
   document.getElementById('dntt-f-tiente').value = 'VND';
@@ -9111,6 +9122,7 @@ function openDNTTForm(prefill){
   _refreshVendorQuickList('');
 
   dnttPreviewBangChu();
+  dnttUpdateHinhThucUI();
   openModal('modal-dntt-form');
 }
 
@@ -9136,6 +9148,7 @@ function openDNTTEdit(id){
   setV('dntt-f-headcode', d.headcode);
   setV('dntt-f-tenheadcode', d.tenHeadcode||'');
   document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => r.checked = r.value === (d.hinhThuc||'CK'));
+  setTimeout(dnttUpdateHinhThucUI, 0); // after DOM settles
   setV('dntt-f-ghichu', d.ghichu);
   document.getElementById('dntt-f-trangthai').value = d.trangThai || 'draft';
   document.getElementById('dntt-f-tiente').value = d.tienTe || 'VND';
@@ -9144,6 +9157,7 @@ function openDNTTEdit(id){
   _fillDNTTLicList(d.licenseId || '');
   _refreshVendorQuickList(d.ncc || '');
   dnttPreviewBangChu();
+  dnttUpdateHinhThucUI();
   openModal('modal-dntt-form');
 }
 
@@ -9170,6 +9184,22 @@ function dnttPreviewBangChu(){
   const tiente = document.getElementById('dntt-f-tiente')?.value||'VND';
   const el = document.getElementById('dntt-bangchu-preview');
   if(el) el.textContent = sotien > 0 ? '→ ' + soTienBangChu(sotien, tiente) : '';
+}
+
+// Cập nhật giao diện các nhãn hình thức thanh toán (highlight ô được chọn)
+function dnttUpdateHinhThucUI(){
+  document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => {
+    const lbl = r.closest('label');
+    if(!lbl) return;
+    lbl.style.borderColor = r.checked ? 'var(--accent)' : 'var(--border)';
+    lbl.style.background  = r.checked ? '#EFF6FF' : '#fff';
+    // Cập nhật ký hiệu ☑/☐ trong text span
+    const span = lbl.querySelector('span');
+    if(span){
+      const symbol = r.checked ? '☑' : '☐';
+      span.textContent = symbol + span.textContent.slice(1);
+    }
+  });
 }
 
 // ── Lưu form ──
@@ -9380,7 +9410,7 @@ function _dnttUpdateTplUI(){
   const btnLabel  = document.getElementById('dntt-tpl-btn-label');
 
   if(statusEl) statusEl.innerHTML = hasTpl
-    ? '<i class="ph ph-check-circle" style="color:var(--green);"></i> <b>Template đã upload</b> — khi xuất phiếu sẽ dùng file này'
+    ? '<i class="ph ph-check-circle" style="color:var(--green);"></i> <b>Template đã upload</b> — khi xuất phiếu sẽ dùng file này. <span style="color:var(--orange)">⚠️ Hãy upload file template <b>trống</b> (chưa điền số tiền) để tránh dữ liệu cũ.</span>'
     : '<i class="ph ph-warning" style="color:var(--orange);"></i> Chưa có template — sẽ tạo phiếu theo định dạng mặc định';
 
   if(clearBtn)  clearBtn.style.display = hasTpl ? '' : 'none';
@@ -9456,7 +9486,8 @@ async function _generateFromTemplate(d){
 
     const map = _getTplMap();
     const tt  = d.tienTe||'VND';
-    const soTien = d.soTien ? Number(d.soTien) : null;
+    const soTienRaw = d.soTien ? Number(d.soTien) : 0;
+    const soTien = soTienRaw > 0 ? soTienRaw : 0;
     const bangChu = soTienBangChu(d.soTien, d.tienTe);
     const hinhThuc= d.hinhThuc||'CK';
     const ckMark  = hinhThuc==='CK'?'☑':'☐';
@@ -9465,10 +9496,18 @@ async function _generateFromTemplate(d){
     const set = (addr, val, numFmt) => {
       if(!addr) return;
       try{
-        const cell = ws.getCell(addr);
+        let cell = ws.getCell(addr);
+        // Nếu ô nằm trong vùng merge và không phải ô chủ, tìm ô chủ để ghi
+        if(cell.isMerged && cell.master && cell.master !== cell){
+          cell = cell.master;
+        }
+        // Xóa formula cũ (nếu có) trước khi ghi giá trị mới
+        if(cell.type === 6 /*formula*/ || (typeof cell.value === 'object' && cell.value?.formula)){
+          cell.value = null; // clear formula
+        }
         cell.value = val;
         if(numFmt) cell.numFmt = numFmt;
-      }catch(e){}
+      }catch(e){ console.warn('[TPL set]', addr, e); }
     };
 
     set(map.soPhieu,     d.soPhieu||'');
