@@ -2404,6 +2404,70 @@ input[type=checkbox].row-cb{
   </div>
 </div>
 
+<!-- ══════════════ MODAL: CẤP BỔ SUNG PHỤ KIỆN ══════════════ -->
+<div class="modal-backdrop" id="modal-supplement" style="display:none;">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-head">
+      <div>
+        <h2><i class="ph ph-package"></i> Cấp bổ sung phụ kiện</h2>
+        <p id="supp-asset-name" style="font-size:11px;color:var(--accent2);margin-top:3px;"></p>
+      </div>
+      <button class="btn icon-only" onclick="closeModal('modal-supplement')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="supp-asset-id">
+
+      <!-- Người đang dùng -->
+      <div style="padding:8px 12px;background:rgba(144,144,168,.07);border:1px solid var(--border);
+        border-radius:8px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">👤</span>
+        <div>
+          <div id="supp-current-user" style="font-size:13px;font-weight:600;">—</div>
+          <div style="font-size:11px;color:var(--muted);">Người đang sử dụng máy</div>
+        </div>
+      </div>
+
+      <div class="grid2" style="gap:12px;">
+        <div class="field">
+          <label>Ngày cấp bổ sung *</label>
+          <input type="date" id="supp-date">
+        </div>
+        <div class="field">
+          <label>Người nhận (nếu khác)</label>
+          <input type="text" id="supp-receiver" placeholder="Để trống = người đang dùng">
+        </div>
+        <div class="field span2">
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Phụ kiện cấp bổ sung</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:400;">Tick những thứ cấp thêm</span>
+          </label>
+          <div id="supp-acc-wrap" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;
+            background:var(--bg2);border:1px solid var(--border);border-radius:8px;min-height:44px;">
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input type="text" id="supp-acc-custom" class="finput" placeholder="Thêm phụ kiện khác…"
+              style="flex:1;font-size:12px;"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();_suppAddCustomAcc();}">
+            <button class="btn btn-icon-ph" onclick="_suppAddCustomAcc()" style="padding:4px 10px;font-size:12px;">
+              <i class="ph ph-plus"></i> Thêm
+            </button>
+          </div>
+        </div>
+        <div class="field span2">
+          <label>Ghi chú</label>
+          <textarea id="supp-notes" placeholder="VD: Cấp bổ sung do chuột cũ bị hỏng…" style="min-height:48px;"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-supplement')">Hủy</button>
+      <button class="btn primary btn-icon-ph" onclick="confirmSupplement()">
+        <i class="ph ph-package"></i> Xác nhận cấp bổ sung
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ PRINT AREA (hidden, only shown on print) ═══ -->
 <div id="print-area"></div>
 
@@ -6706,7 +6770,10 @@ function viewDetail(id){
     <div style="margin-top:16px;">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
         <span><i class="ph ph-clock-counter-clockwise"></i> Lịch sử bàn giao (${tLog.length} lần)</span>
-        <button class="btn btn-icon-ph" style="padding:4px 10px;font-size:11px;" onclick="closeModal('modal-detail');openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i> Bàn giao mới</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-icon-ph" style="padding:4px 10px;font-size:11px;" onclick="closeModal('modal-detail');openSupplement('${a.id}')"><i class="ph ph-package"></i> Cấp bổ sung</button>
+          <button class="btn btn-icon-ph" style="padding:4px 10px;font-size:11px;" onclick="closeModal('modal-detail');openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i> Bàn giao mới</button>
+        </div>
       </div>
       <div class="transfer-log">
         ${tLog.map((t,i)=>{
@@ -6728,14 +6795,33 @@ function viewDetail(id){
                     <button class="btn" style="padding:1px 8px;font-size:10px;" onclick="msalSpLoadXacNhan().then(()=>viewDetail('${a.id}'))"><i class="ph ph-arrows-clockwise"></i></button>
                   </div>`
                 : '');
-          return `
+          const isSupp = t.type === 'supplement';
+          return isSupp ? `
+          <div class="transfer-row" style="background:rgba(16,185,129,.04);border-left:3px solid #10B981;">
+            <div class="tr-arrow" style="color:#10B981;"><i class="ph ph-package"></i></div>
+            <div class="tr-info">
+              <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:4px;display:inline-flex;align-items:center;gap:4px;">
+                <i class="ph ph-plus-circle"></i> Cấp bổ sung phụ kiện
+              </div>
+              <div class="to">→ ${esc(t.to||'(Người đang dùng)')}</div>
+              <div class="to-dept">${esc(t.toDept||'')} ${t.toEmail?`· <a class="mail-link" href="mailto:${esc(t.toEmail)}">${esc(t.toEmail)}</a>`:''}</div>
+              ${t.accessories?.length ? `<div style="font-size:11px;color:#047857;margin-top:4px;">📦 <b>Phụ kiện:</b> ${t.accessories.map(x=>esc(x)).join(' · ')}</div>` : ''}
+              ${t.notes?`<div style="font-size:11px;color:var(--muted);margin-top:3px;">📝 ${esc(t.notes)}</div>`:''}
+            </div>
+            <div class="tr-meta">
+              <div class="date">${t.date?new Date(t.date).toLocaleDateString('vi-VN'):'—'}</div>
+              <div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+                <button class="btn danger btn-icon-ph" style="padding:2px 8px;font-size:10px;" onclick="deleteTransfer('${a.id}',${(tLog.length-1-i)},this)"><i class="ph ph-trash"></i> Xóa</button>
+              </div>
+            </div>
+          </div>` : `
           <div class="transfer-row">
             <div class="tr-arrow"><i class="ph ph-arrows-left-right"></i></div>
             <div class="tr-info">
               <div class="from">Từ: <strong>${esc(t.from||'Chưa có người dùng')}</strong> <span style="color:var(--muted);">${t.fromDept?`(${esc(t.fromDept)})`:''}  </span></div>
               <div class="to">→ ${esc(t.to)}</div>
               <div class="to-dept">${esc(t.toDept||'')} ${t.toEmail?`· <a class="mail-link" href="mailto:${esc(t.toEmail)}">${esc(t.toEmail)}</a>`:''}</div>
-              ${t.accessories?.length ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">📦 <b>Phụ kiện:</b> ${t.accessories.map(a=>esc(a)).join(' · ')}</div>` : ''}
+              ${t.accessories?.length ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">📦 <b>Phụ kiện:</b> ${t.accessories.map(x=>esc(x)).join(' · ')}</div>` : ''}
               ${t.notes?`<div style="font-size:11px;color:var(--muted);margin-top:3px;">📝 ${esc(t.notes)}</div>`:''}
               ${t.condition?`<div style="font-size:11px;margin-top:3px;"><span class="tag-chip">Tình trạng: ${esc(t.condition)}</span></div>`:''}
               ${xnHtml}
@@ -6753,7 +6839,10 @@ function viewDetail(id){
     </div>` : `
     <div style="margin-top:14px;padding:12px;background:rgba(124,107,255,.05);border:1px dashed rgba(124,107,255,.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between;">
       <span style="font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;"><i class="ph ph-clock-counter-clockwise"></i> Chưa có lịch sử bàn giao</span>
-      <button class="btn success btn-icon-ph" style="padding:5px 12px;font-size:12px;" onclick="closeModal('modal-detail');openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i> Bàn giao ngay</button>
+      <div style="display:flex;gap:6px;">
+        ${a.nguoiDung ? `<button class="btn btn-icon-ph" style="padding:5px 12px;font-size:12px;" onclick="closeModal('modal-detail');openSupplement('${a.id}')"><i class="ph ph-package"></i> Cấp bổ sung</button>` : ''}
+        <button class="btn success btn-icon-ph" style="padding:5px 12px;font-size:12px;" onclick="closeModal('modal-detail');openTransfer('${a.id}')"><i class="ph ph-arrows-left-right"></i> Bàn giao ngay</button>
+      </div>
     </div>`;
 
   // Warranty status for detail
@@ -7217,7 +7306,7 @@ function closeModal(id){
 // Danh sách modal FORM — KHÔNG đóng khi click ngoài để tránh mất dữ liệu
 const _FORM_MODALS = new Set([
   'modal-form', 'modal-transfer', 'modal-license', 'modal-dntt-form',
-  'modal-import', 'modal-xfer-company',
+  'modal-import', 'modal-xfer-company', 'modal-supplement',
 ]);
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')){
@@ -7490,6 +7579,115 @@ function _trGetCheckedAcc(){
   const wrap = document.getElementById('tr-accessories-wrap');
   if(!wrap) return [];
   return [...wrap.querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
+}
+
+// ══════════════════════════════════════════════════════════
+//  CẤP BỔ SUNG PHỤ KIỆN
+// ══════════════════════════════════════════════════════════
+
+function openSupplement(assetId){
+  const a = assets.find(x => x.id === assetId);
+  if(!a){ toast('⚠️ Không tìm thấy tài sản!','bad'); return; }
+
+  document.getElementById('supp-asset-id').value = assetId;
+  document.getElementById('supp-asset-name').textContent =
+    [a.maTaiSan, a.tenTaiSan, a.model, a.serial ? `(${a.serial})` : ''].filter(Boolean).join(' · ');
+  document.getElementById('supp-current-user').textContent =
+    [a.nguoiDung || 'Chưa có người dùng', a.boPhan ? `(${a.boPhan})` : ''].filter(Boolean).join(' ');
+  document.getElementById('supp-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('supp-receiver').value = '';
+  document.getElementById('supp-notes').value = '';
+
+  // Build accessories chips — gợi ý theo loại tài sản, tất cả KHÔNG tick sẵn (họ chọn cái đang cấp thêm)
+  const wrap = document.getElementById('supp-acc-wrap');
+  wrap.innerHTML = '';
+  const specific = _ACC_PRESETS[a.tenTaiSan] || [];
+  const all = [...new Set([..._ACC_DEFAULT_ALL, ...specific])];
+  all.forEach(name => _suppAddChip(name, false));
+
+  openModal('modal-supplement');
+}
+
+function _suppAccChipHtml(name, checked){
+  const id = 'supp-acc-' + name.replace(/[^a-zA-Z0-9]/g,'_');
+  return `<label id="slbl-${id}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+    padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;user-select:none;
+    border:1.5px solid ${checked ? 'var(--accent)' : 'var(--border)'};
+    background:${checked ? '#EFF6FF' : '#fff'};
+    color:${checked ? 'var(--accent)' : 'var(--text)'};
+    transition:all .12s;">
+    <input type="checkbox" id="${id}" value="${name}" ${checked?'checked':''} style="display:none;"
+      onchange="
+        const lbl=this.closest('label');
+        lbl.style.borderColor=this.checked?'var(--accent)':'var(--border)';
+        lbl.style.background=this.checked?'#EFF6FF':'#fff';
+        lbl.style.color=this.checked?'var(--accent)':'var(--text)';
+      ">
+    <i class="ph ${checked?'ph-check-circle':'ph-circle'}" style="font-size:13px;"></i>
+    ${name}
+    <span onclick="event.stopPropagation();event.preventDefault();
+      document.getElementById('slbl-${id}').remove();"
+      style="margin-left:2px;opacity:.5;font-size:11px;line-height:1;">✕</span>
+  </label>`;
+}
+
+function _suppAddChip(name, checked=false){
+  const wrap = document.getElementById('supp-acc-wrap');
+  if(!wrap || !name.trim()) return;
+  if(wrap.querySelector(`input[value="${name}"]`)) return;
+  wrap.insertAdjacentHTML('beforeend', _suppAccChipHtml(name, checked));
+}
+
+function _suppAddCustomAcc(){
+  const inp = document.getElementById('supp-acc-custom');
+  if(!inp) return;
+  const name = inp.value.trim();
+  if(!name) return;
+  _suppAddChip(name, true);
+  inp.value = '';
+  inp.focus();
+}
+
+function _suppGetCheckedAcc(){
+  const wrap = document.getElementById('supp-acc-wrap');
+  if(!wrap) return [];
+  return [...wrap.querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
+}
+
+function confirmSupplement(){
+  const assetId = document.getElementById('supp-asset-id').value;
+  const date    = document.getElementById('supp-date').value;
+  const a = assets.find(x => x.id === assetId);
+  if(!a){ toast('⚠️ Không tìm thấy tài sản!','bad'); return; }
+  if(!date){ toast('⚠️ Vui lòng chọn ngày cấp bổ sung!','bad'); return; }
+
+  const checkedAcc = _suppGetCheckedAcc();
+  if(checkedAcc.length === 0){ toast('⚠️ Chưa chọn phụ kiện nào để cấp bổ sung!','bad'); return; }
+
+  const receiver = document.getElementById('supp-receiver').value.trim() || a.nguoiDung || '';
+
+  const rec = {
+    type: 'supplement',
+    from: '',
+    fromDept: '',
+    to: receiver,
+    toDept: a.boPhan || '',
+    toEmail: a.email || '',
+    date,
+    accessories: checkedAcc,
+    notes: document.getElementById('supp-notes').value.trim(),
+    ts: new Date().toISOString()
+  };
+
+  if(!transfers[assetId]) transfers[assetId] = [];
+  transfers[assetId].push(rec);
+  saveTransfers();
+
+  closeModal('modal-supplement');
+  toast(`✅ Đã ghi nhận cấp bổ sung ${checkedAcc.length} phụ kiện cho ${esc(a.tenTaiSan||'')}!`,'ok');
+
+  // Re-open detail to reflect update
+  viewDetail(assetId);
 }
 
 async function confirmTransfer(){
