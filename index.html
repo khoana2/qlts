@@ -2358,9 +2358,27 @@ input[type=checkbox].row-cb{
           </div>
           <small style="color:var(--muted);margin-top:4px;display:block;">Bỏ tick nếu không bàn giao màn hình — màn hình sẽ được trả về kho</small>
         </div>
+        <!-- ── Phụ kiện bàn giao ── -->
+        <div class="field span2">
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Phụ kiện bàn giao kèm</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:400;">Tick vào những thứ bàn giao thực tế</span>
+          </label>
+          <div id="tr-accessories-wrap" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;
+            background:var(--bg2);border:1px solid var(--border);border-radius:8px;min-height:44px;">
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input type="text" id="tr-acc-custom" class="finput" placeholder="Thêm phụ kiện khác…" style="flex:1;font-size:12px;"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();_trAddCustomAcc();}">
+            <button class="btn btn-icon-ph" onclick="_trAddCustomAcc()" style="padding:4px 10px;font-size:12px;">
+              <i class="ph ph-plus"></i> Thêm
+            </button>
+          </div>
+        </div>
+
         <div class="field span2">
           <label>Ghi chú bàn giao</label>
-          <textarea id="tr-notes" placeholder="VD: Bàn giao kèm sạc, túi đựng máy…" style="min-height:56px;"></textarea>
+          <textarea id="tr-notes" placeholder="Ghi chú thêm nếu cần…" style="min-height:48px;"></textarea>
         </div>
         <!-- MS Forms option — chỉ hiện khi MS_FORM_URL đã điền -->
         <div class="field span2" id="tr-msform-row" style="display:none;">
@@ -5778,6 +5796,7 @@ function openAdd(){
   document.getElementById('form-title').textContent = '➕ Thêm tài sản mới';
   clearForm();
   openModal('modal-form');
+  checkAndOfferDraftRestore('modal-form');
 }
 
 function openEdit(id){
@@ -5945,6 +5964,7 @@ async function saveAsset(){
   const idx = assets.findIndex(x=>x.id===id);
   if(idx>=0) assets[idx]=a; else assets.unshift(a);
   saveToStorage();
+  clearDraft('modal-form');
   closeModal('modal-form');
   populateDeptSelects();
   applyFilters(true);
@@ -6715,6 +6735,7 @@ function viewDetail(id){
               <div class="from">Từ: <strong>${esc(t.from||'Chưa có người dùng')}</strong> <span style="color:var(--muted);">${t.fromDept?`(${esc(t.fromDept)})`:''}  </span></div>
               <div class="to">→ ${esc(t.to)}</div>
               <div class="to-dept">${esc(t.toDept||'')} ${t.toEmail?`· <a class="mail-link" href="mailto:${esc(t.toEmail)}">${esc(t.toEmail)}</a>`:''}</div>
+              ${t.accessories?.length ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">📦 <b>Phụ kiện:</b> ${t.accessories.map(a=>esc(a)).join(' · ')}</div>` : ''}
               ${t.notes?`<div style="font-size:11px;color:var(--muted);margin-top:3px;">📝 ${esc(t.notes)}</div>`:''}
               ${t.condition?`<div style="font-size:11px;margin-top:3px;"><span class="tag-chip">Tình trạng: ${esc(t.condition)}</span></div>`:''}
               ${xnHtml}
@@ -7199,6 +7220,171 @@ document.addEventListener('click',e=>{
   }
 });
 
+// ═══════════════════════ AUTO-SAVE DRAFT ═══════════════════════
+// Tự động lưu nháp form đang mở vào localStorage mỗi 30 giây
+// Key: 'qlts_draft_<modalId>'  — xóa khi form đóng bình thường
+
+const _DRAFT_KEY = id => `qlts_draft_${id}`;
+const _draftTimers = {};
+
+function _collectFormData(modalId){
+  const el = document.getElementById(modalId);
+  if(!el) return null;
+  const data = {};
+  el.querySelectorAll('input,select,textarea').forEach(f => {
+    if(!f.id && !f.name) return;
+    const key = f.id || f.name;
+    if(f.type === 'radio')  { if(f.checked) data[key] = f.value; }
+    else if(f.type === 'checkbox') { data[key] = f.checked; }
+    else { data[key] = f.value; }
+  });
+  return data;
+}
+
+function _restoreFormData(modalId, data){
+  if(!data) return;
+  const el = document.getElementById(modalId);
+  if(!el) return;
+  el.querySelectorAll('input,select,textarea').forEach(f => {
+    const key = f.id || f.name;
+    if(!(key in data)) return;
+    if(f.type === 'radio')     { f.checked = (f.value === data[key]); }
+    else if(f.type === 'checkbox') { f.checked = !!data[key]; }
+    else { f.value = data[key] ?? ''; }
+  });
+}
+
+function startDraftTimer(modalId){
+  stopDraftTimer(modalId);
+  _draftTimers[modalId] = setInterval(() => {
+    const d = _collectFormData(modalId);
+    if(d && Object.keys(d).length){
+      try{ localStorage.setItem(_DRAFT_KEY(modalId), JSON.stringify({ ts: Date.now(), data: d })); }
+      catch(e){}
+    }
+  }, 30000);
+}
+
+function stopDraftTimer(modalId){
+  clearInterval(_draftTimers[modalId]);
+  delete _draftTimers[modalId];
+}
+
+function clearDraft(modalId){
+  stopDraftTimer(modalId);
+  try{ localStorage.removeItem(_DRAFT_KEY(modalId)); }catch(e){}
+}
+
+function checkAndOfferDraftRestore(modalId, onRestore){
+  try{
+    const raw = localStorage.getItem(_DRAFT_KEY(modalId));
+    if(!raw) return;
+    const { ts, data } = JSON.parse(raw);
+    const mins = Math.round((Date.now() - ts) / 60000);
+    const label = mins < 2 ? 'vừa xong' : `${mins} phút trước`;
+    const banner = document.createElement('div');
+    banner.id = `draft-banner-${modalId}`;
+    banner.style.cssText = `background:#FFF7ED;border:1px solid #FB923C;border-radius:8px;
+      padding:8px 12px;margin-bottom:12px;font-size:12px;display:flex;
+      align-items:center;gap:10px;`;
+    banner.innerHTML = `<span style="flex:1">💾 Có nháp chưa lưu từ <b>${label}</b>.</span>
+      <button class="btn" style="padding:3px 10px;font-size:11px;" onclick="
+        _restoreFormData('${modalId}', ${JSON.stringify(data).replace(/'/g,"&#39;")});
+        this.closest('#draft-banner-${modalId}').remove();
+        ${onRestore ? onRestore+'()' : ''}
+      ">Khôi phục</button>
+      <button class="btn" style="padding:3px 10px;font-size:11px;" onclick="
+        clearDraft('${modalId}');
+        this.closest('#draft-banner-${modalId}').remove();
+      ">Bỏ qua</button>`;
+    const body = document.querySelector(`#${modalId} .modal-body`);
+    if(body) body.prepend(banner);
+  }catch(e){}
+}
+
+// Hook vào openModal / closeModal để tự bật/tắt timer
+const _origOpenModal  = openModal;
+const _origCloseModal = closeModal;
+function openModal(id){
+  _origOpenModal(id);
+  if(_FORM_MODALS.has(id)) startDraftTimer(id);
+}
+function closeModal(id){
+  _origCloseModal(id);
+  // Xóa banner nháp nếu còn
+  const b = document.getElementById(`draft-banner-${id}`);
+  if(b) b.remove();
+}
+
+// ═══════════════════════ OFFLINE QUEUE ═══════════════════════
+// Khi mất mạng, các SP push được queue lại và tự retry khi online
+
+const _SP_QUEUE_KEY = 'qlts_sp_offline_queue_v1';
+let _spQueue = [];   // [{ type:'dntt'|'asset', id, retries }]
+let _isOnline = navigator.onLine;
+
+function _loadSpQueue(){
+  try{ _spQueue = JSON.parse(localStorage.getItem(_SP_QUEUE_KEY)||'[]'); }
+  catch(e){ _spQueue = []; }
+}
+function _saveSpQueue(){
+  try{ localStorage.setItem(_SP_QUEUE_KEY, JSON.stringify(_spQueue)); }catch(e){}
+}
+function _enqueueSpPush(type, id){
+  // Không thêm trùng
+  if(_spQueue.find(q=>q.type===type && q.id===id)) return;
+  _spQueue.push({ type, id, retries: 0 });
+  _saveSpQueue();
+  _updateOfflineBadge();
+}
+function _dequeueSpPush(type, id){
+  _spQueue = _spQueue.filter(q=>!(q.type===type && q.id===id));
+  _saveSpQueue();
+  _updateOfflineBadge();
+}
+function _updateOfflineBadge(){
+  let badge = document.getElementById('offline-queue-badge');
+  if(_spQueue.length === 0){
+    if(badge) badge.remove();
+    return;
+  }
+  if(!badge){
+    badge = document.createElement('div');
+    badge.id = 'offline-queue-badge';
+    badge.style.cssText = `position:fixed;bottom:16px;left:16px;z-index:9999;
+      background:#F59E0B;color:#fff;border-radius:8px;padding:6px 12px;
+      font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);`;
+    badge.title = 'Click để sync lại';
+    badge.onclick = _flushSpQueue;
+    document.body.appendChild(badge);
+  }
+  badge.textContent = `☁️ ${_spQueue.length} mục chờ sync`;
+}
+async function _flushSpQueue(){
+  if(!_isOnline || !_msalAccount || _spQueue.length === 0) return;
+  const items = [..._spQueue];
+  let ok = 0;
+  for(const q of items){
+    try{
+      if(q.type === 'dntt')  await msalSpPushDNTT(q.id);
+      // thêm type khác ở đây nếu cần
+      _dequeueSpPush(q.type, q.id);
+      ok++;
+    }catch(e){
+      q.retries = (q.retries||0) + 1;
+      if(q.retries >= 5) _dequeueSpPush(q.type, q.id); // bỏ sau 5 lần thất bại
+    }
+  }
+  _saveSpQueue();
+  _updateOfflineBadge();
+  if(ok > 0) toast(`☁️ Đã sync ${ok} mục từ hàng chờ`, 'ok');
+}
+
+window.addEventListener('online',  () => { _isOnline = true;  toast('✅ Đã kết nối mạng','ok'); _flushSpQueue(); });
+window.addEventListener('offline', () => { _isOnline = false; toast('⚠️ Mất kết nối mạng — dữ liệu sẽ được sync khi có mạng lại','warn'); });
+_loadSpQueue();
+setTimeout(_updateOfflineBadge, 1000);
+
 // ═══════════════════════ TOAST ═══════════════════════
 function toast(msg, type='ok'){
   const wrap = document.getElementById('toast-wrap');
@@ -7223,6 +7409,8 @@ function openTransfer(id){
   document.getElementById('tr-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('tr-notes').value = '';
   document.getElementById('tr-print-btn').style.display = 'none';
+  // Build accessories checklist theo loại tài sản
+  _trBuildAccPreset(a.tenTaiSan || '');
   // Hiện row màn hình nếu tài sản có màn hình kèm
   const manhinhRow = document.getElementById('tr-manhinh-row');
   if(a.manHinh){
@@ -7241,6 +7429,77 @@ function openTransfer(id){
   openModal('modal-transfer');
 }
 
+// ── Phụ kiện mặc định theo loại tài sản ──
+const _ACC_PRESETS = {
+  'Laptop':           ['Sạc laptop','Túi/Balo','Chuột','Cáp HDMI','Bộ đổi nguồn','Hộp đựng'],
+  'PC Desktop':       ['Bàn phím','Chuột','Cáp nguồn','Cáp HDMI/VGA/DP','Loa'],
+  'Màn hình':         ['Cáp HDMI/DP/VGA','Cáp nguồn','Chân đế'],
+  'Smartphone':       ['Cáp sạc','Củ sạc','Tai nghe','Hộp đựng','Ốp lưng'],
+  'Tablet':           ['Cáp sạc','Củ sạc','Bút cảm ứng','Bàn phím rời','Hộp đựng'],
+  'Máy in':           ['Cáp USB','Cáp nguồn','Hộp mực dự phòng'],
+  'Dock Station':     ['Cáp nguồn','Cáp USB-C/Thunderbolt','Cáp HDMI'],
+  'Thiết bị mạng':    ['Cáp nguồn','Cáp LAN','Bộ đổi nguồn'],
+};
+const _ACC_DEFAULT_ALL = ['Cáp nguồn','Sách/Tài liệu hướng dẫn'];  // luôn gợi ý
+
+function _trBuildAccPreset(assetType){
+  const wrap = document.getElementById('tr-accessories-wrap');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  const specific = _ACC_PRESETS[assetType] || [];
+  const all = [...new Set([..._ACC_DEFAULT_ALL, ...specific])];
+  // Với laptop/smartphone → tick sẵn một số mục phổ biến
+  const autoCheck = new Set(['Sạc laptop','Cáp sạc','Củ sạc','Chuột','Bàn phím','Cáp nguồn','Túi/Balo']);
+  all.forEach(name => _trAddAccChip(name, autoCheck.has(name)));
+}
+
+function _trAccChipHtml(name, checked){
+  const id = 'tr-acc-' + name.replace(/[^a-zA-Z0-9]/g,'_');
+  return `<label id="lbl-${id}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+    padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;user-select:none;
+    border:1.5px solid ${checked ? 'var(--accent)' : 'var(--border)'};
+    background:${checked ? '#EFF6FF' : '#fff'};
+    color:${checked ? 'var(--accent)' : 'var(--text)'};
+    transition:all .12s;">
+    <input type="checkbox" id="${id}" value="${name}" ${checked?'checked':''} style="display:none;"
+      onchange="
+        const lbl=this.closest('label');
+        lbl.style.borderColor=this.checked?'var(--accent)':'var(--border)';
+        lbl.style.background=this.checked?'#EFF6FF':'#fff';
+        lbl.style.color=this.checked?'var(--accent)':'var(--text)';
+      ">
+    <i class="ph ${checked?'ph-check-circle':'ph-circle'}" style="font-size:13px;" id="ico-${id}"></i>
+    ${name}
+    <span onclick="event.stopPropagation();event.preventDefault();
+      document.getElementById('lbl-${id}').remove();"
+      style="margin-left:2px;opacity:.5;font-size:11px;line-height:1;">✕</span>
+  </label>`;
+}
+
+function _trAddAccChip(name, checked=false){
+  const wrap = document.getElementById('tr-accessories-wrap');
+  if(!wrap || !name.trim()) return;
+  // tránh trùng
+  if(wrap.querySelector(`input[value="${name}"]`)) return;
+  wrap.insertAdjacentHTML('beforeend', _trAccChipHtml(name, checked));
+}
+
+function _trAddCustomAcc(){
+  const inp = document.getElementById('tr-acc-custom');
+  if(!inp) return;
+  const name = inp.value.trim();
+  if(!name) return;
+  _trAddAccChip(name, true);
+  inp.value = '';
+  inp.focus();
+}
+
+function _trGetCheckedAcc(){
+  const wrap = document.getElementById('tr-accessories-wrap');
+  if(!wrap) return [];
+  return [...wrap.querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
+}
+
 async function confirmTransfer(){
   const id = document.getElementById('tr-asset-id').value;
   const newUser = document.getElementById('tr-new-user').value.trim();
@@ -7253,6 +7512,7 @@ async function confirmTransfer(){
 
   // Record transfer history
   if(!transfers[id]) transfers[id] = [];
+  const checkedAcc = _trGetCheckedAcc();
   const newRec = {
     from: a.nguoiDung || '',
     fromDept: a.boPhan || '',
@@ -7260,6 +7520,7 @@ async function confirmTransfer(){
     toDept: document.getElementById('tr-new-dept').value,
     toEmail: document.getElementById('tr-new-email').value.trim(),
     date, condition: document.getElementById('tr-condition').value,
+    accessories: checkedAcc,
     notes: document.getElementById('tr-notes').value.trim(),
     ts: new Date().toISOString()
   };
@@ -7402,6 +7663,8 @@ function doPrint(id, idx){
 
     <div style="margin-bottom:16px;padding:12px 16px;background:#f9f9f9;border:1px solid #ddd;border-radius:6px;">
       <div style="font-weight:bold;font-size:13px;margin-bottom:6px;">IV. Ngày bàn giao: <span style="color:#1a56db;">${tDate}</span></div>
+      ${t.accessories?.length ? `<div style="font-size:13px;margin-top:6px;"><strong>Phụ kiện bàn giao kèm:</strong>
+        <ul style="margin:4px 0 0 18px;padding:0;">${t.accessories.map(ac=>`<li>${esc(ac)}</li>`).join('')}</ul></div>` : ''}
       ${t.notes?`<div style="font-size:13px;margin-top:6px;"><strong>Ghi chú:</strong> ${esc(t.notes)}</div>`:''}
     </div>
 
@@ -9412,6 +9675,8 @@ function openDNTTForm(prefill){
   _buildDeptDatalist();
   _buildCongtyDatalist();
   openModal('modal-dntt-form');
+  // Offer khôi phục nháp nếu có (chỉ khi tạo mới, không phải edit)
+  if(!prefill) checkAndOfferDraftRestore('modal-dntt-form', 'dnttPreviewBangChu');
 }
 
 // ── Mở form Sửa ──
@@ -9551,6 +9816,7 @@ async function saveDNTTForm(draftOnly){
   const idx = dnttList.findIndex(x=>x.id===id);
   if(idx>=0) dnttList[idx]=rec; else dnttList.push(rec);
   saveDNTT();
+  clearDraft('modal-dntt-form');   // xóa nháp khi đã lưu thành công
   closeModal('modal-dntt-form');
 
   // Sync lên SharePoint nền (không block UI)
@@ -9678,6 +9944,7 @@ function spItemToDntt(item){
   return {
     id:          item.LocalId  || ('sp_'+item.ID),
     _spId:       item.ID,
+    _spModified: item.Modified || null,   // lưu để conflict detection
     soPhieu:     item.Title    || '',
     ngayLap:     item.NgayLap  || '',
     maDonVi:     item.MaDonVi  || '',
@@ -9819,15 +10086,36 @@ async function msalSpPushDNTT(id, _retried){
   try{
     const body = dnttToSpItem(rec);
     if(rec._spId){
+      // Conflict detection: kiểm tra Modified trên SP so với lúc load
+      if(rec._spModified){
+        try{
+          const cur = await msalSpReq(`${base}(${rec._spId})?$select=Modified`);
+          if(cur?.Modified && cur.Modified !== rec._spModified){
+            const ok = confirm(
+              `⚠️ Phiếu "${rec.soPhieu||rec.id}" đã bị chỉnh sửa bởi người khác trên SharePoint.\n\n` +
+              `SP: ${new Date(cur.Modified).toLocaleString('vi-VN')}\n` +
+              `Local: ${new Date(rec._spModified).toLocaleString('vi-VN')}\n\n` +
+              `Ghi đè bản trên SharePoint bằng bản local?`
+            );
+            if(!ok){ console.warn('[DNTT-SP] Conflict — bỏ qua push theo yêu cầu người dùng'); return; }
+          }
+        }catch(ce){ console.warn('[DNTT-SP] Conflict check lỗi, bỏ qua:', ce.message); }
+      }
       await msalSpReq(`${base}(${rec._spId})`, {
         method:'POST',
         headers:{ 'X-HTTP-Method':'MERGE', 'IF-MATCH':'*' },
         body: JSON.stringify(body)
       });
+      // Cập nhật _spModified sau khi MERGE thành công
+      try{
+        const updated = await msalSpReq(`${base}(${rec._spId})?$select=Modified`);
+        if(updated?.Modified){ rec._spModified = updated.Modified; saveDNTT(); }
+      }catch(e){}
     } else {
       const res = await msalSpReq(base, { method:'POST', body: JSON.stringify(body) });
       if(res?.ID){
         rec._spId = res.ID;
+        rec._spModified = res.Modified || null;
         if(!rec.id || rec.id === id) rec.id = 'sp_' + res.ID;
         saveDNTT();
       }
@@ -9839,6 +10127,14 @@ async function msalSpPushDNTT(id, _retried){
       console.warn('[DNTT-SP] Cột thiếu, đang provision rồi retry…');
       await msalSpProvisionDNTTList();
       return msalSpPushDNTT(id, true);
+    }
+    // Nếu lỗi mạng / offline → đưa vào queue chờ
+    const isNetworkErr = !navigator.onLine || e.message?.includes('Failed to fetch')
+                      || e.message?.includes('NetworkError') || e.message?.includes('network');
+    if(isNetworkErr){
+      _enqueueSpPush('dntt', id);
+      console.warn('[DNTT-SP] Offline — đã thêm vào queue:', id);
+      return;
     }
     console.warn('[DNTT-SP] Push lỗi:', e.message);
     toast('⚠️ Không sync được SP: '+e.message, 'warn');
