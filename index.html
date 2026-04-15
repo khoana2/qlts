@@ -7203,11 +7203,16 @@ function openModal(id){
   const el = document.getElementById(id);
   el.style.display='flex';
   requestAnimationFrame(()=>el.classList.add('open'));
+  if(_FORM_MODALS && _FORM_MODALS.has(id)) startDraftTimer(id);
 }
 function closeModal(id){
   const el = document.getElementById(id);
   el.classList.remove('open');
   el.style.display='none';
+  // Xóa banner nháp nếu còn
+  const b = document.getElementById(`draft-banner-${id}`);
+  if(b) b.remove();
+  stopDraftTimer(id);
 }
 // Danh sách modal FORM — KHÔNG đóng khi click ngoài để tránh mất dữ liệu
 const _FORM_MODALS = new Set([
@@ -7302,19 +7307,6 @@ function checkAndOfferDraftRestore(modalId, onRestore){
   }catch(e){}
 }
 
-// Hook vào openModal / closeModal để tự bật/tắt timer
-const _origOpenModal  = openModal;
-const _origCloseModal = closeModal;
-function openModal(id){
-  _origOpenModal(id);
-  if(_FORM_MODALS.has(id)) startDraftTimer(id);
-}
-function closeModal(id){
-  _origCloseModal(id);
-  // Xóa banner nháp nếu còn
-  const b = document.getElementById(`draft-banner-${id}`);
-  if(b) b.remove();
-}
 
 // ═══════════════════════ OFFLINE QUEUE ═══════════════════════
 // Khi mất mạng, các SP push được queue lại và tự retry khi online
