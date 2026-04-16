@@ -1335,6 +1335,65 @@ input[type=checkbox].row-cb{
   pointer-events:none;
 }
 
+/* ═══════════════ MODULE MUA SẮM / BÁO GIÁ ═══════════════ */
+.proc-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px 18px;margin-bottom:12px;transition:box-shadow .15s;
+}
+.proc-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.08);}
+.proc-card.status-da_duyet{border-left:4px solid #10B981;}
+.proc-card.status-tu_choi{border-left:4px solid var(--red);opacity:.75;}
+.proc-card.status-da_mua{border-left:4px solid #8B5CF6;}
+.proc-card.status-cho_duyet{border-left:4px solid #F59E0B;}
+.proc-card.status-draft{border-left:4px solid var(--border);}
+.proc-status-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
+}
+.proc-status-badge.draft{background:rgba(148,163,184,.12);color:#64748B;}
+.proc-status-badge.cho_duyet{background:rgba(245,158,11,.12);color:#D97706;}
+.proc-status-badge.da_duyet{background:rgba(16,185,129,.12);color:#059669;}
+.proc-status-badge.tu_choi{background:rgba(239,68,68,.1);color:#DC2626;}
+.proc-status-badge.da_mua{background:rgba(139,92,246,.12);color:#7C3AED;}
+/* Supplier comparison table inside card */
+.proc-ncc-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px;}
+.proc-ncc-table th{padding:6px 10px;background:var(--bg2);font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);}
+.proc-ncc-table td{padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.04);}
+.proc-ncc-table tr:last-child td{border-bottom:none;}
+.proc-ncc-table tr.best-price td{background:rgba(16,185,129,.05);}
+.proc-ncc-table tr.best-price td:first-child{font-weight:700;color:#059669;}
+.proc-ncc-table tr.selected-ncc td{background:#EFF6FF;}
+.proc-ncc-table tr.selected-ncc td:first-child{font-weight:700;color:#2563EB;}
+.proc-price-badge{
+  display:inline-flex;align-items:center;gap:3px;padding:2px 8px;
+  border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap;
+}
+.proc-price-badge.best{background:rgba(16,185,129,.15);color:#059669;}
+.proc-price-badge.worst{background:rgba(239,68,68,.1);color:#DC2626;}
+/* Procurement modal comparison grid */
+.proc-compare-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;
+}
+.proc-ncc-col{
+  border:1.5px solid var(--border);border-radius:10px;padding:12px;
+  background:var(--bg2);transition:border-color .15s, background .15s;
+}
+.proc-ncc-col.col-best{border-color:#10B981;background:rgba(16,185,129,.04);}
+.proc-ncc-col .col-header{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:5px;
+}
+.proc-ncc-col .col-header .best-tag{
+  background:#10B981;color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;
+}
+.proc-live-total{
+  font-size:14px;font-weight:800;color:#1E293B;margin-top:6px;min-height:20px;
+}
+.proc-live-diff{font-size:10px;color:var(--muted);margin-top:2px;min-height:14px;}
+@media(max-width:600px){
+  .proc-compare-grid{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
@@ -1561,6 +1620,9 @@ input[type=checkbox].row-cb{
         </button>
         <button class="nav-tab" onclick="switchTab('dntt')" id="tab-dntt">
           <span class="tab-icon"><i class="ph ph-receipt"></i></span> Đề Nghị TT
+        </button>
+        <button class="nav-tab" onclick="switchTab('procurement')" id="tab-procurement">
+          <span class="tab-icon"><i class="ph ph-shopping-cart"></i></span> Mua Sắm
         </button>
         <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">
           <span class="tab-icon"><i class="ph ph-users-three"></i></span> Phân Quyền
@@ -2133,6 +2195,41 @@ input[type=checkbox].row-cb{
     </div>
   </div>
 
+  <!-- ══════════════ VIEW: MUA SẮM ══════════════ -->
+  <div class="view" id="view-procurement">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;"><i class="ph ph-shopping-cart"></i> Mua Sắm & So Sánh Báo Giá</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Tạo yêu cầu mua thiết bị, so sánh báo giá 3 nhà cung cấp, duyệt và tạo ĐNTT trong một quy trình.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select class="fsel" id="proc-filter-status" onchange="renderProcurement()" style="min-width:130px;">
+          <option value="">Tất cả trạng thái</option>
+          <option value="draft">Nháp</option>
+          <option value="cho_duyet">Chờ duyệt</option>
+          <option value="da_duyet">Đã duyệt</option>
+          <option value="tu_choi">Từ chối</option>
+          <option value="da_mua">Đã mua</option>
+        </select>
+        <input type="text" id="proc-search" class="finput" placeholder="🔍 Tìm thiết bị, NCC…" style="min-width:180px;" oninput="renderProcurement()">
+        <button class="btn primary btn-icon-ph" onclick="openProcurementForm()"><i class="ph ph-plus"></i> Tạo yêu cầu mua</button>
+      </div>
+    </div>
+
+    <!-- Stats summary -->
+    <div id="proc-stats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+
+    <!-- Cards list -->
+    <div id="proc-list">
+      <div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">
+        <i class="ph ph-shopping-cart" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4;"></i>
+        Chưa có yêu cầu mua sắm nào. Nhấn "+ Tạo yêu cầu mua" để bắt đầu.
+      </div>
+    </div>
+    <div id="proc-count" style="font-size:11px;color:var(--muted);padding:4px 0;"></div>
+  </div>
+  <!-- ══════════════════════════════════════════ -->
+
   <!-- FAB: Thêm tài sản nhanh (mobile only) -->
   <button class="fab-add" onclick="openAdd()" title="Thêm tài sản">
     <i class="ph ph-plus"></i>
@@ -2516,6 +2613,171 @@ input[type=checkbox].row-cb{
 </div>
 
 <!-- ══════════════ MODAL: CẤP BỔ SUNG PHỤ KIỆN ══════════════ -->
+<!-- ══════════ MODAL: YÊU CẦU MUA SẮM / BÁO GIÁ ══════════ -->
+<div class="modal-backdrop" id="modal-procurement" style="display:none;">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-head">
+      <div>
+        <h2 id="proc-form-title"><i class="ph ph-shopping-cart"></i> Tạo yêu cầu mua sắm</h2>
+        <p style="font-size:11px;color:var(--accent2);margin-top:3px;" id="proc-form-sub">Nhập thông tin thiết bị và báo giá từ 3 nhà cung cấp</p>
+      </div>
+      <button class="btn icon-only" onclick="closeModal('modal-procurement')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="proc-f-id">
+
+      <!-- ─── Thông tin thiết bị ─── -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;"><i class="ph ph-package"></i> Thông tin thiết bị cần mua</div>
+      <div class="grid2" style="gap:10px;margin-bottom:14px;">
+        <div class="field span2">
+          <label>Tiêu đề yêu cầu *</label>
+          <input type="text" id="proc-f-tieude" class="finput" placeholder="VD: Mua Laptop Dell XPS 15 cho phòng IT">
+        </div>
+        <div class="field">
+          <label>Loại tài sản</label>
+          <input type="text" id="proc-f-loaits" class="finput" placeholder="Laptop, PC, Màn hình…" list="proc-loaits-list">
+          <datalist id="proc-loaits-list">
+            <option value="Laptop"><option value="PC Desktop"><option value="Màn hình">
+            <option value="Smartphone"><option value="Tablet"><option value="Máy in">
+            <option value="Thiết bị mạng"><option value="Dock Station"><option value="Server">
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Số lượng *</label>
+          <input type="number" id="proc-f-soluong" class="finput" value="1" min="1" oninput="procLiveUpdate()">
+        </div>
+        <div class="field span2">
+          <label>Thông số kỹ thuật yêu cầu</label>
+          <textarea id="proc-f-thongso" class="finput" rows="2" placeholder="VD: CPU i7 Gen 13, RAM 16GB, SSD 512GB, màn hình 15.6 FHD"></textarea>
+        </div>
+        <div class="field span2">
+          <label>Mục đích / Lý do mua</label>
+          <input type="text" id="proc-f-mucdich" class="finput" placeholder="VD: Thay thế máy cũ hỏng, bổ sung cho nhân sự mới…">
+        </div>
+        <div class="field">
+          <label>Người đề xuất</label>
+          <input type="text" id="proc-f-nguoidexuat" class="finput" placeholder="Họ tên">
+        </div>
+        <div class="field">
+          <label>Bộ phận / Dự án</label>
+          <input type="text" id="proc-f-bophan" class="finput" placeholder="IT, HR, Lancaster…" list="proc-dept-list">
+          <datalist id="proc-dept-list"></datalist>
+        </div>
+        <div class="field">
+          <label>Ngày đề xuất</label>
+          <input type="date" id="proc-f-ngay">
+        </div>
+        <div class="field">
+          <label>Hạn phê duyệt</label>
+          <input type="date" id="proc-f-handuyet">
+        </div>
+      </div>
+
+      <!-- ─── So sánh báo giá ─── -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;"><i class="ph ph-scales"></i> So sánh báo giá — 3 nhà cung cấp</div>
+      <div class="proc-compare-grid" id="proc-ncc-grid">
+        <!-- NCC 1 -->
+        <div class="proc-ncc-col" id="proc-col-0">
+          <div class="col-header"><i class="ph ph-storefront" style="color:var(--accent2);"></i> Nhà cung cấp 1 <span class="best-tag" id="proc-best-tag-0" style="display:none;">Rẻ nhất</span></div>
+          <div class="field" style="margin-bottom:6px;"><input type="text" id="proc-ncc0-ten" class="finput" placeholder="Tên NCC" style="font-size:12px;" oninput="procLiveUpdate()"></div>
+          <div class="field" style="margin-bottom:6px;">
+            <label style="font-size:10px;color:var(--muted);">Giá đơn (VNĐ)</label>
+            <input type="number" id="proc-ncc0-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="procLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:6px;"><input type="text" id="proc-ncc0-baohiem" class="finput" placeholder="Bảo hành (VD: 12 tháng)" style="font-size:12px;"></div>
+          <div class="field" style="margin-bottom:6px;"><input type="text" id="proc-ncc0-giao" class="finput" placeholder="Thời gian giao hàng" style="font-size:12px;"></div>
+          <div class="field"><input type="text" id="proc-ncc0-ghichu" class="finput" placeholder="Ghi chú thêm…" style="font-size:12px;"></div>
+          <div class="proc-live-total" id="proc-total-0">—</div>
+          <div class="proc-live-diff" id="proc-diff-0"></div>
+        </div>
+        <!-- NCC 2 -->
+        <div class="proc-ncc-col" id="proc-col-1">
+          <div class="col-header"><i class="ph ph-storefront" style="color:var(--accent2);"></i> Nhà cung cấp 2 <span class="best-tag" id="proc-best-tag-1" style="display:none;">Rẻ nhất</span></div>
+          <div class="field" style="margin-bottom:6px;"><input type="text" id="proc-ncc1-ten" class="finput" placeholder="Tên NCC" style="font-size:12px;" oninput="procLiveUpdate()"></div>
+          <div class="field" style="margin-bottom:6px;">
+            <label style="font-size:10px;color:var(--muted);">Giá đơn (VNĐ)</label>
+            <input type="number" id="proc-ncc1-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="procLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:6px;"><input type="text" id="proc-ncc1-baohiem" class="finput" placeholder="Bảo hành" style="font-size:12px;"></div>
+          <div class="field" style="margin-bottom:6px;"><input type="text" id="proc-ncc1-giao" class="finput" placeholder="Thời gian giao hàng" style="font-size:12px;"></div>
+          <div class="field"><input type="text" id="proc-ncc1-ghichu" class="finput" placeholder="Ghi chú thêm…" style="font-size:12px;"></div>
+          <div class="proc-live-total" id="proc-total-1">—</div>
+          <div class="proc-live-diff" id="proc-diff-1"></div>
+        </div>
+        <!-- NCC 3 -->
+        <div class="proc-ncc-col" id="proc-col-2">
+          <div class="col-header"><i class="ph ph-storefront" style="color:var(--accent2);"></i> Nhà cung cấp 3 <span class="best-tag" id="proc-best-tag-2" style="display:none;">Rẻ nhất</span></div>
+          <div class="field" style="margin-bottom:6px;"><input type="text" id="proc-ncc2-ten" class="finput" placeholder="Tên NCC" style="font-size:12px;" oninput="procLiveUpdate()"></div>
+          <div class="field" style="margin-bottom:6px;">
+            <label style="font-size:10px;color:var(--muted);">Giá đơn (VNĐ)</label>
+            <input type="number" id="proc-ncc2-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="procLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:6px;"><input type="text" id="proc-ncc2-baohiem" class="finput" placeholder="Bảo hành" style="font-size:12px;"></div>
+          <div class="field" style="margin-bottom:6px;"><input type="text" id="proc-ncc2-giao" class="finput" placeholder="Thời gian giao hàng" style="font-size:12px;"></div>
+          <div class="field"><input type="text" id="proc-ncc2-ghichu" class="finput" placeholder="Ghi chú thêm…" style="font-size:12px;"></div>
+          <div class="proc-live-total" id="proc-total-2">—</div>
+          <div class="proc-live-diff" id="proc-diff-2"></div>
+        </div>
+      </div>
+
+      <!-- Ghi chú yêu cầu -->
+      <div class="field" style="margin-top:14px;">
+        <label>Ghi chú / Yêu cầu thêm</label>
+        <textarea id="proc-f-ghichu" class="finput" rows="2" placeholder="Ưu tiên NCC nào, lưu ý đặc biệt…"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;">
+      <button class="btn" onclick="closeModal('modal-procurement')">Hủy</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-icon-ph" onclick="saveProcurement('draft')"><i class="ph ph-floppy-disk"></i> Lưu nháp</button>
+        <button class="btn primary btn-icon-ph" onclick="saveProcurement('cho_duyet')"><i class="ph ph-paper-plane-tilt"></i> Gửi phê duyệt</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-procurement-detail" style="display:none;">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-head">
+      <div>
+        <h2 id="procd-title" style="font-size:15px;"></h2>
+        <p id="procd-sub" style="font-size:11px;color:var(--muted);margin-top:2px;"></p>
+      </div>
+      <button class="btn icon-only" onclick="closeModal('modal-procurement-detail')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body" id="procd-body"></div>
+    <div class="modal-foot" id="procd-foot"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-procurement-approve" style="display:none;">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h2 id="proc-approve-title"><i class="ph ph-check-circle"></i> Phê duyệt yêu cầu</h2>
+      <button class="btn icon-only" onclick="closeModal('modal-procurement-approve')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="proc-approve-id">
+      <div class="field" style="margin-bottom:12px;">
+        <label>Nhà cung cấp được chọn *</label>
+        <select id="proc-approve-ncc" class="fsel" style="width:100%;"></select>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Người phê duyệt</label>
+        <input type="text" id="proc-approve-nguoi" class="finput" placeholder="Họ tên người duyệt">
+      </div>
+      <div class="field">
+        <label>Ghi chú phê duyệt</label>
+        <textarea id="proc-approve-ghichu" class="finput" rows="2" placeholder="Lý do, điều kiện, lưu ý…"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn danger btn-icon-ph" onclick="rejectProcurement()"><i class="ph ph-x-circle"></i> Từ chối</button>
+      <button class="btn primary btn-icon-ph" onclick="approveProcurement()"><i class="ph ph-check-circle"></i> Phê duyệt</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-supplement" style="display:none;">
   <div class="modal" style="max-width:480px;">
     <div class="modal-head">
@@ -4348,6 +4610,7 @@ const COMPANY_DEPTS_MAP = {
 window.addEventListener('DOMContentLoaded', async () => {
   loginScreenPopulateStats(); // hiện stats tài sản/license trên login card nếu có data
   loadFromStorage();          // load localStorage trước → UI không trắng
+  loadProc();                 // load danh sách mua sắm
   loadLicenses();             // load license data
   loadLicHistory();           // load lịch sử gia hạn
   loadLicAttachTags();        // load tag file đính kèm theo dòng
@@ -5159,8 +5422,9 @@ function switchTab(t){
   if(t==='dashboard') updateDashboard();
   if(t==='events')   renderEvents();
   if(t==='license')  renderLicenses();
-  if(t==='dntt'){    renderDNTT(); _dnttUpdateTplUI(); }
-  if(t==='roles')    renderRolesTable();
+  if(t==='dntt'){        renderDNTT(); _dnttUpdateTplUI(); }
+  if(t==='procurement')  renderProcurement();
+  if(t==='roles')        renderRolesTable();
   // Sync bottom nav
   setBottomNav(t);
   // Đóng sidebar drawer trên mobile sau khi chọn tab
@@ -7486,6 +7750,7 @@ function closeModal(id){
 const _FORM_MODALS = new Set([
   'modal-form', 'modal-transfer', 'modal-license', 'modal-dntt-form',
   'modal-import', 'modal-xfer-company', 'modal-supplement',
+  'modal-procurement', 'modal-procurement-approve',
 ]);
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')){
@@ -7868,6 +8133,392 @@ function confirmSupplement(){
   // Re-open detail to reflect update
   viewDetail(assetId);
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  MODULE MUA SẮM & SO SÁNH BÁO GIÁ
+// ══════════════════════════════════════════════════════════════════════════════
+
+const PROC_KEY = 'qlts_procurement_v1';
+let procList = [];
+
+function saveProc(){ try{ localStorage.setItem(PROC_KEY, JSON.stringify(procList)); }catch(e){} }
+function loadProc(){ try{ procList = JSON.parse(localStorage.getItem(PROC_KEY)||'[]'); }catch(e){ procList=[]; } }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const _PROC_STATUS_LABEL = {
+  draft:'Nháp', cho_duyet:'Chờ duyệt', da_duyet:'Đã duyệt', tu_choi:'Từ chối', da_mua:'Đã mua'
+};
+function _procStatusBadge(s){
+  return `<span class="proc-status-badge ${s||'draft'}">${_PROC_STATUS_LABEL[s]||s}</span>`;
+}
+function _procFmt(n){ return n ? Number(n).toLocaleString('vi-VN')+'đ' : '—'; }
+
+// ── Open Form ─────────────────────────────────────────────────────────────────
+function openProcurementForm(id){
+  const rec = id ? procList.find(x=>x.id===id) : null;
+  document.getElementById('proc-form-title').innerHTML =
+    `<i class="ph ph-shopping-cart"></i> ${rec ? 'Chỉnh sửa yêu cầu' : 'Tạo yêu cầu mua sắm'}`;
+  document.getElementById('proc-form-sub').textContent =
+    rec ? 'Cập nhật thông tin và báo giá' : 'Nhập thông tin thiết bị và báo giá từ 3 nhà cung cấp';
+
+  const sv = (elId, v) => { const el=document.getElementById(elId); if(el) el.value=v??''; };
+  sv('proc-f-id',            rec?.id||'');
+  sv('proc-f-tieude',        rec?.tieuDe||'');
+  sv('proc-f-loaits',        rec?.loaiTS||'');
+  sv('proc-f-soluong',       rec?.soLuong||1);
+  sv('proc-f-thongso',       rec?.thongSo||'');
+  sv('proc-f-mucdich',       rec?.mucDich||'');
+  sv('proc-f-nguoidexuat',   rec?.nguoiDeXuat || (_msalAccount?.name||''));
+  sv('proc-f-bophan',        rec?.boPhan||'');
+  sv('proc-f-ngay',          rec?.ngayDeXuat || new Date().toISOString().slice(0,10));
+  sv('proc-f-handuyet',      rec?.hanPheDuyet||'');
+  sv('proc-f-ghichu',        rec?.ghiChu||'');
+
+  // 3 NCC
+  for(let i=0;i<3;i++){
+    const n = rec?.nhaCC?.[i] || {};
+    sv(`proc-ncc${i}-ten`,    n.ten||'');
+    sv(`proc-ncc${i}-gia`,    n.giaDon||'');
+    sv(`proc-ncc${i}-baohiem`,n.baoHanh||'');
+    sv(`proc-ncc${i}-giao`,   n.thoiGianGiao||'');
+    sv(`proc-ncc${i}-ghichu`, n.ghiChu||'');
+    // Reset styling
+    document.getElementById(`proc-col-${i}`)?.classList.remove('col-best');
+    const tag = document.getElementById(`proc-best-tag-${i}`);
+    if(tag) tag.style.display='none';
+    const tot = document.getElementById(`proc-total-${i}`);
+    if(tot) tot.textContent = '—';
+    const diff = document.getElementById(`proc-diff-${i}`);
+    if(diff) diff.textContent = '';
+  }
+
+  // Populate dept datalist
+  const dl = document.getElementById('proc-dept-list');
+  if(dl){
+    dl.innerHTML = Object.entries(DEPT_MAP||{}).map(([k,v])=>`<option value="${esc(v.ten)}">`).join('');
+  }
+
+  procLiveUpdate();
+  openModal('modal-procurement');
+}
+
+// ── Live price comparison update ──────────────────────────────────────────────
+function procLiveUpdate(){
+  const qty = Math.max(1, parseInt(document.getElementById('proc-f-soluong')?.value)||1);
+  const prices = [0,1,2].map(i => {
+    const g = parseFloat(document.getElementById(`proc-ncc${i}-gia`)?.value)||0;
+    return g * qty;
+  });
+  const validPrices = prices.filter(p=>p>0);
+  const minPrice = validPrices.length ? Math.min(...validPrices) : 0;
+  const maxPrice = validPrices.length ? Math.max(...validPrices) : 0;
+
+  prices.forEach((total, i) => {
+    const col = document.getElementById(`proc-col-${i}`);
+    const totEl = document.getElementById(`proc-total-${i}`);
+    const diffEl = document.getElementById(`proc-diff-${i}`);
+    const tagEl = document.getElementById(`proc-best-tag-${i}`);
+
+    col?.classList.remove('col-best');
+    if(tagEl) tagEl.style.display='none';
+
+    if(!total){ if(totEl) totEl.textContent='—'; if(diffEl) diffEl.textContent=''; return; }
+    if(totEl) totEl.textContent = total.toLocaleString('vi-VN')+'đ';
+
+    if(total === minPrice && validPrices.length > 1){
+      col?.classList.add('col-best');
+      if(tagEl) tagEl.style.display='inline-flex';
+    }
+    if(diffEl && validPrices.length > 1 && maxPrice > 0){
+      const diff = total - minPrice;
+      if(diff > 0){
+        const pct = ((diff/minPrice)*100).toFixed(1);
+        diffEl.innerHTML = `<span style="color:var(--red);">+${diff.toLocaleString('vi-VN')}đ (+${pct}% so với rẻ nhất)</span>`;
+      } else {
+        diffEl.innerHTML = `<span style="color:#059669;">✓ Rẻ nhất · tiết kiệm ${(maxPrice-minPrice).toLocaleString('vi-VN')}đ</span>`;
+      }
+    }
+  });
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+function saveProcurement(status){
+  const tieuDe = document.getElementById('proc-f-tieude')?.value.trim();
+  if(!tieuDe){ toast('⚠️ Vui lòng nhập tiêu đề yêu cầu!','bad'); return; }
+  const soLuong = parseInt(document.getElementById('proc-f-soluong')?.value)||1;
+
+  const nhaCC = [0,1,2].map(i => ({
+    ten:         document.getElementById(`proc-ncc${i}-ten`)?.value.trim()||'',
+    giaDon:      parseFloat(document.getElementById(`proc-ncc${i}-gia`)?.value)||0,
+    baoHanh:     document.getElementById(`proc-ncc${i}-baohiem`)?.value.trim()||'',
+    thoiGianGiao:document.getElementById(`proc-ncc${i}-giao`)?.value.trim()||'',
+    ghiChu:      document.getElementById(`proc-ncc${i}-ghichu`)?.value.trim()||'',
+  }));
+
+  const existingId = document.getElementById('proc-f-id')?.value;
+  const now = new Date().toISOString();
+  const rec = {
+    id: existingId || ('proc_'+Date.now()),
+    ts: existingId ? (procList.find(x=>x.id===existingId)?.ts||now) : now,
+    tsModified: now,
+    tieuDe,
+    loaiTS:      document.getElementById('proc-f-loaits')?.value.trim()||'',
+    soLuong,
+    thongSo:     document.getElementById('proc-f-thongso')?.value.trim()||'',
+    mucDich:     document.getElementById('proc-f-mucdich')?.value.trim()||'',
+    nguoiDeXuat: document.getElementById('proc-f-nguoidexuat')?.value.trim()||'',
+    boPhan:      document.getElementById('proc-f-bophan')?.value.trim()||'',
+    ngayDeXuat:  document.getElementById('proc-f-ngay')?.value||'',
+    hanPheDuyet: document.getElementById('proc-f-handuyet')?.value||'',
+    ghiChu:      document.getElementById('proc-f-ghichu')?.value.trim()||'',
+    trangThai:   status,
+    nhaCC,
+    nccChonIdx:  existingId ? (procList.find(x=>x.id===existingId)?.nccChonIdx??null) : null,
+    ghiChuDuyet: existingId ? (procList.find(x=>x.id===existingId)?.ghiChuDuyet||'') : '',
+    nguoiDuyet:  existingId ? (procList.find(x=>x.id===existingId)?.nguoiDuyet||'') : '',
+    ngayDuyet:   existingId ? (procList.find(x=>x.id===existingId)?.ngayDuyet||'') : '',
+    dnttId:      existingId ? (procList.find(x=>x.id===existingId)?.dnttId||'') : '',
+  };
+
+  if(existingId){
+    const idx = procList.findIndex(x=>x.id===existingId);
+    if(idx>=0) procList[idx]=rec; else procList.push(rec);
+  } else {
+    procList.unshift(rec);
+  }
+  saveProc();
+  closeModal('modal-procurement');
+  renderProcurement();
+  const label = status==='cho_duyet' ? 'Đã gửi phê duyệt' : 'Đã lưu nháp';
+  toast(`✅ ${label}: ${tieuDe}`,'ok');
+}
+
+// ── Render list ───────────────────────────────────────────────────────────────
+function renderProcurement(){
+  const q = (document.getElementById('proc-search')?.value||'').toLowerCase();
+  const fs = document.getElementById('proc-filter-status')?.value||'';
+
+  let list = procList.filter(p => {
+    if(fs && p.trangThai!==fs) return false;
+    if(q){
+      const hay = [p.tieuDe, p.loaiTS, p.nguoiDeXuat, p.boPhan, ...p.nhaCC.map(n=>n.ten)].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Stats
+  const statsEl = document.getElementById('proc-stats');
+  if(statsEl){
+    const counts = {draft:0,cho_duyet:0,da_duyet:0,tu_choi:0,da_mua:0};
+    procList.forEach(p=>{ if(counts[p.trangThai]!==undefined) counts[p.trangThai]++; });
+    const colors = {draft:'#94A3B8',cho_duyet:'#D97706',da_duyet:'#059669',tu_choi:'#DC2626',da_mua:'#7C3AED'};
+    statsEl.innerHTML = Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>
+      `<span style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;
+        background:${colors[k]}18;color:${colors[k]};border:1px solid ${colors[k]}33;">
+        ${_PROC_STATUS_LABEL[k]} <strong>${v}</strong>
+      </span>`
+    ).join('');
+  }
+
+  const el = document.getElementById('proc-list');
+  const countEl = document.getElementById('proc-count');
+  if(!list.length){
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">
+      <i class="ph ph-shopping-cart" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4;"></i>
+      ${procList.length ? 'Không tìm thấy yêu cầu phù hợp.' : 'Chưa có yêu cầu mua sắm nào. Nhấn "+ Tạo yêu cầu mua" để bắt đầu.'}
+    </div>`;
+    if(countEl) countEl.textContent = '';
+    return;
+  }
+  if(countEl) countEl.textContent = `${list.length} yêu cầu${list.length<procList.length?` (lọc từ ${procList.length})`:''}`;
+
+  el.innerHTML = list.map(p => {
+    const prices = p.nhaCC.map(n=>n.giaDon*p.soLuong).filter(x=>x>0);
+    const minPrice = prices.length ? Math.min(...prices) : 0;
+    const selectedNCC = p.nccChonIdx!=null ? p.nhaCC[p.nccChonIdx] : null;
+
+    // NCC comparison table
+    const nccRows = p.nhaCC.map((n,i) => {
+      if(!n.ten && !n.giaDon) return '';
+      const total = n.giaDon * p.soLuong;
+      const isBest = prices.length>1 && total===minPrice && total>0;
+      const isSel  = p.nccChonIdx===i;
+      const rowCls = isSel ? 'selected-ncc' : (isBest ? 'best-price' : '');
+      const diff = (prices.length>1 && total>0 && !isBest)
+        ? `<span style="color:var(--red);font-size:10px;">+${((total-minPrice)/minPrice*100).toFixed(1)}%</span>` : '';
+      const badge = isBest && prices.length>1 ? `<span class="proc-price-badge best">Rẻ nhất</span>` : '';
+      const selBadge = isSel ? `<span class="proc-price-badge" style="background:#EFF6FF;color:#2563EB;">Đã chọn</span>` : '';
+      return `<tr class="${rowCls}">
+        <td><strong>${esc(n.ten||'—')}</strong></td>
+        <td>${total>0?`<strong>${total.toLocaleString('vi-VN')}đ</strong>`:''} ${badge} ${selBadge} ${diff}</td>
+        <td style="color:var(--muted);">${esc(n.baoHanh||'')}</td>
+        <td style="color:var(--muted);">${esc(n.thoiGianGiao||'')}</td>
+      </tr>`;
+    }).join('');
+
+    const hasNCC = nccRows.trim().length > 0;
+
+    // Action buttons
+    const canApprove = ['cho_duyet','draft'].includes(p.trangThai);
+    const canDNTT    = p.trangThai==='da_duyet' && p.nccChonIdx!=null;
+    const canMarkBought = p.trangThai==='da_duyet';
+
+    return `<div class="proc-card status-${p.trangThai}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+            ${_procStatusBadge(p.trangThai)}
+            ${p.loaiTS?`<span class="type-badge">${esc(p.loaiTS)}</span>`:''}
+            ${p.hanPheDuyet && new Date(p.hanPheDuyet)<new Date() && !['da_duyet','da_mua'].includes(p.trangThai)
+              ? `<span class="proc-status-badge" style="background:rgba(239,68,68,.1);color:#DC2626;">⏰ Quá hạn</span>` : ''}
+          </div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${esc(p.tieuDe)}</div>
+          <div style="font-size:11px;color:var(--muted);">
+            ${p.nguoiDeXuat?`👤 ${esc(p.nguoiDeXuat)}`:''}
+            ${p.boPhan?` · 🏢 ${esc(p.boPhan)}`:''}
+            ${p.soLuong>1?` · SL: <strong>${p.soLuong}</strong>`:''}
+            ${p.ngayDeXuat?` · 📅 ${new Date(p.ngayDeXuat).toLocaleDateString('vi-VN')}`:''}
+          </div>
+          ${p.thongSo?`<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic;">${esc(p.thongSo)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;">
+          ${canApprove ? `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="openApproveModal('${p.id}')"><i class="ph ph-check-circle"></i> Duyệt</button>` : ''}
+          ${canDNTT ? `<button class="btn success btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="procCreateDNTT('${p.id}')"><i class="ph ph-receipt"></i> Tạo ĐNTT</button>` : ''}
+          ${canMarkBought && !p.dnttId ? `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="procMarkBought('${p.id}')"><i class="ph ph-check-square"></i> Đã mua</button>` : ''}
+          ${p.dnttId ? `<span style="font-size:11px;color:#7C3AED;padding:4px 8px;background:rgba(139,92,246,.08);border-radius:8px;"><i class="ph ph-receipt"></i> ĐNTT đã tạo</span>` : ''}
+          <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="openProcurementForm('${p.id}')"><i class="ph ph-pencil-simple"></i> Sửa</button>
+          <button class="btn danger btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="deleteProc('${p.id}',this)"><i class="ph ph-trash"></i></button>
+        </div>
+      </div>
+      ${hasNCC ? `
+      <table class="proc-ncc-table" style="margin-top:10px;">
+        <thead><tr>
+          <th>Nhà cung cấp</th>
+          <th>Tổng tiền</th>
+          <th>Bảo hành</th>
+          <th>Giao hàng</th>
+        </tr></thead>
+        <tbody>${nccRows}</tbody>
+      </table>` : ''}
+      ${p.ghiChuDuyet ? `<div style="margin-top:8px;padding:6px 10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;font-size:11px;color:#92400E;">💬 ${esc(p.ghiChuDuyet)}${p.nguoiDuyet?` — <strong>${esc(p.nguoiDuyet)}</strong>`:''}</div>` : ''}
+      ${p.mucDich ? `<div style="margin-top:6px;font-size:11px;color:var(--muted);">📋 ${esc(p.mucDich)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Approve modal ─────────────────────────────────────────────────────────────
+function openApproveModal(id){
+  const p = procList.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('proc-approve-id').value = id;
+  document.getElementById('proc-approve-title').innerHTML =
+    `<i class="ph ph-check-circle"></i> Phê duyệt: ${esc(p.tieuDe)}`;
+  document.getElementById('proc-approve-nguoi').value =
+    _msalAccount?.name || _msalAccount?.username || '';
+  document.getElementById('proc-approve-ghichu').value = p.ghiChuDuyet||'';
+
+  // Populate NCC select
+  const sel = document.getElementById('proc-approve-ncc');
+  sel.innerHTML = '<option value="">— Chọn nhà cung cấp —</option>';
+  p.nhaCC.forEach((n,i) => {
+    if(!n.ten && !n.giaDon) return;
+    const total = n.giaDon * p.soLuong;
+    sel.insertAdjacentHTML('beforeend',
+      `<option value="${i}">${esc(n.ten||`NCC ${i+1}`)} — ${total>0?total.toLocaleString('vi-VN')+'đ':'giá chưa có'} — BH: ${n.baoHanh||'—'}</option>`);
+  });
+  if(p.nccChonIdx!=null) sel.value = p.nccChonIdx;
+
+  openModal('modal-procurement-approve');
+}
+
+function approveProcurement(){
+  const id = document.getElementById('proc-approve-id').value;
+  const nccIdx = document.getElementById('proc-approve-ncc').value;
+  if(nccIdx===''){ toast('⚠️ Vui lòng chọn nhà cung cấp!','bad'); return; }
+  const p = procList.find(x=>x.id===id);
+  if(!p) return;
+  p.trangThai   = 'da_duyet';
+  p.nccChonIdx  = parseInt(nccIdx);
+  p.nguoiDuyet  = document.getElementById('proc-approve-nguoi').value.trim();
+  p.ghiChuDuyet = document.getElementById('proc-approve-ghichu').value.trim();
+  p.ngayDuyet   = new Date().toISOString().slice(0,10);
+  saveProc();
+  closeModal('modal-procurement-approve');
+  renderProcurement();
+  toast(`✅ Đã duyệt yêu cầu — NCC: ${esc(p.nhaCC[p.nccChonIdx]?.ten||'')} — Có thể tạo ĐNTT ngay!`,'ok');
+}
+
+function rejectProcurement(){
+  const id  = document.getElementById('proc-approve-id').value;
+  const ghichu = document.getElementById('proc-approve-ghichu').value.trim();
+  const p = procList.find(x=>x.id===id);
+  if(!p) return;
+  p.trangThai   = 'tu_choi';
+  p.ghiChuDuyet = ghichu;
+  p.nguoiDuyet  = document.getElementById('proc-approve-nguoi').value.trim();
+  p.ngayDuyet   = new Date().toISOString().slice(0,10);
+  saveProc();
+  closeModal('modal-procurement-approve');
+  renderProcurement();
+  toast('Đã từ chối yêu cầu','warn');
+}
+
+// ── Tạo ĐNTT từ báo giá được duyệt ──────────────────────────────────────────
+function procCreateDNTT(id){
+  const p = procList.find(x=>x.id===id);
+  if(!p || p.nccChonIdx==null) return;
+  const ncc = p.nhaCC[p.nccChonIdx];
+  const totalAmount = (ncc.giaDon||0) * (p.soLuong||1);
+
+  // Pre-fill ĐNTT
+  const prefill = {
+    ncc:     ncc.ten||'',
+    sotien:  totalAmount,
+    noidung: `Mua ${p.soLuong>1?p.soLuong+'x ':''}${p.loaiTS||p.tieuDe}${p.thongSo?' — '+p.thongSo:''}`,
+    ghichu:  [p.ghiChuDuyet, p.ghiChu].filter(Boolean).join(' · '),
+    bophan:  p.boPhan||'',
+    _procId: id,
+  };
+
+  // Switch to ĐNTT tab and open form
+  switchTab('dntt');
+  // Small delay to let render settle
+  setTimeout(()=>{
+    openDNTTForm(prefill);
+    // Link back after ĐNTT saved — hooked in saveDNTTForm
+    _pendingProcLink = id;
+  }, 80);
+}
+
+// Sau khi ĐNTT được lưu: link ngược lại vào procurement record
+let _pendingProcLink = null;
+
+function _linkProcToDNTT(dnttId){
+  if(!_pendingProcLink) return;
+  const p = procList.find(x=>x.id===_pendingProcLink);
+  if(p){ p.dnttId = dnttId; p.trangThai = 'da_mua'; saveProc(); }
+  _pendingProcLink = null;
+}
+
+function procMarkBought(id){
+  const p = procList.find(x=>x.id===id);
+  if(!p) return;
+  p.trangThai = 'da_mua';
+  saveProc();
+  renderProcurement();
+  toast('✅ Đã đánh dấu hoàn tất mua sắm','ok');
+}
+
+function deleteProc(id, btn){
+  if(!confirm('Xóa yêu cầu mua sắm này?')) return;
+  procList = procList.filter(x=>x.id!==id);
+  saveProc();
+  renderProcurement();
+  toast('Đã xóa yêu cầu','warn');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 
 async function confirmTransfer(){
   const id = document.getElementById('tr-asset-id').value;
@@ -10026,10 +10677,16 @@ function openDNTTForm(prefill){
     setV('dntt-f-congty',   prefill.congTy || '');
     setV('dntt-f-ncc',      prefill.ncc || '');
     setV('dntt-f-sohd',     prefill.key || '');
-    setV('dntt-f-sotien',   prefill.giaTri ?? '');
+    setV('dntt-f-sotien',   prefill.giaTri ?? (prefill.sotien ?? ''));
     if(prefill.tienTe) document.getElementById('dntt-f-tiente').value = prefill.tienTe;
-    const desc = `Thanh toán ${prefill.type==='Domain'?'tên miền':prefill.type==='Hosting'?'hosting':'phần mềm'} ${prefill.ten||''}${prefill.ngayHetHan?' - gia hạn đến '+prefill.ngayHetHan:''}`;
-    setV('dntt-f-noidung',  desc);
+    if(prefill.noidung){
+      setV('dntt-f-noidung', prefill.noidung);
+    } else if(!prefill._procId) {
+      const desc = `Thanh toán ${prefill.type==='Domain'?'tên miền':prefill.type==='Hosting'?'hosting':'phần mềm'} ${prefill.ten||''}${prefill.ngayHetHan?' - gia hạn đến '+prefill.ngayHetHan:''}`;
+      setV('dntt-f-noidung',  desc);
+    }
+    if(prefill.bophan) setV('dntt-f-phongban', prefill.bophan);
+    if(prefill.ghichu) setV('dntt-f-ghichu',   prefill.ghichu);
   }
 
   // Datalist công ty
@@ -10187,6 +10844,8 @@ async function saveDNTTForm(draftOnly){
   saveDNTT();
   clearDraft('modal-dntt-form');   // xóa nháp khi đã lưu thành công
   closeModal('modal-dntt-form');
+  // Nếu ĐNTT được tạo từ yêu cầu mua sắm → link ngược lại
+  _linkProcToDNTT(rec.id);
 
   // Sync lên SharePoint nền (không block UI)
   if(!!_msalAccount){
