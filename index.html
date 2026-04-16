@@ -1191,10 +1191,71 @@ input[type=checkbox].row-cb{
 .lf-icon{font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;}
 .lf-icon i.ph{font-size:22px;}
 .lf-label{font-size:10px;color:#94A3B8;white-space:nowrap;}
+/* Guest mode button */
+.login-guest-btn{
+  width:100%;padding:10px 24px;border-radius:12px;margin-top:10px;
+  background:transparent;color:#64748B;
+  border:1.5px dashed #CBD5E1;font-size:13px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:all .2s;
+}
+.login-guest-btn:hover{
+  background:rgba(100,116,139,.07);border-color:#94A3B8;color:#475569;
+  transform:translateY(-1px);
+}
+/* Stats row */
+.login-stats{
+  display:flex;gap:0;margin-bottom:20px;width:100%;
+  border:1px solid rgba(0,0,0,.07);border-radius:12px;overflow:hidden;
+}
+.login-stat{
+  flex:1;padding:10px 4px;text-align:center;
+  border-right:1px solid rgba(0,0,0,.07);
+  background:rgba(249,250,251,1);
+}
+.login-stat:last-child{border-right:none;}
+.login-stat-num{font-size:18px;font-weight:800;color:#1E293B;line-height:1.1;}
+.login-stat-lbl{font-size:10px;color:#94A3B8;margin-top:2px;}
+/* Enhanced features */
+.login-features-v2{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%;}
+.lf2-item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:10px 4px;border-radius:10px;background:rgba(37,99,235,.04);
+  border:1px solid rgba(37,99,235,.08);transition:background .15s;
+}
+.lf2-item:hover{background:rgba(37,99,235,.09);}
+.lf2-icon{font-size:18px;line-height:1;color:#2563EB;}
+.lf2-name{font-size:10px;font-weight:700;color:#374151;}
+/* Footer with changelog */
 .login-footer{
   position:absolute;bottom:16px;left:0;right:0;text-align:center;
-  font-size:10.5px;color:#B5A898;
+  font-size:10.5px;color:#B5A898;display:flex;align-items:center;justify-content:center;gap:6px;
 }
+.login-footer a{color:#8B9BAE;text-decoration:none;border-bottom:1px dashed #C9D4DF;}
+.login-footer a:hover{color:#2563EB;}
+/* Guest banner inside app */
+#guest-banner{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:8888;
+  padding:8px 20px;
+  background:linear-gradient(90deg,#0F172A,#1E293B);
+  color:#CBD5E1;font-size:12px;
+  display:none;align-items:center;justify-content:center;gap:10px;
+  border-top:1px solid #334155;
+}
+#guest-banner.show{display:flex;}
+/* Changelog tooltip */
+#changelog-card{
+  display:none;position:fixed;bottom:48px;left:50%;transform:translateX(-50%);
+  z-index:10000;min-width:280px;max-width:340px;
+  background:#fff;border:1px solid #E2E8F0;border-radius:14px;
+  box-shadow:0 12px 40px rgba(0,0,0,.18);padding:16px 18px;
+  animation:loginFadeIn .2s ease-out both;
+}
+#changelog-card.show{display:block;}
+#changelog-card h4{font-size:13px;font-weight:700;color:#1E293B;margin-bottom:10px;}
+#changelog-card ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;}
+#changelog-card li{font-size:12px;color:#475569;display:flex;gap:6px;align-items:flex-start;line-height:1.5;}
+#changelog-card li::before{content:'•';color:#2563EB;font-size:16px;line-height:1;}
 /* Error message trên login screen */
 .login-error{
   display:none;margin-top:10px;padding:8px 14px;border-radius:8px;
@@ -1306,6 +1367,13 @@ input[type=checkbox].row-cb{
       Đăng nhập với Microsoft
     </button>
 
+    <div class="login-note">Đăng nhập an toàn qua tài khoản Microsoft tổ chức</div>
+
+    <!-- Guest mode button -->
+    <button class="login-guest-btn" onclick="enterGuestMode()">
+      <i class="ph ph-eye"></i> Xem thử không cần đăng nhập
+    </button>
+
     <div class="login-loading" id="login-loading">
       <div class="ld-dots">
         <div class="ld-dot"></div>
@@ -1314,18 +1382,35 @@ input[type=checkbox].row-cb{
       </div>
       <div class="ld-text" id="login-loading-text">Đang kết nối Microsoft 365…</div>
     </div>
-
-    <div class="login-note">Đăng nhập an toàn qua tài khoản Microsoft tổ chức</div>
     <div class="login-error" id="login-error"></div>
 
     <div class="login-divider"></div>
-    <div class="login-features">
-      <div class="lf-item"><div class="lf-icon"><i class="ph ph-package"></i></div><div class="lf-label">Tài Sản</div></div>
-      <div class="lf-item"><div class="lf-icon"><i class="ph ph-key"></i></div><div class="lf-label">License</div></div>
-      <div class="lf-item"><div class="lf-icon"><i class="ph ph-clock-counter-clockwise"></i></div><div class="lf-label">Lịch Sử</div></div>
-      <div class="lf-item"><div class="lf-icon"><i class="ph ph-chart-bar"></i></div><div class="lf-label">Dashboard</div></div>
-      <div class="lf-item"><div class="lf-icon"><i class="ph ph-cloud"></i></div><div class="lf-label">SharePoint</div></div>
+
+    <!-- Stats từ localStorage (nếu có dữ liệu cũ) -->
+    <div class="login-stats" id="login-stats" style="display:none;">
+      <div class="login-stat">
+        <div class="login-stat-num" id="ls-assets">0</div>
+        <div class="login-stat-lbl">Tài sản</div>
+      </div>
+      <div class="login-stat">
+        <div class="login-stat-num" id="ls-licenses">0</div>
+        <div class="login-stat-lbl">License</div>
+      </div>
+      <div class="login-stat">
+        <div class="login-stat-num" id="ls-dntt">0</div>
+        <div class="login-stat-lbl">Đề nghị TT</div>
+      </div>
     </div>
+
+    <!-- Features grid -->
+    <div class="login-features-v2">
+      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-package"></i></div><div class="lf2-name">Tài Sản</div></div>
+      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-key"></i></div><div class="lf2-name">License</div></div>
+      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-clock-counter-clockwise"></i></div><div class="lf2-name">Lịch Sử</div></div>
+      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-chart-bar"></i></div><div class="lf2-name">Dashboard</div></div>
+      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-cloud"></i></div><div class="lf2-name">SharePoint</div></div>
+    </div>
+
     <div class="login-local-warn" id="login-local-warn" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#92400E;font-size:12px;line-height:1.5;text-align:left;">
       ⚠️ <strong>Đang chạy local (file://)</strong><br>
       Azure AD không hỗ trợ đăng nhập qua <code>file://</code>.<br>
@@ -1333,7 +1418,11 @@ input[type=checkbox].row-cb{
     </div>
   </div>
 
-  <div class="login-footer">© 2026 Trung Thuy Group · QLTS CNTT v1.0</div>
+  <div class="login-footer">
+    © 2026 Trung Thuy Group · QLTS CNTT v1.0
+    <span style="opacity:.5;">·</span>
+    <a href="#" onclick="toggleChangelog(event)">Xem thay đổi</a>
+  </div>
 </div>
 <!-- ═══════════════════════════════════════════════════ -->
 
@@ -1359,6 +1448,28 @@ input[type=checkbox].row-cb{
 </div>
 <!-- ══════════════════════════════════════════ -->
 
+
+<!-- Changelog card (hiện khi bấm "Xem thay đổi") -->
+<div id="changelog-card">
+  <h4>📋 Cập nhật gần đây · v1.0</h4>
+  <ul>
+    <li>Cấp bổ sung phụ kiện không cần bàn giao lại</li>
+    <li>Auto-save bản nháp form 30s, khôi phục khi quay lại</li>
+    <li>Tích hợp đề nghị thanh toán với headcode &amp; đơn vị</li>
+    <li>Sync SharePoint tự động khi lưu phiếu</li>
+    <li>Offline queue — lưu lại khi mất mạng, tự đẩy khi có mạng</li>
+    <li>Danh mục tài sản sắp xếp mới nhất → cũ nhất</li>
+  </ul>
+</div>
+
+<!-- Guest mode banner (hiện dưới cùng khi ở chế độ xem thử) -->
+<div id="guest-banner">
+  <i class="ph ph-eye" style="font-size:15px;opacity:.7;"></i>
+  <span>Chế độ <strong style="color:#fff;">Xem thử</strong> — Dữ liệu chỉ lưu trên thiết bị này, không đồng bộ SharePoint.</span>
+  <button onclick="loginFromGuest()" style="margin-left:8px;padding:4px 12px;border-radius:8px;font-size:11px;font-weight:700;background:#2563EB;color:#fff;border:none;cursor:pointer;">
+    <i class="ph ph-sign-in"></i> Đăng nhập M365
+  </button>
+</div>
 
 <div class="app">
 
@@ -3833,6 +3944,73 @@ async function msalAutoInit(){
 }
 
 // ─── Login Screen helpers ─────────────────────────────────────────────────────
+
+// ── Stats trên login screen từ localStorage ──────────────────────────────────
+function loginScreenPopulateStats(){
+  try{
+    const a = JSON.parse(localStorage.getItem('qlts_v14_data')||'[]');
+    const l = JSON.parse(localStorage.getItem('qlts_v14_licenses')||'[]');
+    const d = JSON.parse(localStorage.getItem('qlts_dntt_v1')||'[]');
+    if(!a.length && !l.length && !d.length) return; // không có data → không hiện stats
+    const wrap = document.getElementById('login-stats');
+    if(wrap) wrap.style.display = 'flex';
+    const an = document.getElementById('ls-assets');   if(an) an.textContent = a.length;
+    const ln = document.getElementById('ls-licenses'); if(ln) ln.textContent = l.length;
+    const dn = document.getElementById('ls-dntt');     if(dn) dn.textContent = d.length;
+  }catch(e){}
+}
+
+// ── Guest Mode ───────────────────────────────────────────────────────────────
+let _guestMode = false;
+
+function enterGuestMode(){
+  _guestMode = true;
+  hideLoginScreen();
+  // Hiện banner
+  const banner = document.getElementById('guest-banner');
+  if(banner) banner.classList.add('show');
+  // Ẩn SP-related bars
+  msalSetBar('👁 Chế độ xem thử','s-warn');
+  // Load local data bình thường (không cần token)
+  loadData(); loadTransfers(); loadLicenses(); loadLicAttachTags();
+  loadLicHistory(); loadDNTT(); loadXacNhan();
+  renderTable(); renderLicenses(); renderDNTT(); renderEvents();
+  try{ updateDashboard(); }catch(e){}
+  toast('👋 Đang dùng chế độ xem thử — dữ liệu chỉ lưu trên máy này','warn');
+}
+
+function loginFromGuest(){
+  // Tắt guest mode → quay lại login screen
+  _guestMode = false;
+  const banner = document.getElementById('guest-banner');
+  if(banner) banner.classList.remove('show');
+  const ls = document.getElementById('login-screen');
+  if(ls){ ls.style.display='flex'; ls.classList.remove('hiding');
+    const bg = document.getElementById('splash-bg');
+    if(bg) bg.style.display = ''; }
+}
+
+// ── Changelog toggle ─────────────────────────────────────────────────────────
+let _changelogOpen = false;
+function toggleChangelog(e){
+  if(e) e.preventDefault();
+  _changelogOpen = !_changelogOpen;
+  const card = document.getElementById('changelog-card');
+  if(card) card.classList.toggle('show', _changelogOpen);
+  if(_changelogOpen){
+    // đóng khi click ngoài
+    setTimeout(()=>{
+      document.addEventListener('click', function _cls(ev){
+        if(!ev.target.closest('#changelog-card')){
+          _changelogOpen=false;
+          if(card) card.classList.remove('show');
+          document.removeEventListener('click',_cls);
+        }
+      });
+    },0);
+  }
+}
+
 function hideLoginScreen(){
   const el = document.getElementById('login-screen');
   if(!el) return;
@@ -4168,6 +4346,7 @@ const COMPANY_DEPTS_MAP = {
 
 // ═══════════════════════ INIT ═══════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
+  loginScreenPopulateStats(); // hiện stats tài sản/license trên login card nếu có data
   loadFromStorage();          // load localStorage trước → UI không trắng
   loadLicenses();             // load license data
   loadLicHistory();           // load lịch sử gia hạn
