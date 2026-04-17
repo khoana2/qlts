@@ -1341,20 +1341,30 @@ input[type=checkbox].row-cb{
   padding:16px 18px;margin-bottom:12px;transition:box-shadow .15s;
 }
 .proc-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.08);}
-.proc-card.status-da_duyet{border-left:4px solid #10B981;}
-.proc-card.status-tu_choi{border-left:4px solid var(--red);opacity:.75;}
 .proc-card.status-da_mua{border-left:4px solid #8B5CF6;}
-.proc-card.status-cho_duyet{border-left:4px solid #F59E0B;}
 .proc-card.status-draft{border-left:4px solid var(--border);}
 .proc-status-badge{
   display:inline-flex;align-items:center;gap:4px;
   padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
 }
 .proc-status-badge.draft{background:rgba(148,163,184,.12);color:#64748B;}
-.proc-status-badge.cho_duyet{background:rgba(245,158,11,.12);color:#D97706;}
-.proc-status-badge.da_duyet{background:rgba(16,185,129,.12);color:#059669;}
-.proc-status-badge.tu_choi{background:rgba(239,68,68,.1);color:#DC2626;}
 .proc-status-badge.da_mua{background:rgba(139,92,246,.12);color:#7C3AED;}
+/* Print styles for procurement comparison */
+@media print {
+  body > *:not(#proc-print-area){ display:none !important; }
+  #proc-print-area{ display:block !important; }
+}
+#proc-print-area{
+  display:none;font-family:'Segoe UI',sans-serif;font-size:12px;color:#111;
+}
+#proc-print-area h2{font-size:16px;margin:0 0 4px;}
+#proc-print-area .prt-meta{font-size:11px;color:#555;margin-bottom:14px;}
+#proc-print-area table{width:100%;border-collapse:collapse;margin-top:8px;}
+#proc-print-area th{background:#f0f4f8;padding:7px 9px;font-size:11px;border:1px solid #ccc;text-align:left;}
+#proc-print-area td{padding:7px 9px;border:1px solid #ddd;vertical-align:top;font-size:11px;}
+#proc-print-area .prt-winner{background:#e8fdf2 !important;}
+#proc-print-area .prt-sig{display:flex;gap:40px;margin-top:32px;}
+#proc-print-area .prt-sig-box{flex:1;border-top:1px solid #aaa;padding-top:6px;font-size:11px;color:#555;}
 /* Supplier comparison table inside card */
 .proc-ncc-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px;}
 .proc-ncc-table th{padding:6px 10px;background:var(--bg2);font-size:10px;font-weight:700;
@@ -2204,11 +2214,8 @@ input[type=checkbox].row-cb{
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <select class="fsel" id="proc-filter-status" onchange="renderProcurement()" style="min-width:130px;">
-          <option value="">Tất cả trạng thái</option>
+          <option value="">Tất cả</option>
           <option value="draft">Nháp</option>
-          <option value="cho_duyet">Chờ duyệt</option>
-          <option value="da_duyet">Đã duyệt</option>
-          <option value="tu_choi">Từ chối</option>
           <option value="da_mua">Đã mua</option>
         </select>
         <input type="text" id="proc-search" class="finput" placeholder="🔍 Tìm thiết bị, NCC…" style="min-width:180px;" oninput="renderProcurement()">
@@ -2750,8 +2757,7 @@ input[type=checkbox].row-cb{
     <div class="modal-foot" style="justify-content:space-between;">
       <button class="btn" onclick="closeModal('modal-procurement')">Hủy</button>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-icon-ph" onclick="saveProcurement('draft')"><i class="ph ph-floppy-disk"></i> Lưu nháp</button>
-        <button class="btn primary btn-icon-ph" onclick="saveProcurement('cho_duyet')"><i class="ph ph-paper-plane-tilt"></i> Gửi phê duyệt</button>
+        <button class="btn primary btn-icon-ph" onclick="saveProcurement('draft')"><i class="ph ph-floppy-disk"></i> Lưu</button>
       </div>
     </div>
   </div>
@@ -2771,33 +2777,8 @@ input[type=checkbox].row-cb{
   </div>
 </div>
 
-<div class="modal-backdrop" id="modal-procurement-approve" style="display:none;">
-  <div class="modal" style="max-width:420px;">
-    <div class="modal-head">
-      <h2 id="proc-approve-title"><i class="ph ph-check-circle"></i> Phê duyệt yêu cầu</h2>
-      <button class="btn icon-only" onclick="closeModal('modal-procurement-approve')" style="border:none;font-size:18px;">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="proc-approve-id">
-      <div class="field" style="margin-bottom:12px;">
-        <label>Nhà cung cấp được chọn *</label>
-        <select id="proc-approve-ncc" class="fsel" style="width:100%;"></select>
-      </div>
-      <div class="field" style="margin-bottom:12px;">
-        <label>Người phê duyệt</label>
-        <input type="text" id="proc-approve-nguoi" class="finput" placeholder="Họ tên người duyệt">
-      </div>
-      <div class="field">
-        <label>Ghi chú phê duyệt</label>
-        <textarea id="proc-approve-ghichu" class="finput" rows="2" placeholder="Lý do, điều kiện, lưu ý…"></textarea>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn danger btn-icon-ph" onclick="rejectProcurement()"><i class="ph ph-x-circle"></i> Từ chối</button>
-      <button class="btn primary btn-icon-ph" onclick="approveProcurement()"><i class="ph ph-check-circle"></i> Phê duyệt</button>
-    </div>
-  </div>
-</div>
+<!-- print area for procurement comparison -->
+<div id="proc-print-area"></div>
 
 <div class="modal-backdrop" id="modal-supplement" style="display:none;">
   <div class="modal" style="max-width:480px;">
@@ -7771,7 +7752,7 @@ function closeModal(id){
 const _FORM_MODALS = new Set([
   'modal-form', 'modal-transfer', 'modal-license', 'modal-dntt-form',
   'modal-import', 'modal-xfer-company', 'modal-supplement',
-  'modal-procurement', 'modal-procurement-approve',
+  'modal-procurement',
 ]);
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')){
@@ -8166,9 +8147,7 @@ function saveProc(){ try{ localStorage.setItem(PROC_KEY, JSON.stringify(procList
 function loadProc(){ try{ procList = JSON.parse(localStorage.getItem(PROC_KEY)||'[]'); }catch(e){ procList=[]; } }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const _PROC_STATUS_LABEL = {
-  draft:'Nháp', cho_duyet:'Chờ duyệt', da_duyet:'Đã duyệt', tu_choi:'Từ chối', da_mua:'Đã mua'
-};
+const _PROC_STATUS_LABEL = { draft:'Nháp', da_mua:'Đã mua' };
 function _procStatusBadge(s){
   return `<span class="proc-status-badge ${s||'draft'}">${_PROC_STATUS_LABEL[s]||s}</span>`;
 }
@@ -8318,8 +8297,7 @@ function saveProcurement(status){
   saveProc();
   closeModal('modal-procurement');
   renderProcurement();
-  const label = status==='cho_duyet' ? 'Đã gửi phê duyệt' : 'Đã lưu nháp';
-  toast(`✅ ${label}: ${tieuDe}`,'ok');
+  toast(`✅ Đã lưu: ${tieuDe}`,'ok');
 }
 
 // ── Render list ───────────────────────────────────────────────────────────────
@@ -8339,9 +8317,9 @@ function renderProcurement(){
   // Stats
   const statsEl = document.getElementById('proc-stats');
   if(statsEl){
-    const counts = {draft:0,cho_duyet:0,da_duyet:0,tu_choi:0,da_mua:0};
+    const counts = {draft:0, da_mua:0};
     procList.forEach(p=>{ if(counts[p.trangThai]!==undefined) counts[p.trangThai]++; });
-    const colors = {draft:'#94A3B8',cho_duyet:'#D97706',da_duyet:'#059669',tu_choi:'#DC2626',da_mua:'#7C3AED'};
+    const colors = {draft:'#94A3B8', da_mua:'#7C3AED'};
     statsEl.innerHTML = Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>
       `<span style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;
         background:${colors[k]}18;color:${colors[k]};border:1px solid ${colors[k]}33;">
@@ -8368,7 +8346,8 @@ function renderProcurement(){
     const selectedNCC = p.nccChonIdx!=null ? p.nhaCC[p.nccChonIdx] : null;
 
     // NCC comparison table
-    const nccRows = p.nhaCC.map((n,i) => {
+    // NCC rows with "Tạo ĐNTT" button on each row
+    const nccRowsWithBtn = p.nhaCC.map((n,i) => {
       if(!n.ten && !n.giaDon) return '';
       const total = n.giaDon * p.soLuong;
       const isBest = prices.length>1 && total===minPrice && total>0;
@@ -8376,39 +8355,32 @@ function renderProcurement(){
       const rowCls = isSel ? 'selected-ncc' : (isBest ? 'best-price' : '');
       const diff = (prices.length>1 && total>0 && !isBest)
         ? `<span style="color:var(--red);font-size:10px;">+${((total-minPrice)/minPrice*100).toFixed(1)}%</span>` : '';
-      const badge  = isBest && prices.length>1 ? `<span class="proc-price-badge best">Rẻ nhất</span>` : '';
-      const selBadge = isSel ? `<span class="proc-price-badge" style="background:#EFF6FF;color:#2563EB;">✓ Đã chọn</span>` : '';
+      const badge     = isBest && prices.length>1 ? `<span class="proc-price-badge best">Rẻ nhất</span>` : '';
+      const selBadge  = isSel ? `<span class="proc-price-badge" style="background:#EFF6FF;color:#2563EB;">✓ Đã chọn</span>` : '';
+      const dnttBtn = `<button class="btn success btn-icon-ph" style="padding:2px 8px;font-size:10px;margin-top:4px;"
+        onclick="procCreateDNTTFromNCC('${p.id}',${i})"><i class="ph ph-receipt"></i> Tạo ĐNTT</button>`;
       return `<tr class="${rowCls}">
         <td>
           <strong>${esc(n.ten||'—')}</strong>
-          ${n.model?`<div style="font-size:10px;color:var(--accent2);margin-top:1px;">${esc(n.model)}</div>`:''}
+          ${n.model?`<div style="font-size:10px;color:var(--accent2);">${esc(n.model)}</div>`:''}
+          <div>${dnttBtn}</div>
         </td>
-        <td>
-          ${n.cauHinh?`<div style="font-size:10px;color:var(--muted);max-width:180px;white-space:pre-wrap;">${esc(n.cauHinh)}</div>`:'—'}
-        </td>
+        <td style="font-size:10px;color:var(--muted);max-width:160px;white-space:pre-wrap;">${esc(n.cauHinh||'—')}</td>
         <td>${total>0?`<strong>${total.toLocaleString('vi-VN')}đ</strong>`:''}<br>${badge}${selBadge}${diff}</td>
-        <td style="color:var(--muted);font-size:11px;">${esc(n.baoHanh||'—')}</td>
-        <td style="color:#059669;font-size:11px;">${esc(n.khuyenMai||'—')}</td>
-        <td style="color:var(--muted);font-size:11px;">${esc(n.hinhThucTT||'—')}</td>
-        <td style="color:var(--muted);font-size:11px;">${esc(n.thoiGianGiao||'—')}</td>
+        <td style="font-size:11px;color:var(--muted);">${esc(n.baoHanh||'—')}</td>
+        <td style="font-size:11px;color:#059669;">${esc(n.khuyenMai||'—')}</td>
+        <td style="font-size:11px;color:var(--muted);">${esc(n.hinhThucTT||'—')}</td>
+        <td style="font-size:11px;color:var(--muted);">${esc(n.thoiGianGiao||'—')}</td>
       </tr>`;
     }).join('');
+    const hasNCCBtn = nccRowsWithBtn.trim().length > 0;
 
-    const hasNCC = nccRows.trim().length > 0;
-
-    // Action buttons
-    const canApprove = ['cho_duyet','draft'].includes(p.trangThai);
-    const canDNTT    = p.trangThai==='da_duyet' && p.nccChonIdx!=null;
-    const canMarkBought = p.trangThai==='da_duyet';
-
-    return `<div class="proc-card status-${p.trangThai}">
+    return `<div class="proc-card status-${p.trangThai||'draft'}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-            ${_procStatusBadge(p.trangThai)}
+            ${_procStatusBadge(p.trangThai||'draft')}
             ${p.loaiTS?`<span class="type-badge">${esc(p.loaiTS)}</span>`:''}
-            ${p.hanPheDuyet && new Date(p.hanPheDuyet)<new Date() && !['da_duyet','da_mua'].includes(p.trangThai)
-              ? `<span class="proc-status-badge" style="background:rgba(239,68,68,.1);color:#DC2626;">⏰ Quá hạn</span>` : ''}
           </div>
           <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${esc(p.tieuDe)}</div>
           <div style="font-size:11px;color:var(--muted);">
@@ -8420,15 +8392,13 @@ function renderProcurement(){
           ${p.thongSo?`<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic;">${esc(p.thongSo)}</div>`:''}
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;">
-          ${canApprove ? `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="openApproveModal('${p.id}')"><i class="ph ph-check-circle"></i> Duyệt</button>` : ''}
-          ${canDNTT ? `<button class="btn success btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="procCreateDNTT('${p.id}')"><i class="ph ph-receipt"></i> Tạo ĐNTT</button>` : ''}
-          ${canMarkBought && !p.dnttId ? `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="procMarkBought('${p.id}')"><i class="ph ph-check-square"></i> Đã mua</button>` : ''}
-          ${p.dnttId ? `<span style="font-size:11px;color:#7C3AED;padding:4px 8px;background:rgba(139,92,246,.08);border-radius:8px;"><i class="ph ph-receipt"></i> ĐNTT đã tạo</span>` : ''}
+          <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="printProcurement('${p.id}')"><i class="ph ph-printer"></i> In báo giá</button>
+          ${p.trangThai==='da_mua' ? `<span style="font-size:11px;color:#7C3AED;padding:4px 8px;background:rgba(139,92,246,.08);border-radius:8px;"><i class="ph ph-check-square"></i> Đã mua</span>` : `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="procMarkBought('${p.id}')"><i class="ph ph-check-square"></i> Đã mua</button>`}
           <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="openProcurementForm('${p.id}')"><i class="ph ph-pencil-simple"></i> Sửa</button>
           <button class="btn danger btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="deleteProc('${p.id}',this)"><i class="ph ph-trash"></i></button>
         </div>
       </div>
-      ${hasNCC ? `
+      ${hasNCCBtn ? `
       <table class="proc-ncc-table" style="margin-top:10px;">
         <thead><tr>
           <th>NCC / Model</th>
@@ -8439,97 +8409,133 @@ function renderProcurement(){
           <th>Thanh toán</th>
           <th>Giao hàng</th>
         </tr></thead>
-        <tbody>${nccRows}</tbody>
+        <tbody>${nccRowsWithBtn}</tbody>
       </table>` : ''}
-      ${p.ghiChuDuyet ? `<div style="margin-top:8px;padding:6px 10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;font-size:11px;color:#92400E;">💬 ${esc(p.ghiChuDuyet)}${p.nguoiDuyet?` — <strong>${esc(p.nguoiDuyet)}</strong>`:''}</div>` : ''}
       ${p.mucDich ? `<div style="margin-top:6px;font-size:11px;color:var(--muted);">📋 ${esc(p.mucDich)}</div>` : ''}
     </div>`;
   }).join('');
 }
 
-// ── Approve modal ─────────────────────────────────────────────────────────────
-function openApproveModal(id){
+// ── In bảng so sánh báo giá ───────────────────────────────────────────────────
+function printProcurement(id){
   const p = procList.find(x=>x.id===id);
   if(!p) return;
-  document.getElementById('proc-approve-id').value = id;
-  document.getElementById('proc-approve-title').innerHTML =
-    `<i class="ph ph-check-circle"></i> Phê duyệt: ${esc(p.tieuDe)}`;
-  document.getElementById('proc-approve-nguoi').value =
-    _msalAccount?.name || _msalAccount?.username || '';
-  document.getElementById('proc-approve-ghichu').value = p.ghiChuDuyet||'';
 
-  // Populate NCC select
-  const sel = document.getElementById('proc-approve-ncc');
-  sel.innerHTML = '<option value="">— Chọn nhà cung cấp —</option>';
-  p.nhaCC.forEach((n,i) => {
-    if(!n.ten && !n.giaDon) return;
-    const total = n.giaDon * p.soLuong;
-    sel.insertAdjacentHTML('beforeend',
-      `<option value="${i}">${esc(n.ten||`NCC ${i+1}`)} — ${total>0?total.toLocaleString('vi-VN')+'đ':'giá chưa có'} — BH: ${n.baoHanh||'—'}</option>`);
-  });
-  if(p.nccChonIdx!=null) sel.value = p.nccChonIdx;
+  const prices = p.nhaCC.map(n => n.giaDon * p.soLuong).filter(x=>x>0);
+  const minPrice = prices.length ? Math.min(...prices) : 0;
+  const fmt = n => n ? Number(n).toLocaleString('vi-VN')+'đ' : '—';
+  const today = new Date().toLocaleDateString('vi-VN');
 
-  openModal('modal-procurement-approve');
+  // Build NCC header + rows
+  const validNCC = p.nhaCC.filter(n => n.ten || n.giaDon);
+
+  const theadCols = validNCC.map(n =>
+    `<th style="text-align:center;background:#1e3a5f;color:#fff;min-width:160px;">${esc(n.ten||'—')}</th>`
+  ).join('');
+
+  const rowDefs = [
+    { label:'Model máy',           key:'model' },
+    { label:'Cấu hình',            key:'cauHinh' },
+    { label:'Đơn giá',             key:'_dgia' },
+    { label:'Thành tiền',          key:'_tong', highlight:true },
+    { label:'Chế độ bảo hành',     key:'baoHanh' },
+    { label:'Khuyến mãi / Quà tặng', key:'khuyenMai' },
+    { label:'Hình thức thanh toán',key:'hinhThucTT' },
+    { label:'Thời gian giao hàng', key:'thoiGianGiao' },
+    { label:'Ghi chú',             key:'ghiChu' },
+  ];
+
+  const bodyRows = rowDefs.map(({label, key, highlight}) => {
+    const cells = validNCC.map(n => {
+      let val = '';
+      if(key==='_dgia')  val = fmt(n.giaDon);
+      else if(key==='_tong'){
+        const tot = n.giaDon * p.soLuong;
+        const isBest = prices.length>1 && tot===minPrice && tot>0;
+        const diff = (prices.length>1 && tot>0 && !isBest)
+          ? ` <span style="color:#c00;font-size:10px;">(+${((tot-minPrice)/minPrice*100).toFixed(1)}%)</span>` : '';
+        val = `<strong>${fmt(tot)}</strong>${isBest&&prices.length>1?' <span style="color:#059669;font-size:10px;">✓ Rẻ nhất</span>':''}${diff}`;
+      } else { val = esc(n[key]||'—'); }
+      const tot = n.giaDon * p.soLuong;
+      const isBestRow = key==='_tong' && prices.length>1 && tot===minPrice && tot>0;
+      return `<td class="${isBestRow?'prt-winner':''}" style="text-align:center;">${val}</td>`;
+    }).join('');
+    return `<tr><td style="font-weight:600;background:#f8fafc;">${label}</td>${cells}</tr>`;
+  }).join('');
+
+  const html = `
+  <div id="proc-print-area" style="display:block;padding:20px;">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.1em;">TRUNG THỦY GROUP</div>
+      <h2 style="margin:4px 0;font-size:18px;">BẢNG SO SÁNH BÁO GIÁ</h2>
+      <div style="font-size:12px;color:#333;">${esc(p.tieuDe)}</div>
+    </div>
+    <div class="prt-meta">
+      ${p.nguoiDeXuat?`<strong>Người đề xuất:</strong> ${esc(p.nguoiDeXuat)}&nbsp;&nbsp;`:''}
+      ${p.boPhan?`<strong>Bộ phận:</strong> ${esc(p.boPhan)}&nbsp;&nbsp;`:''}
+      ${p.soLuong>1?`<strong>Số lượng:</strong> ${p.soLuong}&nbsp;&nbsp;`:''}
+      <strong>Ngày:</strong> ${p.ngayDeXuat ? new Date(p.ngayDeXuat).toLocaleDateString('vi-VN') : today}
+      ${p.thongSo?`<br><strong>Yêu cầu kỹ thuật:</strong> ${esc(p.thongSo)}`:''}
+      ${p.mucDich?`<br><strong>Mục đích:</strong> ${esc(p.mucDich)}`:''}
+    </div>
+    <table>
+      <thead><tr>
+        <th style="background:#1e3a5f;color:#fff;min-width:140px;">Tiêu chí so sánh</th>
+        ${theadCols}
+      </tr></thead>
+      <tbody>${bodyRows}</tbody>
+    </table>
+    <div class="prt-sig">
+      <div class="prt-sig-box">Người lập bảng<br><br><br>${esc(p.nguoiDeXuat||'')}</div>
+      <div class="prt-sig-box">Trưởng bộ phận<br><br><br>&nbsp;</div>
+      <div class="prt-sig-box">Ban Giám đốc<br><br><br>&nbsp;</div>
+    </div>
+    <div style="margin-top:16px;font-size:10px;color:#999;text-align:right;">In ngày ${today} · QLTS CNTT — Trung Thủy Group</div>
+  </div>`;
+
+  const printEl = document.getElementById('proc-print-area');
+  if(printEl) printEl.outerHTML = html;
+  window.print();
+  // Restore blank print area after print
+  setTimeout(()=>{
+    const el = document.getElementById('proc-print-area');
+    if(el) el.innerHTML = '';
+  }, 1000);
 }
 
-function approveProcurement(){
-  const id = document.getElementById('proc-approve-id').value;
-  const nccIdx = document.getElementById('proc-approve-ncc').value;
-  if(nccIdx===''){ toast('⚠️ Vui lòng chọn nhà cung cấp!','bad'); return; }
+// ── Tạo ĐNTT từ NCC cụ thể ───────────────────────────────────────────────────
+function procCreateDNTTFromNCC(id, nccIdx){
   const p = procList.find(x=>x.id===id);
   if(!p) return;
-  p.trangThai   = 'da_duyet';
-  p.nccChonIdx  = parseInt(nccIdx);
-  p.nguoiDuyet  = document.getElementById('proc-approve-nguoi').value.trim();
-  p.ghiChuDuyet = document.getElementById('proc-approve-ghichu').value.trim();
-  p.ngayDuyet   = new Date().toISOString().slice(0,10);
-  saveProc();
-  closeModal('modal-procurement-approve');
-  renderProcurement();
-  toast(`✅ Đã duyệt yêu cầu — NCC: ${esc(p.nhaCC[p.nccChonIdx]?.ten||'')} — Có thể tạo ĐNTT ngay!`,'ok');
-}
-
-function rejectProcurement(){
-  const id  = document.getElementById('proc-approve-id').value;
-  const ghichu = document.getElementById('proc-approve-ghichu').value.trim();
-  const p = procList.find(x=>x.id===id);
-  if(!p) return;
-  p.trangThai   = 'tu_choi';
-  p.ghiChuDuyet = ghichu;
-  p.nguoiDuyet  = document.getElementById('proc-approve-nguoi').value.trim();
-  p.ngayDuyet   = new Date().toISOString().slice(0,10);
-  saveProc();
-  closeModal('modal-procurement-approve');
-  renderProcurement();
-  toast('Đã từ chối yêu cầu','warn');
-}
-
-// ── Tạo ĐNTT từ báo giá được duyệt ──────────────────────────────────────────
-function procCreateDNTT(id){
-  const p = procList.find(x=>x.id===id);
-  if(!p || p.nccChonIdx==null) return;
-  const ncc = p.nhaCC[p.nccChonIdx];
+  const ncc = p.nhaCC[nccIdx];
+  if(!ncc){ toast('⚠️ Không tìm thấy thông tin NCC!','bad'); return; }
   const totalAmount = (ncc.giaDon||0) * (p.soLuong||1);
-
-  // Pre-fill ĐNTT
   const modelStr = ncc.model ? ` (${ncc.model})` : '';
+
+  // Ghi lại NCC được chọn
+  p.nccChonIdx = nccIdx;
+  saveProc();
+
   const prefill = {
     ncc:     ncc.ten||'',
     sotien:  totalAmount,
     noidung: `Mua ${p.soLuong>1?p.soLuong+'x ':''}${p.loaiTS||p.tieuDe}${modelStr}${ncc.cauHinh?' — '+ncc.cauHinh:(p.thongSo?' — '+p.thongSo:'')}`,
-    ghichu:  [p.ghiChuDuyet, p.ghiChu, ncc.hinhThucTT ? 'TT: '+ncc.hinhThucTT : ''].filter(Boolean).join(' · '),
+    ghichu:  [p.ghiChu, ncc.hinhThucTT ? 'TT: '+ncc.hinhThucTT : ''].filter(Boolean).join(' · '),
     bophan:  p.boPhan||'',
     _procId: id,
   };
 
-  // Switch to ĐNTT tab and open form
   switchTab('dntt');
-  // Small delay to let render settle
   setTimeout(()=>{
     openDNTTForm(prefill);
-    // Link back after ĐNTT saved — hooked in saveDNTTForm
     _pendingProcLink = id;
   }, 80);
+}
+
+// Giữ lại alias cũ phòng khi có chỗ nào gọi
+function procCreateDNTT(id){
+  const p = procList.find(x=>x.id===id);
+  if(p?.nccChonIdx!=null) procCreateDNTTFromNCC(id, p.nccChonIdx);
 }
 
 // Sau khi ĐNTT được lưu: link ngược lại vào procurement record
