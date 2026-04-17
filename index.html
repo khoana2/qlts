@@ -8421,86 +8421,120 @@ function printProcurement(id){
   const p = procList.find(x=>x.id===id);
   if(!p) return;
 
-  const prices = p.nhaCC.map(n => n.giaDon * p.soLuong).filter(x=>x>0);
+  const prices   = p.nhaCC.map(n => n.giaDon * p.soLuong).filter(x=>x>0);
   const minPrice = prices.length ? Math.min(...prices) : 0;
-  const fmt = n => n ? Number(n).toLocaleString('vi-VN')+'đ' : '—';
-  const today = new Date().toLocaleDateString('vi-VN');
-
-  // Build NCC header + rows
+  const fmt      = n => n ? Number(n).toLocaleString('vi-VN')+'đ' : '—';
+  const today    = new Date().toLocaleDateString('vi-VN');
   const validNCC = p.nhaCC.filter(n => n.ten || n.giaDon);
 
-  const theadCols = validNCC.map(n =>
-    `<th style="text-align:center;background:#1e3a5f;color:#fff;min-width:160px;">${esc(n.ten||'—')}</th>`
+  if(!validNCC.length){ toast('⚠️ Chưa nhập thông tin nhà cung cấp!','bad'); return; }
+
+  // ── Build table ────────────────────────────────────────────────────────────
+  const thCols = validNCC.map(n =>
+    `<th style="text-align:center;background:#1e3a5f;color:#fff;min-width:160px;padding:9px 12px;">${n.ten||'—'}</th>`
   ).join('');
 
   const rowDefs = [
-    { label:'Model máy',           key:'model' },
-    { label:'Cấu hình',            key:'cauHinh' },
-    { label:'Đơn giá',             key:'_dgia' },
-    { label:'Thành tiền',          key:'_tong', highlight:true },
-    { label:'Chế độ bảo hành',     key:'baoHanh' },
-    { label:'Khuyến mãi / Quà tặng', key:'khuyenMai' },
-    { label:'Hình thức thanh toán',key:'hinhThucTT' },
-    { label:'Thời gian giao hàng', key:'thoiGianGiao' },
-    { label:'Ghi chú',             key:'ghiChu' },
+    { label:'Model máy',              key:'model'       },
+    { label:'Cấu hình kỹ thuật',      key:'cauHinh'     },
+    { label:'Đơn giá',                key:'_dgia'       },
+    { label:'Thành tiền',             key:'_tong'       },
+    { label:'Chế độ bảo hành',        key:'baoHanh'     },
+    { label:'Khuyến mãi / Quà tặng',  key:'khuyenMai'   },
+    { label:'Hình thức thanh toán',   key:'hinhThucTT'  },
+    { label:'Thời gian giao hàng',    key:'thoiGianGiao'},
+    { label:'Ghi chú',                key:'ghiChu'      },
   ];
 
-  const bodyRows = rowDefs.map(({label, key, highlight}) => {
+  const bodyRows = rowDefs.map(({label, key}) => {
     const cells = validNCC.map(n => {
-      let val = '';
-      if(key==='_dgia')  val = fmt(n.giaDon);
-      else if(key==='_tong'){
-        const tot = n.giaDon * p.soLuong;
-        const isBest = prices.length>1 && tot===minPrice && tot>0;
-        const diff = (prices.length>1 && tot>0 && !isBest)
-          ? ` <span style="color:#c00;font-size:10px;">(+${((tot-minPrice)/minPrice*100).toFixed(1)}%)</span>` : '';
-        val = `<strong>${fmt(tot)}</strong>${isBest&&prices.length>1?' <span style="color:#059669;font-size:10px;">✓ Rẻ nhất</span>':''}${diff}`;
-      } else { val = esc(n[key]||'—'); }
-      const tot = n.giaDon * p.soLuong;
-      const isBestRow = key==='_tong' && prices.length>1 && tot===minPrice && tot>0;
-      return `<td class="${isBestRow?'prt-winner':''}" style="text-align:center;">${val}</td>`;
+      let val = '—', extra = '';
+      if(key === '_dgia'){
+        val = fmt(n.giaDon);
+      } else if(key === '_tong'){
+        const tot    = n.giaDon * p.soLuong;
+        const isBest = prices.length > 1 && tot === minPrice && tot > 0;
+        const pct    = (!isBest && tot > 0 && minPrice > 0)
+          ? `<div style="color:#c00;font-size:10px;">+${((tot-minPrice)/minPrice*100).toFixed(1)}% so với rẻ nhất</div>` : '';
+        const best   = (isBest && prices.length > 1)
+          ? `<div style="color:#059669;font-size:10px;font-weight:700;">✓ Rẻ nhất</div>` : '';
+        val   = `<strong style="font-size:13px;">${fmt(tot)}</strong>`;
+        extra = best + pct;
+        const bg = isBest ? 'background:#e8fdf2;' : '';
+        return `<td style="text-align:center;padding:8px 10px;${bg}">${val}${extra}</td>`;
+      } else {
+        val = (n[key] || '—').toString();
+      }
+      return `<td style="text-align:center;padding:8px 10px;white-space:pre-wrap;">${val}</td>`;
     }).join('');
-    return `<tr><td style="font-weight:600;background:#f8fafc;">${label}</td>${cells}</tr>`;
+    return `<tr>
+      <td style="padding:8px 10px;font-weight:600;background:#f0f4f8;border-right:2px solid #ddd;">${label}</td>
+      ${cells}
+    </tr>`;
   }).join('');
 
-  const html = `
-  <div id="proc-print-area" style="display:block;padding:20px;">
-    <div style="text-align:center;margin-bottom:16px;">
-      <div style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.1em;">TRUNG THỦY GROUP</div>
-      <h2 style="margin:4px 0;font-size:18px;">BẢNG SO SÁNH BÁO GIÁ</h2>
-      <div style="font-size:12px;color:#333;">${esc(p.tieuDe)}</div>
-    </div>
-    <div class="prt-meta">
-      ${p.nguoiDeXuat?`<strong>Người đề xuất:</strong> ${esc(p.nguoiDeXuat)}&nbsp;&nbsp;`:''}
-      ${p.boPhan?`<strong>Bộ phận:</strong> ${esc(p.boPhan)}&nbsp;&nbsp;`:''}
-      ${p.soLuong>1?`<strong>Số lượng:</strong> ${p.soLuong}&nbsp;&nbsp;`:''}
-      <strong>Ngày:</strong> ${p.ngayDeXuat ? new Date(p.ngayDeXuat).toLocaleDateString('vi-VN') : today}
-      ${p.thongSo?`<br><strong>Yêu cầu kỹ thuật:</strong> ${esc(p.thongSo)}`:''}
-      ${p.mucDich?`<br><strong>Mục đích:</strong> ${esc(p.mucDich)}`:''}
-    </div>
-    <table>
-      <thead><tr>
-        <th style="background:#1e3a5f;color:#fff;min-width:140px;">Tiêu chí so sánh</th>
-        ${theadCols}
-      </tr></thead>
-      <tbody>${bodyRows}</tbody>
-    </table>
-    <div class="prt-sig">
-      <div class="prt-sig-box">Người lập bảng<br><br><br>${esc(p.nguoiDeXuat||'')}</div>
-      <div class="prt-sig-box">Trưởng bộ phận<br><br><br>&nbsp;</div>
-      <div class="prt-sig-box">Ban Giám đốc<br><br><br>&nbsp;</div>
-    </div>
-    <div style="margin-top:16px;font-size:10px;color:#999;text-align:right;">In ngày ${today} · QLTS CNTT — Trung Thủy Group</div>
-  </div>`;
+  // ── Full HTML document ─────────────────────────────────────────────────────
+  const fullHtml = `<!DOCTYPE html><html lang="vi"><head>
+  <meta charset="UTF-8">
+  <title>Bảng so sánh báo giá — ${p.tieuDe}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;padding:24px 32px;}
+    h1{font-size:20px;font-weight:800;margin:6px 0 2px;}
+    .sub{font-size:13px;color:#333;margin-bottom:14px;}
+    .meta{font-size:11px;color:#444;line-height:1.8;margin-bottom:16px;
+      padding:8px 12px;background:#f8fafc;border-left:3px solid #1e3a5f;border-radius:4px;}
+    table{width:100%;border-collapse:collapse;margin-top:4px;}
+    th,td{border:1px solid #ccc;vertical-align:top;}
+    th{font-size:11px;letter-spacing:.03em;}
+    tr:nth-child(even) td:not([style*="background"]){background:#fafafa;}
+    .sig{display:flex;gap:0;margin-top:36px;border-top:2px solid #1e3a5f;padding-top:4px;}
+    .sig-box{flex:1;padding:8px 12px;border-right:1px solid #ddd;font-size:11px;color:#333;}
+    .sig-box:last-child{border-right:none;}
+    .sig-box .role{font-weight:700;font-size:12px;margin-bottom:48px;}
+    .footer{margin-top:16px;font-size:10px;color:#999;text-align:right;}
+    @media print{body{padding:12px 16px;}h1{font-size:16px;}}
+  </style>
+  </head><body>
+  <div style="text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #1e3a5f;">
+    <div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px;">Trung Thủy Group · Nội bộ</div>
+    <h1>BẢNG SO SÁNH BÁO GIÁ</h1>
+    <div class="sub">${p.tieuDe}</div>
+  </div>
 
-  const printEl = document.getElementById('proc-print-area');
-  if(printEl) printEl.outerHTML = html;
-  window.print();
-  // Restore blank print area after print
-  setTimeout(()=>{
-    const el = document.getElementById('proc-print-area');
-    if(el) el.innerHTML = '';
-  }, 1000);
+  <div class="meta">
+    ${p.nguoiDeXuat ? `<span><strong>Người đề xuất:</strong> ${p.nguoiDeXuat}&emsp;</span>` : ''}
+    ${p.boPhan      ? `<span><strong>Bộ phận:</strong> ${p.boPhan}&emsp;</span>` : ''}
+    ${p.soLuong > 1 ? `<span><strong>Số lượng:</strong> ${p.soLuong}&emsp;</span>` : ''}
+    <span><strong>Ngày lập:</strong> ${p.ngayDeXuat ? new Date(p.ngayDeXuat).toLocaleDateString('vi-VN') : today}</span>
+    ${p.thongSo  ? `<br><strong>Yêu cầu kỹ thuật:</strong> ${p.thongSo}` : ''}
+    ${p.mucDich  ? `<br><strong>Mục đích:</strong> ${p.mucDich}` : ''}
+  </div>
+
+  <table>
+    <thead><tr>
+      <th style="background:#1e3a5f;color:#fff;min-width:150px;padding:9px 12px;text-align:left;">Tiêu chí so sánh</th>
+      ${thCols}
+    </tr></thead>
+    <tbody>${bodyRows}</tbody>
+  </table>
+
+  <div class="sig">
+    <div class="sig-box"><div class="role">Người lập bảng</div>${p.nguoiDeXuat||''}</div>
+    <div class="sig-box"><div class="role">Trưởng bộ phận / Quản lý</div></div>
+    <div class="sig-box"><div class="role">Ban Giám đốc phê duyệt</div></div>
+  </div>
+
+  <div class="footer">In ngày ${today} &nbsp;·&nbsp; QLTS CNTT — Trung Thủy Group &nbsp;·&nbsp; Tài liệu nội bộ</div>
+
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=960,height=720');
+  if(!w){ toast('⚠️ Trình duyệt chặn popup! Vui lòng cho phép popup cho trang này.','bad'); return; }
+  w.document.open();
+  w.document.write(fullHtml);
+  w.document.close();
 }
 
 // ── Tạo ĐNTT từ NCC cụ thể ───────────────────────────────────────────────────
