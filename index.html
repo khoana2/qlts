@@ -1335,6 +1335,32 @@ input[type=checkbox].row-cb{
   pointer-events:none;
 }
 
+/* ═══════════════ FONT SIZE OVERRIDES ═══════════════ */
+/* Nội dung bảng & form: 12px → 13px */
+td, th { font-size: 13px; }
+.finput, .fsel { font-size: 13px !important; }
+.modal-body, .modal-body p, .modal-body div { font-size: 13px; }
+.field label { font-size: 12px !important; }
+.nav-tab { font-size: 13px !important; }
+.sidebar-uname { font-size: 13px !important; }
+.proc-ncc-table td, .proc-ncc-table th { font-size: 12px; }
+
+/* Metadata / label phụ: 11px → 12px */
+.tr-info .from, .tr-info .to-dept,
+.transfer-row .date,
+.lf-label, .lf2-name,
+.login-brand, .login-note,
+.login-footer,
+.tag-chip, .type-badge,
+.sync-bar,
+.sidebar-role-badge { font-size: 12px !important; }
+
+/* Toast message */
+.toast .t-msg { font-size: 13px !important; }
+
+/* KPI dashboard giữ nguyên size lớn */
+.kpi-val { font-size: 28px !important; }
+
 /* ═══════════════ MODULE MUA SẮM / BÁO GIÁ ═══════════════ */
 .proc-card{
   background:var(--surface);border:1px solid var(--border);border-radius:14px;
