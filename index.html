@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='0' y='0' width='10' height='10' rx='2' fill='%238B7355'/%3E%3Crect x='13' y='0' width='10' height='10' rx='2' fill='none' stroke='%238B7355' stroke-width='1.8'/%3E%3Crect x='26' y='0' width='10' height='10' rx='2' fill='%238B7355'/%3E%3Crect x='0' y='13' width='10' height='10' rx='2' fill='none' stroke='%238B7355' stroke-width='1.8'/%3E%3Crect x='13' y='13' width='10' height='10' rx='2' fill='%238B7355'/%3E%3Crect x='26' y='13' width='10' height='10' rx='2' fill='none' stroke='%238B7355' stroke-width='1.8'/%3E%3Crect x='0' y='26' width='10' height='10' rx='2' fill='%238B7355'/%3E%3Crect x='13' y='26' width='10' height='10' rx='2' fill='none' stroke='%238B7355' stroke-width='1.8'/%3E%3Crect x='26' y='26' width='10' height='10' rx='2' fill='%238B7355'/%3E%3C/svg%3E">
 <script>
 // ── Auto DPI Scale — chạy trước khi render để tránh flash ──────────────────
 (function(){
@@ -82,9 +83,10 @@ body{
 .brand{display:flex;align-items:center;gap:10px;}
 .brand-icon{
   width:34px;height:34px;border-radius:10px;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));
-  display:flex;align-items:center;justify-content:center;font-size:17px;
-  box-shadow:0 4px 14px rgba(37,99,235,.25);
+  background:#fff;
+  display:flex;align-items:center;justify-content:center;
+  padding:7px;
+  box-shadow:0 4px 14px rgba(139,115,85,.18);
 }
 .brand-text h1{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text);}
 .brand-text p{font-size:11px;color:var(--muted);}
@@ -1141,16 +1143,16 @@ input[type=checkbox].row-cb{
   to{opacity:1;transform:translateY(0);}
 }
 .login-logo{
-  width:68px;height:68px;border-radius:18px;
-  background:linear-gradient(135deg,#2563EB,#0EA5E9);
+  width:72px;height:72px;border-radius:18px;
+  background:#fff;
   display:flex;align-items:center;justify-content:center;
-  font-size:32px;margin-bottom:16px;
-  box-shadow:0 8px 28px rgba(37,99,235,.3);
+  padding:14px;margin-bottom:16px;
+  box-shadow:0 8px 28px rgba(139,115,85,.22);
   animation:logoPulse 3s ease-in-out infinite;
 }
 @keyframes logoPulse{
-  0%,100%{box-shadow:0 8px 28px rgba(37,99,235,.3);}
-  50%{box-shadow:0 12px 36px rgba(37,99,235,.5);}
+  0%,100%{box-shadow:0 8px 28px rgba(139,115,85,.22);}
+  50%{box-shadow:0 14px 38px rgba(139,115,85,.38);}
 }
 .login-brand{
   font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
@@ -1451,7 +1453,19 @@ td, th { font-size: 13px; }
   <div class="login-skyline"></div>
 
   <div class="login-card">
-    <div class="login-logo">💻</div>
+    <div class="login-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="44" height="44">
+        <rect x="0"  y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
+        <rect x="13" y="0"  width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+        <rect x="26" y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
+        <rect x="0"  y="13" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+        <rect x="13" y="13" width="10" height="10" rx="2" fill="#8B7355"/>
+        <rect x="26" y="13" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+        <rect x="0"  y="26" width="10" height="10" rx="2" fill="#8B7355"/>
+        <rect x="13" y="26" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+        <rect x="26" y="26" width="10" height="10" rx="2" fill="#8B7355"/>
+      </svg>
+    </div>
 
     <div class="login-brand">Trung Thuy Group</div>
 
@@ -1584,7 +1598,19 @@ td, th { font-size: 13px; }
       <i class="ph ph-list"></i>
     </button>
     <div class="brand">
-      <div class="brand-icon">💻</div>
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="20" height="20">
+          <rect x="0"  y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
+          <rect x="13" y="0"  width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+          <rect x="26" y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
+          <rect x="0"  y="13" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+          <rect x="13" y="13" width="10" height="10" rx="2" fill="#8B7355"/>
+          <rect x="26" y="13" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+          <rect x="0"  y="26" width="10" height="10" rx="2" fill="#8B7355"/>
+          <rect x="13" y="26" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+          <rect x="26" y="26" width="10" height="10" rx="2" fill="#8B7355"/>
+        </svg>
+      </div>
       <div class="brand-text">
         <h1>Quản Lý Tài Sản CNTT</h1>
         <p id="topbar-sub">Loading…</p>
