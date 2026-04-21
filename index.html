@@ -11838,17 +11838,19 @@ async function _generateDNTTExcel(d){
     const isDuAn = d.loaiMau && d.loaiMau.includes('du an');
     let wb = null;
 
-    if(hasTpl && !isDuAn){
-      wb = await _generateFromTemplate(d);   // null nếu lỗi → fallback
-    }
-
-    // Nếu chưa có wb và không phải dự án → dùng template nhúng sẵn (chuẩn, không lỗi)
-    if(!wb && !isDuAn){
+    // Vận hành: LUÔN dùng built-in template (sạch, không drawings → không lỗi Excel)
+    // Template upload chỉ dành cho loại dự án
+    if(!isDuAn){
       wb = await _generateFromTemplate(d, _DNTT_TPL_BUILTIN);
     }
 
+    // Dự án: ưu tiên uploaded template, fallback về build từ đầu
+    if(!wb && hasTpl && isDuAn){
+      wb = await _generateFromTemplate(d);   // null nếu lỗi → fallback
+    }
+
     if(!wb){
-      // Fallback cuối: tạo từ đầu (chỉ dùng cho dự án)
+      // Fallback cuối: tạo từ đầu (cho dự án khi không có template)
       wb = new ExcelJS.Workbook();
       wb.creator = 'QLTS CNTT'; wb.created = new Date();
       if(isDuAn) await _excelBuildDuAn(wb, d);
@@ -11862,7 +11864,7 @@ async function _generateDNTTExcel(d){
     a.download = fileName; a.href = url;
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
-    toast(`✅ Đã xuất "${fileName}"${hasTpl&&!isDuAn?' (dùng template)':''}`, 'ok');
+    toast(`✅ Đã xuất "${fileName}"${isDuAn&&hasTpl?' (template upload)':!isDuAn?' (template chuẩn)':''}`, 'ok');
   }catch(err){
     console.error('[ĐNTT]', err);
     toast('❌ Lỗi xuất Excel: ' + err.message, 'bad');
