@@ -2178,9 +2178,7 @@ td, th { font-size: 13px; }
       </select>
       <select class="fsel" id="dntt-filter-loai" onchange="renderDNTT()">
         <option value="">Tất cả loại</option>
-        <option value="PR (van hanh) ">Vận hành</option>
         <option value="PR (du an)">Dự án</option>
-        <option value="PR (du an_Song ngu">Dự án Song ngữ</option>
       </select>
     </div>
 
@@ -3194,20 +3192,8 @@ td, th { font-size: 13px; }
       <input type="hidden" id="dntt-f-id">
 
       <!-- Loại mẫu -->
-      <div style="grid-column:1/-1;">
-        <label style="font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;">Loại mẫu thanh toán</label>
-        <div style="display:flex;gap:16px;margin-top:6px;flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-            <input type="radio" name="dntt-f-sheet" value="PR (van hanh) " checked> Vận hành (Operational)
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-            <input type="radio" name="dntt-f-sheet" value="PR (du an)"> Dự án (Project)
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-            <input type="radio" name="dntt-f-sheet" value="PR (du an_Song ngu"> Dự án Song ngữ
-          </label>
-        </div>
-      </div>
+      <!-- loaiMau hidden: always PR (du an) -->
+      <input type="hidden" name="dntt-f-sheet" id="dntt-f-sheet-hidden" value="PR (du an)">
 
       <!-- Thông tin chung -->
       <div style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px;">
@@ -10729,10 +10715,7 @@ function dnttStatusBadge(s){
 
 // ── Loại mẫu label ──
 function dnttLoaiLabel(loai){
-  if(!loai) return '—';
-  if(loai.includes('du an_Song')) return 'Dự án 2 ngữ';
-  if(loai.includes('du an')) return 'Dự án';
-  return 'Vận hành';
+  return 'Dự án';
 }
 
 // ── Render bảng ──
@@ -10835,7 +10818,7 @@ function openDNTTForm(prefill){
   document.getElementById('dntt-f-trangthai').value = 'draft';
   document.getElementById('dntt-f-tiente').value = 'VND';
   // Sheet radio
-  document.querySelectorAll('input[name="dntt-f-sheet"]').forEach(r => r.checked = r.value === 'PR (van hanh) ');
+  // loaiMau fixed to PR (du an)
 
   // Pre-fill từ license nếu có
   if(prefill){
@@ -10899,7 +10882,7 @@ function openDNTTEdit(id){
   setV('dntt-f-ghichu', d.ghichu);
   document.getElementById('dntt-f-trangthai').value = d.trangThai || 'draft';
   document.getElementById('dntt-f-tiente').value = d.tienTe || 'VND';
-  document.querySelectorAll('input[name="dntt-f-sheet"]').forEach(r => r.checked = r.value === (d.loaiMau||'PR (van hanh) '));
+  // loaiMau fixed to PR (du an)
   _fillDNTTCongtyList();
   _buildDeptDatalist();
   _buildCongtyDatalist();
@@ -10969,8 +10952,6 @@ async function saveDNTTForm(draftOnly){
 
   const existingId = v('dntt-f-id');
   const id = existingId || genId();
-  const selectedSheet = [...document.querySelectorAll('input[name="dntt-f-sheet"]')].find(r=>r.checked)?.value || 'PR (van hanh) ';
-
   const rec = {
     id,
     soPhieu:  v('dntt-f-sophieu') || '',
@@ -10978,7 +10959,7 @@ async function saveDNTTForm(draftOnly){
     congTy:   congty,
     phongBan: v('dntt-f-phongban'),
     nguoiLap: v('dntt-f-nguoilap'),
-    loaiMau:  selectedSheet,
+    loaiMau:  'PR (du an)',
     noidung,
     ncc:      v('dntt-f-ncc'),
     soHD:     v('dntt-f-sohd'),
@@ -11620,6 +11601,25 @@ async function _generateFromTemplate(d, tplBase64){
   if(!raw) return null;
   try{
     const buf = Uint8Array.from(atob(raw), c=>c.charCodeAt(0));
+
+    // ── Kiểm tra drawings trước khi load ─────────────────────────────────
+    // Template có drawings/VML → ExcelJS load được nhưng strip khi ghi → Excel báo lỗi
+    // Phát hiện bằng cách quét bytes của zip manifest
+    if(!tplBase64){   // chỉ kiểm tra uploaded template, không kiểm tra built-in
+      try{
+        const txt = new TextDecoder('utf-8',{fatal:false}).decode(buf);
+        const hasDrawings = txt.includes('xl/drawings/') ||
+                            txt.includes('vmlDrawing')    ||
+                            txt.includes('xl/media/image');
+        if(hasDrawings){
+          console.warn('[TPL] Template có drawings/images → dùng built-in để tránh lỗi Excel');
+          toast('⚠️ Template upload có hình ảnh/drawings — tự động dùng template chuẩn. Hãy upload file template không có hình vẽ.','warn');
+          return null;   // fallback về built-in
+        }
+      }catch(e){}
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     const wb  = new ExcelJS.Workbook();
     await wb.xlsx.load(buf.buffer);
 
@@ -11843,22 +11843,21 @@ async function _generateDNTTExcel(d){
 
     // ── Ưu tiên dùng template đã upload ──
     const hasTpl = !!localStorage.getItem(DNTT_TPL_KEY);
-    const isDuAn = d.loaiMau && d.loaiMau.includes('du an');
+    const isDuAn = false; // loaiMau selector removed — always use template path
     let wb = null;
 
-    // Vận hành: LUÔN dùng built-in template (sạch, không drawings → không lỗi Excel)
-    // Template upload chỉ dành cho loại dự án
-    if(!isDuAn){
+    // Ưu tiên template upload nếu có (auto-detect drawings → skip nếu có)
+    if(hasTpl){
+      wb = await _generateFromTemplate(d);   // trả về null nếu có drawings hoặc lỗi
+    }
+
+    // Fallback: built-in template sạch (cho vận hành khi chưa có / lỗi template upload)
+    if(!wb && !isDuAn){
       wb = await _generateFromTemplate(d, _DNTT_TPL_BUILTIN);
     }
 
-    // Dự án: ưu tiên uploaded template, fallback về build từ đầu
-    if(!wb && hasTpl && isDuAn){
-      wb = await _generateFromTemplate(d);   // null nếu lỗi → fallback
-    }
-
     if(!wb){
-      // Fallback cuối: tạo từ đầu (cho dự án khi không có template)
+      // Fallback cuối: tạo từ đầu (cho dự án không có template)
       wb = new ExcelJS.Workbook();
       wb.creator = 'QLTS CNTT'; wb.created = new Date();
       if(isDuAn) await _excelBuildDuAn(wb, d);
