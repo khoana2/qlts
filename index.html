@@ -11841,28 +11841,10 @@ async function _generateDNTTExcel(d){
     const safeNcc = (d.ncc||'DNTT').replace(/[\\/:\*\?"<>|]/g,'_').replace(/\s+/g,'_');
     const fileName = `${d.soPhieu||'DNTT'}_${safeNcc}_${d.ngayLap||'ngay'}.xlsx`;
 
-    // ── Ưu tiên dùng template đã upload ──
-    const hasTpl = !!localStorage.getItem(DNTT_TPL_KEY);
-    const isDuAn = false; // loaiMau selector removed — always use template path
-    let wb = null;
-
-    // Ưu tiên template upload nếu có (auto-detect drawings → skip nếu có)
-    if(hasTpl){
-      wb = await _generateFromTemplate(d);   // trả về null nếu có drawings hoặc lỗi
-    }
-
-    // Fallback: built-in template sạch (cho vận hành khi chưa có / lỗi template upload)
-    if(!wb && !isDuAn){
-      wb = await _generateFromTemplate(d, _DNTT_TPL_BUILTIN);
-    }
-
-    if(!wb){
-      // Fallback cuối: tạo từ đầu (cho dự án không có template)
-      wb = new ExcelJS.Workbook();
-      wb.creator = 'QLTS CNTT'; wb.created = new Date();
-      if(isDuAn) await _excelBuildDuAn(wb, d);
-      else       await _excelBuildVanHanh(wb, d);
-    }
+    // ── Build từ đầu — không dùng ExcelJS load() để tránh lỗi XML corrupt ──
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'QLTS CNTT'; wb.created = new Date();
+    await _excelBuildVanHanh(wb, d);
 
     const buf  = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -11871,7 +11853,7 @@ async function _generateDNTTExcel(d){
     a.download = fileName; a.href = url;
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
-    toast(`✅ Đã xuất "${fileName}"${isDuAn&&hasTpl?' (template upload)':!isDuAn?' (template chuẩn)':''}`, 'ok');
+    toast(`✅ Đã xuất "${fileName}"`, 'ok');
   }catch(err){
     console.error('[ĐNTT]', err);
     toast('❌ Lỗi xuất Excel: ' + err.message, 'bad');
