@@ -11756,6 +11756,8 @@ async function _generateFromTemplate(d, tplBase64){
       for(const sheet of wb.worksheets){
         sheet.eachRow((row, rIdx) => {
           row.eachCell({ includeEmpty: false }, (cell) => {
+            // Bỏ qua slave cells của merge — chỉ xử lý master tránh redundant writes
+            if(cell.isMerged && cell.master && cell.master !== cell) return;
             const v = cell.value;
             // Chỉ thay RAW NUMBER (không phải formula) — đây là ô nguồn thực sự
             if(typeof v === 'number' && isAmountLike(v)){
@@ -11773,6 +11775,8 @@ async function _generateFromTemplate(d, tplBase64){
       for(const sheet of wb.worksheets){
         sheet.eachRow((row, rIdx) => {
           row.eachCell({ includeEmpty: false }, (cell) => {
+            // Bỏ qua slave cells của merge
+            if(cell.isMerged && cell.master && cell.master !== cell) return;
             const txt = getCellText(cell);
             if(txt.includes('nghìn đồng') || txt.includes('triệu đồng') ||
                txt.includes('trăm đồng')  || txt.includes('đồng chẵn')){
@@ -11790,6 +11794,8 @@ async function _generateFromTemplate(d, tplBase64){
     for(const sheet of wb.worksheets){
       sheet.eachRow((row, rIdx) => {
         row.eachCell({ includeEmpty: false }, (cell) => {
+          // Bỏ qua slave cells của merge
+          if(cell.isMerged && cell.master && cell.master !== cell) return;
           const rawVal = cell.value;
           // Lấy text gốc (không lowercase để giữ định dạng khi ghi lại)
           const txt = typeof rawVal === 'string' ? rawVal
