@@ -11998,8 +11998,8 @@ async function _excelBuildVanHanh(wb, d){
   ws.mergeCells('F8:I8');   // Tiền mặt
   C('A8', 'Hình thức thanh toán:', { font:fN(true,9), align:_EX.align('left','middle'), border:_EX.border });
   // Fill màu: được chọn → xanh lá (#C6EFCE / text #006100), không chọn → xám nhạt (#F2F2F2)
-  const fillCK  = hinhThuc==='CK' ? _EX.fill('C6EFCE') : _EX.fill('F2F2F2');
-  const fillTM  = hinhThuc==='TM' ? _EX.fill('C6EFCE') : _EX.fill('F2F2F2');
+  const fillCK  = hinhThuc==='CK' ? _EX.fill('FFC6EFCE') : _EX.fill('FFF2F2F2');
+  const fillTM  = hinhThuc==='TM' ? _EX.fill('FFC6EFCE') : _EX.fill('FFF2F2F2');
   const fontCK  = hinhThuc==='CK' ? { ...fN(true,10),  color:{argb:'FF006100'} } : { ...fN(false,10), color:{argb:'FF888888'} };
   const fontTM  = hinhThuc==='TM' ? { ...fN(true,10),  color:{argb:'FF006100'} } : { ...fN(false,10), color:{argb:'FF888888'} };
   C('B8', `${ckMark}  Chuyển khoản`, { fill:fillCK, font:fontCK, align:_EX.align('center','middle'), border:_EX.border });
