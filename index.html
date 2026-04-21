@@ -3295,7 +3295,7 @@ td, th { font-size: 13px; }
           <div>
             <label style="font-size:11px;color:var(--muted);">Headcode</label>
             <input type="text" id="dntt-f-headcode" class="finput" placeholder="Gõ mã hoặc tên..." style="width:100%;"
-              list="dntt-headcode-list" oninput="dnttHeadcodeLookup(this.value)" autocomplete="off">
+              list="dntt-headcode-list" oninput="dnttHeadcodeLookup(this.value)" onchange="dnttHeadcodeLookup(this.value)" autocomplete="off">
             <datalist id="dntt-headcode-list"></datalist>
           </div>
           <div>
@@ -7820,11 +7820,14 @@ function _restoreFormData(modalId, data){
   if(!data) return;
   const el = document.getElementById(modalId);
   if(!el) return;
+  // Các field ẩn chứa ID bản ghi — KHÔNG restore để tránh ghi đè phiếu cũ
+  const _skipIds = new Set(['dntt-f-id','tr-asset-id','proc-f-id','supp-asset-id','proc-approve-id']);
   el.querySelectorAll('input,select,textarea').forEach(f => {
     const key = f.id || f.name;
     if(!(key in data)) return;
-    if(f.type === 'radio')     { f.checked = (f.value === data[key]); }
-    else if(f.type === 'checkbox') { f.checked = !!data[key]; }
+    if(_skipIds.has(key)) return;   // ← bỏ qua field ID
+    if(f.type === 'radio')          { f.checked = (f.value === data[key]); }
+    else if(f.type === 'checkbox')  { f.checked = !!data[key]; }
     else { f.value = data[key] ?? ''; }
   });
 }
@@ -10633,22 +10636,26 @@ function _buildHeadcodeDatalist(){
     .join('');
 }
 
-// Lookup: khi nhập mã → tự điền tên; khi nhập tên (tìm kiếm) → không xóa tên cũ
+// Lookup: khi nhập mã → tự điền tên; khi chọn từ datalist → onchange + setTimeout đảm bảo value đã committed
 function dnttHeadcodeLookup(val){
-  const v = (val||'').trim();
-  const nameEl = document.getElementById('dntt-f-tenheadcode');
-  if(!nameEl) return;
-  // Nếu gõ đúng mã số → điền tên
-  if(HEADCODE_MAP[v]){
-    nameEl.value = HEADCODE_MAP[v];
-    return;
-  }
-  // Nếu chọn từ datalist dạng "17130200 – Máy móc, thiết bị"
-  const codeMatch = v.match(/^(\d{8})/);
-  if(codeMatch && HEADCODE_MAP[codeMatch[1]]){
-    document.getElementById('dntt-f-headcode').value = codeMatch[1];
-    nameEl.value = HEADCODE_MAP[codeMatch[1]];
-  }
+  // Dùng setTimeout để chờ browser commit giá trị datalist trước khi đọc
+  setTimeout(function(){
+    const input = document.getElementById('dntt-f-headcode');
+    const v = ((val !== undefined ? val : (input ? input.value : '')) || '').trim();
+    const nameEl = document.getElementById('dntt-f-tenheadcode');
+    if(!nameEl) return;
+    // Trường hợp 1: gõ / chọn đúng mã số thuần (vd: 17130200)
+    if(HEADCODE_MAP[v]){
+      nameEl.value = HEADCODE_MAP[v];
+      return;
+    }
+    // Trường hợp 2: datalist option có label "17130200 – Tên..." → trích code 7-9 chữ số đầu
+    const codeMatch = v.match(/^(\d{7,9})/);
+    if(codeMatch && HEADCODE_MAP[codeMatch[1]]){
+      if(input) input.value = codeMatch[1];
+      nameEl.value = HEADCODE_MAP[codeMatch[1]];
+    }
+  }, 0);
 }
 
 // ── State ──
