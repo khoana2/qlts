@@ -7866,7 +7866,13 @@ function startDraftTimer(modalId){
   _draftTimers[modalId] = setInterval(() => {
     const d = _collectFormData(modalId);
     if(d && Object.keys(d).length){
-      try{ localStorage.setItem(_DRAFT_KEY(modalId), JSON.stringify({ ts: Date.now(), data: d })); }
+      // Đánh dấu nếu đang ở chế độ SỬA (có ID bản ghi)
+      // Dùng để tránh restore dữ liệu edit vào form tạo mới
+      const _editIdFields = { 'modal-dntt-form':'dntt-f-id', 'modal-form':'asset-f-id',
+                              'modal-transfer':'tr-asset-id', 'modal-license':'lic-f-id' };
+      const idField = _editIdFields[modalId];
+      const isEdit  = !!(idField && (document.getElementById(idField)?.value||'').trim());
+      try{ localStorage.setItem(_DRAFT_KEY(modalId), JSON.stringify({ ts: Date.now(), data: d, isEdit })); }
       catch(e){}
     }
   }, 30000);
@@ -7886,7 +7892,10 @@ function checkAndOfferDraftRestore(modalId, onRestore){
   try{
     const raw = localStorage.getItem(_DRAFT_KEY(modalId));
     if(!raw) return;
-    const { ts, data } = JSON.parse(raw);
+    const { ts, data, isEdit } = JSON.parse(raw);
+    // Nếu draft được tạo lúc ĐANG SỬA phiếu cũ → bỏ qua, xóa luôn
+    // Tránh việc dữ liệu cũ bị restore vào form tạo mới
+    if(isEdit){ clearDraft(modalId); return; }
     const mins = Math.round((Date.now() - ts) / 60000);
     const label = mins < 2 ? 'vừa xong' : `${mins} phút trước`;
     const banner = document.createElement('div');
