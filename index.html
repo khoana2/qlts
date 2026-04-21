@@ -11414,31 +11414,31 @@ const DNTT_TPL_MAP_KEY = 'qlts_dntt_tpl_map_v1';
 // Mapping mặc định: tên trường → địa chỉ ô trong template
 // (khớp với bố cục chuẩn phiếu ĐNTT vận hành 9 cột A–I)
 const _TPL_DEFAULT_MAP = {
-  soPhieu:     'C2',   // Số phiếu
-  nguoiLap:    'G3',   // Người đề nghị (bên phải)
-  congTy:      'C4',   // Công ty
-  phongBan:    'C5',   // Mã phòng ban
-  phongBanTen: 'H5',   // Tên phòng ban
-  noidung:     'C6',   // Nội dung thanh toán
-  ngayLap:     'C7',   // Ngày đề nghị
-  hinhThuc:    'C8',   // Hình thức TT — ô Chuyển khoản
-  hinhThucTM:  'G8',   // Hình thức TT — ô Tiền mặt
-  soTien:      'G9',   // Số tiền (cột G, bên phải)
-  tienTe:      'I9',   // Tiền tệ
-  bangChu:     'C10',  // Bằng chữ
-  tenTKNH:     'C12',  // Chủ tài khoản
-  soTKNH:      'G12',  // Số tài khoản
-  nganHang:    'C13',  // Tên ngân hàng
-  // Bảng ngân sách - dòng 1
-  ns_tenHC:    'A17',  // Tên Headcode
-  ns_hc:       'B17',  // Headcode
-  ns_soTien:   'F17',  // Số tiền đề nghị TT
-  // Bảng chứng từ - dòng 1
-  ct_hc:       'A22',  // Headcode
-  ct_loai:     'C22',  // Loại CT
-  ct_ngay:     'D22',  // Ngày CT
-  ct_donvi:    'E22',  // Đơn vị / NCC
-  ct_goc:      'G22',  // Gốc
+  soPhieu:     'A2',   // "Số: ..." — ô merge A2:K2
+  nguoiLap:    'D3',   // Người đề nghị — merge D3:K3
+  congTy:      'D4',   // Công ty — merge D4:K4
+  phongBan:    'D5',   // Mã phòng ban — merge D5:F5
+  phongBanTen: 'I5',   // Tên phòng ban — merge I5:K5
+  noidung:     'D6',   // Nội dung thanh toán — merge D6:K6
+  ngayLap:     'D7',   // Ngày đề nghị — merge D7:F7
+  hinhThuc:    'D8',   // Hình thức TT — merge D8:K8 (một ô gộp cả CK & TM)
+  hinhThucTM:  '',     // Không có ô riêng cho TM trong template này
+  soTien:      'D9',   // Số tiền — merge D9:H9
+  tienTe:      'I9',   // Tiền tệ — I9
+  bangChu:     'D10',  // Bằng chữ — merge D10:K10
+  tenTKNH:     'D12',  // Chủ tài khoản — merge D12:G12
+  soTKNH:      'I12',  // Số tài khoản — merge I12:K12
+  nganHang:    'D13',  // Tên ngân hàng — merge D13:K13
+  // Bảng ngân sách - dòng 17
+  ns_tenHC:    'A17',  // Tên Headcode — merge A17:C17
+  ns_hc:       'D17',  // Headcode — D17
+  ns_soTien:   'H17',  // Số tiền đề nghị TT — H17
+  // Bảng chứng từ - dòng 23 (dòng dữ liệu đầu tiên)
+  ct_hc:       'A23',  // Headcode CT — merge A23:B23
+  ct_loai:     'C23',  // Loại CT — merge C23:D23
+  ct_ngay:     'E23',  // Ngày CT — E23
+  ct_donvi:    'F23',  // Đơn vị / NCC — merge F23:G23
+  ct_goc:      'H23',  // Gốc — H23
 };
 
 const _TPL_FIELD_LABELS = {
@@ -11661,14 +11661,15 @@ async function _generateFromTemplate(d){
       }catch(e){ console.warn('[TPL set]', addr, e); }
     };
 
-    set(map.soPhieu,     d.soPhieu||'');
+    // soPhieu: giữ prefix "Số:  " để khớp với định dạng template
+    set(map.soPhieu, d.soPhieu ? 'Số:  ' + d.soPhieu : 'Số: …....................');
     set(map.nguoiLap,    d.nguoiLap||'');
     set(map.congTy,      (d.congTy||'').toUpperCase());
     set(map.phongBan,    d.phongBan||'');
     set(map.phongBanTen, d.phongBan||'');
     set(map.noidung,     d.noidung||'');
     set(map.ngayLap,     d.ngayLap||'');
-    // Hình thức thanh toán: 2 ô riêng, tô màu ô được chọn
+    // Hình thức thanh toán: nếu có 2 ô riêng → dùng 2 ô; nếu chỉ có 1 ô (map.hinhThucTM rỗng) → ghi gộp
     const _applyHinhThucCell = (addr, mark, label, isSelected) => {
       if(!addr) return;
       try{
@@ -11681,8 +11682,22 @@ async function _generateFromTemplate(d){
           fgColor:{ argb: isSelected ? 'FFC6EFCE' : 'FFF2F2F2' } };
       }catch(e){}
     };
-    _applyHinhThucCell(map.hinhThuc,   ckMark, 'Chuyển khoản', hinhThuc==='CK');
-    _applyHinhThucCell(map.hinhThucTM, tmMark, 'Tiền mặt',     hinhThuc==='TM');
+    if(map.hinhThucTM){
+      // Template có 2 ô riêng cho CK và TM
+      _applyHinhThucCell(map.hinhThuc,   ckMark, 'Chuyển khoản', hinhThuc==='CK');
+      _applyHinhThucCell(map.hinhThucTM, tmMark, 'Tiền mặt',     hinhThuc==='TM');
+    } else {
+      // Template dùng 1 ô gộp — ghi cả 2 option, ô nào được chọn thì đậm hơn
+      const ckStr = `${ckMark}  Chuyển khoản`;
+      const tmStr = `${tmMark}  Tiền mặt`;
+      try{
+        let cell = ws.getCell(map.hinhThuc);
+        if(cell.isMerged && cell.master && cell.master !== cell) cell = cell.master;
+        cell.value = `${ckStr}                    ${tmStr}`;
+        cell.alignment = { horizontal:'left', vertical:'middle' };
+        cell.font = { bold: false, size:10 };
+      }catch(e){}
+    }
     set(map.soTien,      soTien, '#,##0');
     set(map.tienTe,      tt);
     set(map.bangChu,     bangChu||'');
