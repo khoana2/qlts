@@ -3306,10 +3306,11 @@ td, th { font-size: 13px; }
                   <div style="display:flex;align-items:center;gap:3px;">
                     <input type="text" id="dntt-ct-1-ngay" class="finput" placeholder="dd/mm/yyyy" style="flex:1;font-size:11px;min-width:80px;"
                       oninput="dnttCtNgaySync(this,1)">
-                    <input type="date" id="dntt-ct-1-ngay-pick" style="width:0;height:0;opacity:0;position:absolute;pointer-events:none;"
-                      onchange="dnttCtPickerToText(this,1)">
-                    <button type="button" title="Chọn ngày" onclick="document.getElementById('dntt-ct-1-ngay-pick').showPicker?document.getElementById('dntt-ct-1-ngay-pick').showPicker():document.getElementById('dntt-ct-1-ngay-pick').click()"
-                      style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 5px;cursor:pointer;font-size:12px;line-height:1;color:var(--muted);">📅</button>
+                    <div style="position:relative;flex-shrink:0;">
+                      <button type="button" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 5px;cursor:pointer;font-size:12px;line-height:1;color:var(--muted);">📅</button>
+                      <input type="date" id="dntt-ct-1-ngay-pick" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+                        onchange="dnttCtPickerToText(this,1)">
+                    </div>
                   </div>
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
@@ -3330,10 +3331,11 @@ td, th { font-size: 13px; }
                   <div style="display:flex;align-items:center;gap:3px;">
                     <input type="text" id="dntt-ct-2-ngay" class="finput" placeholder="dd/mm/yyyy" style="flex:1;font-size:11px;min-width:80px;"
                       oninput="dnttCtNgaySync(this,2)">
-                    <input type="date" id="dntt-ct-2-ngay-pick" style="width:0;height:0;opacity:0;position:absolute;pointer-events:none;"
-                      onchange="dnttCtPickerToText(this,2)">
-                    <button type="button" title="Chọn ngày" onclick="document.getElementById('dntt-ct-2-ngay-pick').showPicker?document.getElementById('dntt-ct-2-ngay-pick').showPicker():document.getElementById('dntt-ct-2-ngay-pick').click()"
-                      style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 5px;cursor:pointer;font-size:12px;line-height:1;color:var(--muted);">📅</button>
+                    <div style="position:relative;flex-shrink:0;">
+                      <button type="button" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 5px;cursor:pointer;font-size:12px;line-height:1;color:var(--muted);">📅</button>
+                      <input type="date" id="dntt-ct-2-ngay-pick" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+                        onchange="dnttCtPickerToText(this,2)">
+                    </div>
                   </div>
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
@@ -3354,10 +3356,11 @@ td, th { font-size: 13px; }
                   <div style="display:flex;align-items:center;gap:3px;">
                     <input type="text" id="dntt-ct-3-ngay" class="finput" placeholder="dd/mm/yyyy" style="flex:1;font-size:11px;min-width:80px;"
                       oninput="dnttCtNgaySync(this,3)">
-                    <input type="date" id="dntt-ct-3-ngay-pick" style="width:0;height:0;opacity:0;position:absolute;pointer-events:none;"
-                      onchange="dnttCtPickerToText(this,3)">
-                    <button type="button" title="Chọn ngày" onclick="document.getElementById('dntt-ct-3-ngay-pick').showPicker?document.getElementById('dntt-ct-3-ngay-pick').showPicker():document.getElementById('dntt-ct-3-ngay-pick').click()"
-                      style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 5px;cursor:pointer;font-size:12px;line-height:1;color:var(--muted);">📅</button>
+                    <div style="position:relative;flex-shrink:0;">
+                      <button type="button" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 5px;cursor:pointer;font-size:12px;line-height:1;color:var(--muted);">📅</button>
+                      <input type="date" id="dntt-ct-3-ngay-pick" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+                        onchange="dnttCtPickerToText(this,3)">
+                    </div>
                   </div>
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
