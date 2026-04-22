@@ -3282,6 +3282,89 @@ td, th { font-size: 13px; }
         </div>
       </div>
 
+      <!-- Chứng từ kèm theo -->
+      <div style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:8px;text-transform:uppercase;">📎 Chứng từ kèm theo</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
+            <thead>
+              <tr style="background:var(--border);">
+                <th style="padding:5px 6px;border:1px solid var(--border);text-align:left;font-weight:600;min-width:130px;">Loại chứng từ</th>
+                <th style="padding:5px 6px;border:1px solid var(--border);text-align:left;font-weight:600;min-width:110px;">Ngày</th>
+                <th style="padding:5px 6px;border:1px solid var(--border);text-align:left;font-weight:600;min-width:130px;">Đơn vị cung cấp</th>
+                <th style="padding:5px 6px;border:1px solid var(--border);text-align:center;font-weight:600;width:60px;">Bản gốc</th>
+                <th style="padding:5px 6px;border:1px solid var(--border);text-align:center;font-weight:600;width:60px;">Bản sao</th>
+              </tr>
+            </thead>
+            <tbody id="dntt-ct-tbody">
+              <!-- 3 rows -->
+              <tr>
+                <td style="padding:3px 4px;border:1px solid var(--border);">
+                  <input type="text" id="dntt-ct-1-loai" class="finput" list="dntt-ct-loai-list" placeholder="Hóa đơn, HĐ…" style="width:100%;font-size:11px;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);">
+                  <input type="date" id="dntt-ct-1-ngay" class="finput" style="width:100%;font-size:11px;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);">
+                  <input type="text" id="dntt-ct-1-donvi" class="finput" placeholder="Tên đơn vị" style="width:100%;font-size:11px;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);text-align:center;">
+                  <input type="checkbox" id="dntt-ct-1-goc" checked style="cursor:pointer;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);text-align:center;">
+                  <input type="checkbox" id="dntt-ct-1-sao" style="cursor:pointer;">
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:3px 4px;border:1px solid var(--border);">
+                  <input type="text" id="dntt-ct-2-loai" class="finput" list="dntt-ct-loai-list" placeholder="Hóa đơn, HĐ…" style="width:100%;font-size:11px;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);">
+                  <input type="date" id="dntt-ct-2-ngay" class="finput" style="width:100%;font-size:11px;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);">
+                  <input type="text" id="dntt-ct-2-donvi" class="finput" placeholder="Tên đơn vị" style="width:100%;font-size:11px;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);text-align:center;">
+                  <input type="checkbox" id="dntt-ct-2-goc" style="cursor:pointer;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);text-align:center;">
+                  <input type="checkbox" id="dntt-ct-2-sao" style="cursor:pointer;">
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:3px 4px;border:1px solid var(--border);">
+                  <input type="text" id="dntt-ct-3-loai" class="finput" list="dntt-ct-loai-list" placeholder="Hóa đơn, HĐ…" style="width:100%;font-size:11px;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);">
+                  <input type="date" id="dntt-ct-3-ngay" class="finput" style="width:100%;font-size:11px;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);">
+                  <input type="text" id="dntt-ct-3-donvi" class="finput" placeholder="Tên đơn vị" style="width:100%;font-size:11px;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);text-align:center;">
+                  <input type="checkbox" id="dntt-ct-3-goc" style="cursor:pointer;">
+                </td>
+                <td style="padding:3px 4px;border:1px solid var(--border);text-align:center;">
+                  <input type="checkbox" id="dntt-ct-3-sao" style="cursor:pointer;">
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <datalist id="dntt-ct-loai-list">
+            <option value="Hóa đơn VAT">
+            <option value="Hóa đơn điện tử">
+            <option value="Hợp đồng">
+            <option value="Phụ lục hợp đồng">
+            <option value="Biên bản nghiệm thu">
+            <option value="Biên bản bàn giao">
+            <option value="Phiếu thu">
+            <option value="Phiếu đặt hàng (PO)">
+            <option value="Báo giá">
+          </datalist>
+        </div>
+      </div>
+
       <!-- Tài khoản thụ hưởng -->
       <div style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -10817,8 +10900,13 @@ function openDNTTForm(prefill){
   setV('dntt-f-ghichu','');
   document.getElementById('dntt-f-trangthai').value = 'draft';
   document.getElementById('dntt-f-tiente').value = 'VND';
-  // Sheet radio
   // loaiMau fixed to PR (du an)
+  // Reset chứng từ kèm theo
+  [1,2,3].forEach(i => {
+    setV(`dntt-ct-${i}-loai`,''); setV(`dntt-ct-${i}-ngay`,''); setV(`dntt-ct-${i}-donvi`,'');
+    const gEl = document.getElementById(`dntt-ct-${i}-goc`); if(gEl) gEl.checked = (i===1);
+    const sEl = document.getElementById(`dntt-ct-${i}-sao`); if(sEl) sEl.checked = false;
+  });
 
   // Pre-fill từ license nếu có
   if(prefill){
@@ -10880,6 +10968,16 @@ function openDNTTEdit(id){
   document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => r.checked = r.value === (d.hinhThuc||'CK'));
   setTimeout(dnttUpdateHinhThucUI, 0); // after DOM settles
   setV('dntt-f-ghichu', d.ghichu);
+  // Chứng từ kèm theo
+  const cts = d.chungTu || [];
+  [1,2,3].forEach(i => {
+    const ct = cts[i-1] || {};
+    setV(`dntt-ct-${i}-loai`,  ct.loai  || '');
+    setV(`dntt-ct-${i}-ngay`,  ct.ngay  || '');
+    setV(`dntt-ct-${i}-donvi`, ct.donvi || '');
+    const gEl = document.getElementById(`dntt-ct-${i}-goc`); if(gEl) gEl.checked = !!ct.goc;
+    const sEl = document.getElementById(`dntt-ct-${i}-sao`); if(sEl) sEl.checked = !!ct.sao;
+  });
   document.getElementById('dntt-f-trangthai').value = d.trangThai || 'draft';
   document.getElementById('dntt-f-tiente').value = d.tienTe || 'VND';
   // loaiMau fixed to PR (du an)
@@ -10975,6 +11073,13 @@ async function saveDNTTForm(draftOnly){
     tenHeadcode: v('dntt-f-tenheadcode'),
     hinhThuc:    [...document.querySelectorAll('input[name="dntt-f-hinhthuc"]')].find(r=>r.checked)?.value || 'CK',
     ghichu:   v('dntt-f-ghichu'),
+    chungTu: [1,2,3].map(i => ({
+      loai:  v(`dntt-ct-${i}-loai`),
+      ngay:  v(`dntt-ct-${i}-ngay`),
+      donvi: v(`dntt-ct-${i}-donvi`),
+      goc:   document.getElementById(`dntt-ct-${i}-goc`)?.checked || false,
+      sao:   document.getElementById(`dntt-ct-${i}-sao`)?.checked || false,
+    })),
     licenseId:document.getElementById('dntt-f-licid').value||null,
     trangThai:document.getElementById('dntt-f-trangthai').value||'draft',
     createdAt: existingId ? (dnttList.find(x=>x.id===existingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
@@ -12120,9 +12225,23 @@ async function _excelBuildVanHanh(wb, d){
     C(`H${r}`, sao,    { ...brd, align:_EX.align('center','middle') });
     C(`I${r}`, null,   { ...brd, align:_EX.align('right','middle'), numFmt });
   };
-  ctRow(22, d.headcode||'', d.soHD?'Hóa đơn':'', ngay, d.ncc||'', 'x', '');
-  ctRow(23, '', '', '', '', '', '');
-  ctRow(24, '', '', '', '', '', '');
+  // Chứng từ kèm theo — lấy từ form, fallback về dữ liệu cơ bản
+  const _cts = d.chungTu || [];
+  const _ct = i => _cts[i] || {};
+  const _fmt = (ngayISO) => {
+    if(!ngayISO) return '';
+    // yyyy-mm-dd → dd/mm/yyyy
+    const p = ngayISO.split('-');
+    return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : ngayISO;
+  };
+  ctRow(22, d.headcode||'',
+    _ct(0).loai  || (d.soHD ? 'Hóa đơn' : ''),
+    _ct(0).ngay  ? _fmt(_ct(0).ngay) : ngay,
+    _ct(0).donvi || d.ncc || '',
+    _ct(0).goc !== false ? 'x' : '',
+    _ct(0).sao ? 'x' : '');
+  ctRow(23, '', _ct(1).loai||'', _fmt(_ct(1).ngay), _ct(1).donvi||'', _ct(1).goc?'x':'', _ct(1).sao?'x':'');
+  ctRow(24, '', _ct(2).loai||'', _fmt(_ct(2).ngay), _ct(2).donvi||'', _ct(2).goc?'x':'', _ct(2).sao?'x':'');
 
   /* ══ ROW 25 – QUYẾT TOÁN TẠM ỨNG ══ */
   ws.getRow(25).height = 16;
