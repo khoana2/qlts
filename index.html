@@ -11952,16 +11952,16 @@ async function _excelBuildVanHanh(wb, d){
   const tmMark  = hinhThuc==='TM' ? '☑' : '☐';
 
   /* ══ ROW 1 – HEADER CHÍNH ══ */
-  ws.getRow(1).height = 38;
-  ws.mergeCells('A1:B1');            // trái: tên công ty
+  ws.getRow(1).height = 45;
+  ws.mergeCells('A1:B1');            // trái: tên công ty (cố định)
   ws.mergeCells('C1:F1');            // giữa: tiêu đề
   ws.mergeCells('G1:I1');            // phải: địa chỉ
-  C('A1', (d.congTy||'').toUpperCase(),
+  C('A1', 'CÔNG TY TNHH ĐẦU TƯ\nBĐS T.N.T TRUNG THỦY',
       { font:fN(true,10), align:_EX.align('left','middle',true), border:_EX.border });
   C('C1', 'PHIẾU ĐỀ NGHỊ THANH TOÁN',
       { font:fN(true,14), align:_EX.align('center','middle'), border:_EX.border });
-  C('G1', '',
-      { font:fN(false,8), align:_EX.align('right','middle',true), border:_EX.border });
+  C('G1', 'F12 Miss Ao Dai Building,\n21 Nguyen Trung Ngan St, Dist 1, HCMC, Vietnam\n(+84) 28 7309 9966          www.trungthuy.com',
+      { font:fN(false,8), align:_EX.align('left','middle',true), border:_EX.border });
 
   /* ══ ROW 2 – SỐ PHIẾU ══ */
   ws.getRow(2).height = 15;
