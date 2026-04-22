@@ -3303,15 +3303,14 @@ td, th { font-size: 13px; }
                   <input type="text" id="dntt-ct-1-loai" class="finput" list="dntt-ct-loai-list" placeholder="Hóa đơn, HĐ…" style="width:100%;font-size:11px;">
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
-                  <div style="display:flex;align-items:center;gap:3px;">
+                  <div style="display:flex;align-items:center;gap:3px;position:relative;">
                     <input type="text" id="dntt-ct-1-ngay" class="finput" placeholder="dd/mm/yyyy" style="flex:1;font-size:11px;min-width:80px;"
                       oninput="dnttCtNgaySync(this,1)">
-                    <span style="position:relative;display:inline-flex;width:26px;height:26px;flex-shrink:0;">
-                      <button type="button" style="width:26px;height:26px;background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;padding:0;line-height:1;color:var(--muted);">📅</button>
-                      <input type="date" id="dntt-ct-1-ngay-pick" tabindex="-1"
-                        style="position:absolute;top:0;left:0;width:26px;height:26px;opacity:0;cursor:pointer;"
-                        onchange="dnttCtPickerToText(this,1)">
-                    </span>
+                    <label for="dntt-ct-1-ngay-pick" title="Chọn ngày"
+                      style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;cursor:pointer;border:1px solid var(--border);border-radius:4px;font-size:13px;user-select:none;">📅</label>
+                    <input type="date" id="dntt-ct-1-ngay-pick" tabindex="-1"
+                      style="position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0.01;padding:0;border:0;"
+                      onchange="dnttCtPickerToText(this,1)">
                   </div>
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
@@ -3329,15 +3328,14 @@ td, th { font-size: 13px; }
                   <input type="text" id="dntt-ct-2-loai" class="finput" list="dntt-ct-loai-list" placeholder="Hóa đơn, HĐ…" style="width:100%;font-size:11px;">
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
-                  <div style="display:flex;align-items:center;gap:3px;">
+                  <div style="display:flex;align-items:center;gap:3px;position:relative;">
                     <input type="text" id="dntt-ct-2-ngay" class="finput" placeholder="dd/mm/yyyy" style="flex:1;font-size:11px;min-width:80px;"
                       oninput="dnttCtNgaySync(this,2)">
-                    <span style="position:relative;display:inline-flex;width:26px;height:26px;flex-shrink:0;">
-                      <button type="button" style="width:26px;height:26px;background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;padding:0;line-height:1;color:var(--muted);">📅</button>
-                      <input type="date" id="dntt-ct-2-ngay-pick" tabindex="-1"
-                        style="position:absolute;top:0;left:0;width:26px;height:26px;opacity:0;cursor:pointer;"
-                        onchange="dnttCtPickerToText(this,2)">
-                    </span>
+                    <label for="dntt-ct-2-ngay-pick" title="Chọn ngày"
+                      style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;cursor:pointer;border:1px solid var(--border);border-radius:4px;font-size:13px;user-select:none;">📅</label>
+                    <input type="date" id="dntt-ct-2-ngay-pick" tabindex="-1"
+                      style="position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0.01;padding:0;border:0;"
+                      onchange="dnttCtPickerToText(this,2)">
                   </div>
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
@@ -3355,15 +3353,14 @@ td, th { font-size: 13px; }
                   <input type="text" id="dntt-ct-3-loai" class="finput" list="dntt-ct-loai-list" placeholder="Hóa đơn, HĐ…" style="width:100%;font-size:11px;">
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
-                  <div style="display:flex;align-items:center;gap:3px;">
+                  <div style="display:flex;align-items:center;gap:3px;position:relative;">
                     <input type="text" id="dntt-ct-3-ngay" class="finput" placeholder="dd/mm/yyyy" style="flex:1;font-size:11px;min-width:80px;"
                       oninput="dnttCtNgaySync(this,3)">
-                    <span style="position:relative;display:inline-flex;width:26px;height:26px;flex-shrink:0;">
-                      <button type="button" style="width:26px;height:26px;background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;padding:0;line-height:1;color:var(--muted);">📅</button>
-                      <input type="date" id="dntt-ct-3-ngay-pick" tabindex="-1"
-                        style="position:absolute;top:0;left:0;width:26px;height:26px;opacity:0;cursor:pointer;"
-                        onchange="dnttCtPickerToText(this,3)">
-                    </span>
+                    <label for="dntt-ct-3-ngay-pick" title="Chọn ngày"
+                      style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;cursor:pointer;border:1px solid var(--border);border-radius:4px;font-size:13px;user-select:none;">📅</label>
+                    <input type="date" id="dntt-ct-3-ngay-pick" tabindex="-1"
+                      style="position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0.01;padding:0;border:0;"
+                      onchange="dnttCtPickerToText(this,3)">
                   </div>
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
