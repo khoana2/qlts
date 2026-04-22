@@ -3290,7 +3290,7 @@ td, th { font-size: 13px; }
             <thead>
               <tr style="background:var(--border);">
                 <th style="padding:5px 6px;border:1px solid var(--border);text-align:left;font-weight:600;min-width:130px;">Loại chứng từ</th>
-                <th style="padding:5px 6px;border:1px solid var(--border);text-align:left;font-weight:600;min-width:110px;">Ngày</th>
+                <th style="padding:5px 6px;border:1px solid var(--border);text-align:left;font-weight:600;width:130px;">Ngày</th>
                 <th style="padding:5px 6px;border:1px solid var(--border);text-align:left;font-weight:600;min-width:130px;">Đơn vị cung cấp</th>
                 <th style="padding:5px 6px;border:1px solid var(--border);text-align:center;font-weight:600;width:60px;">Bản gốc</th>
                 <th style="padding:5px 6px;border:1px solid var(--border);text-align:center;font-weight:600;width:60px;">Bản sao</th>
@@ -3303,15 +3303,7 @@ td, th { font-size: 13px; }
                   <input type="text" id="dntt-ct-1-loai" class="finput" list="dntt-ct-loai-list" placeholder="Hóa đơn, HĐ…" style="width:100%;font-size:11px;">
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
-                  <div style="display:flex;align-items:center;gap:3px;position:relative;">
-                    <input type="text" id="dntt-ct-1-ngay" class="finput" placeholder="dd/mm/yyyy" style="flex:1;font-size:11px;min-width:80px;"
-                      oninput="dnttCtNgaySync(this,1)">
-                    <label for="dntt-ct-1-ngay-pick" title="Chọn ngày"
-                      style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;cursor:pointer;border:1px solid var(--border);border-radius:4px;font-size:13px;user-select:none;">📅</label>
-                    <input type="date" id="dntt-ct-1-ngay-pick" tabindex="-1"
-                      style="position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0.01;padding:0;border:0;"
-                      onchange="dnttCtPickerToText(this,1)">
-                  </div>
+                  <input type="date" id="dntt-ct-1-ngay" class="finput" style="width:100%;font-size:11px;">
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
                   <input type="text" id="dntt-ct-1-donvi" class="finput" placeholder="Tên đơn vị" style="width:100%;font-size:11px;">
@@ -3328,15 +3320,7 @@ td, th { font-size: 13px; }
                   <input type="text" id="dntt-ct-2-loai" class="finput" list="dntt-ct-loai-list" placeholder="Hóa đơn, HĐ…" style="width:100%;font-size:11px;">
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
-                  <div style="display:flex;align-items:center;gap:3px;position:relative;">
-                    <input type="text" id="dntt-ct-2-ngay" class="finput" placeholder="dd/mm/yyyy" style="flex:1;font-size:11px;min-width:80px;"
-                      oninput="dnttCtNgaySync(this,2)">
-                    <label for="dntt-ct-2-ngay-pick" title="Chọn ngày"
-                      style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;cursor:pointer;border:1px solid var(--border);border-radius:4px;font-size:13px;user-select:none;">📅</label>
-                    <input type="date" id="dntt-ct-2-ngay-pick" tabindex="-1"
-                      style="position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0.01;padding:0;border:0;"
-                      onchange="dnttCtPickerToText(this,2)">
-                  </div>
+                  <input type="date" id="dntt-ct-2-ngay" class="finput" style="width:100%;font-size:11px;">
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
                   <input type="text" id="dntt-ct-2-donvi" class="finput" placeholder="Tên đơn vị" style="width:100%;font-size:11px;">
@@ -3353,15 +3337,7 @@ td, th { font-size: 13px; }
                   <input type="text" id="dntt-ct-3-loai" class="finput" list="dntt-ct-loai-list" placeholder="Hóa đơn, HĐ…" style="width:100%;font-size:11px;">
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
-                  <div style="display:flex;align-items:center;gap:3px;position:relative;">
-                    <input type="text" id="dntt-ct-3-ngay" class="finput" placeholder="dd/mm/yyyy" style="flex:1;font-size:11px;min-width:80px;"
-                      oninput="dnttCtNgaySync(this,3)">
-                    <label for="dntt-ct-3-ngay-pick" title="Chọn ngày"
-                      style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;cursor:pointer;border:1px solid var(--border);border-radius:4px;font-size:13px;user-select:none;">📅</label>
-                    <input type="date" id="dntt-ct-3-ngay-pick" tabindex="-1"
-                      style="position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0.01;padding:0;border:0;"
-                      onchange="dnttCtPickerToText(this,3)">
-                  </div>
+                  <input type="date" id="dntt-ct-3-ngay" class="finput" style="width:100%;font-size:11px;">
                 </td>
                 <td style="padding:3px 4px;border:1px solid var(--border);">
                   <input type="text" id="dntt-ct-3-donvi" class="finput" placeholder="Tên đơn vị" style="width:100%;font-size:11px;">
@@ -10927,7 +10903,9 @@ function openDNTTForm(prefill){
   // loaiMau fixed to PR (du an)
   // Reset chứng từ kèm theo
   [1,2,3].forEach(i => {
-    setV(`dntt-ct-${i}-loai`,''); setV(`dntt-ct-${i}-ngay`,''); setV(`dntt-ct-${i}-donvi`,'');
+    setV(`dntt-ct-${i}-loai`,'');
+    setV(`dntt-ct-${i}-ngay`,'');
+    setV(`dntt-ct-${i}-donvi`,'');
     const gEl = document.getElementById(`dntt-ct-${i}-goc`); if(gEl) gEl.checked = (i===1);
     const sEl = document.getElementById(`dntt-ct-${i}-sao`); if(sEl) sEl.checked = false;
   });
@@ -11040,27 +11018,6 @@ function _fillDNTTLicList(selectedId){
     licenses.map(l => `<option value="${l.id}"${l.id===selectedId?' selected':''}>${esc(l.ten||l.id)} ${l.congTy?'['+esc(l.congTy)+']':''}</option>`).join('');
 }
 
-// ── Chứng từ kèm theo: đồng bộ text → picker & ngược lại ──
-// Khi chọn lịch → ghi "dd/mm/yyyy" vào ô text
-function dnttCtPickerToText(pickerEl, idx){
-  const iso = pickerEl.value; // yyyy-mm-dd
-  if(!iso) return;
-  const [y,m,d] = iso.split('-');
-  const textEl = document.getElementById(`dntt-ct-${idx}-ngay`);
-  if(textEl) textEl.value = `${d}/${m}/${y}`;
-}
-// Khi gõ/paste vào text → cố gắng sync ngược vào picker (để showPicker có ngày đúng)
-function dnttCtNgaySync(textEl, idx){
-  const val = textEl.value.trim();
-  const pickerEl = document.getElementById(`dntt-ct-${idx}-ngay-pick`);
-  if(!pickerEl) return;
-  // Thử parse dd/mm/yyyy hoặc dd-mm-yyyy
-  const m1 = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if(m1) pickerEl.value = `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
-  // Thử parse yyyy-mm-dd
-  const m2 = val.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if(m2) pickerEl.value = val;
-}
 
 function dnttPreviewBangChu(){
   const sotien = parseFloat(document.getElementById('dntt-f-sotien')?.value)||0;
