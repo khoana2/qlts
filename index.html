@@ -7962,10 +7962,15 @@ function checkAndOfferDraftRestore(modalId, onRestore){
   try{
     const raw = localStorage.getItem(_DRAFT_KEY(modalId));
     if(!raw) return;
-    const { ts, data, isEdit } = JSON.parse(raw);
-    // Nếu draft được tạo lúc ĐANG SỬA phiếu cũ → bỏ qua, xóa luôn
-    // Tránh việc dữ liệu cũ bị restore vào form tạo mới
-    if(isEdit){ clearDraft(modalId); return; }
+    const { ts, data, isEdit, dismissed } = JSON.parse(raw);
+    // Đã bỏ qua hoặc đang edit → bỏ
+    if(dismissed || isEdit){ clearDraft(modalId); return; }
+    // Nháp quá cũ (>24h) → bỏ
+    if(Date.now() - ts > 86400000){ clearDraft(modalId); return; }
+    // Nháp trống (chưa có dữ liệu thực) → bỏ
+    const hasContent = data && Object.values(data).some(v => v && v !== '' && v !== false && v !== 'draft' && v !== 'VND' && v !== 'CK');
+    if(!hasContent){ clearDraft(modalId); return; }
+
     const mins = Math.round((Date.now() - ts) / 60000);
     const label = mins < 2 ? 'vừa xong' : `${mins} phút trước`;
     const banner = document.createElement('div');
@@ -7974,18 +7979,42 @@ function checkAndOfferDraftRestore(modalId, onRestore){
       padding:8px 12px;margin-bottom:12px;font-size:12px;display:flex;
       align-items:center;gap:10px;`;
     banner.innerHTML = `<span style="flex:1">💾 Có nháp chưa lưu từ <b>${label}</b>.</span>
-      <button class="btn" style="padding:3px 10px;font-size:11px;" onclick="
-        _restoreFormData('${modalId}', ${JSON.stringify(data).replace(/'/g,"&#39;")});
-        this.closest('#draft-banner-${modalId}').remove();
-        ${onRestore ? onRestore+'()' : ''}
-      ">Khôi phục</button>
-      <button class="btn" style="padding:3px 10px;font-size:11px;" onclick="
-        clearDraft('${modalId}');
-        this.closest('#draft-banner-${modalId}').remove();
-      ">Bỏ qua</button>`;
+      <button class="btn" style="padding:3px 10px;font-size:11px;"
+        onclick="_applyDraft('${modalId}','${onRestore||''}')">Khôi phục</button>
+      <button class="btn" style="padding:3px 10px;font-size:11px;"
+        onclick="_dismissDraft('${modalId}')">Bỏ qua</button>`;
     const body = document.querySelector(`#${modalId} .modal-body`);
     if(body) body.prepend(banner);
   }catch(e){}
+}
+
+function _applyDraft(modalId, onRestore){
+  try{
+    const raw = localStorage.getItem(_DRAFT_KEY(modalId));
+    if(!raw) return;
+    const { data } = JSON.parse(raw);
+    _restoreFormData(modalId, data);
+    const banner = document.getElementById(`draft-banner-${modalId}`);
+    if(banner) banner.remove();
+    if(onRestore){ try{ window[onRestore]?.(); }catch(e){} }
+  }catch(e){}
+}
+
+function _dismissDraft(modalId){
+  // Đánh dấu dismissed thay vì xóa hẳn → tránh timer ghi đè ngay sau
+  try{
+    const raw = localStorage.getItem(_DRAFT_KEY(modalId));
+    if(raw){
+      const obj = JSON.parse(raw);
+      obj.dismissed = true;
+      localStorage.setItem(_DRAFT_KEY(modalId), JSON.stringify(obj));
+    }
+  }catch(e){}
+  stopDraftTimer(modalId);
+  const banner = document.getElementById(`draft-banner-${modalId}`);
+  if(banner) banner.remove();
+  // Xóa hẳn sau 1s (chắc chắn không bị timer ghi lại trước)
+  setTimeout(()=>{ try{ localStorage.removeItem(_DRAFT_KEY(modalId)); }catch(e){} }, 1000);
 }
 
 
