@@ -36,6 +36,7 @@
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
 <style>
 /* ═══════════════════════════ RESET & BASE ═══════════════════════════ */
@@ -130,6 +131,28 @@ body{
 }
 .nav-tab .tab-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
 .nav-tab .tab-icon i.ph{font-size:16px;line-height:1;}
+/* Badge hết hạn trên tab */
+.tab-expiry-badge{
+  margin-left:auto;min-width:18px;height:18px;border-radius:9px;
+  background:#ef4444;color:#fff;font-size:10px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:0 5px;line-height:1;
+}
+.tab-expiry-badge.warn{ background:#f59e0b; }
+/* Widget cảnh báo hết hạn trong dashboard */
+.expiry-alert-item{
+  display:flex;align-items:center;gap:10px;padding:7px 10px;
+  border-radius:8px;margin-bottom:4px;font-size:12px;
+  border-left:3px solid #ccc;
+}
+.expiry-alert-item.expired { background:#FEF2F2;border-color:#ef4444; }
+.expiry-alert-item.critical{ background:#FFF7ED;border-color:#f97316; }
+.expiry-alert-item.warning { background:#FFFBEB;border-color:#f59e0b; }
+.expiry-alert-item .exp-name{ font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.expiry-alert-item .exp-badge{ flex-shrink:0;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px; }
+.expiry-alert-item.expired  .exp-badge{ background:#fee2e2;color:#b91c1c; }
+.expiry-alert-item.critical .exp-badge{ background:#ffedd5;color:#c2410c; }
+.expiry-alert-item.warning  .exp-badge{ background:#fef9c3;color:#92400e; }
 
 /* Sidebar footer: user info */
 .sidebar-footer{
@@ -707,6 +730,145 @@ input[type=checkbox].row-cb{
 .sa-item.danger:hover{background:#FEF2F2;}
 .sa-item.ai-item{color:var(--muted);cursor:default;opacity:.7;}
 .sa-item.ai-item:hover{background:none;}
+
+/* ── QR Code Modal ────────────────────────────────────────────── */
+#qr-modal-overlay{
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(30,27,75,.45);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+}
+#qr-modal-overlay.open{display:flex;}
+#qr-modal{
+  background:#fff;border-radius:18px;
+  box-shadow:0 8px 40px rgba(99,102,241,.18),0 2px 12px rgba(0,0,0,.12);
+  padding:0;width:360px;max-width:95vw;overflow:hidden;
+  animation:qrModalIn .22s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes qrModalIn{from{opacity:0;transform:scale(.88);}to{opacity:1;transform:scale(1);}}
+#qr-modal .qr-header{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;padding:16px 20px 14px;display:flex;align-items:center;gap:10px;
+}
+#qr-modal .qr-header i{font-size:22px;}
+#qr-modal .qr-header .qr-title{font-weight:700;font-size:15px;line-height:1.3;}
+#qr-modal .qr-header .qr-sub{font-size:11.5px;opacity:.85;margin-top:2px;}
+#qr-modal .qr-body{padding:20px;text-align:center;}
+#qr-canvas-wrap{
+  display:inline-block;padding:12px;background:#fff;
+  border-radius:12px;border:2px solid var(--border);
+  box-shadow:0 2px 12px rgba(99,102,241,.1);
+  margin-bottom:14px;
+}
+#qr-canvas-wrap canvas,#qr-canvas-wrap img{display:block;}
+.qr-info-row{
+  display:grid;grid-template-columns:auto 1fr;gap:3px 10px;
+  text-align:left;font-size:12px;margin:10px auto 0;max-width:260px;
+}
+.qr-info-row .lbl{color:var(--muted);font-weight:500;white-space:nowrap;}
+.qr-info-row .val{color:var(--text);font-weight:600;word-break:break-all;}
+#qr-modal .qr-footer{
+  padding:0 20px 18px;display:flex;gap:8px;justify-content:center;
+}
+#qr-modal .qr-footer button{flex:1;max-width:140px;}
+/* QR Print label */
+@media print{
+  .qr-no-print{display:none!important;}
+  .qr-print-label{display:block!important;}
+}
+.qr-print-label{display:none;}
+
+/* ── Audit Log ────────────────────────────────────────────────── */
+.al-badge{
+  display:inline-block;font-size:10px;font-weight:700;
+  border-radius:5px;padding:1px 7px;white-space:nowrap;
+}
+.al-badge.add   {background:#d1fae5;color:#065f46;}
+.al-badge.edit  {background:#e0e7ff;color:#3730a3;}
+.al-badge.delete{background:#fee2e2;color:#b91c1c;}
+.al-badge.import{background:#fef3c7;color:#92400e;}
+.al-badge.status{background:#f3e8ff;color:#6d28d9;}
+.al-badge.asset  {background:#eff6ff;color:#1d4ed8;}
+.al-badge.license{background:#f0fdf4;color:#166534;}
+.al-badge.dntt   {background:#fff7ed;color:#c2410c;}
+.al-diff{font-size:11px;color:var(--muted);line-height:1.6;}
+.al-diff .al-old{color:#ef4444;text-decoration:line-through;}
+.al-diff .al-new{color:#16a34a;}
+
+/* ── License Calendar View ────────────────────────────────────── */
+#lic-calendar-wrap{display:none;margin-top:10px;}
+#lic-calendar-wrap.open{display:block;}
+.lc-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 4px 12px;
+}
+.lc-nav-title{font-size:15px;font-weight:700;color:var(--text);}
+.lc-nav-btns{display:flex;gap:6px;}
+.lc-nav-btns button{
+  background:var(--panel2);border:1px solid var(--border);
+  border-radius:8px;padding:4px 12px;cursor:pointer;
+  font-size:12px;font-weight:600;color:var(--accent);
+  transition:background .15s;
+}
+.lc-nav-btns button:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+.lc-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  gap:4px;
+}
+.lc-dow{
+  text-align:center;font-size:11px;font-weight:700;
+  color:var(--muted);padding:4px 0 6px;letter-spacing:.5px;
+}
+.lc-dow:first-child{color:#ef4444;}/* CN */
+.lc-dow:last-child{color:#ef4444;}/* T7 */
+.lc-cell{
+  min-height:70px;background:var(--panel);border:1px solid var(--border);
+  border-radius:10px;padding:6px 7px 5px;cursor:pointer;
+  transition:box-shadow .15s,background .15s;position:relative;
+  display:flex;flex-direction:column;gap:3px;
+}
+.lc-cell:hover{box-shadow:0 2px 12px rgba(99,102,241,.14);background:var(--panel2);}
+.lc-cell.empty{background:transparent;border-color:transparent;cursor:default;pointer-events:none;}
+.lc-cell.today{
+  border-color:var(--accent);
+  box-shadow:0 0 0 1.5px var(--accent);
+}
+.lc-cell.today .lc-day{color:var(--accent);font-weight:800;}
+.lc-day{font-size:12px;font-weight:600;color:var(--text);line-height:1;}
+.lc-cell.other-month .lc-day{color:var(--muted);opacity:.5;}
+.lc-dot{
+  font-size:10px;line-height:1.35;border-radius:5px;
+  padding:1px 5px;font-weight:600;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:100%;
+}
+.lc-dot.exp{background:#fee2e2;color:#b91c1c;}
+.lc-dot.crit{background:#fef3c7;color:#b45309;}
+.lc-dot.warn{background:#ecfdf5;color:#065f46;}
+.lc-dot.more{background:var(--panel2);color:var(--muted);font-style:italic;}
+/* Popover */
+#lc-popover{
+  display:none;position:fixed;z-index:3000;
+  background:#fff;border-radius:12px;
+  box-shadow:0 8px 30px rgba(30,27,75,.18);
+  padding:12px 14px;width:280px;max-height:320px;overflow-y:auto;
+}
+#lc-popover.open{display:block;}
+#lc-popover .lcp-date{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.lcp-item{
+  display:flex;flex-direction:column;padding:6px 0;
+  border-bottom:1px solid var(--border);
+}
+.lcp-item:last-child{border-bottom:none;}
+.lcp-item .lcp-name{font-size:12px;font-weight:700;color:var(--text);}
+.lcp-item .lcp-meta{font-size:10.5px;color:var(--muted);margin-top:2px;}
+.lcp-item .lcp-badge{font-size:10px;font-weight:700;border-radius:5px;padding:1px 6px;display:inline-block;margin-top:3px;}
+.lcp-badge.exp{background:#fee2e2;color:#b91c1c;}
+.lcp-badge.crit{background:#fef3c7;color:#b45309;}
+.lcp-badge.warn{background:#d1fae5;color:#065f46;}
+.lcp-badge.ok{background:#e0e7ff;color:#3730a3;}
+/* Legend */
+.lc-legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 0 4px;font-size:11px;}
+.lc-legend-item{display:flex;align-items:center;gap:5px;color:var(--muted);}
+.lc-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 .sa-divider{height:1px;background:var(--border);margin:4px 0;}
 /* AI badge */
 .sa-ai-badge{
@@ -1965,6 +2127,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </button>
         <button class="nav-tab" onclick="switchTab('license')" id="tab-license">
           <span class="tab-icon"><i class="ph ph-files"></i></span> Contracts
+          <span class="tab-expiry-badge" id="tab-license-badge" style="display:none;"></span>
         </button>
         <button class="nav-tab" onclick="switchTab('dntt')" id="tab-dntt">
           <span class="tab-icon"><i class="ph ph-receipt"></i></span> Đề Nghị TT
@@ -1974,6 +2137,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </button>
         <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">
           <span class="tab-icon"><i class="ph ph-users-three"></i></span> Phân Quyền
+        </button>
+        <button class="nav-tab" onclick="switchTab('auditlog')" id="tab-auditlog" style="display:none">
+          <span class="tab-icon"><i class="ph ph-scroll"></i></span> Nhật Ký
         </button>
       </nav>
 
@@ -2089,6 +2255,47 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </div>
         <div class="chart-body" style="padding:8px 10px;height:220px;overflow-y:auto;">
           <table class="dept-table" id="warranty-table" style="width:100%;"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Widget thống kê ĐNTT -->
+    <div style="margin-top:12px;">
+      <div class="dash-grid-wide">
+        <div class="chart-card">
+          <div class="chart-head" style="justify-content:space-between;">
+            <span><i class="ph ph-chart-bar"></i> ĐNTT theo tháng (số tiền)</span>
+            <select id="dntt-chart-year" style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);" onchange="renderDNTTCharts()"></select>
+          </div>
+          <div class="chart-body"><canvas id="chart-dntt-monthly"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head"><i class="ph ph-chart-donut"></i> ĐNTT theo trạng thái</div>
+          <div class="chart-body"><canvas id="chart-dntt-status"></canvas></div>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="chart-card">
+          <div class="chart-head"><i class="ph ph-buildings"></i> Top công ty / phòng ban theo giá trị ĐNTT</div>
+          <div class="chart-body"><canvas id="chart-dntt-dept"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Widget cảnh báo hết hạn Contract/License -->
+    <div style="margin-top:12px;" id="dash-expiry-wrap">
+      <div class="chart-card">
+        <div class="chart-head" style="justify-content:space-between;">
+          <span><i class="ph ph-warning-circle" style="color:#ef4444;"></i> Cảnh báo hết hạn Contract / License</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="dash-expiry-count" style="font-size:11px;color:#ef4444;font-weight:700;"></span>
+            <button class="btn btn-icon-ph" style="padding:2px 8px;font-size:11px;" onclick="switchTab('license')">
+              <i class="ph ph-arrow-right"></i> Xem tất cả
+            </button>
+          </div>
+        </div>
+        <div class="chart-body" style="padding:6px 10px;max-height:260px;overflow-y:auto;" id="dash-expiry-list">
+          <div style="color:var(--muted);font-size:12px;padding:16px;text-align:center;">Đang tải…</div>
         </div>
       </div>
     </div>
@@ -2354,6 +2561,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </select>
       <span class="filter-count" id="lic-count"></span>
       <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-icon-ph" id="lic-cal-btn" onclick="toggleLicCalendar()" title="Xem dạng lịch"><i class="ph ph-calendar-dots"></i> Lịch</button>
         <button class="btn btn-icon-ph" id="lic-group-btn" onclick="toggleLicGroup()" title="Gom nhóm theo gói"><i class="ph ph-package"></i> Nhóm theo gói</button>
         <button class="btn btn-icon-ph" id="btn-export-lic" onclick="exportLicenseExcel()" title="Xuất Excel"><i class="ph ph-file-xls"></i> Export Excel</button>
         <button class="btn btn-icon-ph" id="lic-sync-btn" onclick="licSyncSP()" style="display:none"><i class="ph ph-arrows-clockwise"></i> Sync SP</button>
@@ -2361,7 +2569,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
     </div>
 
-    <div class="table-card" style="margin-top:10px;">
+    <div class="table-card" id="lic-table-card" style="margin-top:10px;">
       <div class="table-wrap" style="max-height:calc(100vh - 340px);">
         <table>
           <thead>
@@ -2385,6 +2593,39 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <tbody id="lic-tbody"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- ── Calendar View ───────────────────────────────── -->
+    <div id="lic-calendar-wrap">
+      <div class="lc-nav">
+        <div class="lc-nav-title" id="lc-month-title">Tháng 1 / 2026</div>
+        <div class="lc-nav-btns">
+          <button onclick="lcNav(-1)"><i class="ph ph-caret-left"></i></button>
+          <button onclick="lcNavToday()">Hôm nay</button>
+          <button onclick="lcNav(1)"><i class="ph ph-caret-right"></i></button>
+        </div>
+      </div>
+      <div class="lc-legend">
+        <div class="lc-legend-item"><div class="lc-legend-dot" style="background:#ef4444;"></div>Đã hết hạn</div>
+        <div class="lc-legend-item"><div class="lc-legend-dot" style="background:#f59e0b;"></div>Còn ≤ 30 ngày</div>
+        <div class="lc-legend-item"><div class="lc-legend-dot" style="background:#22c55e;"></div>Còn > 30 ngày</div>
+      </div>
+      <div class="lc-grid" id="lc-grid-dow">
+        <div class="lc-dow">CN</div>
+        <div class="lc-dow">T2</div>
+        <div class="lc-dow">T3</div>
+        <div class="lc-dow">T4</div>
+        <div class="lc-dow">T5</div>
+        <div class="lc-dow">T6</div>
+        <div class="lc-dow">T7</div>
+      </div>
+      <div class="lc-grid" id="lc-grid-cells" style="margin-top:3px;"></div>
+    </div>
+
+    <!-- Popover for day details -->
+    <div id="lc-popover">
+      <div class="lcp-date" id="lcp-date-label"></div>
+      <div id="lcp-items"></div>
     </div>
 
   </div>
@@ -2538,6 +2779,57 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <span style="color:var(--accent2);font-weight:600;"><i class="ph ph-pencil-simple"></i> Member</span> — xem + thêm + sửa (không xóa) ·
       <span style="color:var(--muted);font-weight:600;"><i class="ph ph-eye"></i> Viewer</span> — chỉ xem + export.
       <br/>Mặc định cho user chưa có trong danh sách: <strong>Viewer</strong>.
+    </div>
+  </div>
+
+  <!-- ══════════════ VIEW: NHẬT KÝ THAY ĐỔI (global admin only) ══════════════ -->
+  <div class="view" id="view-auditlog">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;"><i class="ph ph-scroll"></i> Nhật Ký Thay Đổi</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Lịch sử mọi thao tác: thêm, sửa, xóa tài sản &amp; contract. Chỉ Global Admin xem được.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select class="fsel" id="al-filter-action" onchange="renderAuditLog()">
+          <option value="">Tất cả hành động</option>
+          <option value="add">➕ Thêm mới</option>
+          <option value="edit">✏️ Chỉnh sửa</option>
+          <option value="delete">🗑️ Xóa</option>
+          <option value="import">📥 Import</option>
+          <option value="status">🔄 Đổi trạng thái</option>
+        </select>
+        <select class="fsel" id="al-filter-module" onchange="renderAuditLog()">
+          <option value="">Tất cả module</option>
+          <option value="asset">Tài sản</option>
+          <option value="license">Contract/License</option>
+          <option value="dntt">ĐNTT</option>
+        </select>
+        <input type="date" class="fsel" id="al-filter-date" onchange="renderAuditLog()" style="padding:5px 10px;font-size:12px;" title="Lọc theo ngày">
+        <button class="btn btn-icon-ph" onclick="clearAuditLogFilters()"><i class="ph ph-x"></i> Xóa lọc</button>
+        <button class="btn danger btn-icon-ph" onclick="confirmClearAuditLog()" style="font-size:11.5px;"><i class="ph ph-trash"></i> Xóa log</button>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-top:4px;">
+      <div class="table-wrap" style="max-height:calc(100vh - 280px);">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:140px;">Thời gian</th>
+              <th style="width:80px;">Module</th>
+              <th style="width:90px;">Hành động</th>
+              <th>Đối tượng</th>
+              <th>Chi tiết thay đổi</th>
+              <th style="width:120px;">Người thực hiện</th>
+            </tr>
+          </thead>
+          <tbody id="al-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="al-empty" style="display:none;text-align:center;padding:40px;color:var(--muted);">
+      <i class="ph ph-scroll" style="font-size:36px;opacity:.3;display:block;margin-bottom:8px;"></i>
+      Chưa có nhật ký nào.
     </div>
   </div>
 
@@ -3787,6 +4079,7 @@ const MSAL_CONFIG = {
   spTransferList:    'Quan_Ly_TransferHistory',   // list lịch sử bàn giao mặc định (TTG)
   spXacNhanList:     'Quan_Ly_XacNhan_BanGiao',   // list xác nhận bàn giao mặc định (TTG)
   spDNTTList:        'Quan_Ly_DNTT',              // list đề nghị thanh toán mặc định (TTG)
+  spAuditLogList:    'QLTS_AuditLog',             // list nhật ký thay đổi (global admin only)
   redirectUri: window.location.origin + window.location.pathname,  // tự động
   scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Manage', 'Mail.Send', 'User.Read'],
 };
@@ -4407,6 +4700,58 @@ async function msalSpDeleteAsset(id){
   try{
     await msalSpReq(url,{ method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
   }catch(e){ console.error('[MSAL] delete error:', e); }
+}
+
+// ═══════════════════════ AUDIT LOG — SHAREPOINT PUSH/PULL ════════════════════
+async function msalSpPushAuditLog(entry){
+  if(!_msalAccount) return;
+  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spAuditLogList}')/items`;
+  const body = {
+    Title:     entry.objName || '—',
+    Module:    entry.module  || '',
+    Action:    entry.action  || '',
+    ObjName:   entry.objName || '—',
+    Details:   entry.diff && entry.diff.length
+                 ? JSON.stringify(entry.diff)
+                 : (entry.details || ''),
+    UserEmail: entry.user      || '',
+    Timestamp: entry.ts        || new Date().toISOString(),
+    EntryId:   entry.id        || ''
+  };
+  try{
+    await msalSpReq(base, { method:'POST', body: JSON.stringify(body) });
+  } catch(e){
+    console.warn('[AuditLog] Push lỗi (đã lưu local):', e.message);
+  }
+}
+
+async function msalSpLoadAuditLog(){
+  if(!_msalAccount) return null;
+  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spAuditLogList}')/items`;
+  const url  = `${base}?$select=Title,Module,Action,ObjName,Details,UserEmail,Timestamp,EntryId,Created`
+             + `&$orderby=Created desc&$top=500`;
+  try{
+    const res = await msalSpReq(url);
+    return (res?.value || []).map(item => {
+      let diff = [];
+      let details = item.Details || '';
+      // Thử parse Details như JSON diff array
+      if(details.startsWith('[')){ try{ diff = JSON.parse(details); details = ''; }catch(e){} }
+      return {
+        id:      item.EntryId  || item.ID,
+        ts:      item.Timestamp || item.Created,
+        module:  item.Module   || '',
+        action:  item.Action   || '',
+        objName: item.ObjName  || item.Title || '—',
+        details,
+        user:    item.UserEmail || '—',
+        diff
+      };
+    });
+  } catch(e){
+    console.warn('[AuditLog] Load từ SP lỗi:', e.message);
+    return null;
+  }
 }
 
 // ═══════════════════════ CROSS-COMPANY ASSET TRANSFER ════════════════════════
@@ -5729,7 +6074,9 @@ function applyRoleUI(){
   show('btn-export-asset',canExp);
 
   // ── Tab Phân Quyền — chỉ global_admin / admin thấy ──
-  show('tab-roles', isGlobalAdmin);
+  show('tab-roles',    isGlobalAdmin);
+  // ── Tab Nhật Ký — chỉ global_admin / admin thấy ──
+  show('tab-auditlog', isGlobalAdmin);
   // ── Nút migrate / set-ttg — chỉ global_admin / admin thấy ──
   show('btn-migrate-transfer', isGlobalAdmin && !!_msalAccount);
   show('btn-set-ttg',          isGlobalAdmin && !!_msalAccount);
@@ -5835,6 +6182,7 @@ function switchTab(t){
   if(t==='dntt'){        renderDNTT(); _dnttUpdateTplUI(); }
   if(t==='procurement')  renderProcurement();
   if(t==='roles')        renderRolesTable();
+  if(t==='auditlog')     renderAuditLog();
   // Sync bottom nav
   setBottomNav(t);
   // Đóng sidebar drawer trên mobile sau khi chọn tab
@@ -6073,6 +6421,11 @@ function buildWarrantyTable(src){
     </tr>`;
   }).join('') + '</tbody>';
 
+  // Expiry alerts từ contracts/licenses
+  updateExpiryBadge();
+  renderDashExpiry();
+  // ĐNTT charts
+  renderDNTTCharts();
 }
 
 // ═══════════════════════ ADVANCED FILTER HELPERS ═══════════════════════
@@ -6879,7 +7232,14 @@ async function saveAsset(){
   };
 
   const idx = assets.findIndex(x=>x.id===id);
+  const oldAsset = idx>=0 ? {...assets[idx]} : null;
   if(idx>=0) assets[idx]=a; else assets.unshift(a);
+  // Audit log
+  if(idx>=0){
+    writeAudit('asset','edit', `${a.tenTaiSan||''} (${a.maTaiSan||''})`, '', oldAsset, a);
+  } else {
+    writeAudit('asset','add',  `${a.tenTaiSan||''} (${a.maTaiSan||''})`, `Serial: ${a.serial||'—'} · ${a.congTy||''}`);
+  }
   saveToStorage();
   clearDraft('modal-form');
   closeModal('modal-form');
@@ -7398,6 +7758,7 @@ function openSmartAction(assetId, triggerEl){
     <div class="sa-section">Quản lý</div>
     <button class="sa-item" onclick="saAct('transfer')"><i class="ph ph-arrows-left-right" style="color:#059669;"></i> Bàn giao</button>
     <button class="sa-item" onclick="saAct('attach')"><i class="ph ph-paperclip" style="color:#EA580C;"></i> Hồ sơ & Đính kèm</button>
+    <button class="sa-item" onclick="saAct('qr')"><i class="ph ph-qr-code" style="color:#0891B2;"></i> QR Code / In nhãn</button>
     ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="color:#7C3AED;"></i> Chuyển công ty</button>` : ''}
 
     <div class="sa-divider"></div>
@@ -7466,6 +7827,7 @@ function saAct(action){
   if(action === 'report-damage') saReportDamage(id);
   if(action === 'recall')        saRecall(id);
   if(action === 'ai-health')     geminiHealthCheck(id);
+  if(action === 'qr')            openQRCode(id);
 }
 
 function closeSmartAction(){
@@ -7587,6 +7949,7 @@ async function confirmDelete(){
     spStatusBar('⟳ Đang xóa trên SharePoint…','busy');
     await spDeleteAsset(deleteId);
   }
+  if(toDelete) writeAudit('asset','delete', `${toDelete.tenTaiSan||''} (${toDelete.maTaiSan||''})`, `Serial: ${toDelete.serial||'—'}`);
   assets = assets.filter(a=>a.id!==deleteId);
   saveToStorage();
   closeModal('modal-delete');
@@ -8106,6 +8469,7 @@ function confirmImport(){
     });
   }
 
+  writeAudit('asset','import', `Import Excel`, `${total} thiết bị · mode: ${mode}`);
   saveToStorage();
   saveTransfers();
   closeModal('modal-import');
@@ -9406,6 +9770,66 @@ function loadLicenses(){
   try{ const d=localStorage.getItem(LIC_STORE_KEY); if(d) licenses=JSON.parse(d); }catch(e){}
 }
 
+// ══════════════ EXPIRY ALERTS ══════════════
+
+function updateExpiryBadge(){
+  const badge = document.getElementById('tab-license-badge');
+  if(!badge) return;
+  const expired  = licenses.filter(l => { const d=licDiff(l.ngayHetHan); return d!==null && d<0; }).length;
+  const critical = licenses.filter(l => { const d=licDiff(l.ngayHetHan); return d!==null && d>=0 && d<=15; }).length;
+  const warning  = licenses.filter(l => { const d=licDiff(l.ngayHetHan); return d!==null && d>15 && d<=90; }).length;
+  const total    = expired + critical;
+  const totalAll = expired + critical + warning;
+  if(totalAll === 0){ badge.style.display='none'; return; }
+  badge.style.display = 'inline-flex';
+  badge.textContent   = totalAll;
+  badge.className     = 'tab-expiry-badge' + (total>0 ? '' : ' warn');
+}
+
+function renderDashExpiry(){
+  const list = document.getElementById('dash-expiry-list');
+  const countEl = document.getElementById('dash-expiry-count');
+  const wrap = document.getElementById('dash-expiry-wrap');
+  if(!list) return;
+
+  // Lọc: chỉ hiện license có ngày hết hạn và còn <= 90 ngày (hoặc đã hết)
+  const items = licenses
+    .filter(l => l.ngayHetHan)
+    .map(l => ({ ...l, diff: licDiff(l.ngayHetHan) }))
+    .filter(l => l.diff !== null && l.diff <= 90)
+    .sort((a,b) => a.diff - b.diff);   // hết hạn sớm nhất lên đầu
+
+  if(wrap) wrap.style.display = items.length ? '' : 'none';
+  if(!items.length){ list.innerHTML=''; if(countEl) countEl.textContent=''; return; }
+
+  if(countEl){
+    const exp = items.filter(l=>l.diff<0).length;
+    const crit= items.filter(l=>l.diff>=0&&l.diff<=15).length;
+    const parts=[];
+    if(exp)  parts.push(`${exp} đã hết hạn`);
+    if(crit) parts.push(`${crit} sắp hết`);
+    countEl.textContent = parts.join(' · ');
+  }
+
+  list.innerHTML = items.map(l => {
+    const d = l.diff;
+    const cls   = d<0 ? 'expired' : d<=15 ? 'critical' : 'warning';
+    const badge = d<0
+      ? `Hết hạn ${Math.abs(d)} ngày`
+      : d===0 ? 'Hết hạn hôm nay!'
+      : `Còn ${d} ngày`;
+    const icon  = d<0 ? '❌' : d<=15 ? '🔴' : '⚠️';
+    return `<div class="expiry-alert-item ${cls}" onclick="switchTab('license')" style="cursor:pointer;" title="Click để xem danh sách contracts">
+      <span style="font-size:16px;flex-shrink:0;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="exp-name">${esc(l.ten||'—')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px;">${esc(l.vendor||l.ncc||'')}${l.congTy?' · '+esc(l.congTy):''}</div>
+      </div>
+      <span class="exp-badge">${badge}</span>
+    </div>`;
+  }).join('');
+}
+
 // ─── Expiry helpers ───────────────────────────────────────────────
 function licDiff(ngayHetHan){
   if(!ngayHetHan) return null;
@@ -9651,6 +10075,115 @@ function renderLicSummary(list){
   wrap.style.display = 'block';
 }
 
+// ══════════════ DNTT CHARTS ══════════════
+let _chartDNTTMonthly=null, _chartDNTTStatus=null, _chartDNTTDept=null;
+
+function renderDNTTCharts(){
+  if(typeof Chart==='undefined') return;
+  if(!dnttList||!dnttList.length){
+    ['chart-dntt-monthly','chart-dntt-status','chart-dntt-dept'].forEach(id=>{
+      const c=document.getElementById(id);
+      if(c){ const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); }
+    });
+    return;
+  }
+
+  // Chọn năm
+  const yrSel = document.getElementById('dntt-chart-year');
+  const years = [...new Set(dnttList.map(d=>(d.ngayLap||'').slice(0,4)).filter(Boolean))].sort().reverse();
+  if(yrSel && !yrSel.options.length){
+    years.forEach(y=>{ const o=document.createElement('option'); o.value=y; o.textContent=y; yrSel.appendChild(o); });
+  }
+  const selYear = yrSel?.value || years[0] || String(new Date().getFullYear());
+
+  const monthNames = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+
+  // ── Chart 1: ĐNTT theo tháng (triệu VND) ──
+  const monthData = Array(12).fill(0);
+  dnttList.filter(d=>(d.ngayLap||'').startsWith(selYear)).forEach(d=>{
+    const m = parseInt((d.ngayLap||'').slice(5,7),10)-1;
+    if(m>=0&&m<12) monthData[m] += (parseFloat(d.soTien)||0);
+  });
+
+  if(_chartDNTTMonthly) _chartDNTTMonthly.destroy();
+  const ctx1=document.getElementById('chart-dntt-monthly');
+  if(ctx1) _chartDNTTMonthly = new Chart(ctx1.getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:monthNames,
+      datasets:[{
+        label:'Số tiền (triệu VND)',
+        data: monthData.map(v=>+(v/1e6).toFixed(2)),
+        backgroundColor:'rgba(99,102,241,.7)',
+        borderColor:'#6366f1',borderWidth:1,borderRadius:5,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y.toLocaleString('vi-VN')} triệu`}}},
+      scales:{
+        y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#64748B',font:{size:10},callback:v=>`${v}M`}},
+        x:{grid:{display:false},ticks:{color:'#64748B',font:{size:10}}}
+      }
+    }
+  });
+
+  // ── Chart 2: Theo trạng thái ──
+  const statusMap={'draft':'Nháp','submitted':'Chờ duyệt','pending':'Chờ duyệt','approved':'Đã duyệt','paid':'Đã TT'};
+  const statusColors={'draft':'#94a3b8','submitted':'#3b82f6','pending':'#3b82f6','approved':'#10b981','paid':'#f97316'};
+  const statusCount={};
+  dnttList.forEach(d=>{
+    const k=d.trangThai||'draft';
+    statusCount[k]=(statusCount[k]||0)+1;
+  });
+  const sLabels=Object.keys(statusCount).map(k=>statusMap[k]||k);
+  const sData=Object.values(statusCount);
+  const sColors=Object.keys(statusCount).map(k=>statusColors[k]||'#94a3b8');
+
+  if(_chartDNTTStatus) _chartDNTTStatus.destroy();
+  const ctx2=document.getElementById('chart-dntt-status');
+  if(ctx2) _chartDNTTStatus = new Chart(ctx2.getContext('2d'),{
+    type:'doughnut',
+    data:{labels:sLabels,datasets:[{data:sData,backgroundColor:sColors,borderColor:'#fff',borderWidth:2}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{color:'#64748B',font:{size:11},boxWidth:12,padding:8}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed} phiếu`}}}
+    }
+  });
+
+  // ── Chart 3: Top công ty theo tổng tiền ──
+  const deptMap={};
+  dnttList.filter(d=>(d.ngayLap||'').startsWith(selYear)).forEach(d=>{
+    const k=d.congTy||d.phongBan||'Khác';
+    deptMap[k]=(deptMap[k]||0)+(parseFloat(d.soTien)||0);
+  });
+  const sorted=Object.entries(deptMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const dLabels=sorted.map(([k])=>k.length>18?k.slice(0,16)+'…':k);
+  const dData=sorted.map(([,v])=>+(v/1e6).toFixed(2));
+  const dColors=['#6366f1','#8b5cf6','#3b82f6','#0ea5e9','#10b981','#f59e0b','#f97316','#ef4444'];
+
+  if(_chartDNTTDept) _chartDNTTDept.destroy();
+  const ctx3=document.getElementById('chart-dntt-dept');
+  if(ctx3) _chartDNTTDept = new Chart(ctx3.getContext('2d'),{
+    type:'bar',
+    data:{labels:dLabels,datasets:[{
+      label:'Triệu VND',data:dData,
+      backgroundColor:dColors.slice(0,dData.length),
+      borderRadius:5,borderSkipped:false,
+    }]},
+    options:{
+      indexAxis:'y',
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.x.toLocaleString('vi-VN')} triệu`}}},
+      scales:{
+        x:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#64748B',font:{size:10},callback:v=>`${v}M`}},
+        y:{grid:{display:false},ticks:{color:'#64748B',font:{size:11}}}
+      }
+    }
+  });
+}
+
 function renderLicenses(){
   const q     = (document.getElementById('lic-search')?.value||'').toLowerCase();
   const fst   = document.getElementById('lic-filter-status')?.value||'';
@@ -9671,6 +10204,9 @@ function renderLicenses(){
   document.getElementById('lic-kpi-warn').textContent  = licenses.filter(l=>licStatusKey(licDiff(l.ngayHetHan))==='warn').length;
   document.getElementById('lic-kpi-exp').textContent   = licenses.filter(l=>licStatusKey(licDiff(l.ngayHetHan))==='exp').length;
   renderLicSummary(list);
+  // Cập nhật badge hết hạn trên tab sidebar
+  updateExpiryBadge();
+  renderDashExpiry();
 
   document.getElementById('lic-count').textContent = `${list.length} / ${licenses.length}`;
 
@@ -9872,7 +10408,14 @@ async function saveLicense(){
   };
 
   const idx = licenses.findIndex(x=>x.id===id);
+  const oldLic = idx>=0 ? {...licenses[idx]} : null;
   if(idx>=0) licenses[idx] = rec; else licenses.push(rec);
+  // Audit log
+  if(idx>=0){
+    writeAudit('license','edit', rec.ten, '', oldLic, rec);
+  } else {
+    writeAudit('license','add', rec.ten, `${rec.type||''} · ${rec.congTy||''} · HH: ${rec.ngayHetHan||'—'}`);
+  }
   saveLicenses();
   populateCompanySelects();
   renderLicenses();
@@ -9900,6 +10443,7 @@ function confirmDeleteLicense(id){
 async function deleteLicense(id){
   const l = licenses.find(x=>x.id===id);
   if(!l) return;
+  if(l) writeAudit('license','delete', l.ten, `${l.type||''} · HH: ${l.ngayHetHan||'—'}`);
   const spId = l.spId;
   licenses = licenses.filter(x=>x.id!==id);
   saveLicenses();
@@ -11174,6 +11718,11 @@ function renderDNTT(){
 
   document.getElementById('dntt-count').textContent =
     `${list.length} phiếu${list.length < dnttList.length ? ` (đang lọc từ ${dnttList.length})` : ''}`;
+
+  // Cập nhật ĐNTT charts nếu đang ở Dashboard
+  if(document.getElementById('view-dashboard')?.classList.contains('active')){
+    renderDNTTCharts();
+  }
 
   // Cập nhật datalist công ty trong filter
   const coSel = document.getElementById('dntt-filter-company');
@@ -13274,12 +13823,533 @@ document.addEventListener('keydown', e=>{
   document.head.appendChild(st);
 })();
 
+// ══════════════════════════════════════════════════════════════════
+//  AUDIT LOG — NHẬT KÝ THAY ĐỔI (global admin only)
+// ══════════════════════════════════════════════════════════════════
+const AL_KEY     = 'qlts_auditlog_v1';
+const AL_MAX     = 1000; // max entries kept
+
+function _alLoad(){ try{ return JSON.parse(localStorage.getItem(AL_KEY)||'[]'); }catch(e){ return []; } }
+function _alSave(log){ localStorage.setItem(AL_KEY, JSON.stringify(log)); }
+
+/**
+ * writeAudit(module, action, objName, details, [oldObj, newObj])
+ *  module : 'asset' | 'license' | 'dntt'
+ *  action : 'add' | 'edit' | 'delete' | 'import' | 'status'
+ *  objName: display name of the object
+ *  details: plain text summary (used for add/delete/import)
+ *  oldObj / newObj : optional — used to generate field diffs for 'edit'
+ */
+function writeAudit(module, action, objName, details, oldObj, newObj){
+  const user = (_msalAccount?.username) || (_userRole ? `[${_userRole}]` : 'local');
+  const entry = {
+    id:      genId(),
+    ts:      new Date().toISOString(),
+    module,
+    action,
+    objName: objName || '—',
+    details: details || '',
+    user,
+    diff:    []
+  };
+
+  // Build diff for edit actions
+  if(action === 'edit' && oldObj && newObj){
+    const WATCH_ASSET = ['tenTaiSan','maTaiSan','serial','model','nguoiDung','boPhan',
+                         'tinhTrang','ngayMua','ngayHetBH','congTy','trangThaiHienTai','giaTri'];
+    const WATCH_LIC   = ['ten','type','ngayHetHan','ngayMua','congTy','ncc','giaTri','goi','tongSeat','tienTe'];
+    const fields      = module === 'license' ? WATCH_LIC : WATCH_ASSET;
+    fields.forEach(f => {
+      const o = (oldObj[f] ?? '');
+      const n = (newObj[f] ?? '');
+      if(String(o) !== String(n)){
+        entry.diff.push({ field: f, old: o, new: n });
+      }
+    });
+    if(!entry.diff.length) return; // nothing actually changed — skip
+  }
+
+  // Lưu local (luôn luôn — fallback khi offline)
+  const log = _alLoad();
+  log.unshift(entry);
+  if(log.length > AL_MAX) log.length = AL_MAX;
+  _alSave(log);
+
+  // Push lên SharePoint nền (không chặn UI)
+  if(_msalAccount) msalSpPushAuditLog(entry).catch(()=>{});
+
+  // Refresh UI if currently viewing audit log tab
+  if(document.getElementById('view-auditlog')?.classList.contains('active')){
+    renderAuditLog();
+  }
+}
+
+// ── Render ───────────────────────────────────────────────────────
+function renderAuditLog(){
+  const tbody   = document.getElementById('al-tbody');
+  const empty   = document.getElementById('al-empty');
+  if(!tbody) return;
+
+  // Nếu đã đăng nhập MSAL → kéo từ SP (async), hiện loading trước
+  if(_msalAccount){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">
+      <i class="ph ph-circle-notch" style="font-size:20px;animation:spin 1s linear infinite;display:inline-block;"></i>
+      &nbsp;Đang tải từ SharePoint…</td></tr>`;
+    if(empty) empty.style.display = 'none';
+    msalSpLoadAuditLog().then(spLog => {
+      _renderAuditLogRows(spLog || _alLoad());
+    }).catch(() => {
+      _renderAuditLogRows(_alLoad());
+    });
+    return;
+  }
+
+  // Offline / chưa đăng nhập → dùng localStorage
+  _renderAuditLogRows(_alLoad());
+}
+
+function _renderAuditLogRows(log){
+  const tbody   = document.getElementById('al-tbody');
+  const empty   = document.getElementById('al-empty');
+  if(!tbody) return;
+
+  const fAction = document.getElementById('al-filter-action')?.value || '';
+  const fModule = document.getElementById('al-filter-module')?.value || '';
+  const fDate   = document.getElementById('al-filter-date')?.value   || '';
+
+  if(fAction) log = log.filter(e => e.action === fAction);
+  if(fModule) log = log.filter(e => e.module === fModule);
+  if(fDate)   log = log.filter(e => e.ts.startsWith(fDate));
+
+  if(!log.length){
+    tbody.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+
+  const ACTION_LABEL = {
+    add:'➕ Thêm', edit:'✏️ Sửa', delete:'🗑️ Xóa',
+    import:'📥 Import', status:'🔄 Trạng thái'
+  };
+  const MOD_LABEL = { asset:'Tài sản', license:'Contract', dntt:'ĐNTT' };
+
+  tbody.innerHTML = log.map(e => {
+    const ts  = new Date(e.ts).toLocaleString('vi-VN',{
+      day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'
+    });
+    const diffHtml = e.diff && e.diff.length
+      ? e.diff.map(d =>
+          `<div class="al-diff">
+            <strong>${d.field}</strong>:
+            <span class="al-old">${d.old||'(trống)'}</span>
+            → <span class="al-new">${d.new||'(trống)'}</span>
+          </div>`
+        ).join('')
+      : (e.details ? `<span class="al-diff">${e.details}</span>` : '');
+
+    return `<tr>
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap;">${ts}</td>
+      <td><span class="al-badge ${e.module||''}">${MOD_LABEL[e.module]||e.module}</span></td>
+      <td><span class="al-badge ${e.action||''}">${ACTION_LABEL[e.action]||e.action}</span></td>
+      <td style="font-size:12px;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(e.objName||'').replace(/"/g,'&quot;')}">${e.objName||'—'}</td>
+      <td style="max-width:280px;">${diffHtml}</td>
+      <td style="font-size:11px;color:var(--muted);word-break:break-all;">${e.user||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function clearAuditLogFilters(){
+  const ids = ['al-filter-action','al-filter-module','al-filter-date'];
+  ids.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  renderAuditLog();
+}
+
+function confirmClearAuditLog(){
+  if(!confirm('Xóa toàn bộ nhật ký thay đổi?\nThao tác này không thể hoàn tác.')) return;
+  _alSave([]);
+  renderAuditLog();
+  toast('🗑️ Đã xóa toàn bộ nhật ký','warn');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  LICENSE CALENDAR VIEW
+// ══════════════════════════════════════════════════════════════════
+let _lcYear  = new Date().getFullYear();
+let _lcMonth = new Date().getMonth(); // 0-based
+let _lcCalOpen = false;
+
+function toggleLicCalendar(){
+  _lcCalOpen = !_lcCalOpen;
+  const wrap  = document.getElementById('lic-calendar-wrap');
+  const table = document.getElementById('lic-table-card');
+  const btn   = document.getElementById('lic-cal-btn');
+
+  if(_lcCalOpen){
+    wrap.classList.add('open');
+    if(table) table.style.display = 'none';
+    if(btn) btn.classList.add('active');
+    // Reset to current month each time we open
+    _lcYear  = new Date().getFullYear();
+    _lcMonth = new Date().getMonth();
+    renderLicCalendar();
+  } else {
+    wrap.classList.remove('open');
+    if(table) table.style.display = '';
+    if(btn) btn.classList.remove('active');
+    closeLcPopover();
+  }
+}
+
+function lcNav(dir){
+  _lcMonth += dir;
+  if(_lcMonth < 0){ _lcMonth = 11; _lcYear--; }
+  if(_lcMonth > 11){ _lcMonth = 0;  _lcYear++; }
+  renderLicCalendar();
+  closeLcPopover();
+}
+
+function lcNavToday(){
+  _lcYear  = new Date().getFullYear();
+  _lcMonth = new Date().getMonth();
+  renderLicCalendar();
+  closeLcPopover();
+}
+
+function _lcStatus(diff){
+  // Returns 'exp', 'crit' (≤30), 'warn' (>30), 'ok' (no date)
+  if(diff === null) return 'ok';
+  if(diff < 0)   return 'exp';
+  if(diff <= 30) return 'crit';
+  return 'warn';
+}
+
+function renderLicCalendar(){
+  const title = document.getElementById('lc-month-title');
+  const grid  = document.getElementById('lc-grid-cells');
+  if(!title || !grid) return;
+
+  const VIMONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
+                    'Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+  title.textContent = `${VIMONTHS[_lcMonth]} / ${_lcYear}`;
+
+  // Build a map: "YYYY-MM-DD" → [license, ...]
+  const dateMap = {};
+  licenses.forEach(l => {
+    if(!l.ngayHetHan) return;
+    const key = l.ngayHetHan.slice(0,10); // "YYYY-MM-DD"
+    if(!dateMap[key]) dateMap[key] = [];
+    dateMap[key].push(l);
+  });
+
+  // Calendar math
+  const today      = new Date(); today.setHours(0,0,0,0);
+  const firstDay   = new Date(_lcYear, _lcMonth, 1);
+  const lastDay    = new Date(_lcYear, _lcMonth + 1, 0);
+  const startDow   = firstDay.getDay(); // 0=Sun
+  const totalCells = Math.ceil((startDow + lastDay.getDate()) / 7) * 7;
+
+  let html = '';
+  for(let i = 0; i < totalCells; i++){
+    const dayOffset = i - startDow;
+    const date      = new Date(_lcYear, _lcMonth, 1 + dayOffset);
+    const inMonth   = date.getMonth() === _lcMonth;
+    const isToday   = date.getTime() === today.getTime();
+    const dateStr   = date.toISOString().slice(0,10);
+    const items     = dateMap[dateStr] || [];
+
+    const cls = [
+      'lc-cell',
+      !inMonth ? 'other-month' : '',
+      isToday  ? 'today' : '',
+    ].join(' ').trim();
+
+    // Build dots (max 3 shown + "+N more")
+    let dots = '';
+    const shown = items.slice(0,3);
+    shown.forEach(l => {
+      const diff = licDiff(l.ngayHetHan);
+      const st   = _lcStatus(diff);
+      const name = (l.ten||'').length > 18 ? (l.ten||'').slice(0,16)+'…' : (l.ten||'—');
+      dots += `<div class="lc-dot ${st}" title="${(l.ten||'').replace(/"/g,'&quot;')}">${name}</div>`;
+    });
+    if(items.length > 3){
+      dots += `<div class="lc-dot more">+${items.length - 3} khác</div>`;
+    }
+
+    const onclk = items.length
+      ? `onclick="lcShowPopover(this,'${dateStr}')" `
+      : '';
+
+    html += `<div class="${cls}" ${onclk}data-date="${dateStr}">
+               <div class="lc-day">${date.getDate()}</div>
+               ${dots}
+             </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function lcShowPopover(el, dateStr){
+  const pop   = document.getElementById('lc-popover');
+  const label = document.getElementById('lcp-date-label');
+  const body  = document.getElementById('lcp-items');
+  if(!pop) return;
+
+  const items = licenses.filter(l => l.ngayHetHan && l.ngayHetHan.slice(0,10) === dateStr);
+  if(!items.length){ closeLcPopover(); return; }
+
+  // Format date label
+  const d = new Date(dateStr + 'T00:00:00');
+  label.textContent = d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+
+  body.innerHTML = items.map(l => {
+    const diff = licDiff(l.ngayHetHan);
+    const st   = _lcStatus(diff);
+    const badgeText = diff === null ? '' : diff < 0 ? `Đã hết hạn ${Math.abs(diff)} ngày` : diff === 0 ? 'Hết hạn hôm nay!' : `Còn ${diff} ngày`;
+    return `<div class="lcp-item">
+      <div class="lcp-name">${(l.ten||'—').replace(/</g,'&lt;')}</div>
+      <div class="lcp-meta">${l.type||''} · ${l.congTy||''} ${l.ncc ? '· '+l.ncc : ''}</div>
+      ${badgeText ? `<span class="lcp-badge ${st}">${badgeText}</span>` : ''}
+    </div>`;
+  }).join('');
+
+  // Position popover near the cell
+  pop.classList.add('open');
+  const rect = el.getBoundingClientRect();
+  const pw   = pop.offsetWidth  || 280;
+  const ph   = pop.offsetHeight || 200;
+  const vw   = window.innerWidth;
+  const vh   = window.innerHeight;
+
+  let top  = rect.top;
+  let left = rect.right + 8;
+  if(left + pw > vw - 8) left = rect.left - pw - 8;
+  if(left < 8) left = 8;
+  if(top + ph > vh - 12) top = vh - ph - 12;
+  if(top < 8) top = 8;
+
+  pop.style.top  = top  + 'px';
+  pop.style.left = left + 'px';
+}
+
+function closeLcPopover(){
+  const pop = document.getElementById('lc-popover');
+  if(pop) pop.classList.remove('open');
+}
+
+// Close popover on outside click
+document.addEventListener('click', e=>{
+  const pop = document.getElementById('lc-popover');
+  if(pop && pop.classList.contains('open')){
+    if(!pop.contains(e.target) && !e.target.closest('.lc-cell')){
+      closeLcPopover();
+    }
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  QR CODE TÀI SẢN
+// ══════════════════════════════════════════════════════════════════
+let _qrCurrentId = null;
+let _qrInstance  = null;
+
+function openQRCode(id){
+  const a = assets.find(x=>x.id===id);
+  if(!a){ toast('Không tìm thấy tài sản','bad'); return; }
+  _qrCurrentId = id;
+
+  // Build QR payload — compact text for small QR
+  const payload = [
+    a.maTaiSan  || '',
+    a.tenTaiSan || '',
+    a.serial    || '',
+    a.loaiTS    || '',
+    a.nguoiDung || ''
+  ].join('|');
+
+  // Header info
+  document.getElementById('qr-modal-title').textContent = a.tenTaiSan || a.maTaiSan || 'Tài sản';
+  document.getElementById('qr-modal-sub').textContent   = a.maTaiSan  || '';
+
+  // Info rows below QR
+  const rows = [
+    ['Mã TS',     a.maTaiSan  || '—'],
+    ['Serial',    a.serial    || '—'],
+    ['Loại',      a.loaiTS    || '—'],
+    ['Người dùng',a.nguoiDung || 'Chưa cấp phát'],
+    ['Phòng ban', a.phongBan  || '—'],
+  ];
+  document.getElementById('qr-info-rows').innerHTML =
+    rows.map(([l,v])=>
+      `<span class="lbl">${l}:</span><span class="val">${v}</span>`
+    ).join('');
+
+  // Generate QR
+  const wrap = document.getElementById('qr-canvas-wrap');
+  wrap.innerHTML = '';
+  if(_qrInstance){ try{ _qrInstance.clear(); }catch(e){} _qrInstance=null; }
+
+  if(typeof QRCode !== 'undefined'){
+    _qrInstance = new QRCode(wrap, {
+      text:           payload,
+      width:          200,
+      height:         200,
+      colorDark:      '#1e1b4b',
+      colorLight:     '#ffffff',
+      correctLevel:   QRCode.CorrectLevel.H
+    });
+  } else {
+    // Fallback: QR Server API (needs internet)
+    const img = document.createElement('img');
+    img.src    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=H&data=${encodeURIComponent(payload)}`;
+    img.width  = 200;
+    img.height = 200;
+    img.alt    = 'QR Code';
+    wrap.appendChild(img);
+  }
+
+  // Show modal
+  document.getElementById('qr-modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeQRModal(){
+  document.getElementById('qr-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  _qrCurrentId = null;
+}
+
+// Close on Escape
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && document.getElementById('qr-modal-overlay')?.classList.contains('open')){
+    closeQRModal();
+  }
+});
+
+function printQRLabel(){
+  const id = _qrCurrentId;
+  const a  = id ? assets.find(x=>x.id===id) : null;
+  if(!a){ toast('Không tìm thấy tài sản','bad'); return; }
+
+  // Build QR payload same as openQRCode
+  const payload = [a.maTaiSan||'', a.tenTaiSan||'', a.serial||'', a.loaiTS||'', a.nguoiDung||''].join('|');
+
+  const pw = window.open('', '_blank', 'width=700,height=600,scrollbars=yes,resizable=yes');
+  if(!pw){ toast('⚠️ Trình duyệt chặn popup — cho phép popup và thử lại','warn'); return; }
+
+  // We'll inject the QR via qrcodejs loaded fresh in popup
+  pw.document.write(`<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Nhãn QR — ${a.maTaiSan||''}</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\/script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f5f5f5;display:flex;flex-direction:column;align-items:center;padding:30px 20px;}
+  .toolbar{display:flex;gap:10px;margin-bottom:24px;}
+  .toolbar button{
+    padding:8px 20px;border:none;border-radius:8px;cursor:pointer;
+    font-size:14px;font-weight:600;
+  }
+  .btn-print{background:#6366f1;color:#fff;}
+  .btn-close{background:#e2e8f0;color:#334155;}
+  .label-sheet{
+    background:#fff;padding:20px;border-radius:12px;
+    box-shadow:0 2px 16px rgba(0,0,0,.1);
+    display:flex;flex-direction:column;align-items:center;gap:0;
+    width:280px;
+  }
+  .label-company{font-size:11px;color:#64748b;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;}
+  .label-asset-name{
+    font-size:13.5px;font-weight:700;color:#1e1b4b;text-align:center;
+    line-height:1.35;margin-bottom:12px;max-width:240px;
+  }
+  #qr-print-wrap{padding:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;margin-bottom:14px;}
+  #qr-print-wrap canvas,#qr-print-wrap img{display:block;}
+  .label-fields{width:100%;font-size:11.5px;border-collapse:collapse;}
+  .label-fields td{padding:3px 6px;border-top:1px solid #f1f5f9;}
+  .label-fields .lbl{color:#64748b;white-space:nowrap;font-weight:500;width:80px;}
+  .label-fields .val{color:#0f172a;font-weight:700;word-break:break-all;}
+  .label-search-hint{
+    margin-top:12px;font-size:10px;color:#94a3b8;text-align:center;font-style:italic;
+  }
+  @page{size:A6 portrait;margin:8mm;}
+  @media print{
+    body{background:none;padding:0;}
+    .toolbar{display:none!important;}
+    .label-sheet{box-shadow:none;border:1px solid #ddd;}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="btn-print" onclick="window.print()">🖨️ In nhãn</button>
+  <button class="btn-close" onclick="window.close()">✕ Đóng</button>
+</div>
+<div class="label-sheet">
+  <div class="label-company">QLTS CNTT</div>
+  <div class="label-asset-name">${(a.tenTaiSan||'Tài sản').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+  <div id="qr-print-wrap"></div>
+  <table class="label-fields">
+    <tr><td class="lbl">Mã TS</td><td class="val">${(a.maTaiSan||'—').replace(/</g,'&lt;')}</td></tr>
+    <tr><td class="lbl">Serial</td><td class="val">${(a.serial||'—').replace(/</g,'&lt;')}</td></tr>
+    <tr><td class="lbl">Loại</td><td class="val">${(a.loaiTS||'—').replace(/</g,'&lt;')}</td></tr>
+    <tr><td class="lbl">Người dùng</td><td class="val">${(a.nguoiDung||'Chưa cấp phát').replace(/</g,'&lt;')}</td></tr>
+    <tr><td class="lbl">Phòng ban</td><td class="val">${(a.phongBan||'—').replace(/</g,'&lt;')}</td></tr>
+  </table>
+  <div class="label-search-hint">Quét QR hoặc tìm bằng Ctrl+K trong app</div>
+</div>
+<script>
+  window.addEventListener('load', function(){
+    var wrap = document.getElementById('qr-print-wrap');
+    try{
+      new QRCode(wrap,{
+        text:         ${JSON.stringify(payload)},
+        width:        180, height:180,
+        colorDark:    '#1e1b4b',
+        colorLight:   '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }catch(e){
+      var img=document.createElement('img');
+      img.src='https://api.qrserver.com/v1/create-qr-code/?size=180x180&ecc=H&data='+encodeURIComponent(${JSON.stringify(payload)});
+      img.width=180;img.height=180;wrap.appendChild(img);
+    }
+  });
+<\/script>
+</body>
+</html>`);
+  pw.document.close();
+}
+
 // (loadDNTT() được gọi trong DOMContentLoaded init)
 
 
 </script>
 
 <!-- ĐNTT print uses window.open() popup — no overlay needed -->
+
+<!-- ── QR Code Modal ───────────────────────────────────────────── -->
+<div id="qr-modal-overlay" onclick="if(event.target===this)closeQRModal()">
+  <div id="qr-modal">
+    <div class="qr-header">
+      <i class="ph ph-qr-code"></i>
+      <div>
+        <div class="qr-title" id="qr-modal-title">QR Code Tài Sản</div>
+        <div class="qr-sub" id="qr-modal-sub">Quét để tra cứu nhanh</div>
+      </div>
+    </div>
+    <div class="qr-body">
+      <div id="qr-canvas-wrap"></div>
+      <div class="qr-info-row" id="qr-info-rows"></div>
+    </div>
+    <div class="qr-footer qr-no-print">
+      <button class="btn btn-icon-ph" onclick="closeQRModal()"><i class="ph ph-x"></i> Đóng</button>
+      <button class="btn primary btn-icon-ph" onclick="printQRLabel()"><i class="ph ph-printer"></i> In nhãn</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
