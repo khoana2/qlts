@@ -9910,7 +9910,7 @@ function _licRow(l, i, hideGoi, inGroup){
       </div>`
     : '';
 
-  return `<tr style="${rowStyle}">
+  return `<tr data-id="${l.id}" style="${rowStyle}">
     <td style="color:var(--muted);font-size:11px;">${i}</td>
     <td>${_licTypeBadge(l.type||'Software')}</td>
     <td><strong>${esc(l.ten||'—')}</strong>${domainExtra}</td>
@@ -13780,31 +13780,56 @@ function gsSearch(q){
 }
 
 function gsGoAsset(id){
-  switchTab('assets');
+  // Đóng search dropdown
   const inp = document.getElementById('global-search-input');
   if(inp){ inp.value=''; inp.blur(); }
   document.getElementById('global-search-results').classList.remove('visible');
-  // Highlight row
+
+  // Reset tất cả filter để chắc chắn row xuất hiện trong bảng
+  resetFilters();
+  switchTab('assets');
+
+  // Chờ render xong rồi scroll + flash + mở detail
   setTimeout(()=>{
-    const row = document.querySelector(`tr[data-id="${id}"]`) || [...document.querySelectorAll('#asset-tbody tr')].find(r=>r.dataset.id===id);
-    if(row){ row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('row-flash'); setTimeout(()=>row.classList.remove('row-flash'),1800); }
-    // Open detail if possible
-    if(typeof openDetail === 'function'){
-      const a = (typeof assets !== 'undefined' ? assets : []).find(x=>x.id===id);
-      if(a) openDetail(a);
+    const row = document.querySelector(`#assets-tbody tr[data-id="${id}"]`);
+    if(row){
+      row.scrollIntoView({ behavior:'smooth', block:'center' });
+      row.classList.add('row-flash');
+      setTimeout(()=> row.classList.remove('row-flash'), 1800);
     }
-  }, 250);
+    // Mở modal chi tiết
+    viewDetail(id);
+  }, 300);
 }
 
 function gsGoLicense(id){
-  switchTab('license');
+  // Đóng search dropdown
   const inp = document.getElementById('global-search-input');
   if(inp){ inp.value=''; inp.blur(); }
   document.getElementById('global-search-results').classList.remove('visible');
+
+  // Reset filter license
+  const licSearch = document.getElementById('lic-search');
+  const licStatus = document.getElementById('lic-filter-status');
+  const licType   = document.getElementById('lic-filter-type');
+  const licGoi    = document.getElementById('lic-filter-goi');
+  const licCo     = document.getElementById('lic-filter-company');
+  if(licSearch) licSearch.value = '';
+  if(licStatus) licStatus.value = '';
+  if(licType)   licType.value   = '';
+  if(licGoi)    licGoi.value    = '';
+  if(licCo)     licCo.value     = '';
+
+  switchTab('license'); // renderLicenses() được gọi bên trong switchTab
+
   setTimeout(()=>{
-    const row = [...document.querySelectorAll('#license-tbody tr')].find(r=>r.dataset.id===id);
-    if(row){ row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('row-flash'); setTimeout(()=>row.classList.remove('row-flash'),1800); }
-  }, 250);
+    const row = document.querySelector(`#lic-tbody tr[data-id="${id}"]`);
+    if(row){
+      row.scrollIntoView({ behavior:'smooth', block:'center' });
+      row.classList.add('row-flash');
+      setTimeout(()=> row.classList.remove('row-flash'), 1800);
+    }
+  }, 300);
 }
 
 // Keyboard shortcut Ctrl+K to open global search
