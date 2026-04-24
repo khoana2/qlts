@@ -14524,9 +14524,12 @@ function printQRLabel(){
     // Fuji: IPP:IP_OR_HOST:username:docname
     m = s.match(/^IPP:[^:]+:([^:]+):/i);
     if(m && m[1].trim()) return m[1].trim().toLowerCase();
-    // Scanner — no user
-    if(/^Scanner\b/i.test(s)) return '';
-    // email local part
+    // Fuji: LPD:HOSTNAME:Full Name With Spaces:docname
+    m = s.match(/^LPD:[^:]+:([^:]+):/i);
+    if(m && m[1].trim()) return m[1].trim().toLowerCase();
+    // Scanner / ScanAuto / Storage — no direct user (skip)
+    if(/^(Scanner|ScanAuto|Storage)\b/i.test(s)) return '';
+    // email local part (e.g. in Output Destination SMTP:user@domain)
     m = s.match(/([A-Za-z0-9._-]+)@[A-Za-z0-9._-]+/); if(m) return m[1].toLowerCase();
     // Generic :TOKEN:username: (fallback for other printer types)
     m = s.match(/:[A-Za-z0-9._-]+:([A-Za-z0-9._-]+):/); if(m) return m[1].toLowerCase();
@@ -14535,22 +14538,40 @@ function printQRLabel(){
 
   // ── B&W vs Color detection ─────────────────────────────────────────
   // Fuji "Page Information" formats:
-  //   "A4:Plain:White"               → máy B&W không có prefix (mặc định B&W)
-  //   "Black & White A4:Plain:White" → rõ ràng B&W
-  //   "Full Color A4:Plain:White"    → in màu (bắt đầu bằng "Full Color")
-  //   "Color 2 Page(s)"              → định dạng cũ, bắt đầu bằng "Color N Page"
+  //   "A4:Plain:White"                    → máy B&W không có prefix (mặc định B&W)
+  //   "Black & White:A4:Plain:White"      → rõ ràng B&W (AC3570, ApeosPort màu)
+  //   "Black & White A4:Plain:White"      → biến thể không có dấu hai chấm
+  //   "Color:A4:Plain:White"              → in màu (AC3570) — bắt đầu bằng "Color:"
+  //   "Full Color:A4:Plain:White"         → in màu — bắt đầu bằng "Full Color"
+  //   "Full Color A4:Plain:White"         → biến thể không có dấu hai chấm
+  //   "Color 2 Page(s)"                   → định dạng cũ, bắt đầu bằng "Color N Page"
   // KHÔNG nhận diện "color" trong "A4:Plain:Color" (color = màu giấy, không phải loại in)
   // KHÔNG nhận diện "color" nằm giữa chuỗi → tránh false positive
+  // Xử lý multi-line (Scanner child jobs): tách từng dòng, cộng tổng từng loại
   function _parsePages(pageInfo, pagesVal){
-    const info = String(pageInfo||'').trim();
-    const total = parseInt(String(pagesVal||'0').match(/\d+/)?.[0]||'0', 10)||0;
-    // isColor: chỉ match khi đầu chuỗi là "Full Color" hoặc "Color N Page(s)" (không phải paper color)
-    const isColor = /^full\s+color\b/i.test(info)
-                 || (/^color\b/i.test(info) && /\bpage/i.test(info));
-    const isBW    = /^black\s*&?\s*white\b/i.test(info);
-    if(isColor && !isBW) return {bw:0, color:total, total};
-    // Mặc định B&W — phù hợp với máy chỉ in đen trắng (ApeosPort 4570 etc.)
-    return {bw:total, color:0, total};
+    const rawInfo  = String(pageInfo||'').trim();
+    const rawPages = String(pagesVal||'');
+
+    // Multi-line entries (scanner child jobs): split by newline
+    const infoLines  = rawInfo.split(/\n/);
+    const pagesLines = rawPages.split(/\n/);
+
+    let totalBW = 0, totalColor = 0;
+    infoLines.forEach((info, i) => {
+      info = info.trim();
+      const n = parseInt((pagesLines[i]||'0').match(/\d+/)?.[0]||'0', 10) || 0;
+      // isColor: "Color:" prefix OR "Full Color" prefix OR legacy "Color N Page(s)"
+      const isColor = /^full\s+color[\s:]/i.test(info)
+                   || /^full\s+color$/i.test(info)
+                   || /^color\s*:/i.test(info)
+                   || (/^color\b/i.test(info) && /\bpage/i.test(info));
+      const isBW    = /^black\s*[&＆]?\s*white\b/i.test(info);
+      if(isColor && !isBW) totalColor += n;
+      else totalBW += n;
+    });
+
+    const total = totalBW + totalColor;
+    return {bw:totalBW, color:totalColor, total};
   }
 
   function _extractDoc(src){
@@ -14632,7 +14653,7 @@ function printQRLabel(){
       const pages      =r[idx.pages]||'';
       const dateRaw    =r[idx.date]||'';
       const timeRaw    =idx.time>=0?(r[idx.time]||''):'';
-      const isScan     =/^Scanner\b/i.test(inputSource.trim());
+      const isScan     =/^(Scanner|ScanAuto|Storage)\b/i.test(inputSource.trim());
       if(isScan) sc++;
       else if(!_extractUser(inputSource)) unk++;
       return {inputSource, pageInfo, pages, dateRaw, timeRaw, isScan};
