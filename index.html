@@ -14723,7 +14723,8 @@ function printQRLabel(){
   function _nameOrUser(r){ return r.name?`${r.name} (${r.user||''})`:r.user||'(n/a)'; }
 
   function _showData(visible){
-    ['fuji-kpi-wrap','fuji-charts-wrap','fuji-filter-wrap','fuji-table-wrap'].forEach(id=>{
+    ['fuji-kpi-wrap','fuji-colorbar-wrap','fuji-summary','fuji-unknown-warn',
+     'fuji-charts-wrap','fuji-filter-wrap','fuji-table-wrap'].forEach(id=>{
       const el=$(id); if(el) el.style.display=visible?'':'none';
     });
     const emp=$('fuji-empty'); if(emp) emp.style.display=visible?'none':'';
