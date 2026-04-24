@@ -14570,22 +14570,27 @@ function printQRLabel(){
     { user: 'binh.tv', name: '', dept: 'Quản Lý Thiết Kế' },
   ];
 
+  // Normalize username: nếu có dạng COMPUTERNAME\username → lấy phần sau \
+  function _normalizeUser(u){
+    if(!u) return '';
+    const bs = u.indexOf('\\');
+    return bs >= 0 ? u.slice(bs+1).toLowerCase().trim() : u.toLowerCase().trim();
+  }
+
   function _extractUser(src){
     const s = String(src||'').trim();
     // Fuji: Web Application Print:HOSTNAME:username:docname
+    // username có thể dạng DESKTOP-XXXX\user.name → normalize
     let m = s.match(/^Web\s+Application\s+Print:[^:]+:([^:]+):/i);
-    if(m && m[1].trim()) return m[1].trim().toLowerCase();
-    // Fuji: IPP:IP_OR_HOST:username:docname
+    if(m && m[1].trim()) return _normalizeUser(m[1]);
+    // Fuji: IPP:IP_OR_HOST:username:docname (username có thể là DESKTOP\user)
     m = s.match(/^IPP:[^:]+:([^:]+):/i);
-    if(m && m[1].trim()) return m[1].trim().toLowerCase();
+    if(m && m[1].trim()) return _normalizeUser(m[1]);
     // Fuji: LPD:HOSTNAME:Full Name With Spaces:docname
     m = s.match(/^LPD:[^:]+:([^:]+):/i);
-    if(m && m[1].trim()) return m[1].trim().toLowerCase();
+    if(m && m[1].trim()) return _normalizeUser(m[1]);
     // Scanner / ScanAuto / Storage — no direct user (skip)
     if(/^(Scanner|ScanAuto|Storage)\b/i.test(s)) return '';
-    // Windows: COMPUTERNAME\username (backslash) — trích phần sau dấu \
-    m = s.match(/^[A-Za-z0-9_-]+\\([A-Za-z0-9._-]+)/);
-    if(m && m[1].trim()) return m[1].trim().toLowerCase();
     // email local part (e.g. in Output Destination SMTP:user@domain)
     m = s.match(/([A-Za-z0-9._-]+)@[A-Za-z0-9._-]+/); if(m) return m[1].toLowerCase();
     // Generic :TOKEN:username: (fallback for other printer types)
