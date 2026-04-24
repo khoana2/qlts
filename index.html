@@ -15009,10 +15009,24 @@ function printQRLabel(){
     on('fuji-file-raw','change',async e=>{ const fs=e.target.files; if(fs&&fs.length) await _importCSV(fs); });
     on('fuji-file-map','change',async()=>{ if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }});
     on('fuji-btn-reset','click',()=>{
-      ['fuji-f-dept','fuji-f-user','fuji-f-month','fuji-f-type'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+      // Xóa toàn bộ dữ liệu, trả về trạng thái ban đầu
+      _raw=[]; _agg=[]; _filtered=[]; _map=[]; _docStats=[]; _unknownCnt=0; _scannerCnt=0;
+      // Reset file inputs
+      const fr=$('fuji-file-raw'); if(fr) fr.value='';
+      const fm=$('fuji-file-map'); if(fm) fm.value='';
+      // Reset bộ lọc
+      ['fuji-f-dept','fuji-f-user','fuji-f-month','fuji-f-type'].forEach(id=>{
+        const el=$(id); if(el){ el.innerHTML='<option value="">-- Tất cả --</option>'; el.value=''; }
+      });
       const cb=$('fuji-cb-group'); if(cb) cb.checked=false;
       _sortDir=-1; const sb=$('fuji-btn-sort'); if(sb) sb.textContent='Sắp xếp ⬇️';
-      _applyFilter();
+      // Disable export buttons
+      const ex=$('fuji-btn-export'); if(ex) ex.disabled=true;
+      const dm=$('fuji-btn-docmax'); if(dm) dm.disabled=true;
+      // Ẩn data, hiện drop zone + empty state
+      _showData(false);
+      _clearErr();
+      toast('🗑️ Đã xóa dữ liệu. Nạp file CSV mới để bắt đầu lại.','ok');
     });
     on('fuji-btn-export','click',_exportCSV);
     on('fuji-btn-docmax','click',_exportDocMax);
