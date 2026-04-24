@@ -14534,15 +14534,22 @@ function printQRLabel(){
   }
 
   // ── B&W vs Color detection ─────────────────────────────────────────
-  // Page Information can be: "A4:Plain:White" (B&W machine, no color info)
-  //   or "Full Color A4:Plain:White" / "Black & White A4:Plain:White" (color machine)
+  // Fuji "Page Information" formats:
+  //   "A4:Plain:White"               → máy B&W không có prefix (mặc định B&W)
+  //   "Black & White A4:Plain:White" → rõ ràng B&W
+  //   "Full Color A4:Plain:White"    → in màu (bắt đầu bằng "Full Color")
+  //   "Color 2 Page(s)"              → định dạng cũ, bắt đầu bằng "Color N Page"
+  // KHÔNG nhận diện "color" trong "A4:Plain:Color" (color = màu giấy, không phải loại in)
+  // KHÔNG nhận diện "color" nằm giữa chuỗi → tránh false positive
   function _parsePages(pageInfo, pagesVal){
-    const info = String(pageInfo||'');
+    const info = String(pageInfo||'').trim();
     const total = parseInt(String(pagesVal||'0').match(/\d+/)?.[0]||'0', 10)||0;
-    const isColor = /\bfull\s+color\b/i.test(info) || (/\bcolor\b/i.test(info)&&!/black/i.test(info));
-    const isBW    = /black\s*&?\s*white/i.test(info) || /\bB\s*[&W]\s*W\b/i.test(info);
+    // isColor: chỉ match khi đầu chuỗi là "Full Color" hoặc "Color N Page(s)" (không phải paper color)
+    const isColor = /^full\s+color\b/i.test(info)
+                 || (/^color\b/i.test(info) && /\bpage/i.test(info));
+    const isBW    = /^black\s*&?\s*white\b/i.test(info);
     if(isColor && !isBW) return {bw:0, color:total, total};
-    // Default B&W (handles "A4:Plain:White" and explicit B&W)
+    // Mặc định B&W — phù hợp với máy chỉ in đen trắng (ApeosPort 4570 etc.)
     return {bw:total, color:0, total};
   }
 
@@ -14904,14 +14911,28 @@ function printQRLabel(){
         const r2=_parseCSV(m2,d2);
         if(r2.length>1){
           const h2=r2[0];
-          const iu=_idx(h2,['user','User']);
-          const iname=_idx(h2,['ten nhan vien','ten_nhan_vien','hoten','ho ten','Họ tên','name']);
-          const idept=_idx(h2,['phong ban','phong_ban','Phòng ban','dept','department','bo phan']);
-          _map=r2.slice(1).map(r=>({
-            user:(iu>=0?r[iu]||'':'').toLowerCase(),
-            name:iname>=0?r[iname]||'':'',
-            dept:idept>=0?r[idept]||'':''
-          }));
+          // _idxFold: tìm cột qua exact match trước, nếu không thấy thì so sánh vnFold
+          const _idxFold=(headers,cands)=>{
+            let i=_idx(headers,cands); if(i>=0) return i;
+            const hF=headers.map(h=>_vnFold(_normHdr(h)));
+            for(const c of cands){ const cf=_vnFold(_normHdr(c)); const j=hF.indexOf(cf); if(j>=0) return j; }
+            return -1;
+          };
+          // Hỗ trợ: cột "Email" (danh sách nhân viên TTG) → lấy local-part làm username
+          const iu=_idxFold(h2,['user','User','email','Email','username','Username']);
+          const iname=_idxFold(h2,['ten nhan vien','ten_nhan_vien','hoten','ho ten','Họ tên','Tên nhân viên','name','fullname']);
+          const idept=_idxFold(h2,['phong ban','phong_ban','Phòng ban','Phòng Ban','dept','department','bo phan','division']);
+          const isEmailCol=iu>=0 && /email/i.test(h2[iu]||'');
+          _map=r2.slice(1).filter(r=>r.some(x=>x)).map(r=>{
+            let rawUser=iu>=0?(r[iu]||''):'';
+            // Nếu là cột Email → tách local-part (trước @)
+            if(isEmailCol && rawUser.includes('@')) rawUser=rawUser.split('@')[0];
+            return {
+              user:rawUser.toLowerCase().trim(),
+              name:iname>=0?r[iname]||'':'',
+              dept:idept>=0?r[idept]||'':''
+            };
+          }).filter(r=>r.user);
         }
       }
       _agg=_aggregate(_raw,_map);
