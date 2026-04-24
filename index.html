@@ -2945,6 +2945,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <button class="btn btn-icon-ph fuji-vtab active" id="fuji-vtab-user" onclick="fujiSwitchView('user')"><i class="ph ph-user"></i> Theo User</button>
         <button class="btn btn-icon-ph fuji-vtab" id="fuji-vtab-dept" onclick="fujiSwitchView('dept')"><i class="ph ph-buildings"></i> Theo Phòng Ban</button>
         <button class="btn btn-icon-ph fuji-vtab" id="fuji-vtab-compare" onclick="fujiSwitchView('compare')"><i class="ph ph-arrows-left-right"></i> So sánh tháng</button>
+        <button class="btn btn-icon-ph fuji-vtab" id="fuji-vtab-machine" onclick="fujiSwitchView('machine')"><i class="ph ph-printer"></i> Theo Máy</button>
         <button class="btn btn-icon-ph" id="fuji-btn-pdf" style="margin-left:auto;" onclick="fujiExportPDF()"><i class="ph ph-file-pdf"></i> Xuất PDF</button>
       </div>
     </div>
@@ -2984,6 +2985,28 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </table>
       </div>
       <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-dept-count"></div>
+    </div>
+
+    <!-- Bảng Theo Máy -->
+    <div class="table-card" id="fuji-machine-wrap" style="display:none">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;padding:0 4px;"><i class="ph ph-printer"></i> Thống kê theo Máy</div>
+      <div class="table-wrap" style="max-height:calc(100vh - 320px);">
+        <table id="fuji-machine-tbl">
+          <thead><tr>
+            <th>#</th>
+            <th>Model</th>
+            <th>Serial</th>
+            <th style="text-align:right">Số user</th>
+            <th style="text-align:right">Trắng đen</th>
+            <th style="text-align:right">In màu</th>
+            <th style="text-align:right">Tổng trang</th>
+            <th style="text-align:right">% Màu</th>
+            <th style="text-align:right">Lượt scan</th>
+          </tr></thead>
+          <tbody id="fuji-machine-tbody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-machine-count"></div>
     </div>
 
     <!-- Bảng So sánh tháng -->
@@ -14802,8 +14825,9 @@ function printQRLabel(){
       $('fuji-table-wrap').style.display   = _curView==='user'    ? '' : 'none';
       $('fuji-dept-wrap').style.display    = _curView==='dept'    ? '' : 'none';
       $('fuji-compare-wrap').style.display = _curView==='compare' ? '' : 'none';
+      $('fuji-machine-wrap').style.display = _curView==='machine' ? '' : 'none';
     } else {
-      ['fuji-table-wrap','fuji-dept-wrap','fuji-compare-wrap'].forEach(id=>{
+      ['fuji-table-wrap','fuji-dept-wrap','fuji-compare-wrap','fuji-machine-wrap'].forEach(id=>{
         const el=$(id); if(el) el.style.display='none';
       });
     }
@@ -14996,9 +15020,10 @@ function printQRLabel(){
     const rows=_filtered.length?_filtered:_agg;
     _renderKPI(rows);
     _renderInsights(rows);
-    if(_curView==='user')       _renderTable(rows);
-    else if(_curView==='dept')  _renderDeptTable();
+    if(_curView==='user')         _renderTable(rows);
+    else if(_curView==='dept')    _renderDeptTable();
     else if(_curView==='compare') _renderCompare();
+    else if(_curView==='machine') _renderMachineTable();
     _renderMonthly();
     _updateTop10();
   }
@@ -15018,7 +15043,8 @@ function printQRLabel(){
         const merged=_mergeLines(txt);
         const delim=_detectDelim(merged);
         const rows=_parseCSV(merged,delim);
-        const raw=_buildRaw(rows);
+        const machine=_parseMachine(f.name);
+        const raw=_buildRaw(rows).map(r=>({...r, machine}));
         allRaw=allRaw.concat(raw);
       }
       _raw=allRaw;
@@ -15091,19 +15117,86 @@ function printQRLabel(){
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
+  // ── Parse machine info từ tên file CSV ───────────────────────────
+  function _parseMachine(filename){
+    const name=(filename||'').replace(/\.csv$/i,'').replace(/\.txt$/i,'').trim();
+    // Model: cụm ký tự đầu tiên (VD: "AC3570", "A4570")
+    const modelM=name.match(/^([A-Za-z0-9]+(?:[-][A-Za-z0-9]+)*)/);
+    const model=modelM?modelM[1]:'';
+    // Serial: chuỗi số cuối cùng có ít nhất 5 chữ số (VD: "108655", "130518")
+    const serialM=name.match(/(\d{5,})\s*$/);
+    const serial=serialM?serialM[1]:'';
+    const label=model+(serial?' | '+serial:'');
+    return {model, serial, label, filename:name};
+  }
+
+  // ── Aggregate theo máy ────────────────────────────────────────────
+  function _aggByMachine(rawRows){
+    const map=new Map();
+    rawRows.forEach(r=>{
+      if(r.isScan) return;
+      const m=r.machine||{label:'(Không rõ)',model:'',serial:''};
+      const key=m.label||m.filename||'(Không rõ)';
+      if(!map.has(key)) map.set(key,{label:key,model:m.model,serial:m.serial,bw:0,color:0,total:0,users:new Set(),scanJobs:0});
+      const d=map.get(key);
+      const {bw,color,total}=_parsePages(r.pageInfo,r.pages);
+      d.bw+=bw; d.color+=color; d.total+=total;
+      const u=_extractUser(r.inputSource);
+      if(u&&u!=='(n/a)') d.users.add(u);
+    });
+    // Đếm scan jobs riêng
+    rawRows.forEach(r=>{
+      if(!r.isScan) return;
+      const m=r.machine||{label:'(Không rõ)'};
+      const key=m.label||m.filename||'(Không rõ)';
+      if(map.has(key)) map.get(key).scanJobs++;
+    });
+    return [...map.values()]
+      .map(d=>({...d,userCount:d.users.size}))
+      .sort((a,b)=>b.total-a.total);
+  }
+
+  function _renderMachineTable(){
+    const machines=_aggByMachine(_raw); // luôn dùng _raw (không filter) để hiện đủ máy
+    const tbody=$('fuji-machine-tbody'); if(!tbody) return;
+    tbody.innerHTML='';
+    const frag=document.createDocumentFragment();
+    machines.forEach((m,i)=>{
+      const pct=m.total?Math.round(m.color*100/m.total):0;
+      const bar=`<div style="display:inline-block;width:${Math.min(pct,60)}px;height:6px;background:#F59E0B;border-radius:3px;vertical-align:middle;margin-left:4px;"></div>`;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td style="text-align:center;color:var(--muted)">${i+1}</td>
+        <td><strong>${m.model||'—'}</strong></td>
+        <td style="color:var(--muted);font-size:12px">${m.serial||'—'}</td>
+        <td style="text-align:right">${m.userCount}</td>
+        <td style="text-align:right">${m.bw.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right">${m.color.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right"><strong>${m.total.toLocaleString('vi-VN')}</strong></td>
+        <td style="text-align:right">${pct}%${bar}</td>
+        <td style="text-align:right;color:var(--muted)">${m.scanJobs}</td>`;
+      frag.appendChild(tr);
+    });
+    tbody.appendChild(frag);
+    const mc=$('fuji-machine-count');
+    if(mc) mc.textContent=machines.length+' máy';
+  }
+
   // ── View state (user / dept / compare) ───────────────────────────
   let _curView='user'; // 'user' | 'dept' | 'compare'
 
   window.fujiSwitchView=function(v){
     _curView=v;
-    ['user','dept','compare'].forEach(k=>{
+    ['user','dept','compare','machine'].forEach(k=>{
       const btn=$('fuji-vtab-'+k); if(btn) btn.classList.toggle('active',k===v);
     });
     $('fuji-table-wrap').style.display   = v==='user'    ? '' : 'none';
     $('fuji-dept-wrap').style.display    = v==='dept'    ? '' : 'none';
     $('fuji-compare-wrap').style.display = v==='compare' ? '' : 'none';
+    $('fuji-machine-wrap').style.display = v==='machine' ? '' : 'none';
     if(v==='dept')    _renderDeptTable();
     if(v==='compare') _renderCompare();
+    if(v==='machine') _renderMachineTable();
   };
 
   // ── Phòng ban aggregation ─────────────────────────────────────────
@@ -15357,7 +15450,7 @@ function printQRLabel(){
       const dm=$('fuji-btn-docmax'); if(dm) dm.disabled=true;
       // Reset về view "Theo User"
       _curView='user';
-      ['user','dept','compare'].forEach(k=>{
+      ['user','dept','compare','machine'].forEach(k=>{
         const btn=$('fuji-vtab-'+k); if(btn) btn.classList.toggle('active',k==='user');
       });
       // Ẩn data, hiện drop zone + empty state
