@@ -2844,6 +2844,11 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   #view-fuji .fuji-k .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
   #view-fuji .fuji-k .val{font-size:20px;font-weight:700;margin-top:4px}
   #view-fuji .fuji-k.scanner .val{color:#D97706}
+  #view-fuji .fuji-vtab{background:transparent;border:1px solid var(--border,#E2E8F0);color:var(--text-main,#1e293b);}
+  #view-fuji .fuji-vtab.active{background:var(--accent,#3B82F6);color:#fff;border-color:var(--accent,#3B82F6);}
+  #view-fuji .fuji-delta-up{color:#16a34a;font-weight:700;}
+  #view-fuji .fuji-delta-down{color:#dc2626;font-weight:700;}
+  #view-fuji .fuji-delta-eq{color:var(--muted);}
   #view-fuji .fuji-drop{border:2px dashed var(--border,#E2E8F0);border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;margin-bottom:12px;background:var(--card-bg,#f9fafb);transition:border-color .2s}
   #view-fuji .fuji-drop.drag{border-color:var(--accent,#3B82F6);background:#EFF6FF}
   #view-fuji .fuji-charts{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px}
@@ -2934,7 +2939,17 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div id="fuji-insights" style="font-size:13px;color:var(--muted);">Chưa có dữ liệu.</div>
     </div>
 
-    <!-- Detail table -->
+    <!-- View toggle tabs -->
+    <div id="fuji-view-tabs" style="display:none;margin-bottom:10px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-icon-ph fuji-vtab active" id="fuji-vtab-user" onclick="fujiSwitchView('user')"><i class="ph ph-user"></i> Theo User</button>
+        <button class="btn btn-icon-ph fuji-vtab" id="fuji-vtab-dept" onclick="fujiSwitchView('dept')"><i class="ph ph-buildings"></i> Theo Phòng Ban</button>
+        <button class="btn btn-icon-ph fuji-vtab" id="fuji-vtab-compare" onclick="fujiSwitchView('compare')"><i class="ph ph-arrows-left-right"></i> So sánh tháng</button>
+        <button class="btn btn-icon-ph" id="fuji-btn-pdf" style="margin-left:auto;" onclick="fujiExportPDF()"><i class="ph ph-file-pdf"></i> Xuất PDF</button>
+      </div>
+    </div>
+
+    <!-- Detail table: Theo User -->
     <div class="table-card" id="fuji-table-wrap" style="display:none">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;padding:0 4px;">Chi tiết theo User</div>
       <div class="table-wrap" style="max-height:calc(100vh - 320px);">
@@ -2950,6 +2965,38 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </table>
       </div>
       <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-row-count"></div>
+    </div>
+
+    <!-- Bảng Theo Phòng Ban -->
+    <div class="table-card" id="fuji-dept-wrap" style="display:none">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;padding:0 4px;"><i class="ph ph-buildings"></i> Thống kê theo Phòng Ban</div>
+      <div class="table-wrap" style="max-height:calc(100vh - 320px);">
+        <table id="fuji-dept-tbl">
+          <thead><tr>
+            <th>#</th><th>Phòng Ban</th>
+            <th style="text-align:right">Số user</th>
+            <th style="text-align:right">Trắng đen</th>
+            <th style="text-align:right">In màu</th>
+            <th style="text-align:right">Tổng trang</th>
+            <th style="text-align:right">% Màu</th>
+          </tr></thead>
+          <tbody id="fuji-dept-tbody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-dept-count"></div>
+    </div>
+
+    <!-- Bảng So sánh tháng -->
+    <div class="table-card" id="fuji-compare-wrap" style="display:none">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;padding:0 4px;"><i class="ph ph-arrows-left-right"></i> So sánh theo tháng — <span id="fuji-compare-label" style="font-weight:400;color:var(--muted);">chọn 2 tháng trong bộ lọc</span></div>
+      <div class="table-wrap" style="max-height:calc(100vh - 320px);">
+        <table id="fuji-compare-tbl">
+          <thead>
+            <tr id="fuji-compare-thead"></tr>
+          </thead>
+          <tbody id="fuji-compare-tbody"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Empty state -->
@@ -14724,9 +14771,19 @@ function printQRLabel(){
 
   function _showData(visible){
     ['fuji-kpi-wrap','fuji-colorbar-wrap','fuji-summary','fuji-unknown-warn',
-     'fuji-charts-wrap','fuji-filter-wrap','fuji-table-wrap'].forEach(id=>{
+     'fuji-charts-wrap','fuji-filter-wrap','fuji-view-tabs'].forEach(id=>{
       const el=$(id); if(el) el.style.display=visible?'':'none';
     });
+    // Table wraps: chỉ hiện cái đang active
+    if(visible){
+      $('fuji-table-wrap').style.display   = _curView==='user'    ? '' : 'none';
+      $('fuji-dept-wrap').style.display    = _curView==='dept'    ? '' : 'none';
+      $('fuji-compare-wrap').style.display = _curView==='compare' ? '' : 'none';
+    } else {
+      ['fuji-table-wrap','fuji-dept-wrap','fuji-compare-wrap'].forEach(id=>{
+        const el=$(id); if(el) el.style.display='none';
+      });
+    }
     const emp=$('fuji-empty'); if(emp) emp.style.display=visible?'none':'';
     const dz=$('fuji-dropzone'); if(dz) dz.style.display=visible?'none':'';
   }
@@ -14908,7 +14965,9 @@ function printQRLabel(){
     const rows=_filtered.length?_filtered:_agg;
     _renderKPI(rows);
     _renderInsights(rows);
-    _renderTable(rows);
+    if(_curView==='user')       _renderTable(rows);
+    else if(_curView==='dept')  _renderDeptTable();
+    else if(_curView==='compare') _renderCompare();
     _renderMonthly();
     _updateTop10();
   }
@@ -15001,6 +15060,205 @@ function printQRLabel(){
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
+  // ── View state (user / dept / compare) ───────────────────────────
+  let _curView='user'; // 'user' | 'dept' | 'compare'
+
+  window.fujiSwitchView=function(v){
+    _curView=v;
+    ['user','dept','compare'].forEach(k=>{
+      const btn=$('fuji-vtab-'+k); if(btn) btn.classList.toggle('active',k===v);
+    });
+    $('fuji-table-wrap').style.display   = v==='user'    ? '' : 'none';
+    $('fuji-dept-wrap').style.display    = v==='dept'    ? '' : 'none';
+    $('fuji-compare-wrap').style.display = v==='compare' ? '' : 'none';
+    if(v==='dept')    _renderDeptTable();
+    if(v==='compare') _renderCompare();
+  };
+
+  // ── Phòng ban aggregation ─────────────────────────────────────────
+  function _aggByDept(rows){
+    const map=new Map();
+    rows.forEach(r=>{
+      const key=r.dept||'(Chưa xác định)';
+      if(!map.has(key)) map.set(key,{dept:key,bw:0,color:0,total:0,users:new Set()});
+      const d=map.get(key);
+      d.bw+=r.bw; d.color+=r.color; d.total+=r.total;
+      if(r.user&&r.user!=='(n/a)') d.users.add(r.user);
+    });
+    return [...map.values()]
+      .map(d=>({...d,userCount:d.users.size}))
+      .sort((a,b)=>b.total-a.total);
+  }
+
+  function _renderDeptTable(){
+    const rows=_filtered.length?_filtered:_agg;
+    const depts=_aggByDept(rows);
+    const tbody=$('fuji-dept-tbody'); if(!tbody) return;
+    tbody.innerHTML='';
+    const frag=document.createDocumentFragment();
+    depts.forEach((d,i)=>{
+      const pct=d.total?Math.round(d.color*100/d.total):0;
+      const bar=`<div style="display:inline-block;width:${pct}px;max-width:60px;height:6px;background:#F59E0B;border-radius:3px;vertical-align:middle;margin-left:4px;"></div>`;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="color:var(--muted);text-align:right">${i+1}</td>
+        <td><strong>${d.dept}</strong></td>
+        <td style="text-align:right">${d.userCount}</td>
+        <td style="text-align:right">${d.bw.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right">${d.color.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right"><strong>${d.total.toLocaleString('vi-VN')}</strong></td>
+        <td style="text-align:right">${pct}%${bar}</td>`;
+      frag.appendChild(tr);
+    });
+    tbody.appendChild(frag);
+    const dc=$('fuji-dept-count'); if(dc) dc.textContent=depts.length+' phòng ban';
+  }
+
+  // ── So sánh 2 tháng ──────────────────────────────────────────────
+  function _renderCompare(){
+    const months=[...new Set(_agg.map(r=>r.month).filter(Boolean))].sort();
+    const lbl=$('fuji-compare-label');
+    if(months.length<2){
+      if(lbl) lbl.textContent='Cần có dữ liệu ít nhất 2 tháng';
+      $('fuji-compare-thead').innerHTML='';
+      $('fuji-compare-tbody').innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);">Chưa đủ dữ liệu — nạp CSV của 2 tháng trở lên.</td></tr>';
+      return;
+    }
+    // Lấy 2 tháng gần nhất
+    const mPrev=months[months.length-2], mCurr=months[months.length-1];
+    if(lbl) lbl.textContent=mPrev+' → '+mCurr;
+
+    // Gộp theo dept cho từng tháng
+    const aggMonth=(m)=>_aggByDept(_agg.filter(r=>r.month===m));
+    const prev=aggMonth(mPrev), curr=aggMonth(mCurr);
+    const prevMap=new Map(prev.map(d=>[d.dept,d]));
+    const currMap=new Map(curr.map(d=>[d.dept,d]));
+    const allDepts=[...new Set([...prev,...curr].map(d=>d.dept))].sort((a,b)=>{
+      const ta=(currMap.get(a)||{total:0}).total;
+      const tb=(currMap.get(b)||{total:0}).total;
+      return tb-ta;
+    });
+
+    // Header
+    const thead=$('fuji-compare-thead'); if(!thead) return;
+    thead.innerHTML=`<th>Phòng Ban</th>
+      <th style="text-align:right">${mPrev} (trang)</th>
+      <th style="text-align:right">${mCurr} (trang)</th>
+      <th style="text-align:right">Thay đổi</th>
+      <th style="text-align:right">% màu (${mCurr})</th>`;
+
+    const tbody=$('fuji-compare-tbody'); if(!tbody) return;
+    tbody.innerHTML='';
+    const frag=document.createDocumentFragment();
+    allDepts.forEach(dept=>{
+      const p=prevMap.get(dept)||{total:0,color:0};
+      const c=currMap.get(dept)||{total:0,color:0};
+      const delta=c.total-p.total;
+      const sign=delta>0?'+':'';
+      const cls=delta>0?'fuji-delta-up':delta<0?'fuji-delta-down':'fuji-delta-eq';
+      const arrow=delta>0?'▲':delta<0?'▼':'—';
+      const pct=c.total?Math.round(c.color*100/c.total):0;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td><strong>${dept}</strong></td>
+        <td style="text-align:right">${p.total.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right">${c.total.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right" class="${cls}">${arrow} ${sign}${delta.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right">${pct}%</td>`;
+      frag.appendChild(tr);
+    });
+    tbody.appendChild(frag);
+  }
+
+  // ── Xuất PDF báo cáo BOD ─────────────────────────────────────────
+  window.fujiExportPDF=function(){
+    const rows=_filtered.length?_filtered:_agg;
+    if(!rows.length){ toast('⚠️ Chưa có dữ liệu để xuất.','warn'); return; }
+    const depts=_aggByDept(rows);
+    const top10=[...rows].reduce((acc,r)=>{
+      const k=r.user||'(n/a)';
+      if(!acc[k]) acc[k]={user:k,name:r.name||'',dept:r.dept||'',bw:0,color:0,total:0};
+      acc[k].bw+=r.bw; acc[k].color+=r.color; acc[k].total+=r.total;
+      return acc;
+    },{});
+    const top10arr=Object.values(top10).sort((a,b)=>b.total-a.total).slice(0,10);
+    const totalPages=rows.reduce((a,b)=>a+b.total,0);
+    const totalColor=rows.reduce((a,b)=>a+b.color,0);
+    const totalBW=rows.reduce((a,b)=>a+b.bw,0);
+    const pctColor=totalPages?Math.round(totalColor*100/totalPages):0;
+    const months=[...new Set(rows.map(r=>r.month).filter(Boolean))].sort();
+    const period=months.length?months[0]+(months.length>1?' — '+months[months.length-1]:''):new Date().toISOString().slice(0,7);
+    const users=new Set(rows.map(r=>r.user).filter(u=>u&&u!=='(n/a)')).size;
+    const now=new Date();
+    const dateStr=String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+
+    const deptRows=depts.map((d,i)=>`
+      <tr>
+        <td style="text-align:center;color:#64748b">${i+1}</td>
+        <td><strong>${d.dept}</strong></td>
+        <td style="text-align:right">${d.userCount}</td>
+        <td style="text-align:right">${d.bw.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right">${d.color.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right"><strong>${d.total.toLocaleString('vi-VN')}</strong></td>
+        <td style="text-align:right">${d.total?Math.round(d.color*100/d.total):0}%</td>
+      </tr>`).join('');
+
+    const userRows=top10arr.map((u,i)=>`
+      <tr>
+        <td style="text-align:center;color:#64748b">${i+1}</td>
+        <td>${u.name||u.user}</td>
+        <td style="color:#64748b;font-size:11px">${u.dept}</td>
+        <td style="text-align:right">${u.bw.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right">${u.color.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right"><strong>${u.total.toLocaleString('vi-VN')}</strong></td>
+      </tr>`).join('');
+
+    const html=`<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"/>
+    <title>Báo Cáo In Ấn Fujixerox</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1e293b;padding:28px 32px;background:#fff;}
+      h1{font-size:18px;font-weight:700;color:#1e40af;margin-bottom:2px;}
+      .sub{font-size:12px;color:#64748b;margin-bottom:18px;}
+      .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+      .kpi{border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;background:#f8fafc;}
+      .kpi .lbl{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;}
+      .kpi .val{font-size:18px;font-weight:700;color:#1e40af;margin-top:2px;}
+      .kpi .val.color{color:#d97706;}
+      h2{font-size:13px;font-weight:700;color:#1e293b;margin:16px 0 8px;border-bottom:2px solid #3b82f6;padding-bottom:4px;}
+      table{width:100%;border-collapse:collapse;font-size:11px;}
+      th{background:#1e40af;color:#fff;padding:6px 8px;text-align:left;font-weight:600;}
+      td{padding:5px 8px;border-bottom:1px solid #f1f5f9;}
+      tr:nth-child(even) td{background:#f8fafc;}
+      .footer{margin-top:20px;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:8px;}
+      @media print{body{padding:16px 20px;} @page{margin:12mm;}}
+    </style></head><body>
+    <h1>📊 Báo Cáo In Ấn Fujixerox</h1>
+    <div class="sub">Kỳ báo cáo: ${period} &nbsp;|&nbsp; Ngày xuất: ${dateStr} &nbsp;|&nbsp; Số user: ${users}</div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="lbl">Tổng trang in</div><div class="val">${totalPages.toLocaleString('vi-VN')}</div></div>
+      <div class="kpi"><div class="lbl">Trắng đen</div><div class="val">${totalBW.toLocaleString('vi-VN')}</div></div>
+      <div class="kpi"><div class="lbl">In màu</div><div class="val color">${totalColor.toLocaleString('vi-VN')}</div></div>
+      <div class="kpi"><div class="lbl">Tỉ lệ màu</div><div class="val color">${pctColor}%</div></div>
+    </div>
+
+    <h2>📋 Thống kê theo Phòng Ban</h2>
+    <table><thead><tr><th>#</th><th>Phòng Ban</th><th style="text-align:right">User</th><th style="text-align:right">Trắng đen</th><th style="text-align:right">In màu</th><th style="text-align:right">Tổng trang</th><th style="text-align:right">% Màu</th></tr></thead>
+    <tbody>${deptRows}</tbody></table>
+
+    <h2>👤 Top 10 Nhân Sự In Nhiều Nhất</h2>
+    <table><thead><tr><th>#</th><th>Tên / User</th><th>Phòng Ban</th><th style="text-align:right">Trắng đen</th><th style="text-align:right">In màu</th><th style="text-align:right">Tổng trang</th></tr></thead>
+    <tbody>${userRows}</tbody></table>
+
+    <div class="footer">Báo cáo được tạo tự động từ hệ thống QLTS — Trung Thuy Group &nbsp;|&nbsp; ${dateStr}</div>
+    </body></html>`;
+
+    const w=window.open('','_blank','width=900,height=700');
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(()=>w.print(),400);
+  };
+
   // ── Init event listeners (once) ───────────────────────────────────
   function _initListeners(){
     if(_initialized) return; _initialized=true;
@@ -15024,6 +15282,11 @@ function printQRLabel(){
       // Disable export buttons
       const ex=$('fuji-btn-export'); if(ex) ex.disabled=true;
       const dm=$('fuji-btn-docmax'); if(dm) dm.disabled=true;
+      // Reset về view "Theo User"
+      _curView='user';
+      ['user','dept','compare'].forEach(k=>{
+        const btn=$('fuji-vtab-'+k); if(btn) btn.classList.toggle('active',k==='user');
+      });
       // Ẩn data, hiện drop zone + empty state
       _showData(false);
       _clearErr();
