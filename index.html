@@ -2141,6 +2141,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <button class="nav-tab" onclick="switchTab('auditlog')" id="tab-auditlog" style="display:none">
           <span class="tab-icon"><i class="ph ph-scroll"></i></span> Nhật Ký
         </button>
+        <button class="nav-tab" onclick="switchTab('fuji')" id="tab-fuji" style="display:none">
+          <span class="tab-icon"><i class="ph ph-printer"></i></span> Báo Cáo In
+        </button>
       </nav>
 
       <!-- User info footer -->
@@ -2830,6 +2833,129 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     <div id="al-empty" style="display:none;text-align:center;padding:40px;color:var(--muted);">
       <i class="ph ph-scroll" style="font-size:36px;opacity:.3;display:block;margin-bottom:8px;"></i>
       Chưa có nhật ký nào.
+    </div>
+  </div>
+
+  <!-- ══════════════ VIEW: BÁO CÁO IN ẤN FUJIXEROX ══════════════ -->
+  <style>
+  #view-fuji .fuji-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px}
+  @media(max-width:900px){#view-fuji .fuji-kpi-grid{grid-template-columns:repeat(3,1fr)}}
+  #view-fuji .fuji-k{background:var(--card-bg,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:12px 14px}
+  #view-fuji .fuji-k .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  #view-fuji .fuji-k .val{font-size:20px;font-weight:700;margin-top:4px}
+  #view-fuji .fuji-k.scanner .val{color:#D97706}
+  #view-fuji .fuji-drop{border:2px dashed var(--border,#E2E8F0);border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;margin-bottom:12px;background:var(--card-bg,#f9fafb);transition:border-color .2s}
+  #view-fuji .fuji-drop.drag{border-color:var(--accent,#3B82F6);background:#EFF6FF}
+  #view-fuji .fuji-charts{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px}
+  @media(max-width:800px){#view-fuji .fuji-charts{grid-template-columns:1fr}}
+  #view-fuji .fuji-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:10px}
+  #view-fuji .fuji-colorbar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:8px 0 2px}
+  #view-fuji .fuji-colorbar .seg-bw{background:#3B82F6}
+  #view-fuji .fuji-colorbar .seg-col{background:#F59E0B}
+  #view-fuji .fuji-legend{display:flex;gap:14px;font-size:11px;color:var(--muted)}
+  #view-fuji .fuji-legend span::before{content:'';display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:middle}
+  #view-fuji .fuji-legend .leg-bw::before{background:#3B82F6}
+  #view-fuji .fuji-legend .leg-col::before{background:#F59E0B}
+  #view-fuji canvas{width:100%;display:block}
+  </style>
+
+  <div class="view" id="view-fuji">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;"><i class="ph ph-printer"></i> Báo Cáo In Ấn Fujixerox</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Nạp file CSV từ máy Fuji để xem thống kê in ấn theo user, phòng ban, tháng.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <label class="btn success btn-icon-ph" for="fuji-file-raw" style="cursor:pointer;"><i class="ph ph-upload-simple"></i> Tải CSV Fuji</label>
+        <input id="fuji-file-raw" type="file" accept=".csv,.txt" style="display:none"/>
+        <label class="btn btn-icon-ph" for="fuji-file-map" style="cursor:pointer;" title="File mapping: user, ten nhan vien, phong ban"><i class="ph ph-users"></i> Mapping User</label>
+        <input id="fuji-file-map" type="file" accept=".csv,.txt" style="display:none"/>
+        <button class="btn btn-icon-ph" id="fuji-btn-reset"><i class="ph ph-funnel-x"></i> Reset</button>
+        <button class="btn btn-icon-ph" id="fuji-btn-export" disabled><i class="ph ph-download-simple"></i> Xuất CSV</button>
+        <button class="btn btn-icon-ph" id="fuji-btn-docmax" disabled><i class="ph ph-file-text"></i> DocMax</button>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="fuji-err" style="display:none;background:#FEF2F2;color:#B91C1C;border:1px solid #FCA5A5;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:13px;"></div>
+
+    <!-- Drop zone -->
+    <div id="fuji-dropzone" class="fuji-drop" tabindex="0">
+      <i class="ph ph-file-csv" style="font-size:28px;color:var(--muted);display:block;margin-bottom:6px;"></i>
+      <div><strong>Kéo-thả</strong> file CSV từ máy Fuji vào đây, hoặc nhấn <strong>Tải CSV Fuji</strong>.</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Hỗ trợ: Web Application Print · IPP · Scanner. Có thể kéo thêm file mapping user.</div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="fuji-kpi-grid" id="fuji-kpi-wrap" style="display:none">
+      <div class="fuji-k"><div class="lbl">Tổng trang</div><div class="val" id="fuji-k-total">—</div></div>
+      <div class="fuji-k"><div class="lbl">In màu</div><div class="val" id="fuji-k-color">—</div></div>
+      <div class="fuji-k"><div class="lbl">Số user</div><div class="val" id="fuji-k-users">—</div></div>
+      <div class="fuji-k"><div class="lbl">Phòng ban</div><div class="val" id="fuji-k-depts">—</div></div>
+      <div class="fuji-k scanner"><div class="lbl">Lượt scan</div><div class="val" id="fuji-k-scanner">—</div></div>
+    </div>
+    <div id="fuji-colorbar-wrap" style="display:none;margin-bottom:8px;">
+      <div class="fuji-colorbar"><div class="seg-bw" id="fuji-seg-bw" style="flex:1"></div><div class="seg-col" id="fuji-seg-col" style="flex:0"></div></div>
+      <div class="fuji-legend"><span class="leg-bw">Trắng đen</span><span class="leg-col">In màu</span></div>
+    </div>
+    <div id="fuji-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px;display:none;"></div>
+    <div id="fuji-unknown-warn" style="display:none;font-size:12px;color:#D97706;margin-bottom:8px;"></div>
+
+    <!-- Charts -->
+    <div class="fuji-charts" id="fuji-charts-wrap" style="display:none">
+      <div class="table-card" style="padding:12px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:8px;"><i class="ph ph-chart-bar"></i> Xu hướng theo tháng</div>
+        <canvas id="fuji-chart-monthly" height="130"></canvas>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Xanh = trắng đen · Vàng = màu</div>
+      </div>
+      <div class="table-card" style="padding:12px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:8px;"><i class="ph ph-ranking"></i> Top 10 User</div>
+        <canvas id="fuji-chart-top10" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- Filters + Insights -->
+    <div class="table-card" id="fuji-filter-wrap" style="padding:12px;margin-bottom:12px;display:none">
+      <div class="fuji-filters">
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Phòng ban</div><select class="fsel" id="fuji-f-dept"><option value="">(Tất cả)</option></select></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px;">User</div><select class="fsel" id="fuji-f-user"><option value="">(Tất cả)</option></select></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Tháng</div><select class="fsel" id="fuji-f-month"><option value="">(Tất cả)</option></select></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Loại in</div>
+          <select class="fsel" id="fuji-f-type">
+            <option value="">(Tất cả)</option>
+            <option value="color">Chỉ in màu</option>
+            <option value="bw">Chỉ trắng đen</option>
+          </select>
+        </div>
+        <div style="align-self:flex-end"><button class="btn btn-icon-ph" id="fuji-btn-sort">Sắp xếp ⬇️</button></div>
+        <div style="align-self:flex-end"><label><input type="checkbox" id="fuji-cb-group"/> Gộp theo user</label></div>
+      </div>
+      <div id="fuji-insights" style="font-size:13px;color:var(--muted);">Chưa có dữ liệu.</div>
+    </div>
+
+    <!-- Detail table -->
+    <div class="table-card" id="fuji-table-wrap" style="display:none">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;padding:0 4px;">Chi tiết theo User</div>
+      <div class="table-wrap" style="max-height:calc(100vh - 320px);">
+        <table id="fuji-tbl">
+          <thead><tr>
+            <th>User</th><th>Tên nhân viên</th><th>Phòng ban</th>
+            <th style="text-align:right">Trắng đen</th>
+            <th style="text-align:right">Màu</th>
+            <th style="text-align:right">Tổng</th>
+            <th>Tháng</th>
+          </tr></thead>
+          <tbody id="fuji-tbody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-row-count"></div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="fuji-empty" style="text-align:center;padding:60px 20px;color:var(--muted);">
+      <i class="ph ph-printer" style="font-size:40px;opacity:.25;display:block;margin-bottom:10px;"></i>
+      <div style="font-size:14px;">Chưa có dữ liệu. Tải file CSV từ máy Fuji để bắt đầu.</div>
     </div>
   </div>
 
@@ -6077,6 +6203,8 @@ function applyRoleUI(){
   show('tab-roles',    isGlobalAdmin);
   // ── Tab Nhật Ký — chỉ global_admin / admin thấy ──
   show('tab-auditlog', isGlobalAdmin);
+  // ── Tab Báo Cáo In — admin trở lên thấy ──
+  show('tab-fuji', isAdmin);
   // ── Nút migrate / set-ttg — chỉ global_admin / admin thấy ──
   show('btn-migrate-transfer', isGlobalAdmin && !!_msalAccount);
   show('btn-set-ttg',          isGlobalAdmin && !!_msalAccount);
@@ -6183,6 +6311,7 @@ function switchTab(t){
   if(t==='procurement')  renderProcurement();
   if(t==='roles')        renderRolesTable();
   if(t==='auditlog')     renderAuditLog();
+  if(t==='fuji')         fujiOnTabOpen();
   // Sync bottom nav
   setBottomNav(t);
   // Đóng sidebar drawer trên mobile sau khi chọn tab
@@ -14350,6 +14479,517 @@ function printQRLabel(){
 
 // (loadDNTT() được gọi trong DOMContentLoaded init)
 
+
+// ══════════════════════════════════════════════════════════════════════
+// MODULE: BÁO CÁO IN ẤN FUJIXEROX
+// Tất cả biến/hàm đặt prefix fuji_ để tránh xung đột với QLTS
+// ══════════════════════════════════════════════════════════════════════
+(function(){
+  'use strict';
+
+  // ── Helpers ────────────────────────────────────────────────────────
+  const ZW = /[\u200B-\u200D\uFEFF]/g;
+  function _normHdr(s){ return String(s||'').replace(/^\ufeff/,'').replace(ZW,'').trim().toLowerCase().replace(/\s+/g,' '); }
+  function _trim(s){ return String(s??'').replace(/\t|\r/g,' ').replace(/\s+/g,' ').trim(); }
+  function _vnFold(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+
+  // ── Date parsing ───────────────────────────────────────────────────
+  function _parseDate(s){
+    if(!s) return null; s=String(s).trim();
+    if(/\d{4}-\d{2}-\d{2}/.test(s)){ const d=new Date(s); if(!isNaN(d)) return d; }
+    let dp=s, tp=''; const sp=s.split(' '); if(sp.length>=2){dp=sp[0];tp=sp[1];}
+    if(dp.includes('/')){
+      const arr=dp.split('/');
+      if(arr.length>=3){
+        const d=parseInt(arr[0],10), m=parseInt(arr[1],10), y=parseInt(arr[2],10);
+        if(!isNaN(d)&&!isNaN(m)&&!isNaN(y)){
+          const th=(tp||'00:00').split(':'); const hh=+th[0]||0, mm2=+th[1]||0;
+          return new Date(y, m-1, d, hh, mm2);
+        }
+      }
+    }
+    return null;
+  }
+  function _toMonth(dateRaw, timeRaw){
+    const dt = _parseDate(dateRaw ? dateRaw+(timeRaw?' '+timeRaw:'') : '');
+    if(!dt) return ''; return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+  }
+
+  // ── Extract user from Input Source ─────────────────────────────────
+  function _extractUser(src){
+    const s = String(src||'').trim();
+    // Fuji: Web Application Print:HOSTNAME:username:docname
+    let m = s.match(/^Web\s+Application\s+Print:[^:]+:([^:]+):/i);
+    if(m && m[1].trim()) return m[1].trim().toLowerCase();
+    // Fuji: IPP:IP_OR_HOST:username:docname
+    m = s.match(/^IPP:[^:]+:([^:]+):/i);
+    if(m && m[1].trim()) return m[1].trim().toLowerCase();
+    // Scanner — no user
+    if(/^Scanner\b/i.test(s)) return '';
+    // email local part
+    m = s.match(/([A-Za-z0-9._-]+)@[A-Za-z0-9._-]+/); if(m) return m[1].toLowerCase();
+    // Generic :TOKEN:username: (fallback for other printer types)
+    m = s.match(/:[A-Za-z0-9._-]+:([A-Za-z0-9._-]+):/); if(m) return m[1].toLowerCase();
+    return '';
+  }
+
+  // ── B&W vs Color detection ─────────────────────────────────────────
+  // Page Information can be: "A4:Plain:White" (B&W machine, no color info)
+  //   or "Full Color A4:Plain:White" / "Black & White A4:Plain:White" (color machine)
+  function _parsePages(pageInfo, pagesVal){
+    const info = String(pageInfo||'');
+    const total = parseInt(String(pagesVal||'0').match(/\d+/)?.[0]||'0', 10)||0;
+    const isColor = /\bfull\s+color\b/i.test(info) || (/\bcolor\b/i.test(info)&&!/black/i.test(info));
+    const isBW    = /black\s*&?\s*white/i.test(info) || /\bB\s*[&W]\s*W\b/i.test(info);
+    if(isColor && !isBW) return {bw:0, color:total, total};
+    // Default B&W (handles "A4:Plain:White" and explicit B&W)
+    return {bw:total, color:0, total};
+  }
+
+  function _extractDoc(src){
+    const s=String(src||''); const parts=s.split(':');
+    return (parts.length>=4 ? parts.slice(3).join(':') : parts[parts.length-1]).trim()||s;
+  }
+
+  // ── CSV parsing ────────────────────────────────────────────────────
+  async function _readFile(file){
+    const buf=await file.arrayBuffer(); const u8=new Uint8Array(buf);
+    if(u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF) return new TextDecoder('utf-8').decode(u8);
+    if(u8[0]===0xFF&&u8[1]===0xFE) return new TextDecoder('utf-16le').decode(u8.subarray(2));
+    if(u8[0]===0xFE&&u8[1]===0xFF) return new TextDecoder('utf-16be').decode(u8.subarray(2));
+    for(const enc of ['utf-8','windows-1258','iso-8859-1']){
+      try{ return new TextDecoder(enc,{fatal:false}).decode(u8).replace(/\u0000/g,''); }catch{}
+    }
+    throw new Error('Không đọc được encoding file.');
+  }
+  function _mergeLines(txt){
+    const lines=txt.replace(/^\ufeff/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+    const out=[]; let buf='', q=false;
+    for(const L of lines){
+      for(let j=0;j<L.length;j++){const c=L[j];if(c==='"'){if(q&&L[j+1]==='"'){j++;continue;}q=!q;}}
+      buf+=(buf?'\n':'')+L; if(!q){out.push(buf);buf='';}
+    }
+    if(buf) out.push(buf); return out;
+  }
+  function _detectDelim(merged){
+    const f=merged[0]||''; const c={',':0,';':0,'\t':0,'|':0}; let q=false;
+    for(let i=0;i<f.length;i++){const ch=f[i];if(ch==='"'){if(q&&f[i+1]==='"'){i++;continue;}q=!q;continue;}if(!q&&c[ch]!==undefined)c[ch]++;}
+    return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0];
+  }
+  function _parseCSV(merged, delim){
+    return merged.map(line=>{
+      let fi='', row=[], q=false;
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==='"'){if(q&&line[i+1]==='"'){fi+='"';i++;continue;}q=!q;continue;}
+        if(!q&&c===delim){row.push(fi);fi='';continue;}
+        fi+=c;
+      }
+      row.push(fi); return row.map(_trim);
+    }).filter(r=>r.some(x=>x));
+  }
+  function _idx(headers, cands){
+    const H=headers.map(_normHdr);
+    for(const c of cands){ const i=H.indexOf(_normHdr(c)); if(i>=0) return i; }
+    return -1;
+  }
+
+  // ── State ──────────────────────────────────────────────────────────
+  let _raw=[], _map=[], _agg=[], _filtered=[], _sortDir=-1;
+  let _docStats=null, _singleMax=null, _sumMax=null;
+  let _unknownCnt=0, _scannerCnt=0;
+  let _initialized=false;
+
+  // ── Build raw objects ──────────────────────────────────────────────
+  function _buildRaw(rows){
+    if(rows.length<2) return [];
+    const hdr=rows[0];
+    const idx={
+      input  : _idx(hdr,['Input Source','InputSource','Src']),
+      info   : _idx(hdr,['Page Information','PageInformation','Page Info','Page Infomation']),
+      pages  : _idx(hdr,['Pages','Page Count','Count','Total Pages']),
+      date   : _idx(hdr,['Date','Ngày']),
+      time   : _idx(hdr,['Time','Giờ']),
+      status : _idx(hdr,['Job Status','Status'])
+    };
+    if(idx.input<0||idx.pages<0||idx.date<0){
+      _showErr('⚠️ Thiếu cột bắt buộc (Input Source, Pages, Date). Kiểm tra lại file CSV Fuji.');
+      return [];
+    }
+    let unk=0, sc=0;
+    const data = rows.slice(1).map(r=>{
+      const status=idx.status>=0?(r[idx.status]||''):'';
+      if(String(status).toLowerCase()==='deleted') return null;
+      const inputSource=r[idx.input]||'';
+      const pageInfo   =idx.info>=0?(r[idx.info]||''):'';
+      const pages      =r[idx.pages]||'';
+      const dateRaw    =r[idx.date]||'';
+      const timeRaw    =idx.time>=0?(r[idx.time]||''):'';
+      const isScan     =/^Scanner\b/i.test(inputSource.trim());
+      if(isScan) sc++;
+      else if(!_extractUser(inputSource)) unk++;
+      return {inputSource, pageInfo, pages, dateRaw, timeRaw, isScan};
+    }).filter(Boolean);
+    _unknownCnt=unk; _scannerCnt=sc;
+    return data;
+  }
+
+  // ── Aggregate ─────────────────────────────────────────────────────
+  function _aggregate(raw, map){
+    const mapU={}, mapN={};
+    (map||[]).forEach(m=>{
+      const u=String(m.user||'').toLowerCase();
+      const name=m.name||''; const dept=m.dept||'';
+      const rec={name, dept};
+      if(u) mapU[u]=rec;
+      const fold=_vnFold(name); if(fold) mapN[fold]=rec;
+    });
+    const byKey=new Map();
+    raw.forEach(r=>{
+      if(r.isScan) return;
+      const user=_extractUser(r.inputSource)||'(n/a)';
+      const mp=mapU[user]||{};
+      const month=_toMonth(r.dateRaw, r.timeRaw);
+      const {bw,color,total}=_parsePages(r.pageInfo, r.pages);
+      const key=[user, mp.dept||'', mp.name||'', month].join('|');
+      const rec=byKey.get(key)||{user, dept:mp.dept||'', name:mp.name||'', month, bw:0, color:0, total:0};
+      rec.bw+=bw; rec.color+=color; rec.total+=total;
+      byKey.set(key,rec);
+    });
+    return [...byKey.values()].sort((a,b)=>b.total-a.total);
+  }
+
+  function _regroupUser(rows){
+    const m=new Map();
+    rows.forEach(r=>{
+      const k=r.user||'(n/a)';
+      const ex=m.get(k)||{user:r.user,name:r.name,dept:r.dept,bw:0,color:0,total:0,month:''};
+      ex.bw+=r.bw; ex.color+=r.color; ex.total+=r.total;
+      if(!ex.name&&r.name) ex.name=r.name;
+      if(!ex.dept&&r.dept) ex.dept=r.dept;
+      m.set(k,ex);
+    });
+    return [...m.values()].sort((a,b)=>b.total-a.total);
+  }
+
+  function _computeDocStats(raw){
+    const sm=new Map(); let sMax=null;
+    raw.forEach(r=>{
+      if(r.isScan) return;
+      const p=_parsePages(r.pageInfo,r.pages); const doc=_extractDoc(r.inputSource);
+      if(!sm.has(doc)) sm.set(doc,{doc,total:0,bw:0,color:0,jobs:0,maxSingle:0});
+      const s=sm.get(doc);
+      s.total+=p.total; s.bw+=p.bw; s.color+=p.color; s.jobs++;
+      if(p.total>s.maxSingle) s.maxSingle=p.total;
+      if(!sMax||p.total>sMax.pages) sMax={doc,pages:p.total};
+    });
+    const arr=[...sm.values()].sort((a,b)=>b.total-a.total);
+    return {stats:arr, singleMax:sMax, sumMax:arr.length?{doc:arr[0].doc,total:arr[0].total}:null};
+  }
+
+  // ── UI helpers ─────────────────────────────────────────────────────
+  const $=id=>document.getElementById(id);
+  function _showErr(msg){ const e=$('fuji-err'); if(e){e.innerHTML=msg;e.style.display='block';} }
+  function _clearErr(){ const e=$('fuji-err'); if(e){e.innerHTML='';e.style.display='none';} }
+
+  function _nameOrUser(r){ return r.name?`${r.name} (${r.user||''})`:r.user||'(n/a)'; }
+
+  function _showData(visible){
+    ['fuji-kpi-wrap','fuji-charts-wrap','fuji-filter-wrap','fuji-table-wrap'].forEach(id=>{
+      const el=$(id); if(el) el.style.display=visible?'':'none';
+    });
+    const emp=$('fuji-empty'); if(emp) emp.style.display=visible?'none':'';
+    const dz=$('fuji-dropzone'); if(dz) dz.style.display=visible?'none':'';
+  }
+
+  // ── KPIs ──────────────────────────────────────────────────────────
+  function _renderKPI(rows){
+    const total=rows.reduce((a,b)=>a+b.total,0);
+    const col=rows.reduce((a,b)=>a+b.color,0);
+    const users=new Set(rows.map(r=>r.user).filter(u=>u&&u!=='(n/a)')).size;
+    const depts=new Set(rows.map(r=>r.dept||'').filter(Boolean)).size;
+    const pct=total?Math.round(col*100/total):0;
+    const V=(id,v)=>{ const el=$(id); if(el) el.textContent=v; };
+    V('fuji-k-total',  total.toLocaleString('vi-VN'));
+    V('fuji-k-color',  total?pct+'%':'0%');
+    V('fuji-k-users',  users);
+    V('fuji-k-depts',  depts||'—');
+    V('fuji-k-scanner',_scannerCnt.toLocaleString('vi-VN'));
+    // color bar
+    const barWrap=$('fuji-colorbar-wrap');
+    if(total>0 && barWrap){
+      barWrap.style.display='';
+      const bwPct=100-pct;
+      const segBW=$('fuji-seg-bw'); if(segBW) segBW.style.flex=String(bwPct||0);
+      const segCol=$('fuji-seg-col'); if(segCol) segCol.style.flex=String(pct||0);
+    } else if(barWrap) barWrap.style.display='none';
+    const sum=$('fuji-summary');
+    if(sum){ sum.textContent=`Tổng ${total.toLocaleString('vi-VN')} trang · ${users} user · ${_scannerCnt} lượt scan · ${pct}% trang màu`; sum.style.display=''; }
+    const uw=$('fuji-unknown-warn');
+    if(uw){ uw.style.display=_unknownCnt>0?'':'none'; if(_unknownCnt>0) uw.textContent=`⚠️ ${_unknownCnt} dòng không xác định được username.`; }
+    const expBtn=$('fuji-btn-export'); if(expBtn) expBtn.disabled=rows.length===0;
+    const dmBtn=$('fuji-btn-docmax');  if(dmBtn)  dmBtn.disabled=!_raw.length;
+  }
+
+  // ── Charts ────────────────────────────────────────────────────────
+  function _renderMonthly(){
+    const cv=$('fuji-chart-monthly'); if(!cv) return;
+    const ctx=cv.getContext('2d');
+    const cw=cv.clientWidth||cv.width||600; cv.width=cw;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    const rows=_filtered.length?_filtered:_agg;
+    const byM={};
+    rows.forEach(r=>{ if(!r.month) return; if(!byM[r.month]) byM[r.month]={bw:0,color:0}; byM[r.month].bw+=r.bw; byM[r.month].color+=r.color; });
+    const months=Object.keys(byM).sort();
+    if(!months.length){ctx.fillStyle='#94A3B8';ctx.font='12px Inter';ctx.fillText('Chưa có dữ liệu',12,26);return;}
+    const totals=months.map(m=>byM[m].bw+byM[m].color);
+    const maxV=Math.max(...totals)||1;
+    const pL=48,pR=8,pT=18,pB=32, w=cv.width-pL-pR, h=cv.height-pT-pB;
+    const barW=Math.max(10,Math.floor(w/months.length*0.55));
+    const step=w/months.length;
+    ctx.strokeStyle='#E2E8F0'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pL,pT); ctx.lineTo(pL,pT+h); ctx.lineTo(pL+w,pT+h); ctx.stroke();
+    for(let i=0;i<=4;i++){
+      const y=pT+h-Math.round(h*i/4);
+      ctx.strokeStyle='#E2E8F0'; ctx.beginPath(); ctx.moveTo(pL,y); ctx.lineTo(pL+w,y); ctx.stroke();
+      const val=Math.round(maxV*i/4);
+      ctx.fillStyle='#94A3B8'; ctx.font='9px Inter'; ctx.textAlign='right';
+      ctx.fillText(val>=1000?(val/1000).toFixed(1)+'k':val, pL-3, y+3);
+    }
+    months.forEach((m,i)=>{
+      const x=pL+step*i+(step-barW)/2;
+      const bwH=Math.round(h*byM[m].bw/maxV);
+      const colH=Math.round(h*byM[m].color/maxV);
+      // BW bar
+      if(bwH>0){ const g=ctx.createLinearGradient(0,pT+h-bwH,0,pT+h); g.addColorStop(0,'#60A5FA'); g.addColorStop(1,'#2563EB'); ctx.fillStyle=g; ctx.fillRect(x,pT+h-bwH,barW,bwH); }
+      // Color bar
+      if(colH>0){ ctx.fillStyle='#F59E0B'; ctx.fillRect(x,pT+h-bwH-colH,barW,colH); }
+      // Total label
+      const tot=byM[m].bw+byM[m].color;
+      ctx.fillStyle='#374151'; ctx.font='9px Inter'; ctx.textAlign='center';
+      ctx.fillText(tot>=1000?(tot/1000).toFixed(1)+'k':tot, x+barW/2, pT+h-(bwH+colH)-3);
+      // Month label
+      ctx.fillStyle='#6B7280'; ctx.font='10px Inter';
+      ctx.fillText(m.slice(5)+'/'+m.slice(2,4), x+barW/2, pT+h+13);
+    });
+    ctx.textAlign='left';
+  }
+
+  function _renderTop10Chart(items){
+    const cv=$('fuji-chart-top10'); if(!cv) return;
+    const ctx=cv.getContext('2d');
+    const cw=cv.clientWidth||cv.width||300; cv.width=cw;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    if(!items.length){ctx.fillStyle='#94A3B8';ctx.font='12px Inter';ctx.fillText('Chưa có dữ liệu',10,24);return;}
+    const pL=8,pR=8,pT=14,pB=28;
+    const w=cv.width-pL-pR, h=cv.height-pT-pB;
+    const barW=Math.max(10,Math.floor(w/items.length*0.6));
+    const step=w/items.length;
+    const max=Math.max(...items.map(x=>x.total))||1;
+    ctx.strokeStyle='#E2E8F0'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pL,pT+h); ctx.lineTo(pL+w,pT+h); ctx.stroke();
+    items.forEach((it,i)=>{
+      const x=pL+step*i+(step-barW)/2;
+      const bH=Math.round(h*it.bw/max);
+      const cH=Math.round(h*it.color/max);
+      if(bH>0){ const g=ctx.createLinearGradient(0,pT+h-bH,0,pT+h); g.addColorStop(0,'#60A5FA'); g.addColorStop(1,'#2563EB'); ctx.fillStyle=g; ctx.fillRect(x,pT+h-bH,barW,bH); }
+      if(cH>0){ ctx.fillStyle='#F59E0B'; ctx.fillRect(x,pT+h-bH-cH,barW,cH); }
+      ctx.fillStyle='#374151'; ctx.font='9px Inter'; ctx.textAlign='center';
+      ctx.fillText(it.total>=1000?(it.total/1000).toFixed(1)+'k':it.total, x+barW/2, pT+h-(bH+cH)-3);
+      ctx.fillStyle='#6B7280'; ctx.font='9px Inter';
+      ctx.fillText((it.user||'').slice(0,9), x+barW/2, pT+h+13);
+    });
+    ctx.textAlign='left';
+  }
+
+  function _updateTop10(){
+    const top=_regroupUser(_agg).filter(r=>r.user&&r.user!=='(n/a)').slice(0,10);
+    const tbody=$('fuji-tbl')?.querySelector('tbody'); // reuse if filtered; for top10 always use global agg
+    // Dedicated top10 table (inside chart wrap — we render into the canvas only, no separate table)
+    _renderTop10Chart(top);
+  }
+
+  // ── Table ─────────────────────────────────────────────────────────
+  function _renderTable(rows){
+    const tbody=$('fuji-tbody'); if(!tbody) return;
+    tbody.innerHTML='';
+    const frag=document.createDocumentFragment();
+    rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${r.user||''}</td><td>${r.name||''}</td><td>${r.dept||''}</td>
+        <td style="text-align:right">${r.bw.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right">${r.color.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right"><strong>${r.total.toLocaleString('vi-VN')}</strong></td>
+        <td>${r.month||''}</td>`;
+      frag.appendChild(tr);
+    });
+    tbody.appendChild(frag);
+    const rc=$('fuji-row-count'); if(rc) rc.textContent=rows.length+' dòng';
+  }
+
+  // ── Insights ──────────────────────────────────────────────────────
+  function _renderInsights(rows){
+    const el=$('fuji-insights'); if(!el) return;
+    if(!rows.length){ el.textContent='Không có dữ liệu.'; return; }
+    const total=rows.reduce((a,b)=>a+b.total,0);
+    const col=rows.reduce((a,b)=>a+b.color,0);
+    const pct=total?Math.round(col*100/total):0;
+    const fu=($('fuji-f-user')||{}).value||'';
+    const fd=($('fuji-f-dept')||{}).value||'';
+    if(fu){
+      const uR=rows.filter(r=>r.user===fu);
+      const t=uR.reduce((a,b)=>a+b.total,0), c2=uR.reduce((a,b)=>a+b.color,0), bw2=uR.reduce((a,b)=>a+b.bw,0);
+      el.innerHTML=`<strong>${_nameOrUser(uR[0]||{user:fu,name:''})}</strong> đã in <strong>${t.toLocaleString('vi-VN')} trang</strong> — trắng đen: <strong>${bw2.toLocaleString('vi-VN')}</strong>, màu: <strong>${c2.toLocaleString('vi-VN')}</strong>.`;
+      return;
+    }
+    const top=[...rows].sort((a,b)=>b.total-a.total)[0];
+    const byD={}; rows.forEach(r=>{ const k=r.dept||'(chưa xác định)'; byD[k]=(byD[k]||0)+r.total; });
+    const topD=Object.entries(byD).sort((a,b)=>b[1]-a[1])[0];
+    el.innerHTML=`Tổng <strong>${total.toLocaleString('vi-VN')} trang</strong>, ${pct}% màu. Top user: <strong>${_nameOrUser(top)} — ${top.total.toLocaleString('vi-VN')}</strong>. Top phòng: <strong>${topD?topD[0]:'(n/a)'}</strong>.`;
+  }
+
+  // ── Filter lists ──────────────────────────────────────────────────
+  function _populateFilters(){
+    const depts=[...new Set(_agg.map(r=>r.dept).filter(Boolean))].sort();
+    const months=[...new Set(_agg.map(r=>r.month).filter(Boolean))].sort();
+    const fd=$('fuji-f-dept'), fm=$('fuji-f-month');
+    if(fd) fd.innerHTML='<option value="">(Tất cả)</option>'+depts.map(x=>`<option>${x}</option>`).join('');
+    if(fm) fm.innerHTML='<option value="">(Tất cả)</option>'+months.map(x=>`<option>${x}</option>`).join('');
+    _populateUserList(fd?.value||'');
+  }
+  function _populateUserList(dept){
+    const subset=dept?_agg.filter(r=>r.dept===dept):_agg;
+    const users=[...new Set(subset.map(r=>r.user).filter(u=>u&&u!=='(n/a)'))].sort();
+    const fu=$('fuji-f-user');
+    if(fu) fu.innerHTML='<option value="">(Tất cả)</option>'+users.map(x=>`<option>${x}</option>`).join('');
+  }
+
+  // ── Apply filter ──────────────────────────────────────────────────
+  function _applyFilter(){
+    const fd=($('fuji-f-dept')||{}).value||'';
+    const fu=($('fuji-f-user')||{}).value||'';
+    const fm=($('fuji-f-month')||{}).value||'';
+    const ft=($('fuji-f-type')||{}).value||'';
+    const cb=($('fuji-cb-group')||{}).checked;
+    _filtered=_agg.filter(r=>(fd?r.dept===fd:true)&&(fu?r.user===fu:true)&&(fm?r.month===fm:true));
+    if(ft==='color') _filtered=_filtered.map(r=>({...r,bw:0,total:r.color}));
+    else if(ft==='bw') _filtered=_filtered.map(r=>({...r,color:0,total:r.bw}));
+    if(cb) _filtered=_regroupUser(_filtered);
+    _filtered.sort((a,b)=>_sortDir*(a.total-b.total));
+    const rows=_filtered.length?_filtered:_agg;
+    _renderKPI(rows);
+    _renderInsights(rows);
+    _renderTable(rows);
+    _renderMonthly();
+    _updateTop10();
+  }
+
+  // ── Import CSV ────────────────────────────────────────────────────
+  async function _importCSV(mainFile){
+    _clearErr();
+    try{
+      const txt=await _readFile(mainFile);
+      const merged=_mergeLines(txt);
+      const delim=_detectDelim(merged);
+      const rows=_parseCSV(merged,delim);
+      _raw=_buildRaw(rows);
+      if(!_raw.length){ toast('⚠️ Không có dữ liệu hợp lệ từ file Fuji.','warn'); return; }
+      const dm=_computeDocStats(_raw); _docStats=dm.stats; _singleMax=dm.singleMax; _sumMax=dm.sumMax;
+      // Load mapping if present
+      const mapFile=($('fuji-file-map')||{}).files?.[0];
+      _map=[];
+      if(mapFile){
+        const t2=await _readFile(mapFile);
+        const m2=_mergeLines(t2); const d2=_detectDelim(m2);
+        const r2=_parseCSV(m2,d2);
+        if(r2.length>1){
+          const h2=r2[0];
+          const iu=_idx(h2,['user','User']);
+          const iname=_idx(h2,['ten nhan vien','ten_nhan_vien','hoten','ho ten','Họ tên','name']);
+          const idept=_idx(h2,['phong ban','phong_ban','Phòng ban','dept','department','bo phan']);
+          _map=r2.slice(1).map(r=>({
+            user:(iu>=0?r[iu]||'':'').toLowerCase(),
+            name:iname>=0?r[iname]||'':'',
+            dept:idept>=0?r[idept]||'':''
+          }));
+        }
+      }
+      _agg=_aggregate(_raw,_map);
+      _filtered=[];
+      _populateFilters();
+      _showData(true);
+      _applyFilter();
+      toast('✅ Đã nạp '+_raw.length.toLocaleString('vi-VN')+' dòng. '+_agg.length+' bản ghi (sau gộp).','ok');
+    }catch(err){
+      _showErr('❌ Lỗi đọc file: '+(err?.message||String(err)));
+    }
+  }
+
+  // ── Export ────────────────────────────────────────────────────────
+  function _exportCSV(){
+    const rows=_filtered.length?_filtered:_agg;
+    const lines=[['user','ten_nhan_vien','phong_ban','bw','color','total','month'].join(',')]
+      .concat(rows.map(r=>[r.user||'',r.name||'',r.dept||'',r.bw,r.color,r.total,r.month||''].join(',')));
+    const now=new Date();
+    const ts=String(now.getDate()).padStart(2,'0')+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+now.getFullYear();
+    const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`BaoCao_In_Fuji_${ts}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+  function _exportDocMax(){
+    if(!_docStats?.length){ toast('⚠️ Chưa có dữ liệu DocMax.','warn'); return; }
+    const lines=[['doc_name','total_pages','color_pages','bw_pages','max_single','jobs'].join(',')]
+      .concat(_docStats.map(s=>[s.doc,s.total,s.color,s.bw,s.maxSingle,s.jobs].join(',')));
+    const now=new Date();
+    const ts=String(now.getDate()).padStart(2,'0')+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+now.getFullYear();
+    const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Fuji_DocMax_${ts}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  // ── Init event listeners (once) ───────────────────────────────────
+  function _initListeners(){
+    if(_initialized) return; _initialized=true;
+
+    const on=(id,ev,fn)=>{ const el=$(id); if(el) el.addEventListener(ev,fn); };
+
+    on('fuji-file-raw','change',async e=>{ const f=e.target.files[0]; if(f) await _importCSV(f); });
+    on('fuji-file-map','change',async()=>{ if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }});
+    on('fuji-btn-reset','click',()=>{
+      ['fuji-f-dept','fuji-f-user','fuji-f-month','fuji-f-type'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+      const cb=$('fuji-cb-group'); if(cb) cb.checked=false;
+      _sortDir=-1; const sb=$('fuji-btn-sort'); if(sb) sb.textContent='Sắp xếp ⬇️';
+      _applyFilter();
+    });
+    on('fuji-btn-export','click',_exportCSV);
+    on('fuji-btn-docmax','click',_exportDocMax);
+    on('fuji-btn-sort','click',()=>{
+      _sortDir=_sortDir===-1?1:-1;
+      const sb=$('fuji-btn-sort'); if(sb) sb.textContent=_sortDir===-1?'Sắp xếp ⬇️':'Sắp xếp ⬆️';
+      _applyFilter();
+    });
+    on('fuji-f-dept','change',()=>{ _populateUserList(($('fuji-f-dept')||{}).value||''); const fu=$('fuji-f-user'); if(fu) fu.value=''; _applyFilter(); });
+    ['fuji-f-user','fuji-f-month','fuji-f-type','fuji-cb-group'].forEach(id=>on(id,'change',_applyFilter));
+
+    // Drag-drop
+    const dz=$('fuji-dropzone');
+    if(dz){
+      ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();dz.classList.add('drag');}));
+      ['dragleave','dragend','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();dz.classList.remove('drag');}));
+      dz.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) _importCSV(f); });
+      dz.addEventListener('click',()=>$('fuji-file-raw')?.click());
+      dz.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') $('fuji-file-raw')?.click(); });
+    }
+  }
+
+  // ── Public: called when tab opened ────────────────────────────────
+  window.fujiOnTabOpen = function(){
+    _initListeners();
+    // Re-render charts (canvas sizing may change after hidden)
+    if(_agg.length){ setTimeout(()=>{ _renderMonthly(); _updateTop10(); }, 80); }
+  };
+
+})(); // end IIFE
 
 </script>
 
