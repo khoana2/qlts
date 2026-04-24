@@ -14563,6 +14563,13 @@ function printQRLabel(){
   }
 
   // ── Extract user from Input Source ─────────────────────────────────
+  // ── Built-in mapping cứng (override) ─────────────────────────────
+  // Thêm vào đây những tài khoản đặc biệt không có trong file mapping CSV
+  // Format: { user: 'username', name: 'Họ tên', dept: 'Phòng ban' }
+  const _BUILTIN_MAP = [
+    { user: 'binh.tv', name: '', dept: 'Quản Lý Thiết Kế' },
+  ];
+
   function _extractUser(src){
     const s = String(src||'').trim();
     // Fuji: Web Application Print:HOSTNAME:username:docname
@@ -14576,6 +14583,9 @@ function printQRLabel(){
     if(m && m[1].trim()) return m[1].trim().toLowerCase();
     // Scanner / ScanAuto / Storage — no direct user (skip)
     if(/^(Scanner|ScanAuto|Storage)\b/i.test(s)) return '';
+    // Windows: COMPUTERNAME\username (backslash) — trích phần sau dấu \
+    m = s.match(/^[A-Za-z0-9_-]+\\([A-Za-z0-9._-]+)/);
+    if(m && m[1].trim()) return m[1].trim().toLowerCase();
     // email local part (e.g. in Output Destination SMTP:user@domain)
     m = s.match(/([A-Za-z0-9._-]+)@[A-Za-z0-9._-]+/); if(m) return m[1].toLowerCase();
     // Generic :TOKEN:username: (fallback for other printer types)
@@ -14712,12 +14722,18 @@ function printQRLabel(){
   // ── Aggregate ─────────────────────────────────────────────────────
   function _aggregate(raw, map){
     const mapU={}, mapN={};
+    // Nạp mapping CSV trước
     (map||[]).forEach(m=>{
       const u=String(m.user||'').toLowerCase();
       const name=m.name||''; const dept=m.dept||'';
       const rec={name, dept};
       if(u) mapU[u]=rec;
       const fold=_vnFold(name); if(fold) mapN[fold]=rec;
+    });
+    // Built-in map ghi đè (ưu tiên cao hơn CSV)
+    _BUILTIN_MAP.forEach(m=>{
+      const u=String(m.user||'').toLowerCase();
+      if(u) mapU[u]={name:m.name||'', dept:m.dept||''};
     });
     const byKey=new Map();
     raw.forEach(r=>{
