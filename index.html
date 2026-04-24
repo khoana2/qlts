@@ -14723,7 +14723,9 @@ function printQRLabel(){
     raw.forEach(r=>{
       if(r.isScan) return;
       const user=_extractUser(r.inputSource)||'(n/a)';
-      const mp=mapU[user]||{};
+      // Lookup 1: theo username/email (mapU)
+      // Lookup 2: fallback theo tên đầy đủ vnFold (mapN) — dùng cho LPD "Nguyen Van A"
+      const mp=mapU[user] || mapN[_vnFold(user)] || {};
       const month=_toMonth(r.dateRaw, r.timeRaw);
       const {bw,color,total}=_parsePages(r.pageInfo, r.pages);
       const key=[user, mp.dept||'', mp.name||'', month].join('|');
