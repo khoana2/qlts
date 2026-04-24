@@ -14945,14 +14945,14 @@ function printQRLabel(){
     if(fd){
       fd.innerHTML='<option value="">(Tất cả)</option>'
         +depts.map(x=>`<option>${x}</option>`).join('')
-        +(hasUnknown?'<option value="\x00">(Chưa xác định)</option>':'');
+        +(hasUnknown?'<option value="__unknown__">(Chưa xác định)</option>':'');
     }
     if(fm) fm.innerHTML='<option value="">(Tất cả)</option>'+months.map(x=>`<option>${x}</option>`).join('');
     _populateUserList(fd?.value||'');
   }
   function _populateUserList(dept){
-    const subset = dept==='\x00' ? _agg.filter(r=>!r.dept)
-                 : dept          ? _agg.filter(r=>r.dept===dept)
+    const subset = dept==='__unknown__' ? _agg.filter(r=>!r.dept)
+                 : dept                 ? _agg.filter(r=>r.dept===dept)
                  : _agg;
     const users=[...new Set(subset.map(r=>r.user).filter(u=>u&&u!=='(n/a)'))].sort();
     const fu=$('fuji-f-user');
@@ -14966,7 +14966,7 @@ function printQRLabel(){
     const fm=($('fuji-f-month')||{}).value||'';
     const ft=($('fuji-f-type')||{}).value||'';
     const cb=($('fuji-cb-group')||{}).checked;
-    const deptMatch = fd==='\x00' ? r=>!r.dept : fd ? r=>r.dept===fd : ()=>true;
+    const deptMatch = fd==='__unknown__' ? r=>!r.dept : fd ? r=>r.dept===fd : ()=>true;
     _filtered=_agg.filter(r=>deptMatch(r)&&(fu?r.user===fu:true)&&(fm?r.month===fm:true));
     if(ft==='color') _filtered=_filtered.map(r=>({...r,bw:0,total:r.color}));
     else if(ft==='bw') _filtered=_filtered.map(r=>({...r,color:0,total:r.bw}));
@@ -15145,12 +15145,12 @@ function printQRLabel(){
 
       // Click → switch sang tab User, filter theo phòng
       tr.addEventListener('click',()=>{
-        // '\x00' = sentinel cho "Chưa xác định" (dept rỗng)
-        const deptVal = d.dept==='(Chưa xác định)' ? '\x00' : d.dept;
+        // '__unknown__' = sentinel cho phòng ban chưa xác định (dept rỗng)
+        const deptVal = d.dept==='(Chưa xác định)' ? '__unknown__' : d.dept;
         const sel=$('fuji-f-dept');
         if(sel){
           sel.value=deptVal;
-          _populateUserList(deptVal==='\x00'?'':deptVal);
+          _populateUserList(deptVal);
           const fu=$('fuji-f-user'); if(fu) fu.value='';
         }
         fujiSwitchView('user');
@@ -15351,7 +15351,7 @@ function printQRLabel(){
       const sb=$('fuji-btn-sort'); if(sb) sb.textContent=_sortDir===-1?'Sắp xếp ⬇️':'Sắp xếp ⬆️';
       _applyFilter();
     });
-    on('fuji-f-dept','change',()=>{ _populateUserList(($('fuji-f-dept')||{}).value||''); const fu=$('fuji-f-user'); if(fu) fu.value=''; _applyFilter(); });
+    on('fuji-f-dept','change',()=>{ const dv=($('fuji-f-dept')||{}).value||''; _populateUserList(dv); const fu=$('fuji-f-user'); if(fu) fu.value=''; _applyFilter(); });
     ['fuji-f-user','fuji-f-month','fuji-f-type','fuji-cb-group'].forEach(id=>on(id,'change',_applyFilter));
 
     // Drag-drop
