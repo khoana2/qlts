@@ -15149,7 +15149,7 @@ function printQRLabel(){
   }
 
   // ── SharePoint: Lưu & Load báo cáo máy ──────────────────────────
-  async function _fujiSpSave(){
+  window._fujiSpSave = async function _fujiSpSave(){
     if(!_raw.length){ toast('⚠️ Chưa có dữ liệu để lưu.','warn'); return; }
     if(typeof msalGetToken !== 'function'){ toast('⚠️ Chưa đăng nhập SharePoint.','warn'); return; }
     const machines=_aggByMachine(_raw);
@@ -15197,7 +15197,7 @@ function printQRLabel(){
     }
   }
 
-  async function _fujiSpLoad(){
+  window._fujiSpLoad = async function _fujiSpLoad(){
     const tbody=$('fuji-history-tbody'); if(!tbody) return;
     tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:16px;color:var(--muted);">Đang tải...</td></tr>';
     if(typeof msalGetToken !== 'function'){
