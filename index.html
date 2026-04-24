@@ -2946,6 +2946,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <button class="btn btn-icon-ph fuji-vtab" id="fuji-vtab-dept" onclick="fujiSwitchView('dept')"><i class="ph ph-buildings"></i> Theo Phòng Ban</button>
         <button class="btn btn-icon-ph fuji-vtab" id="fuji-vtab-compare" onclick="fujiSwitchView('compare')"><i class="ph ph-arrows-left-right"></i> So sánh tháng</button>
         <button class="btn btn-icon-ph fuji-vtab" id="fuji-vtab-machine" onclick="fujiSwitchView('machine')"><i class="ph ph-printer"></i> Theo Máy</button>
+        <button class="btn btn-icon-ph fuji-vtab" id="fuji-vtab-history" onclick="fujiSwitchView('history')"><i class="ph ph-clock-clockwise"></i> Lịch Sử</button>
         <button class="btn btn-icon-ph" id="fuji-btn-pdf" style="margin-left:auto;" onclick="fujiExportPDF()"><i class="ph ph-file-pdf"></i> Xuất PDF</button>
       </div>
     </div>
@@ -2989,7 +2990,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 
     <!-- Bảng Theo Máy -->
     <div class="table-card" id="fuji-machine-wrap" style="display:none">
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px;padding:0 4px;"><i class="ph ph-printer"></i> Thống kê theo Máy</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:600;"><i class="ph ph-printer"></i> Thống kê theo Máy</div>
+        <button class="btn btn-icon-ph success" onclick="_fujiSpSave()" title="Lưu báo cáo tháng này lên SharePoint để xem lại sau"><i class="ph ph-cloud-arrow-up"></i> Lưu lên SharePoint</button>
+      </div>
       <div class="table-wrap" style="max-height:calc(100vh - 320px);">
         <table id="fuji-machine-tbl">
           <thead><tr>
@@ -3007,6 +3011,31 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </table>
       </div>
       <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-machine-count"></div>
+    </div>
+
+    <!-- Bảng Lịch Sử SharePoint -->
+    <div class="table-card" id="fuji-history-wrap" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:600;"><i class="ph ph-clock-clockwise"></i> Lịch sử báo cáo theo Máy</div>
+        <button class="btn btn-icon-ph" onclick="_fujiSpLoad()"><i class="ph ph-arrows-clockwise"></i> Làm mới</button>
+      </div>
+      <div class="table-wrap" style="max-height:calc(100vh - 320px);">
+        <table>
+          <thead><tr>
+            <th>Tháng</th><th>Model</th><th>Serial</th>
+            <th style="text-align:right">Số user</th>
+            <th style="text-align:right">Trắng đen</th>
+            <th style="text-align:right">In màu</th>
+            <th style="text-align:right">Tổng trang</th>
+            <th style="text-align:right">% Màu</th>
+            <th style="text-align:right">Lượt scan</th>
+          </tr></thead>
+          <tbody id="fuji-history-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted);">Nhấn "Làm mới" để tải lịch sử từ SharePoint.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-history-count"></div>
     </div>
 
     <!-- Bảng So sánh tháng -->
@@ -4276,6 +4305,7 @@ const MSAL_CONFIG = {
   spXacNhanList:     'Quan_Ly_XacNhan_BanGiao',   // list xác nhận bàn giao mặc định (TTG)
   spDNTTList:        'Quan_Ly_DNTT',              // list đề nghị thanh toán mặc định (TTG)
   spAuditLogList:    'QLTS_AuditLog',             // list nhật ký thay đổi (global admin only)
+  spFujiMachineList: 'Fuji_MachineReport',        // list báo cáo máy Fuji theo tháng
   redirectUri: window.location.origin + window.location.pathname,  // tự động
   scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Manage', 'Mail.Send', 'User.Read'],
 };
@@ -14826,8 +14856,9 @@ function printQRLabel(){
       $('fuji-dept-wrap').style.display    = _curView==='dept'    ? '' : 'none';
       $('fuji-compare-wrap').style.display = _curView==='compare' ? '' : 'none';
       $('fuji-machine-wrap').style.display = _curView==='machine' ? '' : 'none';
+      $('fuji-history-wrap').style.display = _curView==='history' ? '' : 'none';
     } else {
-      ['fuji-table-wrap','fuji-dept-wrap','fuji-compare-wrap','fuji-machine-wrap'].forEach(id=>{
+      ['fuji-table-wrap','fuji-dept-wrap','fuji-compare-wrap','fuji-machine-wrap','fuji-history-wrap'].forEach(id=>{
         const el=$(id); if(el) el.style.display='none';
       });
     }
@@ -15117,6 +15148,99 @@ function printQRLabel(){
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
+  // ── SharePoint: Lưu & Load báo cáo máy ──────────────────────────
+  async function _fujiSpSave(){
+    if(!_raw.length){ toast('⚠️ Chưa có dữ liệu để lưu.','warn'); return; }
+    if(typeof msalGetToken !== 'function'){ toast('⚠️ Chưa đăng nhập SharePoint.','warn'); return; }
+    const machines=_aggByMachine(_raw);
+    const months=[...new Set(_raw.map(r=>r.dateRaw).filter(Boolean).map(d=>{
+      const dt=new Date(d.split('/').reverse().join('-')||d);
+      return isNaN(dt)?'':dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+    }).filter(Boolean))].sort();
+    const thang=months.length?months[months.length-1]:'';
+    if(!thang){ toast('⚠️ Không xác định được tháng từ dữ liệu.','warn'); return; }
+
+    try{
+      const token=await msalGetToken();
+      const base=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiMachineList}')/items`;
+      const headers={'Authorization':'Bearer '+token,'Content-Type':'application/json;odata=verbose','Accept':'application/json;odata=verbose'};
+
+      // Xoá bản ghi cũ cùng tháng+model+serial trước khi lưu mới
+      const existUrl=base+`?$filter=Thang eq '${thang}'&$select=Id,Model,Serial`;
+      const existRes=await fetch(existUrl,{headers});
+      if(existRes.ok){
+        const existJson=await existRes.json();
+        for(const item of (existJson.d?.results||[])){
+          await fetch(`${base}(${item.Id})`,{method:'DELETE',headers:{...headers,'IF-MATCH':'*','X-HTTP-Method':'DELETE'}});
+        }
+      }
+
+      // Lưu từng dòng máy
+      let saved=0;
+      for(const m of machines){
+        const body={__metadata:{type:'SP.Data.Fuji_x005f_MachineReportListItem'},
+          Title:`${thang} | ${m.label}`,
+          Thang:thang, Model:m.model||'', Serial:m.serial||'',
+          TrangBW:m.bw, TrangMau:m.color, TongTrang:m.total,
+          LuotScan:m.scanJobs, SoUser:m.userCount,
+          PhanTramMau:m.total?Math.round(m.color*100/m.total):0,
+          NguoiLuu:typeof currentUser!=='undefined'?(currentUser.displayName||currentUser.username||''):'',
+        };
+        await fetch(base,{method:'POST',headers,body:JSON.stringify(body)});
+        saved++;
+      }
+      toast(`✅ Đã lưu báo cáo tháng ${thang} — ${saved} máy lên SharePoint.`,'ok');
+      // Reload lịch sử nếu đang xem
+      if(_curView==='history') _fujiSpLoad();
+    }catch(e){
+      toast('❌ Lưu thất bại: '+(e?.message||e),'warn');
+    }
+  }
+
+  async function _fujiSpLoad(){
+    const tbody=$('fuji-history-tbody'); if(!tbody) return;
+    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:16px;color:var(--muted);">Đang tải...</td></tr>';
+    if(typeof msalGetToken !== 'function'){
+      tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#dc2626;">Chưa đăng nhập SharePoint.</td></tr>';
+      return;
+    }
+    try{
+      const token=await msalGetToken();
+      const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiMachineList}')/items?$select=Thang,Model,Serial,TrangBW,TrangMau,TongTrang,LuotScan,SoUser,PhanTramMau,NguoiLuu&$orderby=Thang desc,TongTrang desc&$top=500`;
+      const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const json=await res.json();
+      const items=json.d?.results||[];
+      if(!items.length){
+        tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted);">Chưa có dữ liệu lưu trữ.</td></tr>';
+        return;
+      }
+      tbody.innerHTML='';
+      const frag=document.createDocumentFragment();
+      items.forEach(r=>{
+        const pct=r.PhanTramMau||0;
+        const bar=`<div style="display:inline-block;width:${Math.min(pct,60)}px;height:6px;background:#F59E0B;border-radius:3px;vertical-align:middle;margin-left:4px;"></div>`;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td><strong>${r.Thang||''}</strong></td>
+          <td>${r.Model||'—'}</td>
+          <td style="color:var(--muted);font-size:12px">${r.Serial||'—'}</td>
+          <td style="text-align:right">${(r.SoUser||0)}</td>
+          <td style="text-align:right">${(r.TrangBW||0).toLocaleString('vi-VN')}</td>
+          <td style="text-align:right">${(r.TrangMau||0).toLocaleString('vi-VN')}</td>
+          <td style="text-align:right"><strong>${(r.TongTrang||0).toLocaleString('vi-VN')}</strong></td>
+          <td style="text-align:right">${pct}%${bar}</td>
+          <td style="text-align:right;color:var(--muted)">${r.LuotScan||0}</td>`;
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      const months=[...new Set(items.map(r=>r.Thang).filter(Boolean))];
+      const lbl=$('fuji-history-count');
+      if(lbl) lbl.textContent=months.length+' tháng · '+items.length+' bản ghi';
+    }catch(e){
+      tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:#dc2626;">Lỗi tải dữ liệu: ${e?.message||e}</td></tr>`;
+    }
+  }
+
   // ── Parse machine info từ tên file CSV ───────────────────────────
   function _parseMachine(filename){
     const name=(filename||'').replace(/\.csv$/i,'').replace(/\.txt$/i,'').trim();
@@ -15187,16 +15311,18 @@ function printQRLabel(){
 
   window.fujiSwitchView=function(v){
     _curView=v;
-    ['user','dept','compare','machine'].forEach(k=>{
+    ['user','dept','compare','machine','history'].forEach(k=>{
       const btn=$('fuji-vtab-'+k); if(btn) btn.classList.toggle('active',k===v);
     });
     $('fuji-table-wrap').style.display   = v==='user'    ? '' : 'none';
     $('fuji-dept-wrap').style.display    = v==='dept'    ? '' : 'none';
     $('fuji-compare-wrap').style.display = v==='compare' ? '' : 'none';
     $('fuji-machine-wrap').style.display = v==='machine' ? '' : 'none';
+    $('fuji-history-wrap').style.display = v==='history' ? '' : 'none';
     if(v==='dept')    _renderDeptTable();
     if(v==='compare') _renderCompare();
     if(v==='machine') _renderMachineTable();
+    if(v==='history') _fujiSpLoad();
   };
 
   // ── Phòng ban aggregation ─────────────────────────────────────────
@@ -15468,7 +15594,7 @@ function printQRLabel(){
       const dm=$('fuji-btn-docmax'); if(dm) dm.disabled=true;
       // Reset về view "Theo User"
       _curView='user';
-      ['user','dept','compare','machine'].forEach(k=>{
+      ['user','dept','compare','machine','history'].forEach(k=>{
         const btn=$('fuji-vtab-'+k); if(btn) btn.classList.toggle('active',k==='user');
       });
       // Ẩn data, hiện drop zone + empty state
