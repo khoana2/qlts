@@ -15096,21 +15096,63 @@ function printQRLabel(){
     const tbody=$('fuji-dept-tbody'); if(!tbody) return;
     tbody.innerHTML='';
     const frag=document.createDocumentFragment();
+
+    // Tính top users theo từng phòng (để hiện preview)
+    const deptUsers={}; // dept → [{user, name, total}]
+    rows.forEach(r=>{
+      const key=r.dept||'(Chưa xác định)';
+      if(!deptUsers[key]) deptUsers[key]={};
+      const u=r.user||'(n/a)';
+      if(!deptUsers[key][u]) deptUsers[key][u]={user:u,name:r.name||'',total:0};
+      deptUsers[key][u].total+=r.total;
+    });
+
     depts.forEach((d,i)=>{
       const pct=d.total?Math.round(d.color*100/d.total):0;
-      const bar=`<div style="display:inline-block;width:${pct}px;max-width:60px;height:6px;background:#F59E0B;border-radius:3px;vertical-align:middle;margin-left:4px;"></div>`;
+      const bar=`<div style="display:inline-block;width:${Math.min(pct,60)}px;height:6px;background:#F59E0B;border-radius:3px;vertical-align:middle;margin-left:4px;"></div>`;
+
+      // Top 3 user của phòng này
+      const topUsers=Object.values(deptUsers[d.dept]||{})
+        .sort((a,b)=>b.total-a.total).slice(0,3);
+      const previewHtml=topUsers.map(u=>{
+        const label=u.name?`${u.name} (${u.user})`:u.user;
+        return `<span style="color:var(--muted);font-size:10px;">${label} — ${u.total.toLocaleString('vi-VN')} trang</span>`;
+      }).join('<br>');
+
       const tr=document.createElement('tr');
+      tr.style.cursor='pointer';
+      tr.title='Click để xem chi tiết user của phòng này';
       tr.innerHTML=`<td style="color:var(--muted);text-align:right">${i+1}</td>
-        <td><strong>${d.dept}</strong></td>
+        <td>
+          <strong>${d.dept}</strong>
+          ${previewHtml?`<div style="margin-top:3px;line-height:1.6">${previewHtml}</div>`:''}
+        </td>
         <td style="text-align:right">${d.userCount}</td>
         <td style="text-align:right">${d.bw.toLocaleString('vi-VN')}</td>
         <td style="text-align:right">${d.color.toLocaleString('vi-VN')}</td>
         <td style="text-align:right"><strong>${d.total.toLocaleString('vi-VN')}</strong></td>
         <td style="text-align:right">${pct}%${bar}</td>`;
+
+      // Click → switch sang tab User, filter theo phòng
+      tr.addEventListener('click',()=>{
+        const deptVal = d.dept==='(Chưa xác định)' ? '' : d.dept;
+        const sel=$('fuji-f-dept');
+        if(sel){
+          sel.value=deptVal;
+          _populateUserList(deptVal);
+          const fu=$('fuji-f-user'); if(fu) fu.value='';
+        }
+        fujiSwitchView('user');
+        _applyFilter();
+        // Scroll lên đầu bảng
+        const tw=$('fuji-table-wrap'); if(tw) tw.scrollIntoView({behavior:'smooth',block:'start'});
+      });
+
       frag.appendChild(tr);
     });
     tbody.appendChild(frag);
-    const dc=$('fuji-dept-count'); if(dc) dc.textContent=depts.length+' phòng ban';
+    const dc=$('fuji-dept-count');
+    if(dc) dc.textContent=depts.length+' phòng ban — click vào một dòng để xem chi tiết user';
   }
 
   // ── So sánh 2 tháng ──────────────────────────────────────────────
