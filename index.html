@@ -2868,7 +2868,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <label class="btn success btn-icon-ph" for="fuji-file-raw" style="cursor:pointer;"><i class="ph ph-upload-simple"></i> Tải CSV Fuji</label>
-        <input id="fuji-file-raw" type="file" accept=".csv,.txt" style="display:none"/>
+        <input id="fuji-file-raw" type="file" accept=".csv,.txt" multiple style="display:none"/>
         <label class="btn btn-icon-ph" for="fuji-file-map" style="cursor:pointer;" title="File mapping: user, ten nhan vien, phong ban"><i class="ph ph-users"></i> Mapping User</label>
         <input id="fuji-file-map" type="file" accept=".csv,.txt" style="display:none"/>
         <button class="btn btn-icon-ph" id="fuji-btn-reset"><i class="ph ph-funnel-x"></i> Reset</button>
@@ -2884,7 +2884,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     <div id="fuji-dropzone" class="fuji-drop" tabindex="0">
       <i class="ph ph-file-csv" style="font-size:28px;color:var(--muted);display:block;margin-bottom:6px;"></i>
       <div><strong>Kéo-thả</strong> file CSV từ máy Fuji vào đây, hoặc nhấn <strong>Tải CSV Fuji</strong>.</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Hỗ trợ: Web Application Print · IPP · Scanner. Có thể kéo thêm file mapping user.</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Có thể chọn / thả <strong>nhiều file cùng lúc</strong> — dữ liệu sẽ được gộp lại. Hỗ trợ: Web Application Print · IPP · LPD · Scanner.</div>
     </div>
 
     <!-- KPIs -->
@@ -14912,15 +14912,25 @@ function printQRLabel(){
     _updateTop10();
   }
 
-  // ── Import CSV ────────────────────────────────────────────────────
-  async function _importCSV(mainFile){
+  // ── Import CSV (1 hoặc nhiều file cùng lúc) ──────────────────────
+  async function _importCSV(mainFiles){
     _clearErr();
+    // Chuẩn hoá: chấp nhận File đơn hoặc FileList/Array
+    const fileList=mainFiles instanceof File ? [mainFiles]
+                  : Array.from(mainFiles||[]);
+    if(!fileList.length) return;
     try{
-      const txt=await _readFile(mainFile);
-      const merged=_mergeLines(txt);
-      const delim=_detectDelim(merged);
-      const rows=_parseCSV(merged,delim);
-      _raw=_buildRaw(rows);
+      // Đọc và parse từng file, gộp hết _raw lại
+      let allRaw=[];
+      for(const f of fileList){
+        const txt=await _readFile(f);
+        const merged=_mergeLines(txt);
+        const delim=_detectDelim(merged);
+        const rows=_parseCSV(merged,delim);
+        const raw=_buildRaw(rows);
+        allRaw=allRaw.concat(raw);
+      }
+      _raw=allRaw;
       if(!_raw.length){ toast('⚠️ Không có dữ liệu hợp lệ từ file Fuji.','warn'); return; }
       const dm=_computeDocStats(_raw); _docStats=dm.stats; _singleMax=dm.singleMax; _sumMax=dm.sumMax;
       // Load mapping if present
@@ -14961,7 +14971,8 @@ function printQRLabel(){
       _populateFilters();
       _showData(true);
       _applyFilter();
-      toast('✅ Đã nạp '+_raw.length.toLocaleString('vi-VN')+' dòng. '+_agg.length+' bản ghi (sau gộp).','ok');
+      const fLabel=fileList.length>1?fileList.length+' file':'1 file';
+      toast('✅ Đã nạp '+fLabel+' — '+_raw.length.toLocaleString('vi-VN')+' dòng, '+_agg.length+' bản ghi (sau gộp).','ok');
     }catch(err){
       _showErr('❌ Lỗi đọc file: '+(err?.message||String(err)));
     }
@@ -14995,7 +15006,7 @@ function printQRLabel(){
 
     const on=(id,ev,fn)=>{ const el=$(id); if(el) el.addEventListener(ev,fn); };
 
-    on('fuji-file-raw','change',async e=>{ const f=e.target.files[0]; if(f) await _importCSV(f); });
+    on('fuji-file-raw','change',async e=>{ const fs=e.target.files; if(fs&&fs.length) await _importCSV(fs); });
     on('fuji-file-map','change',async()=>{ if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }});
     on('fuji-btn-reset','click',()=>{
       ['fuji-f-dept','fuji-f-user','fuji-f-month','fuji-f-type'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
@@ -15018,7 +15029,7 @@ function printQRLabel(){
     if(dz){
       ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();dz.classList.add('drag');}));
       ['dragleave','dragend','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();dz.classList.remove('drag');}));
-      dz.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) _importCSV(f); });
+      dz.addEventListener('drop',e=>{ const fs=e.dataTransfer.files; if(fs&&fs.length) _importCSV(fs); });
       dz.addEventListener('click',()=>$('fuji-file-raw')?.click());
       dz.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') $('fuji-file-raw')?.click(); });
     }
