@@ -15026,22 +15026,13 @@ function printQRLabel(){
     const deptOf=d=>{const m={}; (d.agg||[]).forEach(r=>{const k=r.dept||'(Chưa xác định)'; if(!m[k]) m[k]={dept:k,total:0,color:0,bw:0}; m[k].total+=r.total; m[k].color+=r.color; m[k].bw+=r.bw;}); return Object.values(m).sort((a,b)=>b.total-a.total);};
     const dA2=deptOf(dA), dB2=deptOf(dB);
     const dBmap={}; dB2.forEach(d=>dBmap[d.dept]=d);
-    const deptRows=dA2.map(d=>{
-      const b=dBmap[d.dept]||{total:0};
-      return`<tr><td><strong>${d.dept}</strong></td><td style="text-align:right">${d.total.toLocaleString('vi-VN')}</td><td style="text-align:right">${b.total.toLocaleString('vi-VN')}</td><td style="text-align:right">${diff(d.total,b.total)||'—'}</td></tr>`;
-    }).join('');
-
-    // Machine so sánh
-    const machRows=((dA.machines||[]).map((m,i)=>{
-      const bm=(dB.machines||[]).find(x=>x.model===m.model&&x.serial===m.serial)||{total:0};
-      const modelStr=m.model+(m.serial?' / '+m.serial:'');
-      return`<tr><td><strong>${modelStr}</strong></td><td style="text-align:right">${m.total.toLocaleString('vi-VN')}</td><td style="text-align:right">${bm.total.toLocaleString('vi-VN')}</td><td style="text-align:right">${diff(m.total,bm.total)||'—'}</td></tr>`;
-    })).join('');
+    // (deptRows và machRows được render trực tiếp trong innerHTML bên dưới)
 
     const lA=_fujiCycleLabel(cycA), lB=_fujiCycleLabel(cycB);
-    const thStyle='padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);';
-    const thL='padding:7px 10px;text-align:left;border-bottom:2px solid var(--border);';
-    const hdr=`<th style="${thL}">Chỉ số / Máy / Phòng Ban</th><th style="${thStyle}">${lA}</th><th style="${thStyle}">${lB}</th><th style="${thStyle}">Chênh lệch</th>`;
+    // Nhãn ngắn cho header bảng: "T03/26" thay vì "11/03 – 10/04/2026"
+    const shortLabel=c=>{ const[y,m]=c.split('-'); return`T${m}/${String(y).slice(2)}`; };
+    const sA=shortLabel(cycA), sB=shortLabel(cycB);
+
     // Lưu lại để xuất PDF
     _lastCmp={cycA,cycB,lA,lB,kA,kB,dA,dB,dA2,dB2,dBmap};
 
@@ -15049,34 +15040,57 @@ function printQRLabel(){
     const pdfBtn=$('fuji-cmp-pdf-btn');
     if(pdfBtn) pdfBtn.style.display='inline-flex';
 
+    // Style bảng gọn: fixed layout, padding nhỏ
+    const tblStyle='width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;margin-bottom:18px;';
+    const colGroup=`<colgroup><col style="width:40%"><col style="width:22%"><col style="width:22%"><col style="width:16%"></colgroup>`;
+    const thBase='padding:6px 8px;border-bottom:2px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;';
+    const thL=thBase+'text-align:left;';
+    const thR=thBase+'text-align:right;';
+    // Header với nhãn ngắn + tooltip đầy đủ
+    const hdr=`
+      <th style="${thL}">Chỉ tiêu</th>
+      <th style="${thR}" title="${lA}">Chu kỳ A<br><span style="font-size:10px;font-weight:400;color:var(--primary);">${lA}</span></th>
+      <th style="${thR}" title="${lB}">Chu kỳ B<br><span style="font-size:10px;font-weight:400;color:var(--muted);">${lB}</span></th>
+      <th style="${thR}">±</th>`;
+    const tdL='padding:6px 8px;';
+    const tdR='padding:6px 8px;text-align:right;';
+    const even='background:var(--surface2);';
+
     res.style.display='';
     res.innerHTML=`
-      <div style="overflow-x:auto;">
       <!-- 1. Theo Máy -->
-      <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--muted);">🖨️ Theo Máy</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px;">
-        <thead><tr style="background:var(--surface2);">${hdr}</tr></thead>
-        <tbody>${machRows}</tbody>
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--muted);">🖨️ Theo Máy</div>
+      <table style="${tblStyle}">${colGroup}
+        <thead><tr>${hdr}</tr></thead>
+        <tbody>${((dA.machines||[]).map((m,i)=>{
+          const bm=(dB.machines||[]).find(x=>x.model===m.model&&x.serial===m.serial)||{total:0};
+          const ms=`<strong>${m.model}</strong>${m.serial?` <span style="color:var(--muted);font-size:11px;">/ ${m.serial}</span>`:''}`;
+          return`<tr style="${i%2?even:''}"><td style="${tdL}">${ms}</td><td style="${tdR}">${m.total.toLocaleString('vi-VN')}</td><td style="${tdR}">${bm.total.toLocaleString('vi-VN')}</td><td style="${tdR}">${diff(m.total,bm.total)||'—'}</td></tr>`;
+        })).join('')}
+        </tbody>
       </table>
       <!-- 2. Tổng quan -->
-      <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--muted);">📊 Tổng quan</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px;">
-        <thead><tr style="background:var(--surface2);">${hdr}</tr></thead>
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--muted);">📊 Tổng quan</div>
+      <table style="${tblStyle}">${colGroup}
+        <thead><tr>${hdr}</tr></thead>
         <tbody>
-          <tr><td style="padding:6px 10px;">Tổng trang in</td><td style="text-align:right;padding:6px 10px;"><strong>${kA.total.toLocaleString('vi-VN')}</strong></td><td style="text-align:right;padding:6px 10px;"><strong>${kB.total.toLocaleString('vi-VN')}</strong></td><td style="text-align:right;padding:6px 10px;">${diff(kA.total,kB.total)}</td></tr>
-          <tr style="background:var(--surface2);"><td style="padding:6px 10px;">Trắng đen</td><td style="text-align:right;padding:6px 10px;">${kA.bw.toLocaleString('vi-VN')}</td><td style="text-align:right;padding:6px 10px;">${kB.bw.toLocaleString('vi-VN')}</td><td style="text-align:right;padding:6px 10px;">${diff(kA.bw,kB.bw)}</td></tr>
-          <tr><td style="padding:6px 10px;">In màu</td><td style="text-align:right;padding:6px 10px;">${kA.color.toLocaleString('vi-VN')}</td><td style="text-align:right;padding:6px 10px;">${kB.color.toLocaleString('vi-VN')}</td><td style="text-align:right;padding:6px 10px;">${diff(kA.color,kB.color)}</td></tr>
-          <tr style="background:var(--surface2);"><td style="padding:6px 10px;">% Màu</td><td style="text-align:right;padding:6px 10px;">${kA.pct}%</td><td style="text-align:right;padding:6px 10px;">${kB.pct}%</td><td style="text-align:right;padding:6px 10px;">${diff(kA.pct,kB.pct)}</td></tr>
-          <tr><td style="padding:6px 10px;">Số user</td><td style="text-align:right;padding:6px 10px;">${kA.users}</td><td style="text-align:right;padding:6px 10px;">${kB.users}</td><td style="text-align:right;padding:6px 10px;">${diff(kA.users,kB.users)}</td></tr>
+          <tr><td style="${tdL}">Tổng trang in</td><td style="${tdR}"><strong>${kA.total.toLocaleString('vi-VN')}</strong></td><td style="${tdR}"><strong>${kB.total.toLocaleString('vi-VN')}</strong></td><td style="${tdR}">${diff(kA.total,kB.total)}</td></tr>
+          <tr style="${even}"><td style="${tdL}">Trắng đen</td><td style="${tdR}">${kA.bw.toLocaleString('vi-VN')}</td><td style="${tdR}">${kB.bw.toLocaleString('vi-VN')}</td><td style="${tdR}">${diff(kA.bw,kB.bw)}</td></tr>
+          <tr><td style="${tdL}">In màu</td><td style="${tdR}">${kA.color.toLocaleString('vi-VN')}</td><td style="${tdR}">${kB.color.toLocaleString('vi-VN')}</td><td style="${tdR}">${diff(kA.color,kB.color)}</td></tr>
+          <tr style="${even}"><td style="${tdL}">% Màu</td><td style="${tdR}">${kA.pct}%</td><td style="${tdR}">${kB.pct}%</td><td style="${tdR}">${diff(kA.pct,kB.pct)}</td></tr>
+          <tr><td style="${tdL}">Số user</td><td style="${tdR}">${kA.users}</td><td style="${tdR}">${kB.users}</td><td style="${tdR}">${diff(kA.users,kB.users)}</td></tr>
         </tbody>
       </table>
       <!-- 3. Theo Phòng Ban -->
-      <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--muted);">🏢 Theo Phòng Ban</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px;">
-        <thead><tr style="background:var(--surface2);">${hdr}</tr></thead>
-        <tbody>${deptRows}</tbody>
-      </table>
-      </div>`;
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--muted);">🏢 Theo Phòng Ban</div>
+      <table style="${tblStyle}">${colGroup}
+        <thead><tr>${hdr}</tr></thead>
+        <tbody>${dA2.map((d,i)=>{
+          const b=dBmap[d.dept]||{total:0};
+          return`<tr style="${i%2?even:''}"><td style="${tdL}"><strong>${d.dept}</strong></td><td style="${tdR}">${d.total.toLocaleString('vi-VN')}</td><td style="${tdR}">${b.total.toLocaleString('vi-VN')}</td><td style="${tdR}">${diff(d.total,b.total)||'—'}</td></tr>`;
+        }).join('')}
+        </tbody>
+      </table>`;
   };
 
   // Render danh sách chu kỳ đã lưu
