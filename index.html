@@ -4393,7 +4393,7 @@ const MSAL_CONFIG = {
   spAuditLogList:    'QLTS_AuditLog',             // list nhật ký thay đổi (global admin only)
   spFujiMachineList:  'Fuji_MachineReport',         // list báo cáo máy Fuji theo tháng
   spFujiReportCache:  'Fuji_ReportCache',           // list lưu toàn bộ dữ liệu báo cáo (JSON)
-  spFujiUserMap:      'Fuji_UserMap',               // list lưu mapping user (1 item duy nhất)
+  // spFujiUserMap đã bỏ — mapping lấy trực tiếp từ HubIT/Employees và cache localStorage
   redirectUri: window.location.origin + window.location.pathname,  // tự động
   scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Manage', 'Mail.Send', 'User.Read', 'User.ReadBasic.All'],
 };
@@ -15028,7 +15028,7 @@ function printQRLabel(){
       const csv='user,ten nhan vien,phong ban\n'+_map.map(u=>`${u.user},${u.name},${u.dept}`).join('\n');
       _fujiMapSave(csv);
       _fujiMapUpdateUI();
-      _fujiMapSpSave(csv); // async, không block
+      // (không cần lưu SP UserMap — mapping lấy trực tiếp từ HubIT Employees)
 
       // Re-aggregate nếu đang có data
       if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
@@ -15041,43 +15041,7 @@ function printQRLabel(){
     }
   };
 
-  // ── SP: Lưu mapping lên SharePoint ────────────────────────────────
-  async function _fujiMapSpSave(rawCsv){
-    if(typeof msalGetToken!=='function') return;
-    try{
-      const token=await msalGetToken();
-      const listUrl=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiUserMap}')`;
-      const hdrs={'Authorization':'Bearer '+token,'Accept':'application/json;odata=nometadata','Content-Type':'application/json;odata=nometadata'};
-      // Kiểm tra item đã tồn tại chưa (Title='default')
-      const chk=await fetch(`${listUrl}/items?$filter=Title eq 'default'&$select=Id`,{headers:{...hdrs}});
-      if(!chk.ok){ console.warn('Fuji map SP check failed:',chk.status); return; }
-      const existing=((await chk.json()).value||[])[0];
-      const body=JSON.stringify({'Title':'default','MapCsv':rawCsv});
-      if(existing){
-        // Dùng PATCH (không cần X-HTTP-Method) cho SP Online
-        const r=await fetch(`${listUrl}/items(${existing.Id})`,{
-          method:'PATCH',
-          headers:{...hdrs,'IF-MATCH':'*'},
-          body});
-        if(!r.ok) console.warn('Fuji map SP PATCH failed:',r.status, await r.text().catch(()=>''));
-      } else {
-        const r=await fetch(`${listUrl}/items`,{method:'POST',headers:{...hdrs},body});
-        if(!r.ok) console.warn('Fuji map SP POST failed:',r.status, await r.text().catch(()=>''));
-      }
-    }catch(e){ console.warn('Fuji map SP save error:',e); }
-  }
-
-  // ── SP: Tải mapping từ SharePoint ─────────────────────────────────
-  async function _fujiMapSpLoad(){
-    if(typeof msalGetToken!=='function') return '';
-    try{
-      const token=await msalGetToken();
-      const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiUserMap}')/items?$filter=Title eq 'default'&$select=MapCsv`;
-      const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=nometadata'}});
-      if(!res.ok) return '';
-      return ((await res.json()).value||[])[0]?.MapCsv||'';
-    }catch(e){ return ''; }
-  }
+  // Fuji_UserMap SP functions removed — mapping caches in localStorage only, source = HubIT Employees list
 
   // Lưu chu kỳ hiện tại vào localStorage
   function _fujiLocalSave(){
@@ -16705,24 +16669,14 @@ function printQRLabel(){
   function _initListeners(){
     if(_initialized) return; _initialized=true;
 
-    // Restore mapping: local cache trước, fallback SP
+    // Restore mapping: localStorage trước, nếu không có → tự sync từ HubIT Employees
     const cachedMap=_fujiMapLoad();
     if(cachedMap){
       _map=_fujiParseMapText(cachedMap);
       _fujiMapUpdateUI();
     } else {
-      // Thử load từ SharePoint trước, nếu không có thì tự sync AD
-      _fujiMapSpLoad().then(async spCsv=>{
-        if(spCsv && !_map.length){
-          _map=_fujiParseMapText(spCsv);
-          _fujiMapSave(spCsv);
-          _fujiMapUpdateUI();
-          if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
-        } else if(!_map.length){
-          // Không có cả local lẫn SP → tự đồng bộ AD ngay
-          await window._fujiSyncFromAD();
-        }
-      });
+      // Không có cache → tự đồng bộ ngay từ SharePoint HubIT/Employees
+      window._fujiSyncFromAD();
       _fujiMapUpdateUI();
     }
 
@@ -16740,8 +16694,7 @@ function printQRLabel(){
       _map=_fujiParseMapText(txt);
       _fujiMapSave(txt);          // lưu localStorage
       _fujiMapUpdateUI();
-      toast(`✅ Đã lưu mapping ${_map.length} user vào bộ nhớ — đang đồng bộ SharePoint...`,'ok');
-      _fujiMapSpSave(txt).then(()=>toast('☁️ Mapping đã đồng bộ lên SharePoint.','ok'));
+      toast(`✅ Đã lưu mapping ${_map.length} user vào bộ nhớ.`,'ok');
       if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
     });
     on('fuji-btn-reset','click',()=>{
