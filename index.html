@@ -2071,6 +2071,13 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <span class="gs-kbd" id="gs-kbd-hint">Ctrl K</span>
         <div class="global-search-results" id="global-search-results"></div>
       </div>
+      <!-- Đồng bộ nhân viên (global) -->
+      <button class="btn btn-icon-ph" id="btn-sync-emp" onclick="_syncEmployees()"
+        title="Đồng bộ danh sách nhân viên TTG từ SharePoint"
+        style="font-size:12px;padding:6px 10px;display:none;">
+        <i class="ph ph-users"></i>
+        <span class="btn-label" id="btn-sync-emp-label">NV</span>
+      </button>
       <!-- MSAL SharePoint sync bar -->
       <div class="sync-bar s-warn" id="msal-bar" onclick="msalBarClick()" title="Kết nối SharePoint qua Microsoft 365" style="font-size:11px;">
         <i class="ph ph-microsoft-teams-logo"></i>
@@ -2868,9 +2875,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <input id="fuji-file-raw" type="file" accept=".csv,.txt" multiple style="display:none"/>
         <label class="btn btn-icon-ph" id="fuji-map-status" for="fuji-file-map" style="cursor:pointer;" title="Upload file mapping CSV"><i class="ph ph-users"></i> Mapping User</label>
         <input id="fuji-file-map" type="file" accept=".csv,.txt" style="display:none"/>
-        <button class="btn btn-icon-ph" id="fuji-btn-sync-ad" onclick="_fujiSyncFromAD()" title="Đồng bộ danh sách nhân viên từ SharePoint">
-          <i class="ph ph-arrows-clockwise"></i> Đồng bộ NV
-        </button>
+        <!-- Nút Đồng bộ NV đã chuyển lên topbar (btn-sync-emp) -->
         <button class="btn btn-icon-ph" id="fuji-btn-reset"><i class="ph ph-funnel-x"></i> Reset</button>
         <button class="btn btn-icon-ph" id="fuji-btn-export" disabled><i class="ph ph-download-simple"></i> Xuất CSV</button>
         <button class="btn btn-icon-ph" id="fuji-btn-docmax" disabled><i class="ph ph-file-text"></i> DocMax</button>
@@ -4935,8 +4940,11 @@ async function msalSpLoad(){
     const dnttBtn = document.getElementById('dntt-sp-sync-btn');
     if(dnttBtn) dnttBtn.style.display = can('sync') ? 'inline-flex' : 'none';
     await msalSpLoadDNTT();
-    // Load employee directory nền — force=true để clear cache cũ (áp dụng filter TTG)
-    _loadEmployees(true);
+    // Load employee directory nền (localStorage cache trước, fetch HubIT nếu không có)
+    _loadEmployees(false);
+    // Hiện nút đồng bộ NV trên topbar sau khi đã login
+    const syncEmpBtn=document.getElementById('btn-sync-emp');
+    if(syncEmpBtn) syncEmpBtn.style.display='';
   }catch(e){
     console.error('[MSAL] load error:', e);
     msalSetBar('⚠️ Lỗi tải SP: ' + e.message,'s-err');
@@ -6214,12 +6222,39 @@ async function _loadEmployees(force=false){
   }catch(e){ console.warn('[EMP] Load error:', e.message); }
 }
 
-// Gọi sau khi _qltsEmployees được nạp: refresh dept dropdowns
+// Gọi sau khi _qltsEmployees được nạp: refresh dept dropdowns + update topbar label
 function _onEmployeesLoaded(){
-  // Cập nhật dropdown phòng ban với dữ liệu thực từ HubIT
   populateDeptSelects();
-  // Fuji sẽ tự sync _map từ _qltsEmployees qua _initListeners() / _fujiSyncFromAD()
-  // Không cần access _map trực tiếp (nó nằm trong IIFE)
+  // Cập nhật label nút trên topbar
+  const lbl=document.getElementById('btn-sync-emp-label');
+  if(lbl) lbl.textContent=`${window._qltsEmployees.length} NV`;
+}
+
+// Hàm sync nhân viên từ topbar (force refresh)
+async function _syncEmployees(){
+  const btn=document.getElementById('btn-sync-emp');
+  const lbl=document.getElementById('btn-sync-emp-label');
+  if(btn){ btn.disabled=true; }
+  if(lbl){ lbl.textContent='Đang tải…'; }
+  try{
+    try{ localStorage.removeItem(LS_EMP); }catch(e){}
+    window._qltsEmployees=[];
+    await _loadEmployees(true);
+    // Cập nhật Fuji map nếu đang dùng
+    if(window._fujiSyncFromAD && window._qltsEmployees.length){
+      const csv='user,ten nhan vien,phong ban\n'+window._qltsEmployees.map(e=>`${e.user},${e.name},${e.dept}`).join('\n');
+      try{
+        const LS_MAP='fuji_map_cache';
+        localStorage.setItem(LS_MAP,csv);
+      }catch(e){}
+    }
+    toast(`✅ Đã đồng bộ ${window._qltsEmployees.length} nhân viên TTG`,'ok');
+  }catch(e){
+    toast('❌ Lỗi đồng bộ NV: '+(e?.message||e),'warn');
+    if(lbl) lbl.textContent='NV';
+  }finally{
+    if(btn){ btn.disabled=false; }
+  }
 }
 
 // ─── Autocomplete helper: gắn vào input, gợi ý từ _qltsEmployees ─────────────
