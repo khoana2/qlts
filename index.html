@@ -2928,6 +2928,12 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
     </div>
 
+    <!-- Banner: đang xem từ cache -->
+    <div id="fuji-cache-banner" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12px;color:#1d4ed8;align-items:center;justify-content:space-between;gap:8px;">
+      <span id="fuji-cache-banner-text"></span>
+      <button onclick="_fujiCacheClear()" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:12px;white-space:nowrap;"><i class="ph ph-x-circle"></i> Thoát cache</button>
+    </div>
+
     <!-- Detail table: Theo User -->
     <div class="table-card" id="fuji-table-wrap" style="display:none">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;padding:0 4px;">Chi tiết theo User</div>
@@ -2988,6 +2994,24 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </table>
       </div>
       <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-machine-count"></div>
+    </div>
+
+    <!-- Chu kỳ trên SharePoint (Fuji_ReportCache) -->
+    <div id="fuji-sp-cycles-wrap" style="display:none;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <i class="ph ph-cloud"></i> Chu kỳ trên SharePoint
+        <span style="font-size:11px;color:var(--muted);font-weight:400;">(xem được trên mọi máy)</span>
+      </div>
+      <div id="fuji-sp-cycles-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+
+    <!-- Chu kỳ đã lưu local (localStorage) -->
+    <div id="fuji-local-cycles-wrap" style="display:none;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <i class="ph ph-hard-drive"></i> Chu kỳ đã lưu (trên máy này)
+        <span style="font-size:11px;color:var(--muted);font-weight:400;" id="fuji-local-cycle-count"></span>
+      </div>
+      <div id="fuji-local-cycles-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
     </div>
 
     <!-- Bảng Lịch Sử SharePoint -->
@@ -4283,7 +4307,8 @@ const MSAL_CONFIG = {
   spXacNhanList:     'Quan_Ly_XacNhan_BanGiao',   // list xác nhận bàn giao mặc định (TTG)
   spDNTTList:        'Quan_Ly_DNTT',              // list đề nghị thanh toán mặc định (TTG)
   spAuditLogList:    'QLTS_AuditLog',             // list nhật ký thay đổi (global admin only)
-  spFujiMachineList: 'Fuji_MachineReport',        // list báo cáo máy Fuji theo tháng
+  spFujiMachineList:  'Fuji_MachineReport',         // list báo cáo máy Fuji theo tháng
+  spFujiReportCache:  'Fuji_ReportCache',           // list lưu toàn bộ dữ liệu báo cáo (JSON)
   redirectUri: window.location.origin + window.location.pathname,  // tự động
   scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Manage', 'Mail.Send', 'User.Read'],
 };
@@ -14720,6 +14745,110 @@ function printQRLabel(){
   let _docStats=null, _singleMax=null, _sumMax=null;
   let _unknownCnt=0, _scannerCnt=0;
   let _initialized=false;
+  let _restoredMachines=null; // set khi restore từ localStorage, null khi có _raw thật
+
+  // ── localStorage helpers ──────────────────────────────────────────
+  const LS_IDX='fuji_cycles';
+  function _fujiLsKey(c){ return 'fuji_cycle_'+c; }
+
+  // Lưu chu kỳ hiện tại vào localStorage
+  function _fujiLocalSave(){
+    if(!_agg.length||!_raw.length) return;
+    const cycleCounts={};
+    _raw.map(r=>r.dateRaw).filter(Boolean).forEach(d=>{
+      const c=_fujiCycleMonth(d); if(c) cycleCounts[c]=(cycleCounts[c]||0)+1;
+    });
+    const cycle=Object.entries(cycleCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+    if(!cycle) return;
+    try{
+      const payload={
+        cycle, savedAt:new Date().toISOString(),
+        agg:_agg,
+        machines:_aggByMachine(_raw),
+        scannerCnt:_scannerCnt, unknownCnt:_unknownCnt
+      };
+      localStorage.setItem(_fujiLsKey(cycle),JSON.stringify(payload));
+      // Cập nhật index
+      const idx=JSON.parse(localStorage.getItem(LS_IDX)||'[]');
+      if(!idx.includes(cycle)){ idx.unshift(cycle); localStorage.setItem(LS_IDX,JSON.stringify(idx)); }
+      else { // Đưa lên đầu
+        const ni=[cycle,...idx.filter(c=>c!==cycle)]; localStorage.setItem(LS_IDX,JSON.stringify(ni));
+      }
+    }catch(e){ console.warn('Fuji cache save error:',e); }
+  }
+
+  // Khôi phục 1 chu kỳ từ localStorage
+  window._fujiLocalLoad=function(cycle){
+    try{
+      const raw=localStorage.getItem(_fujiLsKey(cycle));
+      if(!raw){ toast('⚠️ Không tìm thấy cache của chu kỳ này.','warn'); return; }
+      const data=JSON.parse(raw);
+      _agg=data.agg||[]; _raw=[]; _filtered=[];
+      _restoredMachines=data.machines||[];
+      _scannerCnt=data.scannerCnt||0; _unknownCnt=data.unknownCnt||0;
+      _map=[];
+      _populateFilters(); _showData(true); _applyFilter();
+      // Hiện banner
+      const banner=$('fuji-cache-banner'), bannerTxt=$('fuji-cache-banner-text');
+      if(banner&&bannerTxt){
+        bannerTxt.innerHTML='<i class="ph ph-hard-drive"></i> Đang xem chu kỳ <strong>'+_fujiCycleLabel(cycle)+'</strong> từ cache';
+        banner.style.display='flex';
+      }
+      // Chuyển về tab user để xem ngay
+      fujiSwitchView('user');
+      toast('✅ Đã khôi phục chu kỳ '+_fujiCycleLabel(cycle),'ok');
+    }catch(e){ toast('❌ Lỗi đọc cache: '+(e?.message||e),'warn'); }
+  };
+
+  // Xoá 1 chu kỳ khỏi cache
+  window._fujiLocalDelete=function(cycle,evt){
+    if(evt) evt.stopPropagation();
+    if(!confirm('Xoá cache chu kỳ '+_fujiCycleLabel(cycle)+'?')) return;
+    try{
+      localStorage.removeItem(_fujiLsKey(cycle));
+      const idx=JSON.parse(localStorage.getItem(LS_IDX)||'[]').filter(c=>c!==cycle);
+      localStorage.setItem(LS_IDX,JSON.stringify(idx));
+      _fujiRenderLocalCycles();
+      toast('🗑️ Đã xoá cache chu kỳ '+_fujiCycleLabel(cycle),'ok');
+    }catch(e){ toast('❌ Lỗi xoá cache','warn'); }
+  };
+
+  // Thoát chế độ cache, quay về trạng thái rỗng
+  window._fujiCacheClear=function(){
+    _agg=[]; _raw=[]; _filtered=[]; _restoredMachines=null;
+    _showData(false);
+    const banner=$('fuji-cache-banner'); if(banner) banner.style.display='none';
+    toast('↩️ Đã thoát cache. Tải CSV để bắt đầu lại.','ok');
+  };
+
+  // Render danh sách chu kỳ đã lưu
+  window._fujiRenderLocalCycles=function(){
+    const wrap=$('fuji-local-cycles-wrap'), list=$('fuji-local-cycles-list'), cnt=$('fuji-local-cycle-count');
+    if(!wrap||!list) return;
+    const idx=JSON.parse(localStorage.getItem(LS_IDX)||'[]');
+    if(!idx.length){ wrap.style.display='none'; return; }
+    wrap.style.display='';
+    if(cnt) cnt.textContent='('+idx.length+' chu kỳ)';
+    list.innerHTML='';
+    idx.forEach(cycle=>{
+      let savedAt='', totalPages=0;
+      try{
+        const d=JSON.parse(localStorage.getItem(_fujiLsKey(cycle))||'{}');
+        if(d.savedAt){ const dt=new Date(d.savedAt); savedAt=String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear(); }
+        totalPages=(d.agg||[]).reduce((a,r)=>a+r.total,0);
+      }catch(e){}
+      const card=document.createElement('div');
+      card.style.cssText='border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--surface2);cursor:pointer;min-width:180px;flex:1;max-width:240px;position:relative;';
+      card.innerHTML=`
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${savedAt?'Lưu: '+savedAt:''}</div>
+        <div style="font-weight:700;font-size:13px;color:var(--primary);">${_fujiCycleLabel(cycle)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${totalPages?totalPages.toLocaleString('vi-VN')+' trang':''}</div>
+        <button onclick="_fujiLocalDelete('${cycle}',event)" title="Xoá cache" style="position:absolute;top:6px;right:6px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:13px;padding:2px;"><i class="ph ph-trash"></i></button>
+      `;
+      card.addEventListener('click',()=>window._fujiLocalLoad(cycle));
+      list.appendChild(card);
+    });
+  };
 
   // ── Build raw objects ──────────────────────────────────────────────
   function _buildRaw(rows){
@@ -15097,6 +15226,11 @@ function printQRLabel(){
       _populateFilters();
       _showData(true);
       _applyFilter();
+      _restoredMachines=null; // import mới → dùng _raw thật, bỏ cache cũ
+      // Ẩn banner cache (nếu đang hiện)
+      const bnn=$('fuji-cache-banner'); if(bnn) bnn.style.display='none';
+      // Auto-save vào localStorage
+      _fujiLocalSave();
       const fLabel=fileList.length>1?fileList.length+' file':'1 file';
       toast('✅ Đã nạp '+fLabel+' — '+_raw.length.toLocaleString('vi-VN')+' dòng, '+_agg.length+' bản ghi (sau gộp).','ok');
     }catch(err){
@@ -15191,9 +15325,11 @@ function printQRLabel(){
         await fetch(base,{method:'POST',headers,body:JSON.stringify(body)});
         saved++;
       }
+      // Lưu thêm toàn bộ báo cáo (agg+machines) vào ReportCache
+      await _fujiSpSaveReport(thang);
       toast(`✅ Đã lưu chu kỳ ${_fujiCycleLabel(thang)} — ${saved} máy lên SharePoint.`,'ok');
       // Reload lịch sử nếu đang xem
-      if(_curView==='history') _fujiSpLoad();
+      if(_curView==='history'){ _fujiSpLoad(); _fujiSpListCycles(); }
     }catch(e){
       toast('❌ Lưu thất bại: '+(e?.message||e),'warn');
     }
@@ -15243,6 +15379,89 @@ function printQRLabel(){
     }
   }
 
+  // ── SP: Lưu toàn bộ báo cáo (agg+machines) lên Fuji_ReportCache ─
+  window._fujiSpSaveReport=async function(thang){
+    if(!thang||!_agg.length) return;
+    try{
+      const token=await msalGetToken();
+      const base=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiReportCache}')/items`;
+      const headers={'Authorization':'Bearer '+token,'Content-Type':'application/json;odata=verbose','Accept':'application/json;odata=verbose'};
+      // Xoá bản ghi cũ cùng chu kỳ trước khi lưu
+      const ex=await fetch(base+`?$filter=Thang eq '${thang}'&$select=Id`,{headers});
+      if(ex.ok){ const ej=await ex.json(); for(const i of (ej.d?.results||[])) await fetch(`${base}(${i.Id})`,{method:'DELETE',headers:{...headers,'IF-MATCH':'*','X-HTTP-Method':'DELETE'}}); }
+      // Lưu JSON
+      const payload={
+        agg:_agg,
+        machines:_raw.length?_aggByMachine(_raw):(_restoredMachines||[])
+      };
+      const body={__metadata:{type:'SP.Data.Fuji_x005f_ReportCacheListItem'},
+        Title:thang+' | '+_fujiCycleLabel(thang), Thang:thang,
+        DataJson:JSON.stringify(payload),
+        NguoiLuu:typeof currentUser!=='undefined'?(currentUser.displayName||currentUser.username||''):''
+      };
+      await fetch(base,{method:'POST',headers,body:JSON.stringify(body)});
+    }catch(e){ console.warn('_fujiSpSaveReport error:',e); }
+  };
+
+  // ── SP: Tải danh sách chu kỳ từ Fuji_ReportCache ─────────────────
+  window._fujiSpListCycles=async function(){
+    const wrap=$('fuji-sp-cycles-wrap'), list=$('fuji-sp-cycles-list');
+    if(!wrap||!list) return;
+    wrap.style.display='';
+    list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:6px 0;">Đang tải...</div>';
+    try{
+      const token=await msalGetToken();
+      const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiReportCache}')/items?$select=Id,Thang,NguoiLuu,Modified&$orderby=Thang desc&$top=50`;
+      const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const json=await res.json();
+      const items=json.d?.results||[];
+      if(!items.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:6px 0;">Chưa có chu kỳ nào được lưu.</div>'; return; }
+      list.innerHTML='';
+      items.forEach(item=>{
+        const dt=new Date(item.Modified);
+        const savedAt=String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear();
+        const card=document.createElement('div');
+        card.style.cssText='border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--surface2);cursor:pointer;min-width:180px;flex:1;max-width:240px;';
+        card.innerHTML=`
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${savedAt} · ${item.NguoiLuu||''}</div>
+          <div style="font-weight:700;font-size:13px;color:var(--primary);">${_fujiCycleLabel(item.Thang)||item.Thang}</div>
+          <div style="font-size:11px;color:#16a34a;margin-top:3px;"><i class="ph ph-cloud-check"></i> Trên SharePoint</div>`;
+        card.addEventListener('click',()=>window._fujiSpLoadReport(item.Thang));
+        list.appendChild(card);
+      });
+    }catch(e){
+      list.innerHTML=`<div style="color:#dc2626;font-size:12px;">Lỗi: ${e?.message||e}</div>`;
+    }
+  };
+
+  // ── SP: Khôi phục báo cáo từ Fuji_ReportCache ────────────────────
+  window._fujiSpLoadReport=async function(cycle){
+    try{
+      toast('⏳ Đang tải báo cáo từ SharePoint...','ok');
+      const token=await msalGetToken();
+      const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiReportCache}')/items?$filter=Thang eq '${cycle}'&$select=DataJson,Thang`;
+      const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const json=await res.json();
+      const item=(json.d?.results||[])[0];
+      if(!item) throw new Error('Không tìm thấy dữ liệu chu kỳ '+cycle);
+      const data=JSON.parse(item.DataJson||'{}');
+      _agg=data.agg||[]; _raw=[]; _filtered=[];
+      _restoredMachines=data.machines||[];
+      _unknownCnt=0; _scannerCnt=0; _map=[];
+      _populateFilters(); _showData(true); _applyFilter();
+      // Hiện banner
+      const banner=$('fuji-cache-banner'), bannerTxt=$('fuji-cache-banner-text');
+      if(banner&&bannerTxt){
+        bannerTxt.innerHTML='<i class="ph ph-cloud-check"></i> Đang xem chu kỳ <strong>'+_fujiCycleLabel(cycle)+'</strong> từ SharePoint';
+        banner.style.display='flex';
+      }
+      fujiSwitchView('user');
+      toast('✅ Đã tải chu kỳ '+_fujiCycleLabel(cycle)+' từ SharePoint','ok');
+    }catch(e){ toast('❌ Lỗi tải: '+(e?.message||e),'warn'); }
+  };
+
   // ── Parse machine info từ tên file CSV ───────────────────────────
   function _parseMachine(filename){
     const name=(filename||'').replace(/\.csv$/i,'').replace(/\.txt$/i,'').trim();
@@ -15283,7 +15502,7 @@ function printQRLabel(){
   }
 
   function _renderMachineTable(){
-    const machines=_aggByMachine(_raw); // luôn dùng _raw (không filter) để hiện đủ máy
+    const machines=_raw.length?_aggByMachine(_raw):(_restoredMachines||[]); // fallback cache khi restore
     const tbody=$('fuji-machine-tbody'); if(!tbody) return;
     tbody.innerHTML='';
     const frag=document.createDocumentFragment();
@@ -15324,7 +15543,7 @@ function printQRLabel(){
     if(v==='dept')    _renderDeptTable();
     if(v==='compare') _renderCompare();
     if(v==='machine') _renderMachineTable();
-    if(v==='history') _fujiSpLoad();
+    if(v==='history'){ _fujiRenderLocalCycles(); _fujiSpListCycles(); _fujiSpLoad(); }
   };
 
   // ── Phòng ban aggregation ─────────────────────────────────────────
@@ -15583,6 +15802,8 @@ function printQRLabel(){
     on('fuji-btn-reset','click',()=>{
       // Xóa toàn bộ dữ liệu, trả về trạng thái ban đầu
       _raw=[]; _agg=[]; _filtered=[]; _map=[]; _docStats=[]; _unknownCnt=0; _scannerCnt=0;
+      _restoredMachines=null;
+      const bnn=$('fuji-cache-banner'); if(bnn) bnn.style.display='none';
       // Reset file inputs
       const fr=$('fuji-file-raw'); if(fr) fr.value='';
       const fm=$('fuji-file-map'); if(fm) fm.value='';
