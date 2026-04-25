@@ -2884,6 +2884,24 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     <div id="fuji-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px;display:none;"></div>
     <div id="fuji-unknown-warn" style="display:none;font-size:12px;color:#D97706;margin-bottom:8px;"></div>
 
+    <!-- Chu kỳ hiện tại + picker -->
+    <div id="fuji-cycle-bar" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--muted);white-space:nowrap;"><i class="ph ph-calendar-blank"></i> Chu kỳ:</span>
+      <strong id="fuji-cycle-label" style="font-size:13px;color:var(--primary);"></strong>
+      <button id="fuji-cycle-edit-btn" onclick="_fujiToggleCyclePicker()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--muted);"><i class="ph ph-pencil"></i> Sửa</button>
+      <div id="fuji-cycle-picker" style="display:none;display:flex;gap:6px;align-items:center;">
+        <select id="fuji-cycle-mm" style="padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+          <option value="01">Tháng 1</option><option value="02">Tháng 2</option><option value="03">Tháng 3</option>
+          <option value="04">Tháng 4</option><option value="05">Tháng 5</option><option value="06">Tháng 6</option>
+          <option value="07">Tháng 7</option><option value="08">Tháng 8</option><option value="09">Tháng 9</option>
+          <option value="10">Tháng 10</option><option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+        </select>
+        <select id="fuji-cycle-yy" style="padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></select>
+        <button onclick="_fujiApplyCyclePicker()" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;">Xác nhận</button>
+      </div>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto;">Dữ liệu sẽ được lưu theo chu kỳ này</span>
+    </div>
+
     <!-- Charts -->
     <div class="fuji-charts" id="fuji-charts-wrap" style="display:none">
       <div class="table-card" style="padding:12px;">
@@ -2994,6 +3012,25 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </table>
       </div>
       <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-machine-count"></div>
+    </div>
+
+    <!-- So sánh 2 chu kỳ -->
+    <div id="fuji-compare-cycles-wrap" style="margin-bottom:18px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+        <i class="ph ph-arrows-left-right"></i> So sánh chu kỳ
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Chu kỳ A</div>
+          <select id="fuji-cmp-a" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;min-width:180px;background:var(--surface2);"></select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Chu kỳ B</div>
+          <select id="fuji-cmp-b" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;min-width:180px;background:var(--surface2);"></select>
+        </div>
+        <button class="btn btn-icon-ph primary" onclick="_fujiRunCompare()"><i class="ph ph-arrows-left-right"></i> So sánh</button>
+      </div>
+      <div id="fuji-cmp-result" style="display:none;"></div>
     </div>
 
     <!-- Chu kỳ trên SharePoint (Fuji_ReportCache) -->
@@ -14746,6 +14783,46 @@ function printQRLabel(){
   let _unknownCnt=0, _scannerCnt=0;
   let _initialized=false;
   let _restoredMachines=null; // set khi restore từ localStorage, null khi có _raw thật
+  let _selectedCycle='';     // chu kỳ do user chọn (override auto-detect)
+
+  // ── Cycle picker helpers ──────────────────────────────────────────
+  function _fujiShowCycleBar(cycle){
+    _selectedCycle=cycle;
+    const bar=$('fuji-cycle-bar'), lbl=$('fuji-cycle-label');
+    if(!bar||!lbl) return;
+    bar.style.display='flex';
+    lbl.textContent=_fujiCycleLabel(cycle);
+    // Điền sẵn picker
+    const [y,m]=cycle.split('-');
+    const mm=$('fuji-cycle-mm'), yy=$('fuji-cycle-yy');
+    if(mm) mm.value=m;
+    if(yy){
+      yy.innerHTML='';
+      const curY=new Date().getFullYear();
+      for(let yr=curY-2;yr<=curY+1;yr++){
+        const o=document.createElement('option'); o.value=yr; o.textContent=yr; yy.appendChild(o);
+      }
+      yy.value=y;
+    }
+    // Ẩn picker (nếu đang mở)
+    const picker=$('fuji-cycle-picker'); if(picker) picker.style.display='none';
+  }
+
+  window._fujiToggleCyclePicker=function(){
+    const picker=$('fuji-cycle-picker');
+    if(!picker) return;
+    picker.style.display=picker.style.display==='none'?'flex':'none';
+  };
+
+  window._fujiApplyCyclePicker=function(){
+    const mm=($('fuji-cycle-mm')||{}).value||'';
+    const yy=($('fuji-cycle-yy')||{}).value||'';
+    if(!mm||!yy) return;
+    const cycle=yy+'-'+mm;
+    _fujiShowCycleBar(cycle);
+    const picker=$('fuji-cycle-picker'); if(picker) picker.style.display='none';
+    toast('✅ Đã chọn chu kỳ '+_fujiCycleLabel(cycle),'ok');
+  };
 
   // ── localStorage helpers ──────────────────────────────────────────
   const LS_IDX='fuji_cycles';
@@ -14754,11 +14831,7 @@ function printQRLabel(){
   // Lưu chu kỳ hiện tại vào localStorage
   function _fujiLocalSave(){
     if(!_agg.length||!_raw.length) return;
-    const cycleCounts={};
-    _raw.map(r=>r.dateRaw).filter(Boolean).forEach(d=>{
-      const c=_fujiCycleMonth(d); if(c) cycleCounts[c]=(cycleCounts[c]||0)+1;
-    });
-    const cycle=Object.entries(cycleCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+    const cycle=_selectedCycle||'';
     if(!cycle) return;
     try{
       const payload={
@@ -14819,6 +14892,132 @@ function printQRLabel(){
     _showData(false);
     const banner=$('fuji-cache-banner'); if(banner) banner.style.display='none';
     toast('↩️ Đã thoát cache. Tải CSV để bắt đầu lại.','ok');
+  };
+
+  // ── So sánh 2 chu kỳ ─────────────────────────────────────────────
+  // Populate dropdowns từ localStorage + SP (SP cycles loaded vào _spCycleMap)
+  let _spCycleMap={}; // cycle → {agg, machines} đã load từ SP
+
+  function _fujiPopulateCmpDropdowns(){
+    const selA=$('fuji-cmp-a'), selB=$('fuji-cmp-b');
+    if(!selA||!selB) return;
+    // Ghép: localStorage cycles + SP cycles
+    const lsIdx=JSON.parse(localStorage.getItem(LS_IDX)||'[]');
+    const spCycles=Object.keys(_spCycleMap);
+    const allCycles=[...new Set([...lsIdx,...spCycles])].sort().reverse();
+    const opts='<option value="">-- Chọn chu kỳ --</option>'+allCycles.map(c=>{
+      const src=lsIdx.includes(c)?'💾':'☁️';
+      return`<option value="${c}">${src} ${_fujiCycleLabel(c)}</option>`;
+    }).join('');
+    selA.innerHTML=opts; selB.innerHTML=opts;
+    if(allCycles.length>0) selA.value=allCycles[0];
+    if(allCycles.length>1) selB.value=allCycles[1];
+  }
+
+  async function _fujiLoadCycleData(cycle){
+    // 1. Thử localStorage
+    try{
+      const raw=localStorage.getItem(_fujiLsKey(cycle));
+      if(raw){ const d=JSON.parse(raw); if(d.agg?.length) return d; }
+    }catch(e){}
+    // 2. Thử SP cache
+    if(_spCycleMap[cycle]) return _spCycleMap[cycle];
+    // 3. Tải từ SP
+    if(typeof msalGetToken!=='function') return null;
+    try{
+      const token=await msalGetToken();
+      const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiReportCache}')/items?$filter=Thang eq '${cycle}'&$select=DataJson`;
+      const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+      if(!res.ok) return null;
+      const json=await res.json();
+      const item=(json.d?.results||[])[0];
+      if(!item?.DataJson) return null;
+      const data=JSON.parse(item.DataJson);
+      _spCycleMap[cycle]=data;
+      return data;
+    }catch(e){ return null; }
+  }
+
+  window._fujiRunCompare=async function(){
+    const cycA=($('fuji-cmp-a')||{}).value||'';
+    const cycB=($('fuji-cmp-b')||{}).value||'';
+    if(!cycA||!cycB){ toast('⚠️ Chọn 2 chu kỳ để so sánh.','warn'); return; }
+    if(cycA===cycB){ toast('⚠️ Chọn 2 chu kỳ khác nhau.','warn'); return; }
+    const res=$('fuji-cmp-result'); if(!res) return;
+    res.style.display=''; res.innerHTML='<div style="color:var(--muted);font-size:12px;padding:10px 0;">Đang tải dữ liệu...</div>';
+
+    const [dA, dB]=await Promise.all([_fujiLoadCycleData(cycA),_fujiLoadCycleData(cycB)]);
+    if(!dA){ res.innerHTML=`<div style="color:#dc2626;font-size:12px;">Không tìm thấy dữ liệu cho chu kỳ A (${_fujiCycleLabel(cycA)}).</div>`; return; }
+    if(!dB){ res.innerHTML=`<div style="color:#dc2626;font-size:12px;">Không tìm thấy dữ liệu cho chu kỳ B (${_fujiCycleLabel(cycB)}).</div>`; return; }
+
+    // Tính KPI tổng hợp
+    const kpiOf=d=>{
+      const agg=d.agg||[];
+      const total=agg.reduce((s,r)=>s+r.total,0);
+      const color=agg.reduce((s,r)=>s+r.color,0);
+      const bw=agg.reduce((s,r)=>s+r.bw,0);
+      const users=new Set(agg.map(r=>r.user).filter(u=>u&&u!=='(n/a)')).size;
+      const pct=total?Math.round(color*100/total):0;
+      return{total,color,bw,users,pct};
+    };
+    const kA=kpiOf(dA), kB=kpiOf(dB);
+    const diff=(a,b)=>{
+      if(!b) return '';
+      const d=a-b, pct=Math.round(d*100/b);
+      const arrow=d>0?'↑':'↓', col=d>0?'#16a34a':'#dc2626';
+      return`<span style="color:${col};font-size:11px;margin-left:4px;">${arrow}${Math.abs(pct)}%</span>`;
+    };
+
+    // Dept so sánh
+    const deptOf=d=>{const m={}; (d.agg||[]).forEach(r=>{const k=r.dept||'(Chưa xác định)'; if(!m[k]) m[k]={dept:k,total:0,color:0,bw:0}; m[k].total+=r.total; m[k].color+=r.color; m[k].bw+=r.bw;}); return Object.values(m).sort((a,b)=>b.total-a.total);};
+    const dA2=deptOf(dA), dB2=deptOf(dB);
+    const dBmap={}; dB2.forEach(d=>dBmap[d.dept]=d);
+    const deptRows=dA2.map(d=>{
+      const b=dBmap[d.dept]||{total:0};
+      return`<tr><td><strong>${d.dept}</strong></td><td style="text-align:right">${d.total.toLocaleString('vi-VN')}</td><td style="text-align:right">${b.total.toLocaleString('vi-VN')}</td><td style="text-align:right">${diff(d.total,b.total)||'—'}</td></tr>`;
+    }).join('');
+
+    // Machine so sánh
+    const machRows=((dA.machines||[]).map((m,i)=>{
+      const bm=(dB.machines||[]).find(x=>x.model===m.model&&x.serial===m.serial)||{total:0};
+      const modelStr=m.model+(m.serial?' / '+m.serial:'');
+      return`<tr><td><strong>${modelStr}</strong></td><td style="text-align:right">${m.total.toLocaleString('vi-VN')}</td><td style="text-align:right">${bm.total.toLocaleString('vi-VN')}</td><td style="text-align:right">${diff(m.total,bm.total)||'—'}</td></tr>`;
+    })).join('');
+
+    const lA=_fujiCycleLabel(cycA), lB=_fujiCycleLabel(cycB);
+    res.style.display='';
+    res.innerHTML=`
+      <div style="overflow-x:auto;">
+      <!-- KPI so sánh -->
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--muted);">📊 Tổng quan</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px;">
+        <thead><tr style="background:var(--surface2);">
+          <th style="padding:7px 10px;text-align:left;border-bottom:2px solid var(--border);">Chỉ số</th>
+          <th style="padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);">${lA}</th>
+          <th style="padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);">${lB}</th>
+          <th style="padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);">Chênh lệch</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:6px 10px;">Tổng trang in</td><td style="text-align:right;padding:6px 10px;"><strong>${kA.total.toLocaleString('vi-VN')}</strong></td><td style="text-align:right;padding:6px 10px;"><strong>${kB.total.toLocaleString('vi-VN')}</strong></td><td style="text-align:right;padding:6px 10px;">${diff(kA.total,kB.total)}</td></tr>
+          <tr style="background:var(--surface2);"><td style="padding:6px 10px;">Trắng đen</td><td style="text-align:right;padding:6px 10px;">${kA.bw.toLocaleString('vi-VN')}</td><td style="text-align:right;padding:6px 10px;">${kB.bw.toLocaleString('vi-VN')}</td><td style="text-align:right;padding:6px 10px;">${diff(kA.bw,kB.bw)}</td></tr>
+          <tr><td style="padding:6px 10px;">In màu</td><td style="text-align:right;padding:6px 10px;">${kA.color.toLocaleString('vi-VN')}</td><td style="text-align:right;padding:6px 10px;">${kB.color.toLocaleString('vi-VN')}</td><td style="text-align:right;padding:6px 10px;">${diff(kA.color,kB.color)}</td></tr>
+          <tr style="background:var(--surface2);"><td style="padding:6px 10px;">% Màu</td><td style="text-align:right;padding:6px 10px;">${kA.pct}%</td><td style="text-align:right;padding:6px 10px;">${kB.pct}%</td><td style="text-align:right;padding:6px 10px;">${diff(kA.pct,kB.pct)}</td></tr>
+          <tr><td style="padding:6px 10px;">Số user</td><td style="text-align:right;padding:6px 10px;">${kA.users}</td><td style="text-align:right;padding:6px 10px;">${kB.users}</td><td style="text-align:right;padding:6px 10px;">${diff(kA.users,kB.users)}</td></tr>
+        </tbody>
+      </table>
+      <!-- Dept so sánh -->
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--muted);">🏢 Theo Phòng Ban (sắp xếp theo chu kỳ A)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px;">
+        <thead><tr style="background:var(--surface2);"><th style="padding:7px 10px;text-align:left;border-bottom:2px solid var(--border);">Phòng Ban</th><th style="padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);">${lA}</th><th style="padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);">${lB}</th><th style="padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);">Chênh lệch</th></tr></thead>
+        <tbody>${deptRows}</tbody>
+      </table>
+      <!-- Machine so sánh -->
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--muted);">🖨️ Theo Máy</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:var(--surface2);"><th style="padding:7px 10px;text-align:left;border-bottom:2px solid var(--border);">Máy</th><th style="padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);">${lA}</th><th style="padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);">${lB}</th><th style="padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);">Chênh lệch</th></tr></thead>
+        <tbody>${machRows}</tbody>
+      </table>
+      </div>`;
   };
 
   // Render danh sách chu kỳ đã lưu
@@ -15229,6 +15428,15 @@ function printQRLabel(){
       _restoredMachines=null; // import mới → dùng _raw thật, bỏ cache cũ
       // Ẩn banner cache (nếu đang hiện)
       const bnn=$('fuji-cache-banner'); if(bnn) bnn.style.display='none';
+      // Auto-detect chu kỳ và hiện cycle bar để user xác nhận / sửa
+      {
+        const cycleCounts={};
+        _raw.map(r=>r.dateRaw).filter(Boolean).forEach(d=>{
+          const c=_fujiCycleMonth(d); if(c) cycleCounts[c]=(cycleCounts[c]||0)+1;
+        });
+        const detected=Object.entries(cycleCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+        if(detected) _fujiShowCycleBar(detected);
+      }
       // Auto-save vào localStorage
       _fujiLocalSave();
       const fLabel=fileList.length>1?fileList.length+' file':'1 file';
@@ -15288,13 +15496,16 @@ function printQRLabel(){
     if(!_raw.length){ toast('⚠️ Chưa có dữ liệu để lưu.','warn'); return; }
     if(typeof msalGetToken !== 'function'){ toast('⚠️ Chưa đăng nhập SharePoint.','warn'); return; }
     const machines=_aggByMachine(_raw);
-    // Xác định chu kỳ Fuji: lấy chu kỳ xuất hiện nhiều nhất trong toàn bộ dữ liệu
-    const cycleCounts={};
-    _raw.map(r=>r.dateRaw).filter(Boolean).forEach(d=>{
-      const c=_fujiCycleMonth(d); if(c) cycleCounts[c]=(cycleCounts[c]||0)+1;
-    });
-    const thang=Object.entries(cycleCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
-    if(!thang){ toast('⚠️ Không xác định được chu kỳ từ dữ liệu.','warn'); return; }
+    // Dùng chu kỳ user đã chọn (hoặc auto-detect nếu chưa chọn)
+    let thang=_selectedCycle;
+    if(!thang){
+      const cycleCounts={};
+      _raw.map(r=>r.dateRaw).filter(Boolean).forEach(d=>{
+        const c=_fujiCycleMonth(d); if(c) cycleCounts[c]=(cycleCounts[c]||0)+1;
+      });
+      thang=Object.entries(cycleCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+    }
+    if(!thang){ toast('⚠️ Không xác định được chu kỳ. Vui lòng chọn thủ công.','warn'); return; }
 
     try{
       const token=await msalGetToken();
@@ -15430,6 +15641,8 @@ function printQRLabel(){
         card.addEventListener('click',()=>window._fujiSpLoadReport(item.Thang));
         list.appendChild(card);
       });
+      // Cập nhật dropdowns sau khi biết SP cycles
+      _fujiPopulateCmpDropdowns();
     }catch(e){
       list.innerHTML=`<div style="color:#dc2626;font-size:12px;">Lỗi: ${e?.message||e}</div>`;
     }
@@ -15543,7 +15756,7 @@ function printQRLabel(){
     if(v==='dept')    _renderDeptTable();
     if(v==='compare') _renderCompare();
     if(v==='machine') _renderMachineTable();
-    if(v==='history'){ _fujiRenderLocalCycles(); _fujiSpListCycles(); _fujiSpLoad(); }
+    if(v==='history'){ _fujiRenderLocalCycles(); _fujiSpListCycles(); _fujiSpLoad(); _fujiPopulateCmpDropdowns(); }
   };
 
   // ── Phòng ban aggregation ─────────────────────────────────────────
@@ -15802,8 +16015,9 @@ function printQRLabel(){
     on('fuji-btn-reset','click',()=>{
       // Xóa toàn bộ dữ liệu, trả về trạng thái ban đầu
       _raw=[]; _agg=[]; _filtered=[]; _map=[]; _docStats=[]; _unknownCnt=0; _scannerCnt=0;
-      _restoredMachines=null;
+      _restoredMachines=null; _selectedCycle='';
       const bnn=$('fuji-cache-banner'); if(bnn) bnn.style.display='none';
+      const cb2=$('fuji-cycle-bar'); if(cb2) cb2.style.display='none';
       // Reset file inputs
       const fr=$('fuji-file-raw'); if(fr) fr.value='';
       const fm=$('fuji-file-map'); if(fm) fm.value='';
