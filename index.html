@@ -4939,7 +4939,8 @@ async function msalSpLoad(){
     if(dnttBtn) dnttBtn.style.display = can('sync') ? 'inline-flex' : 'none';
     await msalSpLoadDNTT();
     // Load employee directory nền (localStorage cache → HubIT/Employees)
-    _loadEmployees();
+    // force=true nếu cache rỗng hoặc không hợp lệ
+    _loadEmployees(!window._qltsEmployees.length);
   }catch(e){
     console.error('[MSAL] load error:', e);
     msalSetBar('⚠️ Lỗi tải SP: ' + e.message,'s-err');
@@ -6165,8 +6166,9 @@ async function _loadEmployees(force=false){
   if(typeof msalGetToken!=='function'){ return; }
   const token=await msalGetToken();
   if(!token) return;
+  const _EMP_URL='https://ttgvncom.sharepoint.com/sites/HubIT/_api/web/lists/getbytitle(\'Employees\')/items?$top=500';
   try{
-    let items=[], url=`${SP_EMP_SITE}/_api/web/lists/getbytitle('${SP_EMP_LIST}')/items?$top=500`;
+    let items=[], url=_EMP_URL;
     while(url){
       const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
       if(!res.ok) throw new Error('SP HTTP '+res.status);
@@ -6214,24 +6216,12 @@ async function _loadEmployees(force=false){
   }catch(e){ console.warn('[EMP] Load error:', e.message); }
 }
 
-// Gọi sau khi _qltsEmployees được nạp: refresh dept dropdowns + Fuji map
+// Gọi sau khi _qltsEmployees được nạp: refresh dept dropdowns
 function _onEmployeesLoaded(){
-  // Cập nhật dropdown phòng ban
+  // Cập nhật dropdown phòng ban với dữ liệu thực từ HubIT
   populateDeptSelects();
-  // Đồng bộ vào Fuji _map nếu Fuji đã init
-  try{
-    if(typeof _fujiParseMapText==='function' && typeof _fujiMapSave==='function'){
-      // Tạo CSV từ employees, parse lại thành _map format
-      const csv='user,ten nhan vien,phong ban\n'+
-        window._qltsEmployees.map(e=>`${e.user},${e.name},${e.dept}`).join('\n');
-      // Chỉ update _map nếu Fuji chưa có dữ liệu in
-      if(typeof _map!=='undefined' && !_map.length){
-        _map=window._qltsEmployees.map(e=>({user:e.user,name:e.name,dept:e.dept}));
-        _fujiMapSave(csv);
-        if(typeof _fujiMapUpdateUI==='function') _fujiMapUpdateUI();
-      }
-    }
-  }catch(e){}
+  // Fuji sẽ tự sync _map từ _qltsEmployees qua _initListeners() / _fujiSyncFromAD()
+  // Không cần access _map trực tiếp (nó nằm trong IIFE)
 }
 
 // ─── Autocomplete helper: gắn vào input, gợi ý từ _qltsEmployees ─────────────
