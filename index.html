@@ -2999,7 +2999,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div class="table-wrap" style="max-height:calc(100vh - 320px);">
         <table>
           <thead><tr>
-            <th>Tháng</th><th>Model</th><th>Serial</th>
+            <th>Chu Kỳ</th><th>Model</th><th>Serial</th>
             <th style="text-align:right">Số user</th>
             <th style="text-align:right">Trắng đen</th>
             <th style="text-align:right">In màu</th>
@@ -3010,6 +3010,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <tbody id="fuji-history-tbody">
             <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted);">Nhấn "Làm mới" để tải lịch sử từ SharePoint.</td></tr>
           </tbody>
+
         </table>
       </div>
       <div style="font-size:11px;color:var(--muted);padding:6px 4px 0" id="fuji-history-count"></div>
@@ -15125,17 +15126,41 @@ function printQRLabel(){
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
+  // ── Fuji cycle helpers ───────────────────────────────────────────
+  // Trả về "YYYY-MM" là tháng bắt đầu chu kỳ Fuji của 1 ngày (dd/mm/yyyy)
+  // Chu kỳ: ngày 11 tháng N → ngày 10 tháng N+1. Ngày 1-10 thuộc chu kỳ tháng N-1.
+  function _fujiCycleMonth(dateStr){
+    const parts=(dateStr||'').split('/');
+    if(parts.length!==3) return null;
+    let dd=parseInt(parts[0],10), mm=parseInt(parts[1],10), yyyy=parseInt(parts[2],10);
+    if(isNaN(dd)||isNaN(mm)||isNaN(yyyy)) return null;
+    if(dd<=10){ // thuộc chu kỳ tháng trước
+      mm--; if(mm<1){mm=12;yyyy--;}
+    }
+    return yyyy+'-'+String(mm).padStart(2,'0');
+  }
+  // Convert "YYYY-MM" → "11/MM – 10/MM+1/YYYY" để hiển thị
+  function _fujiCycleLabel(thang){
+    if(!thang) return thang;
+    const [ys,ms]=thang.split('-');
+    const y=parseInt(ys,10), m=parseInt(ms,10);
+    if(isNaN(y)||isNaN(m)) return thang;
+    const m2=m===12?1:m+1, y2=m===12?y+1:y;
+    return '11/'+String(m).padStart(2,'0')+' – 10/'+String(m2).padStart(2,'0')+'/'+y2;
+  }
+
   // ── SharePoint: Lưu & Load báo cáo máy ──────────────────────────
   window._fujiSpSave = async function _fujiSpSave(){
     if(!_raw.length){ toast('⚠️ Chưa có dữ liệu để lưu.','warn'); return; }
     if(typeof msalGetToken !== 'function'){ toast('⚠️ Chưa đăng nhập SharePoint.','warn'); return; }
     const machines=_aggByMachine(_raw);
-    const months=[...new Set(_raw.map(r=>r.dateRaw).filter(Boolean).map(d=>{
-      const dt=new Date(d.split('/').reverse().join('-')||d);
-      return isNaN(dt)?'':dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
-    }).filter(Boolean))].sort();
-    const thang=months.length?months[months.length-1]:'';
-    if(!thang){ toast('⚠️ Không xác định được tháng từ dữ liệu.','warn'); return; }
+    // Xác định chu kỳ Fuji: lấy chu kỳ xuất hiện nhiều nhất trong toàn bộ dữ liệu
+    const cycleCounts={};
+    _raw.map(r=>r.dateRaw).filter(Boolean).forEach(d=>{
+      const c=_fujiCycleMonth(d); if(c) cycleCounts[c]=(cycleCounts[c]||0)+1;
+    });
+    const thang=Object.entries(cycleCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+    if(!thang){ toast('⚠️ Không xác định được chu kỳ từ dữ liệu.','warn'); return; }
 
     try{
       const token=await msalGetToken();
@@ -15166,7 +15191,7 @@ function printQRLabel(){
         await fetch(base,{method:'POST',headers,body:JSON.stringify(body)});
         saved++;
       }
-      toast(`✅ Đã lưu báo cáo tháng ${thang} — ${saved} máy lên SharePoint.`,'ok');
+      toast(`✅ Đã lưu chu kỳ ${_fujiCycleLabel(thang)} — ${saved} máy lên SharePoint.`,'ok');
       // Reload lịch sử nếu đang xem
       if(_curView==='history') _fujiSpLoad();
     }catch(e){
@@ -15198,7 +15223,7 @@ function printQRLabel(){
         const pct=r.PhanTramMau||0;
         const bar=`<div style="display:inline-block;width:${Math.min(pct,60)}px;height:6px;background:#F59E0B;border-radius:3px;vertical-align:middle;margin-left:4px;"></div>`;
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td><strong>${r.Thang||''}</strong></td>
+        tr.innerHTML=`<td><strong>${_fujiCycleLabel(r.Thang)||r.Thang||''}</strong></td>
           <td>${r.Model||'—'}</td>
           <td style="color:var(--muted);font-size:12px">${r.Serial||'—'}</td>
           <td style="text-align:right">${(r.SoUser||0)}</td>
@@ -15212,7 +15237,7 @@ function printQRLabel(){
       tbody.appendChild(frag);
       const months=[...new Set(items.map(r=>r.Thang).filter(Boolean))];
       const lbl=$('fuji-history-count');
-      if(lbl) lbl.textContent=months.length+' tháng · '+items.length+' bản ghi';
+      if(lbl) lbl.textContent=months.length+' chu kỳ · '+items.length+' bản ghi';
     }catch(e){
       tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:#dc2626;">Lỗi tải dữ liệu: ${e?.message||e}</td></tr>`;
     }
