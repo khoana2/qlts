@@ -4935,9 +4935,8 @@ async function msalSpLoad(){
     const dnttBtn = document.getElementById('dntt-sp-sync-btn');
     if(dnttBtn) dnttBtn.style.display = can('sync') ? 'inline-flex' : 'none';
     await msalSpLoadDNTT();
-    // Load employee directory nền (localStorage cache → HubIT/Employees)
-    // force=true nếu cache rỗng hoặc không hợp lệ
-    _loadEmployees(!window._qltsEmployees.length);
+    // Load employee directory nền — force=true để clear cache cũ (áp dụng filter TTG)
+    _loadEmployees(true);
   }catch(e){
     console.error('[MSAL] load error:', e);
     msalSetBar('⚠️ Lỗi tải SP: ' + e.message,'s-err');
@@ -6193,11 +6192,13 @@ async function _loadEmployees(force=false){
     if(!colUser&&!colName) return;
     const seen=new Set();
     window._qltsEmployees=items.map(item=>{
-      let rawUser=colUser?String(item[colUser]||'').trim():'';
+      const rawEmail=colUser?String(item[colUser]||'').trim():'';
+      // Chỉ lấy nhân viên TTG (email @ttgvn.com)
+      if(colUser && rawEmail && !rawEmail.toLowerCase().includes('@ttgvn.com') && rawEmail.includes('@')) return null;
+      let rawUser=rawEmail;
       if(rawUser.includes('\\')) rawUser=rawUser.split('\\').pop();
       if(rawUser.includes('@')) rawUser=rawUser.split('@')[0];
       rawUser=rawUser.toLowerCase().trim();
-      // Nếu không có user, dùng tên làm key dự phòng
       const key=rawUser||(colName?String(item[colName]||'').toLowerCase().trim():'');
       if(!key||seen.has(key)) return null;
       seen.add(key);
@@ -6209,7 +6210,7 @@ async function _loadEmployees(force=false){
     }).filter(Boolean);
     try{ localStorage.setItem(LS_EMP, JSON.stringify(window._qltsEmployees)); }catch(e){}
     _onEmployeesLoaded();
-    console.log(`[EMP] Loaded ${window._qltsEmployees.length} employees from HubIT`);
+    console.log(`[EMP] Loaded ${window._qltsEmployees.length} TTG employees from HubIT`);
   }catch(e){ console.warn('[EMP] Load error:', e.message); }
 }
 
@@ -6254,13 +6255,28 @@ function _empAutocomplete(inputEl, opts={}){
 
   function select(emp){
     inputEl.value=emp.name;
-    if(opts.emailField){ const el=document.getElementById(opts.emailField); if(el) el.value=emp.user?emp.user+'@ttgvn.com':''; }
+    if(opts.emailField){
+      const el=document.getElementById(opts.emailField);
+      if(el) el.value=emp.user?emp.user+'@ttgvn.com':'';
+    }
     if(opts.deptField){
       const el=document.getElementById(opts.deptField);
       if(el){
-        // select: tìm option khớp hoặc set value trực tiếp
-        const opt=[...el.options].find(o=>o.value===emp.dept||o.text===emp.dept);
-        el.value=opt?opt.value:emp.dept;
+        if(el.tagName==='SELECT'){
+          // Tìm option khớp (so sánh không phân biệt dấu/hoa thường)
+          const deptLow=emp.dept.toLowerCase().trim();
+          const opt=[...el.options].find(o=>o.text.toLowerCase().trim()===deptLow||o.value.toLowerCase().trim()===deptLow);
+          if(opt) el.value=opt.value;
+          else {
+            // Thêm option mới nếu chưa có
+            const newOpt=document.createElement('option');
+            newOpt.value=emp.dept; newOpt.textContent=emp.dept;
+            el.appendChild(newOpt);
+            el.value=emp.dept;
+          }
+        } else {
+          el.value=emp.dept;
+        }
       }
     }
     close();
@@ -6308,14 +6324,12 @@ function _empAutocomplete(inputEl, opts={}){
 // ═════════════════════════════════════════════════════════════════════
 
 function populateDeptSelects(){
-  // Ưu tiên: phòng ban từ _qltsEmployees (live từ HubIT); fallback DEPTS hardcode
-  const empDepts=window._qltsEmployees&&window._qltsEmployees.length
-    ? window._qltsEmployees.map(e=>e.dept).filter(Boolean)
-    : [];
+  // Dept list cho filter bar + form: dùng DEPTS hardcode + depts thực tế từ assets
+  // (KHÔNG dùng employee list vì có thể có hàng trăm giá trị khác nhau)
   const baseDepts = (_userCompanyGroup && COMPANY_DEPTS_MAP[_userCompanyGroup])
     ? COMPANY_DEPTS_MAP[_userCompanyGroup]
-    : (empDepts.length ? [] : DEPTS); // nếu có emp data thì không dùng DEPTS hardcode
-  const allDepts = [...new Set([...baseDepts, ...empDepts, ...assets.map(a=>a.boPhan).filter(Boolean)])].sort();
+    : DEPTS;
+  const allDepts = [...new Set([...baseDepts, ...assets.map(a=>a.boPhan).filter(Boolean)])].sort();
   const opts = '<option value="">-- Chọn phòng ban --</option>' + allDepts.map(d=>`<option>${esc(d)}</option>`).join('');
 
   document.getElementById('f-dept').innerHTML = '<option value="">🏢 Phòng ban</option>' + allDepts.map(d=>`<option>${esc(d)}</option>`).join('');
@@ -6324,6 +6338,11 @@ function populateDeptSelects(){
   if(trDept) trDept.innerHTML = opts;
 
   populateCompanySelects();
+}
+// Hàm tiện ích: lấy dept list từ employee (dùng khi cần suggest dept trong autocomplete)
+function _getEmpDepts(){
+  if(!window._qltsEmployees||!window._qltsEmployees.length) return [];
+  return [...new Set(window._qltsEmployees.map(e=>e.dept).filter(Boolean))].sort();
 }
 
 // ─── Helper: lấy danh sách phòng ban theo tên công ty ────────────────────────
