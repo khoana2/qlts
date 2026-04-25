@@ -2851,8 +2851,11 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <label class="btn success btn-icon-ph" for="fuji-file-raw" style="cursor:pointer;"><i class="ph ph-upload-simple"></i> Tải CSV Fuji</label>
         <input id="fuji-file-raw" type="file" accept=".csv,.txt" multiple style="display:none"/>
-        <label class="btn btn-icon-ph" id="fuji-map-status" for="fuji-file-map" style="cursor:pointer;" title="File mapping: user, ten nhan vien, phong ban"><i class="ph ph-users"></i> Mapping User</label>
+        <label class="btn btn-icon-ph" id="fuji-map-status" for="fuji-file-map" style="cursor:pointer;" title="Upload file mapping CSV"><i class="ph ph-users"></i> Mapping User</label>
         <input id="fuji-file-map" type="file" accept=".csv,.txt" style="display:none"/>
+        <button class="btn btn-icon-ph" id="fuji-btn-sync-ad" onclick="_fujiSyncFromAD()" title="Đồng bộ danh sách nhân viên từ Azure AD">
+          <i class="ph ph-arrows-clockwise"></i> Đồng bộ AD
+        </button>
         <button class="btn btn-icon-ph" id="fuji-btn-reset"><i class="ph ph-funnel-x"></i> Reset</button>
         <button class="btn btn-icon-ph" id="fuji-btn-export" disabled><i class="ph ph-download-simple"></i> Xuất CSV</button>
         <button class="btn btn-icon-ph" id="fuji-btn-docmax" disabled><i class="ph ph-file-text"></i> DocMax</button>
@@ -4538,6 +4541,25 @@ async function msalInit(){
     console.error('[MSAL] init error:', e);
     msalSetBar('⚠️ MSAL lỗi: ' + e.message,'s-err');
     return false;
+  }
+}
+
+async function msalGetGraphToken(){
+  if(!_msalApp || !_msalAccount) return null;
+  try{
+    const res = await _msalApp.acquireTokenSilent({
+      scopes: ['User.ReadBasic.All','User.Read'],
+      account: _msalAccount,
+    });
+    return res.accessToken;
+  }catch(e){
+    try{
+      const res = await _msalApp.acquireTokenPopup({
+        scopes: ['User.ReadBasic.All','User.Read'],
+        account: _msalAccount,
+      });
+      return res.accessToken;
+    }catch(e2){ return null; }
   }
 }
 
@@ -14925,6 +14947,51 @@ function printQRLabel(){
     toast('🗑️ Đã xóa mapping.','ok');
   };
 
+  // ── Đồng bộ nhân viên từ Azure AD (Graph API) ─────────────────────
+  window._fujiSyncFromAD=async function(){
+    const btn=$('fuji-btn-sync-ad');
+    if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner" style="animation:spin 1s linear infinite;display:inline-block;"></i> Đang tải...'; }
+    try{
+      const token=await msalGetGraphToken();
+      if(!token){ toast('⚠️ Không lấy được token Graph API. Thử đăng nhập lại.','warn'); return; }
+
+      // Fetch tất cả users — dùng paging nếu >999 người
+      let users=[], url='https://graph.microsoft.com/v1.0/users?$select=displayName,department,userPrincipalName,accountEnabled&$top=999&$filter=accountEnabled eq true';
+      while(url){
+        const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}});
+        if(!res.ok) throw new Error('Graph API HTTP '+res.status);
+        const json=await res.json();
+        users=users.concat(json.value||[]);
+        url=json['@odata.nextLink']||null; // paging
+      }
+
+      // Lọc bỏ service accounts (không có @), build _map
+      const domain=/@(.+)$/.exec(_msalAccount?.username||'')?.[1]||'';
+      _map=users
+        .filter(u=>u.userPrincipalName && !u.userPrincipalName.startsWith('#EXT#'))
+        .map(u=>{
+          const username=u.userPrincipalName.split('@')[0].toLowerCase();
+          return{ user:username, name:u.displayName||'', dept:u.department||'' };
+        })
+        .filter(u=>u.user);
+
+      // Lưu local + SP (convert sang CSV text để tương thích)
+      const csv='user,ten nhan vien,phong ban\n'+_map.map(u=>`${u.user},${u.name},${u.dept}`).join('\n');
+      _fujiMapSave(csv);
+      _fujiMapUpdateUI();
+      _fujiMapSpSave(csv); // async, không block
+
+      // Re-aggregate nếu đang có data
+      if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
+      toast(`✅ Đã đồng bộ ${_map.length} nhân viên từ Azure AD.`,'ok');
+    }catch(e){
+      console.error('AD sync error:',e);
+      toast('❌ Lỗi đồng bộ AD: '+(e?.message||e),'warn');
+    }finally{
+      if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-arrows-clockwise"></i> Đồng bộ AD'; }
+    }
+  };
+
   // ── SP: Lưu mapping lên SharePoint ────────────────────────────────
   async function _fujiMapSpSave(rawCsv){
     if(typeof msalGetToken!=='function') return;
@@ -16596,13 +16663,16 @@ function printQRLabel(){
       _map=_fujiParseMapText(cachedMap);
       _fujiMapUpdateUI();
     } else {
-      // Thử load từ SharePoint (async, không block)
-      _fujiMapSpLoad().then(spCsv=>{
+      // Thử load từ SharePoint trước, nếu không có thì tự sync AD
+      _fujiMapSpLoad().then(async spCsv=>{
         if(spCsv && !_map.length){
           _map=_fujiParseMapText(spCsv);
-          _fujiMapSave(spCsv); // cache lại local để lần sau nhanh hơn
+          _fujiMapSave(spCsv);
           _fujiMapUpdateUI();
           if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
+        } else if(!_map.length){
+          // Không có cả local lẫn SP → tự đồng bộ AD ngay
+          await window._fujiSyncFromAD();
         }
       });
       _fujiMapUpdateUI();
