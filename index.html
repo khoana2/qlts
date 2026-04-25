@@ -2885,7 +2885,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     <div id="fuji-unknown-warn" style="display:none;font-size:12px;color:#D97706;margin-bottom:8px;"></div>
 
     <!-- Chu kỳ hiện tại + picker -->
-    <div id="fuji-cycle-bar" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div id="fuji-cycle-bar" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-size:12px;color:var(--muted);white-space:nowrap;"><i class="ph ph-calendar-blank"></i> Chu kỳ:</span>
       <strong id="fuji-cycle-label" style="font-size:13px;color:var(--primary);"></strong>
       <button id="fuji-cycle-edit-btn" onclick="_fujiToggleCyclePicker()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--muted);"><i class="ph ph-pencil"></i> Sửa</button>
@@ -3015,7 +3015,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     </div>
 
     <!-- So sánh 2 chu kỳ -->
-    <div id="fuji-compare-cycles-wrap" style="margin-bottom:18px;">
+    <div id="fuji-compare-cycles-wrap" style="display:none;margin-bottom:18px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
         <i class="ph ph-arrows-left-right"></i> So sánh chu kỳ
       </div>
@@ -15156,13 +15156,14 @@ function printQRLabel(){
     });
     // Table wraps: chỉ hiện cái đang active
     if(visible){
-      $('fuji-table-wrap').style.display   = _curView==='user'    ? '' : 'none';
-      $('fuji-dept-wrap').style.display    = _curView==='dept'    ? '' : 'none';
-      $('fuji-compare-wrap').style.display = _curView==='compare' ? '' : 'none';
-      $('fuji-machine-wrap').style.display = _curView==='machine' ? '' : 'none';
-      $('fuji-history-wrap').style.display = _curView==='history' ? '' : 'none';
+      $('fuji-table-wrap').style.display          = _curView==='user'    ? '' : 'none';
+      $('fuji-dept-wrap').style.display           = _curView==='dept'    ? '' : 'none';
+      $('fuji-compare-wrap').style.display        = _curView==='compare' ? '' : 'none';
+      $('fuji-machine-wrap').style.display        = _curView==='machine' ? '' : 'none';
+      $('fuji-history-wrap').style.display        = _curView==='history' ? '' : 'none';
+      $('fuji-compare-cycles-wrap').style.display = _curView==='history' ? '' : 'none';
     } else {
-      ['fuji-table-wrap','fuji-dept-wrap','fuji-compare-wrap','fuji-machine-wrap','fuji-history-wrap'].forEach(id=>{
+      ['fuji-table-wrap','fuji-dept-wrap','fuji-compare-wrap','fuji-machine-wrap','fuji-history-wrap','fuji-compare-cycles-wrap'].forEach(id=>{
         const el=$(id); if(el) el.style.display='none';
       });
     }
@@ -15746,15 +15747,16 @@ function printQRLabel(){
     ['user','dept','compare','machine','history'].forEach(k=>{
       const btn=$('fuji-vtab-'+k); if(btn) btn.classList.toggle('active',k===v);
     });
-    $('fuji-table-wrap').style.display   = v==='user'    ? '' : 'none';
-    $('fuji-dept-wrap').style.display    = v==='dept'    ? '' : 'none';
-    $('fuji-compare-wrap').style.display = v==='compare' ? '' : 'none';
-    $('fuji-machine-wrap').style.display = v==='machine' ? '' : 'none';
-    $('fuji-history-wrap').style.display = v==='history' ? '' : 'none';
+    $('fuji-table-wrap').style.display          = v==='user'    ? '' : 'none';
+    $('fuji-dept-wrap').style.display           = v==='dept'    ? '' : 'none';
+    $('fuji-compare-wrap').style.display        = v==='compare' ? '' : 'none';
+    $('fuji-machine-wrap').style.display        = v==='machine' ? '' : 'none';
+    $('fuji-history-wrap').style.display        = v==='history' ? '' : 'none';
+    $('fuji-compare-cycles-wrap').style.display = v==='history' ? '' : 'none';
     if(v==='dept')    _renderDeptTable();
     if(v==='compare') _renderCompare();
     if(v==='machine') _renderMachineTable();
-    if(v==='history'){ _fujiRenderLocalCycles(); _fujiSpListCycles(); _fujiSpLoad(); _fujiPopulateCmpDropdowns(); }
+    if(v==='history'){ _fujiRenderLocalCycles(); _fujiPopulateCmpDropdowns(); _fujiSpListCycles(); _fujiSpLoad(); }
   };
 
   // ── Phòng ban aggregation ─────────────────────────────────────────
@@ -16005,6 +16007,9 @@ function printQRLabel(){
   // ── Init event listeners (once) ───────────────────────────────────
   function _initListeners(){
     if(_initialized) return; _initialized=true;
+
+    // Populate dropdown so sánh chu kỳ từ localStorage ngay khi load
+    _fujiPopulateCmpDropdowns();
 
     const on=(id,ev,fn)=>{ const el=$(id); if(el) el.addEventListener(ev,fn); };
 
