@@ -2062,7 +2062,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div class="global-search-wrap" id="global-search-wrap">
         <i class="ph ph-magnifying-glass global-search-icon"></i>
         <input type="text" id="global-search-input" class="global-search-input"
-          placeholder="Tìm kiếm… (Ctrl+K)"
+          placeholder="Tìm kiếm…"
           autocomplete="off"
           oninput="gsOnInput(this.value)"
           onfocus="gsOnFocus()"
@@ -2873,8 +2873,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <label class="btn success btn-icon-ph" for="fuji-file-raw" style="cursor:pointer;"><i class="ph ph-upload-simple"></i> Tải CSV Fuji</label>
         <input id="fuji-file-raw" type="file" accept=".csv,.txt" multiple style="display:none"/>
-        <label class="btn btn-icon-ph" id="fuji-map-status" for="fuji-file-map" style="cursor:pointer;" title="Upload file mapping CSV"><i class="ph ph-users"></i> Mapping User</label>
-        <input id="fuji-file-map" type="file" accept=".csv,.txt" style="display:none"/>
         <!-- Nút Đồng bộ NV đã chuyển lên topbar (btn-sync-emp) -->
         <button class="btn btn-icon-ph" id="fuji-btn-reset"><i class="ph ph-funnel-x"></i> Reset</button>
         <button class="btn btn-icon-ph" id="fuji-btn-export" disabled><i class="ph ph-download-simple"></i> Xuất CSV</button>
@@ -6228,6 +6226,8 @@ function _onEmployeesLoaded(){
   // Cập nhật label nút trên topbar
   const lbl=document.getElementById('btn-sync-emp-label');
   if(lbl) lbl.textContent=`${window._qltsEmployees.length} NV`;
+  // Cập nhật UI Fuji mapping (dùng số từ _qltsEmployees)
+  try{ if(typeof window._fujiRefreshMap==='function') window._fujiRefreshMap(); }catch(e){}
 }
 
 // Hàm sync nhân viên từ topbar (force refresh)
@@ -6240,14 +6240,8 @@ async function _syncEmployees(){
     try{ localStorage.removeItem(LS_EMP); }catch(e){}
     window._qltsEmployees=[];
     await _loadEmployees(true);
-    // Cập nhật Fuji map nếu đang dùng
-    if(window._fujiSyncFromAD && window._qltsEmployees.length){
-      const csv='user,ten nhan vien,phong ban\n'+window._qltsEmployees.map(e=>`${e.user},${e.name},${e.dept}`).join('\n');
-      try{
-        const LS_MAP='fuji_map_cache';
-        localStorage.setItem(LS_MAP,csv);
-      }catch(e){}
-    }
+    // Cập nhật Fuji _map nếu module đang dùng
+    try{ if(typeof window._fujiRefreshMap==='function') window._fujiRefreshMap(); }catch(e){}
     toast(`✅ Đã đồng bộ ${window._qltsEmployees.length} nhân viên TTG`,'ok');
   }catch(e){
     toast('❌ Lỗi đồng bộ NV: '+(e?.message||e),'warn');
@@ -15143,18 +15137,7 @@ function printQRLabel(){
 
   // ── localStorage helpers ──────────────────────────────────────────
   const LS_IDX='fuji_cycles';
-  const LS_MAP='fuji_map_cache'; // lưu raw CSV mapping
   function _fujiLsKey(c){ return 'fuji_cycle_'+c; }
-
-  function _fujiMapSave(rawCsv){
-    try{ localStorage.setItem(LS_MAP, rawCsv); }catch(e){}
-  }
-  function _fujiMapLoad(){
-    try{ return localStorage.getItem(LS_MAP)||''; }catch(e){ return ''; }
-  }
-  function _fujiMapClear(){
-    try{ localStorage.removeItem(LS_MAP); }catch(e){}
-  }
   function _fujiParseMapText(text){
     if(!text) return [];
     const m2=_mergeLines(text); const d2=_detectDelim(m2);
@@ -15177,29 +15160,15 @@ function printQRLabel(){
       return{ user:rawUser.toLowerCase().trim(), name:iname>=0?r[iname]||'':'', dept:idept>=0?r[idept]||'':'' };
     }).filter(r=>r.user);
   }
-  function _fujiMapUpdateUI(){
-    const btn=$('fuji-map-status');
-    if(!btn) return;
-    if(_map.length){
-      btn.innerHTML=`<i class="ph ph-check-circle" style="color:#16a34a;"></i> Mapping (${_map.length} user) <span onclick="event.preventDefault();_fujiMapClearAndReset()" title="Xóa mapping đã lưu" style="margin-left:6px;color:#ef4444;cursor:pointer;font-size:11px;line-height:1;">✕</span>`;
-      btn.style.color='#16a34a';
-    } else {
-      btn.innerHTML=`<i class="ph ph-users"></i> Mapping User`;
-      btn.style.color='';
+  // _fujiRefreshMap: gọi khi _qltsEmployees được load xong (từ _onEmployeesLoaded)
+  window._fujiRefreshMap=function(){
+    if(window._qltsEmployees&&window._qltsEmployees.length){
+      _map=window._qltsEmployees.map(e=>({user:e.user,name:e.name,dept:e.dept}));
+      if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
     }
-  }
-  window._fujiMapClearAndReset=function(){
-    if(!confirm('Xóa mapping đã lưu (local + SharePoint)?')) return;
-    _fujiMapClear(); _map=[];
-    _fujiMapUpdateUI();
-    if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
-    toast('🗑️ Đã xóa mapping.','ok');
   };
 
   // ── Đồng bộ nhân viên (dùng chung _loadEmployees từ QLTS global) ──
-  const SP_EMP_SITE='https://ttgvncom.sharepoint.com/sites/HubIT';
-  const SP_EMP_LIST='Employees';
-
   window._fujiSyncFromAD=async function(){
     const btn=$('fuji-btn-sync-ad');
     if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner" style="animation:spin 1s linear infinite;display:inline-block;"></i> Đang tải...'; }
@@ -15212,9 +15181,6 @@ function printQRLabel(){
       if(!window._qltsEmployees.length) throw new Error('Không đồng bộ được nhân viên nào. Kiểm tra quyền truy cập HubIT site.');
       // Cập nhật Fuji _map từ employee store
       _map=window._qltsEmployees.map(e=>({user:e.user,name:e.name,dept:e.dept}));
-      const csv='user,ten nhan vien,phong ban\n'+_map.map(u=>`${u.user},${u.name},${u.dept}`).join('\n');
-      _fujiMapSave(csv);
-      _fujiMapUpdateUI();
       if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
       toast(`✅ Đã đồng bộ ${_map.length} nhân viên.`,'ok');
     }catch(e){
@@ -15808,21 +15774,10 @@ function printQRLabel(){
       _raw=allRaw;
       if(!_raw.length){ toast('⚠️ Không có dữ liệu hợp lệ từ file Fuji.','warn'); return; }
       const dm=_computeDocStats(_raw); _docStats=dm.stats; _singleMax=dm.singleMax; _sumMax=dm.sumMax;
-      // Load mapping: ưu tiên file mới upload, fallback về cache
-      const mapFile=($('fuji-file-map')||{}).files?.[0];
-      if(mapFile){
-        const t2=await _readFile(mapFile);
-        _map=_fujiParseMapText(t2);
-        _fujiMapSave(t2); // lưu vào localStorage
-        toast(`✅ Đã lưu mapping ${_map.length} user vào bộ nhớ.`,'ok');
-      } else {
-        // Restore từ cache nếu chưa có _map
-        if(!_map.length){
-          const cached=_fujiMapLoad();
-          if(cached) _map=_fujiParseMapText(cached);
-        }
+      // Load mapping từ _qltsEmployees (global store), fallback về _map hiện tại
+      if(!_map.length && window._qltsEmployees && window._qltsEmployees.length){
+        _map=window._qltsEmployees.map(e=>({user:e.user,name:e.name,dept:e.dept}));
       }
-      _fujiMapUpdateUI();
       _agg=_aggregate(_raw,_map);
       _filtered=[];
       _populateFilters();
@@ -16853,22 +16808,12 @@ function printQRLabel(){
   function _initListeners(){
     if(_initialized) return; _initialized=true;
 
-    // Restore mapping: ưu tiên _qltsEmployees (global store) → localStorage → sync mới
+    // Restore mapping từ _qltsEmployees (global store) → sync mới nếu chưa có
     if(window._qltsEmployees && window._qltsEmployees.length){
       _map=window._qltsEmployees.map(e=>({user:e.user,name:e.name,dept:e.dept}));
-      _fujiMapUpdateUI();
     } else {
-      const cachedMap=_fujiMapLoad();
-      if(cachedMap){
-        _map=_fujiParseMapText(cachedMap);
-        _fujiMapUpdateUI();
-        // Cập nhật global store nếu chưa có
-        if(!window._qltsEmployees.length) window._qltsEmployees=_map.map(m=>({...m}));
-      } else {
-        // Không có gì → sync mới (sẽ populate cả _qltsEmployees lẫn _map)
-        window._fujiSyncFromAD();
-        _fujiMapUpdateUI();
-      }
+      // Không có gì → sync mới (sẽ populate cả _qltsEmployees lẫn _map)
+      window._fujiSyncFromAD();
     }
 
     // Populate dropdown so sánh chu kỳ từ localStorage ngay khi load
@@ -16879,15 +16824,6 @@ function printQRLabel(){
     const on=(id,ev,fn)=>{ const el=$(id); if(el) el.addEventListener(ev,fn); };
 
     on('fuji-file-raw','change',async e=>{ const fs=e.target.files; if(fs&&fs.length) await _importCSV(fs); });
-    on('fuji-file-map','change',async e=>{
-      const f=e.target.files?.[0]; if(!f) return;
-      const txt=await _readFile(f);
-      _map=_fujiParseMapText(txt);
-      _fujiMapSave(txt);          // lưu localStorage
-      _fujiMapUpdateUI();
-      toast(`✅ Đã lưu mapping ${_map.length} user vào bộ nhớ.`,'ok');
-      if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
-    });
     on('fuji-btn-reset','click',()=>{
       // Xóa toàn bộ dữ liệu, trả về trạng thái ban đầu
       _raw=[]; _agg=[]; _filtered=[]; _map=[]; _docStats=[]; _unknownCnt=0; _scannerCnt=0;
@@ -16896,7 +16832,6 @@ function printQRLabel(){
       const cb2=$('fuji-cycle-bar'); if(cb2) cb2.style.display='none';
       // Reset file inputs
       const fr=$('fuji-file-raw'); if(fr) fr.value='';
-      const fm=$('fuji-file-map'); if(fm) fm.value='';
       // Reset bộ lọc
       ['fuji-f-dept','fuji-f-user','fuji-f-month','fuji-f-type'].forEach(id=>{
         const el=$(id); if(el){ el.innerHTML='<option value="">-- Tất cả --</option>'; el.value=''; }
