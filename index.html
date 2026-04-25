@@ -602,6 +602,24 @@ input[type=checkbox].row-cb{
 }
 .spec-chip .sc-label{color:var(--muted);font-size:10px;}
 
+/* ══════════════════════ EMPLOYEE AUTOCOMPLETE ══════════════════ */
+.emp-ac-wrap{position:relative;display:block;}
+.emp-ac-drop{
+  position:absolute;top:100%;left:0;right:0;z-index:9999;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);
+  max-height:220px;overflow-y:auto;margin-top:3px;
+  display:none;
+}
+.emp-ac-drop.open{display:block;}
+.emp-ac-item{
+  padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;
+  border-bottom:1px solid var(--border);transition:background .12s;
+}
+.emp-ac-item:last-child{border-bottom:none;}
+.emp-ac-item:hover,.emp-ac-item.active{background:var(--hover);}
+.emp-ac-name{font-size:13px;font-weight:600;color:var(--text);}
+.emp-ac-sub{font-size:11px;color:var(--muted);}
 /* ═══════════════════════════ TOASTS ═══════════════════════════ */
 .toast-wrap{position:fixed;right:14px;bottom:14px;z-index:500;display:flex;flex-direction:column;gap:8px;}
 .toast{
@@ -4347,9 +4365,12 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 // ═══════════════════════ STATE ═══════════════════════
 const STORE_KEY = 'qlts_v14_data';
 const TRANSFER_KEY = 'qlts_v14_transfers';
+const LS_EMP = 'qlts_employees_v1'; // cache danh sách nhân viên từ HubIT
 let assets = [];
 let transfers = {};   // { assetId: [{from, fromDept, to, toDept, toEmail, date, condition, notes}] }
 let _xacNhanMap = {}; // { assetId: { nguoiNhan, thoiGianXacNhan, ghiChuNguoiNhan, trangThai } }
+// ─── Global employee directory (shared: QLTS + Fuji) ─────────────
+window._qltsEmployees = []; // [{user, name, dept}]
 let filtered = [];
 let sortCol = '';
 let sortDir = 1;
@@ -4917,6 +4938,8 @@ async function msalSpLoad(){
     const dnttBtn = document.getElementById('dntt-sp-sync-btn');
     if(dnttBtn) dnttBtn.style.display = can('sync') ? 'inline-flex' : 'none';
     await msalSpLoadDNTT();
+    // Load employee directory nền (localStorage cache → HubIT/Employees)
+    _loadEmployees();
   }catch(e){
     console.error('[MSAL] load error:', e);
     msalSetBar('⚠️ Lỗi tải SP: ' + e.message,'s-err');
@@ -6124,15 +6147,176 @@ async function spManualSync(){
 
 // ═══════════════════════ END SHAREPOINT ═══════════════════════
 
+// ═══════════════ EMPLOYEE DIRECTORY (shared QLTS + Fuji) ══════════════════
+// Load từ localStorage cache, rồi background-refresh từ HubIT/Employees
+async function _loadEmployees(force=false){
+  // 1. localStorage cache
+  if(!force){
+    try{
+      const cached=localStorage.getItem(LS_EMP);
+      if(cached){
+        window._qltsEmployees=JSON.parse(cached);
+        _onEmployeesLoaded();
+        return;
+      }
+    }catch(e){}
+  }
+  // 2. Fetch từ SharePoint HubIT/Employees (dùng token hiện có)
+  if(typeof msalGetToken!=='function'){ return; }
+  const token=await msalGetToken();
+  if(!token) return;
+  try{
+    let items=[], url=`${SP_EMP_SITE}/_api/web/lists/getbytitle('${SP_EMP_LIST}')/items?$top=500`;
+    while(url){
+      const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+      if(!res.ok) throw new Error('SP HTTP '+res.status);
+      const json=await res.json();
+      items=items.concat(json.d?.results||[]);
+      url=json.d?.__next||null;
+    }
+    if(!items.length) return;
+    // Column detection (same logic as Fuji sync)
+    const SYS_KEYS=new Set(['__metadata','FileSystemObjectType','ServerRedirectedEmbedUri','ServerRedirectedEmbedUrl','ContentTypeId','OData__ColorTag','ComplianceAssetId','AuthorId','EditorId','OData__UIVersionString','Attachments','GUID','Modified','Created','ID','Id']);
+    const sample=items[0];
+    const keys=Object.keys(sample).filter(k=>!SYS_KEYS.has(k)&&!k.startsWith('odata'));
+    const pickKey=(cands)=>cands.find(c=>keys.some(k=>k.toLowerCase()===c.toLowerCase()))||null;
+    let colUser=pickKey(['Email','Mail','WorkEmail','Work_x0020_Email','UserEmail','Username','UserName','LoginName','AccountName','UserPrincipalName','UserLogin','TaiKhoan','Account','UserAccount','SamAccountName']);
+    const colName=pickKey(['FullName','HoTen','Ho_x0020_va_x0020_Ten','TenNhanVien','HoVaTen','DisplayName','Name','NhanVien','Title']);
+    const colDept=pickKey(['Department','PhongBan','Bo_x0020_Phan','BoPhan','PhongBan0','Dept','Division','Team','BoPhận']);
+    // Fallback: scan giá trị tìm cột email/domain
+    if(!colUser){
+      const spl=items.slice(0,10);
+      colUser=keys.find(k=>{
+        if(k===colName||k===colDept) return false;
+        return spl.some(it=>{ const v=String(it[k]||''); return v.includes('@')||v.includes('\\'); });
+      })||null;
+    }
+    if(!colUser&&!colName) return;
+    const seen=new Set();
+    window._qltsEmployees=items.map(item=>{
+      let rawUser=colUser?String(item[colUser]||'').trim():'';
+      if(rawUser.includes('\\')) rawUser=rawUser.split('\\').pop();
+      if(rawUser.includes('@')) rawUser=rawUser.split('@')[0];
+      rawUser=rawUser.toLowerCase().trim();
+      // Nếu không có user, dùng tên làm key dự phòng
+      const key=rawUser||(colName?String(item[colName]||'').toLowerCase().trim():'');
+      if(!key||seen.has(key)) return null;
+      seen.add(key);
+      return{
+        user: rawUser,
+        name: colName?String(item[colName]||''):'',
+        dept: colDept?String(item[colDept]||''):''
+      };
+    }).filter(Boolean);
+    try{ localStorage.setItem(LS_EMP, JSON.stringify(window._qltsEmployees)); }catch(e){}
+    _onEmployeesLoaded();
+    console.log(`[EMP] Loaded ${window._qltsEmployees.length} employees from HubIT`);
+  }catch(e){ console.warn('[EMP] Load error:', e.message); }
+}
+
+// Gọi sau khi _qltsEmployees được nạp: refresh dept dropdowns + Fuji map
+function _onEmployeesLoaded(){
+  // Cập nhật dropdown phòng ban
+  populateDeptSelects();
+  // Đồng bộ vào Fuji _map nếu Fuji đã init
+  try{
+    if(typeof _fujiParseMapText==='function' && typeof _fujiMapSave==='function'){
+      // Tạo CSV từ employees, parse lại thành _map format
+      const csv='user,ten nhan vien,phong ban\n'+
+        window._qltsEmployees.map(e=>`${e.user},${e.name},${e.dept}`).join('\n');
+      // Chỉ update _map nếu Fuji chưa có dữ liệu in
+      if(typeof _map!=='undefined' && !_map.length){
+        _map=window._qltsEmployees.map(e=>({user:e.user,name:e.name,dept:e.dept}));
+        _fujiMapSave(csv);
+        if(typeof _fujiMapUpdateUI==='function') _fujiMapUpdateUI();
+      }
+    }
+  }catch(e){}
+}
+
+// ─── Autocomplete helper: gắn vào input, gợi ý từ _qltsEmployees ─────────────
+// opts: { nameField, emailField, deptField }
+function _empAutocomplete(inputEl, opts={}){
+  if(!inputEl) return;
+  // Bọc input trong wrapper nếu chưa có
+  let wrap=inputEl.parentElement;
+  if(!wrap.classList.contains('emp-ac-wrap')){
+    wrap=document.createElement('div');
+    wrap.className='emp-ac-wrap';
+    inputEl.parentNode.insertBefore(wrap, inputEl);
+    wrap.appendChild(inputEl);
+  }
+  // Tạo dropdown
+  const drop=document.createElement('div');
+  drop.className='emp-ac-drop';
+  wrap.appendChild(drop);
+
+  let activeIdx=-1;
+
+  function getEmpField(emp, fieldId){
+    const el=fieldId?document.getElementById(fieldId):null;
+    return el;
+  }
+
+  function close(){ drop.classList.remove('open'); activeIdx=-1; }
+
+  function select(emp){
+    inputEl.value=emp.name;
+    if(opts.emailField){ const el=document.getElementById(opts.emailField); if(el) el.value=emp.user?emp.user+'@ttgvn.com':''; }
+    if(opts.deptField){ const el=document.getElementById(opts.deptField); if(el) el.value=emp.dept; }
+    close();
+    inputEl.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+
+  function render(q){
+    const lq=q.toLowerCase().trim();
+    if(!lq){ close(); return; }
+    const matches=window._qltsEmployees
+      .filter(e=>e.name.toLowerCase().includes(lq)||e.user.includes(lq))
+      .slice(0,8);
+    if(!matches.length){ close(); return; }
+    drop.innerHTML=matches.map((e,i)=>`
+      <div class="emp-ac-item" data-i="${i}">
+        <span class="emp-ac-name">${esc(e.name)||e.user}</span>
+        <span class="emp-ac-sub">${esc(e.dept)}${e.user?' · '+e.user:''}</span>
+      </div>`).join('');
+    drop._matches=matches;
+    drop.classList.add('open');
+    activeIdx=-1;
+    drop.querySelectorAll('.emp-ac-item').forEach(item=>{
+      item.addEventListener('mousedown',ev=>{
+        ev.preventDefault();
+        select(matches[+item.dataset.i]);
+      });
+    });
+  }
+
+  inputEl.addEventListener('input', ()=>render(inputEl.value));
+  inputEl.addEventListener('focus', ()=>{ if(inputEl.value) render(inputEl.value); });
+  inputEl.addEventListener('blur', ()=>setTimeout(close, 150));
+  inputEl.addEventListener('keydown', e=>{
+    const items=drop.querySelectorAll('.emp-ac-item');
+    if(!items.length) return;
+    if(e.key==='ArrowDown'){ e.preventDefault(); activeIdx=Math.min(activeIdx+1,items.length-1); items.forEach((el,i)=>el.classList.toggle('active',i===activeIdx)); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); activeIdx=Math.max(activeIdx-1,0); items.forEach((el,i)=>el.classList.toggle('active',i===activeIdx)); }
+    else if(e.key==='Enter'&&activeIdx>=0){ e.preventDefault(); select(drop._matches[activeIdx]); }
+    else if(e.key==='Escape') close();
+  });
+}
+// ═════════════════════════════════════════════════════════════════════
+
 function populateDeptSelects(){
-  // Dùng danh sách phòng ban theo công ty nếu có, fallback về DEPTS chung
+  // Ưu tiên: phòng ban từ _qltsEmployees (live từ HubIT); fallback DEPTS hardcode
+  const empDepts=window._qltsEmployees&&window._qltsEmployees.length
+    ? window._qltsEmployees.map(e=>e.dept).filter(Boolean)
+    : [];
   const baseDepts = (_userCompanyGroup && COMPANY_DEPTS_MAP[_userCompanyGroup])
     ? COMPANY_DEPTS_MAP[_userCompanyGroup]
-    : DEPTS;
-  const allDepts = [...new Set([...baseDepts, ...assets.map(a=>a.boPhan).filter(Boolean)])].sort();
-  const opts = '<option value="">-- Chọn phòng ban --</option>' + allDepts.map(d=>`<option>${d}</option>`).join('');
+    : (empDepts.length ? [] : DEPTS); // nếu có emp data thì không dùng DEPTS hardcode
+  const allDepts = [...new Set([...baseDepts, ...empDepts, ...assets.map(a=>a.boPhan).filter(Boolean)])].sort();
+  const opts = '<option value="">-- Chọn phòng ban --</option>' + allDepts.map(d=>`<option>${esc(d)}</option>`).join('');
 
-  document.getElementById('f-dept').innerHTML = '<option value="">🏢 Phòng ban</option>' + allDepts.map(d=>`<option>${d}</option>`).join('');
+  document.getElementById('f-dept').innerHTML = '<option value="">🏢 Phòng ban</option>' + allDepts.map(d=>`<option>${esc(d)}</option>`).join('');
   document.getElementById('f-boPhan').innerHTML = opts;
   const trDept = document.getElementById('tr-new-dept');
   if(trDept) trDept.innerHTML = opts;
@@ -7171,6 +7355,20 @@ function initColVisibility(){
   });
 }
 document.addEventListener('DOMContentLoaded', initColVisibility);
+
+// ─── Wire employee autocomplete vào các form input ───────────────────────────
+document.addEventListener('DOMContentLoaded', function(){
+  // Form thêm/sửa tài sản: Người đang sử dụng
+  _empAutocomplete(document.getElementById('f-nguoiDung'), {
+    emailField: 'f-email',
+    deptField:  'f-boPhan'
+  });
+  // Form bàn giao tài sản: Người nhận mới
+  _empAutocomplete(document.getElementById('tr-new-user'), {
+    emailField: 'tr-new-email',
+    deptField:  'tr-new-dept'
+  });
+});
 
 // ─── Tính khấu hao đường thẳng ───────────────────────────────────────────────
 function calcDepreciation(asset){
@@ -14942,7 +15140,7 @@ function printQRLabel(){
     toast('🗑️ Đã xóa mapping.','ok');
   };
 
-  // ── Đồng bộ nhân viên từ SharePoint Employees list ───────────────
+  // ── Đồng bộ nhân viên (dùng chung _loadEmployees từ QLTS global) ──
   const SP_EMP_SITE='https://ttgvncom.sharepoint.com/sites/HubIT';
   const SP_EMP_LIST='Employees';
 
@@ -14950,92 +15148,22 @@ function printQRLabel(){
     const btn=$('fuji-btn-sync-ad');
     if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner" style="animation:spin 1s linear infinite;display:inline-block;"></i> Đang tải...'; }
     try{
-      const token=await msalGetToken();
-      if(!token){ toast('⚠️ Không lấy được token. Thử đăng nhập lại.','warn'); return; }
-
-      // Fetch tất cả items từ Employees list (có paging)
-      let items=[], url=`${SP_EMP_SITE}/_api/web/lists/getbytitle('${SP_EMP_LIST}')/items?$top=500`;
-      while(url){
-        const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
-        if(!res.ok) throw new Error('SP HTTP '+res.status);
-        const json=await res.json();
-        items=items.concat(json.d?.results||[]);
-        url=json.d?.__next||null;
-      }
-
-      if(!items.length) throw new Error('Danh sách Employees trống.');
-
-      // Lấy tất cả keys, bỏ system fields
-      const sample=items[0];
-      const SYS_KEYS=new Set(['odata.type','odata.id','odata.etag','odata.editLink','__metadata','FileSystemObjectType','ServerRedirectedEmbedUri','ServerRedirectedEmbedUrl','ContentTypeId','OData__ColorTag','ComplianceAssetId','AuthorId','EditorId','OData__UIVersionString','Attachments','GUID','Modified','Created','ID','Id','OData__ModerationStatus','OData__ModerationComments']);
-      const keys=Object.keys(sample).filter(k=>!SYS_KEYS.has(k)&&!k.startsWith('odata'));
-      console.log('=== Employees list columns ===', keys);
-      console.log('Sample:', JSON.stringify(keys.reduce((o,k)=>{o[k]=sample[k];return o},{}),null,2));
-
-      // Auto-detect ưu tiên theo thứ tự cụ thể
-      const pickKey=(cands)=>cands.find(c=>keys.some(k=>k.toLowerCase()===c.toLowerCase()))||null;
-      // Username/Email → lấy phần trước @ để map với print log
-      let colUser=pickKey(['Email','Mail','WorkEmail','Work_x0020_Email','UserEmail','Username','UserName','LoginName','AccountName','UserPrincipalName','UserLogin','TaiKhoan','Account','UserAccount','SamAccountName']);
-      // Tên hiển thị
-      const colName=pickKey(['FullName','HoTen','Ho_x0020_va_x0020_Ten','TenNhanVien','HoVaTen','DisplayName','Name','NhanVien','Title']);
-      // Phòng ban
-      const colDept=pickKey(['Department','PhongBan','Bo_x0020_Phan','BoPhan','PhongBan0','Dept','Division','PhongBan_x0020_','Team','BoPhận']);
-
-      // Nếu colUser vẫn null → scan giá trị để tìm cột chứa email / domain login
-      if(!colUser){
-        // Kiểm tra nhiều item để tìm cột có dạng "xxx@yyy" hoặc "DOMAIN\xxx"
-        const sampleItems=items.slice(0,Math.min(10,items.length));
-        colUser=keys.find(k=>{
-          if(k===colName||k===colDept) return false;
-          return sampleItems.some(it=>{
-            const v=String(it[k]||'');
-            return v.includes('@') || v.includes('\\');
-          });
-        })||null;
-        if(colUser) console.log('[Fuji Sync] colUser detected by value scan:', colUser, '->', sample[colUser]);
-      }
-
-      // Vẫn không có cột email → show tên cột để user báo lại
-      if(!colUser){
-        const colList=keys.filter(k=>k!==colName&&k!==colDept).join(' | ');
-        toast(`⚠️ Không tìm được cột email/username!\nCác cột còn lại: ${colList}\n→ Báo tên cột chứa email để fix.`,'warn',15000);
-        console.warn('[Fuji Sync] Available cols:', keys, '| sample:', JSON.stringify(keys.reduce((o,k)=>{o[k]=sample[k];return o},{})));
-        throw new Error(`Thiếu cột email. Xem toast — còn các cột: ${colList}`);
-      }
-
-      console.log(`[Fuji Sync] colUser="${colUser}" colName="${colName}" colDept="${colDept}"`);
-      toast(`🔍 Detect: User="${colUser}", Tên="${colName||'(N/A)'}", Bộ phận="${colDept||'(N/A)'}" — đang xử lý ${items.length} dòng…`,'ok',5000);
-
-      // Build _map
-      const seen=new Set();
-      _map=items.map(item=>{
-        let rawUser=String(item[colUser]||'').trim();
-        // Domain login: DOMAIN\username → lấy phần sau \
-        if(rawUser.includes('\\')) rawUser=rawUser.split('\\').pop();
-        // Email → lấy phần trước @
-        if(rawUser.includes('@')) rawUser=rawUser.split('@')[0];
-        rawUser=rawUser.toLowerCase().trim();
-        if(!rawUser||seen.has(rawUser)) return null;
-        seen.add(rawUser);
-        return{
-          user: rawUser,
-          name: colName?String(item[colName]||''):'',
-          dept: colDept?String(item[colDept]||''):''
-        };
-      }).filter(Boolean);
-
-      // Lưu local + SP (convert sang CSV text để tương thích)
+      // Xóa cache để force fetch mới từ HubIT
+      try{ localStorage.removeItem(LS_EMP); }catch(e){}
+      window._qltsEmployees=[];
+      // Dùng _loadEmployees() chung (đã có full logic detect column)
+      await _loadEmployees(true);
+      if(!window._qltsEmployees.length) throw new Error('Không đồng bộ được nhân viên nào. Kiểm tra quyền truy cập HubIT site.');
+      // Cập nhật Fuji _map từ employee store
+      _map=window._qltsEmployees.map(e=>({user:e.user,name:e.name,dept:e.dept}));
       const csv='user,ten nhan vien,phong ban\n'+_map.map(u=>`${u.user},${u.name},${u.dept}`).join('\n');
       _fujiMapSave(csv);
       _fujiMapUpdateUI();
-      // (không cần lưu SP UserMap — mapping lấy trực tiếp từ HubIT Employees)
-
-      // Re-aggregate nếu đang có data
       if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
-      toast(`✅ Đã đồng bộ ${_map.length} nhân viên từ Azure AD.`,'ok');
+      toast(`✅ Đã đồng bộ ${_map.length} nhân viên.`,'ok');
     }catch(e){
-      console.error('AD sync error:',e);
-      toast('❌ Lỗi đồng bộ AD: '+(e?.message||e),'warn');
+      console.error('EMP sync error:',e);
+      toast('❌ Lỗi đồng bộ: '+(e?.message||e),'warn');
     }finally{
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-arrows-clockwise"></i> Đồng bộ NV'; }
     }
@@ -16669,15 +16797,22 @@ function printQRLabel(){
   function _initListeners(){
     if(_initialized) return; _initialized=true;
 
-    // Restore mapping: localStorage trước, nếu không có → tự sync từ HubIT Employees
-    const cachedMap=_fujiMapLoad();
-    if(cachedMap){
-      _map=_fujiParseMapText(cachedMap);
+    // Restore mapping: ưu tiên _qltsEmployees (global store) → localStorage → sync mới
+    if(window._qltsEmployees && window._qltsEmployees.length){
+      _map=window._qltsEmployees.map(e=>({user:e.user,name:e.name,dept:e.dept}));
       _fujiMapUpdateUI();
     } else {
-      // Không có cache → tự đồng bộ ngay từ SharePoint HubIT/Employees
-      window._fujiSyncFromAD();
-      _fujiMapUpdateUI();
+      const cachedMap=_fujiMapLoad();
+      if(cachedMap){
+        _map=_fujiParseMapText(cachedMap);
+        _fujiMapUpdateUI();
+        // Cập nhật global store nếu chưa có
+        if(!window._qltsEmployees.length) window._qltsEmployees=_map.map(m=>({...m}));
+      } else {
+        // Không có gì → sync mới (sẽ populate cả _qltsEmployees lẫn _map)
+        window._fujiSyncFromAD();
+        _fujiMapUpdateUI();
+      }
     }
 
     // Populate dropdown so sánh chu kỳ từ localStorage ngay khi load
