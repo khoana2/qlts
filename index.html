@@ -9057,13 +9057,13 @@ _loadSpQueue();
 setTimeout(_updateOfflineBadge, 1000);
 
 // ═══════════════════════ TOAST ═══════════════════════
-function toast(msg, type='ok'){
+function toast(msg, type='ok', duration=3800){
   const wrap = document.getElementById('toast-wrap');
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.innerHTML = `<div class="t-dot"></div><div class="t-msg">${msg}</div>`;
+  t.innerHTML = `<div class="t-dot"></div><div class="t-msg" style="white-space:pre-wrap;word-break:break-word;">${msg}</div>`;
   wrap.appendChild(t);
-  setTimeout(()=>t.remove(), 3800);
+  setTimeout(()=>t.remove(), duration);
 }
 
 // ═══════════════════════ TRANSFER / BÀN GIAO ═══════════════════════
@@ -14965,20 +14965,31 @@ function printQRLabel(){
 
       if(!items.length) throw new Error('Danh sách Employees trống.');
 
-      // Tự detect cột từ item đầu tiên
+      // Lấy tất cả keys, bỏ metadata + odata fields
       const sample=items[0];
-      const keys=Object.keys(sample);
+      const allKeys=Object.keys(sample);
+      const keys=allKeys.filter(k=>!k.startsWith('odata')&&k!=='__metadata'&&k!=='FileSystemObjectType'&&k!=='ServerRedirectedEmbedUri'&&k!=='ServerRedirectedEmbedUrl'&&k!=='ContentTypeId'&&k!=='OData__ColorTag'&&k!=='ComplianceAssetId'&&k!=='AuthorId'&&k!=='EditorId'&&k!=='OData__UIVersionString'&&k!=='Attachments'&&k!=='GUID');
+      console.log('=== Employees list columns ===', keys);
+      console.log('Sample:', JSON.stringify(keys.reduce((o,k)=>{o[k]=sample[k];return o},{}),null,2));
+
+      // Auto-detect ưu tiên theo thứ tự cụ thể
       const pick=(cands)=>cands.find(c=>keys.some(k=>k.toLowerCase()===c.toLowerCase()))||null;
+      // Username/Email → lấy phần trước @ để map với print log
+      const colUser=pick(['Email','Mail','WorkEmail','Work_x0020_Email','UserEmail','username','UserName','LoginName','AccountName','UserPrincipalName','UserLogin','MaNhanVien','EmployeeId','employee_id']);
+      // Tên hiển thị
+      const colName=pick(['FullName','HoTen','Ho_x0020_va_x0020_Ten','TenNhanVien','HoVaTen','Title','DisplayName','Name','NhanVien']);
+      // Phòng ban
+      const colDept=pick(['Department','PhongBan','Bo_x0020_Phan','BoPhan','Dept','Division','PhongBan_x0020_','Team','BoPhận']);
 
-      const colUser =pick(['Email','UserEmail','email','UserName','username','LoginName']);
-      const colName =pick(['FullName','HoTen','Title','DisplayName','TenNhanVien','Name']);
-      const colDept =pick(['Department','PhongBan','Dept','BoPhận','Division','PhongBan_x0020_']);
-
+      // Nếu không detect được → hiển thị các cột có sẵn để user báo lại
       if(!colUser && !colName){
-        // Log keys để debug
-        console.warn('Employees list keys:', keys);
-        throw new Error(`Không tìm được cột user/name. Các cột hiện có: ${keys.filter(k=>!k.startsWith('odata')).slice(0,10).join(', ')}`);
+        const visibleKeys=keys.filter(k=>!['Id','Modified','Created','ID'].includes(k)).slice(0,20).join('\n  ');
+        toast(`⚠️ Không detect được cột. Các cột trong Employees list:\n  ${visibleKeys}\nBáo lại cột Email + Tên để fix.`,'warn',12000);
+        throw new Error('Không detect được cột email/name. Xem toast để biết danh sách cột.');
       }
+      // Log kết quả detect
+      console.log(`[Fuji Sync] colUser="${colUser}" colName="${colName}" colDept="${colDept}"`);
+      toast(`🔍 Tìm thấy: Email="${colUser||'(N/A)'}", Tên="${colName||'(N/A)'}", Bộ phận="${colDept||'(N/A)'}"… đang xử lý ${items.length} dòng`,'ok',4000);
 
       // Build _map
       const seen=new Set();
@@ -15019,23 +15030,22 @@ function printQRLabel(){
     try{
       const token=await msalGetToken();
       const listUrl=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiUserMap}')`;
+      const hdrs={'Authorization':'Bearer '+token,'Accept':'application/json;odata=nometadata','Content-Type':'application/json;odata=nometadata'};
       // Kiểm tra item đã tồn tại chưa (Title='default')
-      const chk=await fetch(`${listUrl}/items?$filter=Title eq 'default'&$select=Id`,
-        {headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
-      if(!chk.ok) return;
-      const existing=((await chk.json()).d?.results||[])[0];
-      const body=JSON.stringify({'__metadata':{'type':'SP.Data.Fuji_UserMapListItem'},'Title':'default','MapCsv':rawCsv});
+      const chk=await fetch(`${listUrl}/items?$filter=Title eq 'default'&$select=Id`,{headers:{...hdrs}});
+      if(!chk.ok){ console.warn('Fuji map SP check failed:',chk.status); return; }
+      const existing=((await chk.json()).value||[])[0];
+      const body=JSON.stringify({'Title':'default','MapCsv':rawCsv});
       if(existing){
-        await fetch(`${listUrl}/items(${existing.Id})`,{
-          method:'MERGE',
-          headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose',
-            'Content-Type':'application/json;odata=verbose','IF-MATCH':'*','X-HTTP-Method':'MERGE'}
-          ,body});
+        // Dùng PATCH (không cần X-HTTP-Method) cho SP Online
+        const r=await fetch(`${listUrl}/items(${existing.Id})`,{
+          method:'PATCH',
+          headers:{...hdrs,'IF-MATCH':'*'},
+          body});
+        if(!r.ok) console.warn('Fuji map SP PATCH failed:',r.status, await r.text().catch(()=>''));
       } else {
-        await fetch(`${listUrl}/items`,{
-          method:'POST',
-          headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose',
-            'Content-Type':'application/json;odata=verbose'},body});
+        const r=await fetch(`${listUrl}/items`,{method:'POST',headers:{...hdrs},body});
+        if(!r.ok) console.warn('Fuji map SP POST failed:',r.status, await r.text().catch(()=>''));
       }
     }catch(e){ console.warn('Fuji map SP save error:',e); }
   }
@@ -15046,9 +15056,9 @@ function printQRLabel(){
     try{
       const token=await msalGetToken();
       const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiUserMap}')/items?$filter=Title eq 'default'&$select=MapCsv`;
-      const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+      const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=nometadata'}});
       if(!res.ok) return '';
-      return ((await res.json()).d?.results||[])[0]?.MapCsv||'';
+      return ((await res.json()).value||[])[0]?.MapCsv||'';
     }catch(e){ return ''; }
   }
 
