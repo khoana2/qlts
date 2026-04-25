@@ -14965,45 +14965,62 @@ function printQRLabel(){
 
       if(!items.length) throw new Error('Danh sách Employees trống.');
 
-      // Lấy tất cả keys, bỏ metadata + odata fields
+      // Lấy tất cả keys, bỏ system fields
       const sample=items[0];
-      const allKeys=Object.keys(sample);
-      const keys=allKeys.filter(k=>!k.startsWith('odata')&&k!=='__metadata'&&k!=='FileSystemObjectType'&&k!=='ServerRedirectedEmbedUri'&&k!=='ServerRedirectedEmbedUrl'&&k!=='ContentTypeId'&&k!=='OData__ColorTag'&&k!=='ComplianceAssetId'&&k!=='AuthorId'&&k!=='EditorId'&&k!=='OData__UIVersionString'&&k!=='Attachments'&&k!=='GUID');
+      const SYS_KEYS=new Set(['odata.type','odata.id','odata.etag','odata.editLink','__metadata','FileSystemObjectType','ServerRedirectedEmbedUri','ServerRedirectedEmbedUrl','ContentTypeId','OData__ColorTag','ComplianceAssetId','AuthorId','EditorId','OData__UIVersionString','Attachments','GUID','Modified','Created','ID','Id','OData__ModerationStatus','OData__ModerationComments']);
+      const keys=Object.keys(sample).filter(k=>!SYS_KEYS.has(k)&&!k.startsWith('odata'));
       console.log('=== Employees list columns ===', keys);
       console.log('Sample:', JSON.stringify(keys.reduce((o,k)=>{o[k]=sample[k];return o},{}),null,2));
 
       // Auto-detect ưu tiên theo thứ tự cụ thể
-      const pick=(cands)=>cands.find(c=>keys.some(k=>k.toLowerCase()===c.toLowerCase()))||null;
+      const pickKey=(cands)=>cands.find(c=>keys.some(k=>k.toLowerCase()===c.toLowerCase()))||null;
       // Username/Email → lấy phần trước @ để map với print log
-      const colUser=pick(['Email','Mail','WorkEmail','Work_x0020_Email','UserEmail','username','UserName','LoginName','AccountName','UserPrincipalName','UserLogin','MaNhanVien','EmployeeId','employee_id']);
+      let colUser=pickKey(['Email','Mail','WorkEmail','Work_x0020_Email','UserEmail','Username','UserName','LoginName','AccountName','UserPrincipalName','UserLogin','TaiKhoan','Account','UserAccount','SamAccountName']);
       // Tên hiển thị
-      const colName=pick(['FullName','HoTen','Ho_x0020_va_x0020_Ten','TenNhanVien','HoVaTen','Title','DisplayName','Name','NhanVien']);
+      const colName=pickKey(['FullName','HoTen','Ho_x0020_va_x0020_Ten','TenNhanVien','HoVaTen','DisplayName','Name','NhanVien','Title']);
       // Phòng ban
-      const colDept=pick(['Department','PhongBan','Bo_x0020_Phan','BoPhan','Dept','Division','PhongBan_x0020_','Team','BoPhận']);
+      const colDept=pickKey(['Department','PhongBan','Bo_x0020_Phan','BoPhan','PhongBan0','Dept','Division','PhongBan_x0020_','Team','BoPhận']);
 
-      // Nếu không detect được → hiển thị các cột có sẵn để user báo lại
-      if(!colUser && !colName){
-        const visibleKeys=keys.filter(k=>!['Id','Modified','Created','ID'].includes(k)).slice(0,20).join('\n  ');
-        toast(`⚠️ Không detect được cột. Các cột trong Employees list:\n  ${visibleKeys}\nBáo lại cột Email + Tên để fix.`,'warn',12000);
-        throw new Error('Không detect được cột email/name. Xem toast để biết danh sách cột.');
+      // Nếu colUser vẫn null → scan giá trị để tìm cột chứa email / domain login
+      if(!colUser){
+        // Kiểm tra nhiều item để tìm cột có dạng "xxx@yyy" hoặc "DOMAIN\xxx"
+        const sampleItems=items.slice(0,Math.min(10,items.length));
+        colUser=keys.find(k=>{
+          if(k===colName||k===colDept) return false;
+          return sampleItems.some(it=>{
+            const v=String(it[k]||'');
+            return v.includes('@') || v.includes('\\');
+          });
+        })||null;
+        if(colUser) console.log('[Fuji Sync] colUser detected by value scan:', colUser, '->', sample[colUser]);
       }
-      // Log kết quả detect
+
+      // Vẫn không có cột email → show tên cột để user báo lại
+      if(!colUser){
+        const colList=keys.filter(k=>k!==colName&&k!==colDept).join(' | ');
+        toast(`⚠️ Không tìm được cột email/username!\nCác cột còn lại: ${colList}\n→ Báo tên cột chứa email để fix.`,'warn',15000);
+        console.warn('[Fuji Sync] Available cols:', keys, '| sample:', JSON.stringify(keys.reduce((o,k)=>{o[k]=sample[k];return o},{})));
+        throw new Error(`Thiếu cột email. Xem toast — còn các cột: ${colList}`);
+      }
+
       console.log(`[Fuji Sync] colUser="${colUser}" colName="${colName}" colDept="${colDept}"`);
-      toast(`🔍 Tìm thấy: Email="${colUser||'(N/A)'}", Tên="${colName||'(N/A)'}", Bộ phận="${colDept||'(N/A)'}"… đang xử lý ${items.length} dòng`,'ok',4000);
+      toast(`🔍 Detect: User="${colUser}", Tên="${colName||'(N/A)'}", Bộ phận="${colDept||'(N/A)'}" — đang xử lý ${items.length} dòng…`,'ok',5000);
 
       // Build _map
       const seen=new Set();
       _map=items.map(item=>{
-        let rawUser=(colUser?item[colUser]||'':'');
-        // Nếu là email → lấy phần trước @
+        let rawUser=String(item[colUser]||'').trim();
+        // Domain login: DOMAIN\username → lấy phần sau \
+        if(rawUser.includes('\\')) rawUser=rawUser.split('\\').pop();
+        // Email → lấy phần trước @
         if(rawUser.includes('@')) rawUser=rawUser.split('@')[0];
         rawUser=rawUser.toLowerCase().trim();
         if(!rawUser||seen.has(rawUser)) return null;
         seen.add(rawUser);
         return{
           user: rawUser,
-          name: colName?item[colName]||'':'',
-          dept: colDept?item[colDept]||'':''
+          name: colName?String(item[colName]||''):'',
+          dept: colDept?String(item[colDept]||''):''
         };
       }).filter(Boolean);
 
