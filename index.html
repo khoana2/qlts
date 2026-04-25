@@ -2910,6 +2910,13 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </table>
         </div>
       </div>
+      <!-- Trend chart -->
+      <div id="fuji-trend-chart" style="display:none;margin-top:18px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+          <i class="ph ph-chart-bar"></i> Xu hướng trang in theo chu kỳ
+        </div>
+        <div id="fuji-trend-chart-inner" style="overflow-x:auto;"></div>
+      </div>
     </div>
 
     <!-- KPIs -->
@@ -3072,6 +3079,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <select id="fuji-cmp-b" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;min-width:180px;background:var(--surface2);"></select>
         </div>
         <button class="btn btn-icon-ph primary" onclick="_fujiRunCompare()"><i class="ph ph-arrows-left-right"></i> So sánh</button>
+        <button id="fuji-cmp-pdf-btn" onclick="_fujiExportComparePDF()" style="display:none;" class="btn btn-icon-ph" title="Xuất PDF báo cáo so sánh">
+          <i class="ph ph-file-pdf"></i> Xuất PDF
+        </button>
       </div>
       <div id="fuji-cmp-result" style="display:none;"></div>
     </div>
@@ -14827,6 +14837,7 @@ function printQRLabel(){
   let _initialized=false;
   let _restoredMachines=null; // set khi restore từ localStorage, null khi có _raw thật
   let _selectedCycle='';     // chu kỳ do user chọn (override auto-detect)
+  let _lastCmp=null;         // lưu kết quả so sánh gần nhất để xuất PDF
 
   // ── Cycle picker helpers ──────────────────────────────────────────
   function _fujiShowCycleBar(cycle){
@@ -15031,6 +15042,13 @@ function printQRLabel(){
     const thStyle='padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);';
     const thL='padding:7px 10px;text-align:left;border-bottom:2px solid var(--border);';
     const hdr=`<th style="${thL}">Chỉ số / Máy / Phòng Ban</th><th style="${thStyle}">${lA}</th><th style="${thStyle}">${lB}</th><th style="${thStyle}">Chênh lệch</th>`;
+    // Lưu lại để xuất PDF
+    _lastCmp={cycA,cycB,lA,lB,kA,kB,dA,dB,dA2,dB2,dBmap};
+
+    // Hiện nút PDF
+    const pdfBtn=$('fuji-cmp-pdf-btn');
+    if(pdfBtn) pdfBtn.style.display='inline-flex';
+
     res.style.display='';
     res.innerHTML=`
       <div style="overflow-x:auto;">
@@ -16100,8 +16118,9 @@ function printQRLabel(){
       sel.innerHTML='<option value="">-- Chọn chu kỳ --</option>'
         +opts.map(o=>`<option value="${o.cycle}">${_fujiCycleLabel(o.cycle)}  ·  ${o.note}</option>`).join('');
     }
-    // Cập nhật dropdown so sánh cùng lúc
+    // Cập nhật dropdown so sánh + vẽ trend chart
     _fujiPopulateCmpDropdowns();
+    _fujiRenderTrendChart();
   }
 
   window._fujiQuickPreview=async function(cycle){
@@ -16245,6 +16264,185 @@ function printQRLabel(){
     if(delBtn) delBtn.style.display='none';
     toast('🗑️ Đã xóa tất cả chu kỳ lưu trên máy.','ok');
     _fujiRenderQuickCycles();
+  };
+
+  // ── Trend Chart ─────────────────────────────────────────────────────
+  function _fujiRenderTrendChart(){
+    const wrap=$('fuji-trend-chart'), inner=$('fuji-trend-chart-inner');
+    if(!wrap||!inner) return;
+
+    // Lấy cycles từ _qcData đã load, sắp theo thứ tự thời gian
+    const cycles=Object.keys(_qcData).sort();
+    if(cycles.length<2){ wrap.style.display='none'; return; }
+    wrap.style.display='';
+
+    const data=cycles.map(c=>{
+      const d=_qcData[c];
+      // Ưu tiên tính từ machines, fallback sang agg
+      const ms=d.machines||[];
+      const ag=d.agg||[];
+      const bw=ms.length?ms.reduce((s,m)=>s+(m.bw||0),0):ag.reduce((s,r)=>s+(r.bw||0),0);
+      const color=ms.length?ms.reduce((s,m)=>s+(m.color||0),0):ag.reduce((s,r)=>s+(r.color||0),0);
+      const total=bw+color;
+      const [y,m]=c.split('-');
+      return{cycle:c,label:`T${m}/${String(y).slice(2)}`,bw,color,total};
+    });
+
+    const maxTotal=Math.max(...data.map(d=>d.total),1);
+    const barW=40, gap=20;
+    const W=data.length*(barW+gap)+gap;
+    const H=180, TOP=24, BOTTOM=36;
+    const chartH=H-TOP-BOTTOM;
+    const fmt=n=>n>=1000?Math.round(n/1000).toLocaleString('vi-VN')+'K':n.toLocaleString('vi-VN');
+
+    let bars='';
+    data.forEach((d,i)=>{
+      const x=gap+i*(barW+gap);
+      const bwH=Math.round((d.bw/maxTotal)*chartH);
+      const colorH=Math.round((d.color/maxTotal)*chartH);
+      const totalH=bwH+colorH;
+      const yTop=TOP+chartH-totalH;
+
+      // BW bar (dưới)
+      if(bwH>0) bars+=`<rect x="${x}" y="${yTop+colorH}" width="${barW}" height="${bwH}" fill="#94a3b8" rx="3"/>`;
+      // Color bar (trên)
+      if(colorH>0) bars+=`<rect x="${x}" y="${yTop}" width="${barW}" height="${colorH}" fill="#7c3aed" rx="3"/>`;
+      // Tổng trang (trên bar)
+      bars+=`<text x="${x+barW/2}" y="${yTop-5}" text-anchor="middle" font-size="9" font-weight="700" fill="#1e293b">${fmt(d.total)}</text>`;
+      // Nhãn chu kỳ (dưới)
+      bars+=`<text x="${x+barW/2}" y="${TOP+chartH+16}" text-anchor="middle" font-size="10" fill="#64748b">${d.label}</text>`;
+    });
+
+    // Đường baseline
+    const baseY=TOP+chartH;
+    inner.innerHTML=`
+      <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;min-width:${W}px;">
+        <line x1="0" y1="${baseY}" x2="${W}" y2="${baseY}" stroke="#e2e8f0" stroke-width="1.5"/>
+        ${bars}
+      </svg>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:#64748b;">
+        <span><span style="display:inline-block;width:12px;height:10px;background:#94a3b8;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Trắng đen</span>
+        <span><span style="display:inline-block;width:12px;height:10px;background:#7c3aed;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>In màu</span>
+        <span style="margin-left:auto;color:#94a3b8;">${data.length} chu kỳ · tổng: ${fmt(data.reduce((s,d)=>s+d.total,0))} trang</span>
+      </div>`;
+  }
+
+  // ── Export Compare PDF ──────────────────────────────────────────────
+  window._fujiExportComparePDF=function(){
+    if(!_lastCmp){ toast('⚠️ Chưa có kết quả so sánh.','warn'); return; }
+    const{cycA,cycB,lA,lB,kA,kB,dA,dB,dA2,dB2,dBmap}=_lastCmp;
+    const fmt=n=>(n||0).toLocaleString('vi-VN');
+    const now=new Date();
+    const dateStr=String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+
+    const diffPdf=(a,b)=>{
+      if(!b) return '—';
+      const d=a-b, p=Math.round(d*100/b);
+      const arrow=d>0?'↑':'↓', col=d>0?'#16a34a':'#dc2626';
+      return`<span style="color:${col};font-weight:600;">${arrow}${Math.abs(p)}%</span>`;
+    };
+
+    // Bảng máy
+    const machPdfRows=((dA.machines||[]).map(m=>{
+      const bm=(dB.machines||[]).find(x=>x.model===m.model&&x.serial===m.serial)||{total:0};
+      const ms=m.model+(m.serial?' / '+m.serial:'');
+      return`<tr><td>${ms}</td><td class="r">${fmt(m.total)}</td><td class="r">${fmt(bm.total)}</td><td class="r">${diffPdf(m.total,bm.total)}</td></tr>`;
+    })).join('');
+
+    // Bảng phòng ban
+    const deptPdfRows=dA2.map(d=>{
+      const b=dBmap[d.dept]||{total:0};
+      return`<tr><td>${d.dept}</td><td class="r">${fmt(d.total)}</td><td class="r">${fmt(b.total)}</td><td class="r">${diffPdf(d.total,b.total)}</td></tr>`;
+    }).join('');
+
+    const thStyle='background:#1e40af;color:#fff;padding:7px 10px;font-weight:600;';
+    const thR=thStyle+'text-align:right;';
+    const thL=thStyle+'text-align:left;';
+
+    const html=`<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"/>
+    <title>So Sánh Chu Kỳ In Ấn Fujixerox</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1e293b;padding:28px 32px;background:#fff;}
+      h1{font-size:18px;font-weight:700;color:#1e40af;margin-bottom:4px;}
+      .sub{font-size:11px;color:#64748b;margin-bottom:20px;}
+      .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+      .kpi{border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;background:#f8fafc;}
+      .kpi .lbl{font-size:10px;color:#64748b;letter-spacing:.4px;margin-bottom:2px;}
+      .kpi-row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+      .kpi-val{font-size:15px;font-weight:700;color:#1e40af;}
+      .kpi-val.b{color:#475569;}
+      .kpi-diff{font-size:11px;font-weight:600;}
+      h2{font-size:13px;font-weight:700;color:#1e293b;margin:18px 0 8px;border-bottom:2px solid #3b82f6;padding-bottom:4px;}
+      table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px;}
+      .r{text-align:right;}
+      td{padding:6px 10px;border-bottom:1px solid #f1f5f9;}
+      tr:nth-child(even) td{background:#f8fafc;}
+      .legend{display:flex;gap:24px;margin-bottom:8px;font-size:10px;color:#64748b;}
+      .legend span{font-weight:700;color:#1e293b;}
+      .footer{margin-top:24px;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:8px;text-align:center;}
+      @media print{body{padding:16px 20px;}@page{margin:12mm;size:A4;}}
+    </style></head><body>
+    <h1>📊 Báo Cáo So Sánh Chu Kỳ In Ấn Fujixerox</h1>
+    <div class="sub">Ngày xuất: ${dateStr} &nbsp;·&nbsp; QLTS CNTT — Trung Thủy Group</div>
+
+    <div class="legend">
+      <span>Chu kỳ A:</span> ${lA} &nbsp;&nbsp;
+      <span>Chu kỳ B:</span> ${lB} &nbsp;&nbsp;
+      <span>Chênh lệch:</span> A so với B
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="lbl">Tổng trang in</div>
+        <div class="kpi-row"><span class="kpi-val">${fmt(kA.total)}</span><span class="kpi-diff" style="color:#64748b;">${fmt(kB.total)}</span><span class="kpi-diff">${diffPdf(kA.total,kB.total)}</span></div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Trắng đen</div>
+        <div class="kpi-row"><span class="kpi-val b">${fmt(kA.bw)}</span><span class="kpi-diff" style="color:#64748b;">${fmt(kB.bw)}</span><span class="kpi-diff">${diffPdf(kA.bw,kB.bw)}</span></div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">In màu</div>
+        <div class="kpi-row"><span class="kpi-val" style="color:#7c3aed;">${fmt(kA.color)}</span><span class="kpi-diff" style="color:#64748b;">${fmt(kB.color)}</span><span class="kpi-diff">${diffPdf(kA.color,kB.color)}</span></div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">% In màu</div>
+        <div class="kpi-row"><span class="kpi-val" style="color:${kA.pct>30?'#dc2626':'#16a34a'};">${kA.pct}%</span><span class="kpi-diff" style="color:#64748b;">${kB.pct}%</span><span class="kpi-diff">${diffPdf(kA.pct,kB.pct)}</span></div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Số user</div>
+        <div class="kpi-row"><span class="kpi-val">${kA.users}</span><span class="kpi-diff" style="color:#64748b;">${kB.users}</span><span class="kpi-diff">${diffPdf(kA.users,kB.users)}</span></div>
+      </div>
+    </div>
+
+    <h2>🖨️ So Sánh Theo Máy</h2>
+    <table><thead><tr>
+      <th style="${thL}">Model / Serial</th>
+      <th style="${thR}">Tổng trang (A)</th>
+      <th style="${thR}">Tổng trang (B)</th>
+      <th style="${thR}">Chênh lệch</th>
+    </tr></thead><tbody>${machPdfRows}</tbody></table>
+
+    <h2>🏢 So Sánh Theo Phòng Ban</h2>
+    <table><thead><tr>
+      <th style="${thL}">Phòng Ban</th>
+      <th style="${thR}">Tổng trang (A)</th>
+      <th style="${thR}">Tổng trang (B)</th>
+      <th style="${thR}">Chênh lệch</th>
+    </tr></thead><tbody>${deptPdfRows}</tbody></table>
+
+    <div class="footer">
+      Báo cáo so sánh được tạo tự động từ hệ thống QLTS — Trung Thủy Group &nbsp;|&nbsp; ${dateStr}
+    </div>
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`;
+
+    const w=window.open('','_blank','width=960,height=720');
+    if(!w){ toast('⚠️ Trình duyệt chặn popup. Vui lòng cho phép popup rồi thử lại.','warn'); return; }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
   };
 
   function _initListeners(){
