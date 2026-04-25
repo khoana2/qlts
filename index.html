@@ -2851,7 +2851,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <label class="btn success btn-icon-ph" for="fuji-file-raw" style="cursor:pointer;"><i class="ph ph-upload-simple"></i> Tải CSV Fuji</label>
         <input id="fuji-file-raw" type="file" accept=".csv,.txt" multiple style="display:none"/>
-        <label class="btn btn-icon-ph" for="fuji-file-map" style="cursor:pointer;" title="File mapping: user, ten nhan vien, phong ban"><i class="ph ph-users"></i> Mapping User</label>
+        <label class="btn btn-icon-ph" id="fuji-map-status" for="fuji-file-map" style="cursor:pointer;" title="File mapping: user, ten nhan vien, phong ban"><i class="ph ph-users"></i> Mapping User</label>
         <input id="fuji-file-map" type="file" accept=".csv,.txt" style="display:none"/>
         <button class="btn btn-icon-ph" id="fuji-btn-reset"><i class="ph ph-funnel-x"></i> Reset</button>
         <button class="btn btn-icon-ph" id="fuji-btn-export" disabled><i class="ph ph-download-simple"></i> Xuất CSV</button>
@@ -4390,6 +4390,7 @@ const MSAL_CONFIG = {
   spAuditLogList:    'QLTS_AuditLog',             // list nhật ký thay đổi (global admin only)
   spFujiMachineList:  'Fuji_MachineReport',         // list báo cáo máy Fuji theo tháng
   spFujiReportCache:  'Fuji_ReportCache',           // list lưu toàn bộ dữ liệu báo cáo (JSON)
+  spFujiUserMap:      'Fuji_UserMap',               // list lưu mapping user (1 item duy nhất)
   redirectUri: window.location.origin + window.location.pathname,  // tự động
   scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Manage', 'Mail.Send', 'User.Read'],
 };
@@ -14871,7 +14872,97 @@ function printQRLabel(){
 
   // ── localStorage helpers ──────────────────────────────────────────
   const LS_IDX='fuji_cycles';
+  const LS_MAP='fuji_map_cache'; // lưu raw CSV mapping
   function _fujiLsKey(c){ return 'fuji_cycle_'+c; }
+
+  function _fujiMapSave(rawCsv){
+    try{ localStorage.setItem(LS_MAP, rawCsv); }catch(e){}
+  }
+  function _fujiMapLoad(){
+    try{ return localStorage.getItem(LS_MAP)||''; }catch(e){ return ''; }
+  }
+  function _fujiMapClear(){
+    try{ localStorage.removeItem(LS_MAP); }catch(e){}
+  }
+  function _fujiParseMapText(text){
+    if(!text) return [];
+    const m2=_mergeLines(text); const d2=_detectDelim(m2);
+    const r2=_parseCSV(m2,d2);
+    if(r2.length<2) return [];
+    const h2=r2[0];
+    const _idxFold=(headers,cands)=>{
+      let i=_idx(headers,cands); if(i>=0) return i;
+      const hF=headers.map(h=>_vnFold(_normHdr(h)));
+      for(const c of cands){ const cf=_vnFold(_normHdr(c)); const j=hF.indexOf(cf); if(j>=0) return j; }
+      return -1;
+    };
+    const iu=_idxFold(h2,['user','User','email','Email','username','Username']);
+    const iname=_idxFold(h2,['ten nhan vien','ten_nhan_vien','hoten','ho ten','Họ tên','Tên nhân viên','name','fullname']);
+    const idept=_idxFold(h2,['phong ban','phong_ban','Phòng ban','Phòng Ban','dept','department','bo phan','division']);
+    const isEmailCol=iu>=0 && /email/i.test(h2[iu]||'');
+    return r2.slice(1).filter(r=>r.some(x=>x)).map(r=>{
+      let rawUser=iu>=0?(r[iu]||''):'';
+      if(isEmailCol && rawUser.includes('@')) rawUser=rawUser.split('@')[0];
+      return{ user:rawUser.toLowerCase().trim(), name:iname>=0?r[iname]||'':'', dept:idept>=0?r[idept]||'':'' };
+    }).filter(r=>r.user);
+  }
+  function _fujiMapUpdateUI(){
+    const btn=$('fuji-map-status');
+    if(!btn) return;
+    if(_map.length){
+      btn.innerHTML=`<i class="ph ph-check-circle" style="color:#16a34a;"></i> Mapping (${_map.length} user) <span onclick="event.preventDefault();_fujiMapClearAndReset()" title="Xóa mapping đã lưu" style="margin-left:6px;color:#ef4444;cursor:pointer;font-size:11px;line-height:1;">✕</span>`;
+      btn.style.color='#16a34a';
+    } else {
+      btn.innerHTML=`<i class="ph ph-users"></i> Mapping User`;
+      btn.style.color='';
+    }
+  }
+  window._fujiMapClearAndReset=function(){
+    if(!confirm('Xóa mapping đã lưu (local + SharePoint)?')) return;
+    _fujiMapClear(); _map=[];
+    _fujiMapUpdateUI();
+    if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
+    toast('🗑️ Đã xóa mapping.','ok');
+  };
+
+  // ── SP: Lưu mapping lên SharePoint ────────────────────────────────
+  async function _fujiMapSpSave(rawCsv){
+    if(typeof msalGetToken!=='function') return;
+    try{
+      const token=await msalGetToken();
+      const listUrl=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiUserMap}')`;
+      // Kiểm tra item đã tồn tại chưa (Title='default')
+      const chk=await fetch(`${listUrl}/items?$filter=Title eq 'default'&$select=Id`,
+        {headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+      if(!chk.ok) return;
+      const existing=((await chk.json()).d?.results||[])[0];
+      const body=JSON.stringify({'__metadata':{'type':'SP.Data.Fuji_UserMapListItem'},'Title':'default','MapCsv':rawCsv});
+      if(existing){
+        await fetch(`${listUrl}/items(${existing.Id})`,{
+          method:'MERGE',
+          headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose',
+            'Content-Type':'application/json;odata=verbose','IF-MATCH':'*','X-HTTP-Method':'MERGE'}
+          ,body});
+      } else {
+        await fetch(`${listUrl}/items`,{
+          method:'POST',
+          headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose',
+            'Content-Type':'application/json;odata=verbose'},body});
+      }
+    }catch(e){ console.warn('Fuji map SP save error:',e); }
+  }
+
+  // ── SP: Tải mapping từ SharePoint ─────────────────────────────────
+  async function _fujiMapSpLoad(){
+    if(typeof msalGetToken!=='function') return '';
+    try{
+      const token=await msalGetToken();
+      const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiUserMap}')/items?$filter=Title eq 'default'&$select=MapCsv`;
+      const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+      if(!res.ok) return '';
+      return ((await res.json()).d?.results||[])[0]?.MapCsv||'';
+    }catch(e){ return ''; }
+  }
 
   // Lưu chu kỳ hiện tại vào localStorage
   function _fujiLocalSave(){
@@ -15454,39 +15545,21 @@ function printQRLabel(){
       _raw=allRaw;
       if(!_raw.length){ toast('⚠️ Không có dữ liệu hợp lệ từ file Fuji.','warn'); return; }
       const dm=_computeDocStats(_raw); _docStats=dm.stats; _singleMax=dm.singleMax; _sumMax=dm.sumMax;
-      // Load mapping if present
+      // Load mapping: ưu tiên file mới upload, fallback về cache
       const mapFile=($('fuji-file-map')||{}).files?.[0];
-      _map=[];
       if(mapFile){
         const t2=await _readFile(mapFile);
-        const m2=_mergeLines(t2); const d2=_detectDelim(m2);
-        const r2=_parseCSV(m2,d2);
-        if(r2.length>1){
-          const h2=r2[0];
-          // _idxFold: tìm cột qua exact match trước, nếu không thấy thì so sánh vnFold
-          const _idxFold=(headers,cands)=>{
-            let i=_idx(headers,cands); if(i>=0) return i;
-            const hF=headers.map(h=>_vnFold(_normHdr(h)));
-            for(const c of cands){ const cf=_vnFold(_normHdr(c)); const j=hF.indexOf(cf); if(j>=0) return j; }
-            return -1;
-          };
-          // Hỗ trợ: cột "Email" (danh sách nhân viên TTG) → lấy local-part làm username
-          const iu=_idxFold(h2,['user','User','email','Email','username','Username']);
-          const iname=_idxFold(h2,['ten nhan vien','ten_nhan_vien','hoten','ho ten','Họ tên','Tên nhân viên','name','fullname']);
-          const idept=_idxFold(h2,['phong ban','phong_ban','Phòng ban','Phòng Ban','dept','department','bo phan','division']);
-          const isEmailCol=iu>=0 && /email/i.test(h2[iu]||'');
-          _map=r2.slice(1).filter(r=>r.some(x=>x)).map(r=>{
-            let rawUser=iu>=0?(r[iu]||''):'';
-            // Nếu là cột Email → tách local-part (trước @)
-            if(isEmailCol && rawUser.includes('@')) rawUser=rawUser.split('@')[0];
-            return {
-              user:rawUser.toLowerCase().trim(),
-              name:iname>=0?r[iname]||'':'',
-              dept:idept>=0?r[idept]||'':''
-            };
-          }).filter(r=>r.user);
+        _map=_fujiParseMapText(t2);
+        _fujiMapSave(t2); // lưu vào localStorage
+        toast(`✅ Đã lưu mapping ${_map.length} user vào bộ nhớ.`,'ok');
+      } else {
+        // Restore từ cache nếu chưa có _map
+        if(!_map.length){
+          const cached=_fujiMapLoad();
+          if(cached) _map=_fujiParseMapText(cached);
         }
       }
+      _fujiMapUpdateUI();
       _agg=_aggregate(_raw,_map);
       _filtered=[];
       _populateFilters();
@@ -16517,6 +16590,24 @@ function printQRLabel(){
   function _initListeners(){
     if(_initialized) return; _initialized=true;
 
+    // Restore mapping: local cache trước, fallback SP
+    const cachedMap=_fujiMapLoad();
+    if(cachedMap){
+      _map=_fujiParseMapText(cachedMap);
+      _fujiMapUpdateUI();
+    } else {
+      // Thử load từ SharePoint (async, không block)
+      _fujiMapSpLoad().then(spCsv=>{
+        if(spCsv && !_map.length){
+          _map=_fujiParseMapText(spCsv);
+          _fujiMapSave(spCsv); // cache lại local để lần sau nhanh hơn
+          _fujiMapUpdateUI();
+          if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
+        }
+      });
+      _fujiMapUpdateUI();
+    }
+
     // Populate dropdown so sánh chu kỳ từ localStorage ngay khi load
     _fujiPopulateCmpDropdowns();
     // Hiện chu kỳ đã lưu trên màn hình trống
@@ -16525,7 +16616,16 @@ function printQRLabel(){
     const on=(id,ev,fn)=>{ const el=$(id); if(el) el.addEventListener(ev,fn); };
 
     on('fuji-file-raw','change',async e=>{ const fs=e.target.files; if(fs&&fs.length) await _importCSV(fs); });
-    on('fuji-file-map','change',async()=>{ if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }});
+    on('fuji-file-map','change',async e=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      const txt=await _readFile(f);
+      _map=_fujiParseMapText(txt);
+      _fujiMapSave(txt);          // lưu localStorage
+      _fujiMapUpdateUI();
+      toast(`✅ Đã lưu mapping ${_map.length} user vào bộ nhớ — đang đồng bộ SharePoint...`,'ok');
+      _fujiMapSpSave(txt).then(()=>toast('☁️ Mapping đã đồng bộ lên SharePoint.','ok'));
+      if(_raw.length){ _agg=_aggregate(_raw,_map); _populateFilters(); _filtered=[]; _applyFilter(); }
+    });
     on('fuji-btn-reset','click',()=>{
       // Xóa toàn bộ dữ liệu, trả về trạng thái ban đầu
       _raw=[]; _agg=[]; _filtered=[]; _map=[]; _docStats=[]; _unknownCnt=0; _scannerCnt=0;
