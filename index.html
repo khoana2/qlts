@@ -2853,8 +2853,8 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <input id="fuji-file-raw" type="file" accept=".csv,.txt" multiple style="display:none"/>
         <label class="btn btn-icon-ph" id="fuji-map-status" for="fuji-file-map" style="cursor:pointer;" title="Upload file mapping CSV"><i class="ph ph-users"></i> Mapping User</label>
         <input id="fuji-file-map" type="file" accept=".csv,.txt" style="display:none"/>
-        <button class="btn btn-icon-ph" id="fuji-btn-sync-ad" onclick="_fujiSyncFromAD()" title="Đồng bộ danh sách nhân viên từ Azure AD">
-          <i class="ph ph-arrows-clockwise"></i> Đồng bộ AD
+        <button class="btn btn-icon-ph" id="fuji-btn-sync-ad" onclick="_fujiSyncFromAD()" title="Đồng bộ danh sách nhân viên từ SharePoint">
+          <i class="ph ph-arrows-clockwise"></i> Đồng bộ NV
         </button>
         <button class="btn btn-icon-ph" id="fuji-btn-reset"><i class="ph ph-funnel-x"></i> Reset</button>
         <button class="btn btn-icon-ph" id="fuji-btn-export" disabled><i class="ph ph-download-simple"></i> Xuất CSV</button>
@@ -14942,46 +14942,59 @@ function printQRLabel(){
     toast('🗑️ Đã xóa mapping.','ok');
   };
 
-  // ── Đồng bộ nhân viên từ Azure AD (Graph API) ─────────────────────
+  // ── Đồng bộ nhân viên từ SharePoint Employees list ───────────────
+  const SP_EMP_SITE='https://ttgvncom.sharepoint.com/sites/HubIT';
+  const SP_EMP_LIST='Employees';
+
   window._fujiSyncFromAD=async function(){
     const btn=$('fuji-btn-sync-ad');
     if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner" style="animation:spin 1s linear infinite;display:inline-block;"></i> Đang tải...'; }
     try{
-      const token=await msalGetGraphToken();
-      if(!token){ toast('⚠️ Không lấy được token Graph API. Thử đăng nhập lại.','warn'); return; }
+      const token=await msalGetToken();
+      if(!token){ toast('⚠️ Không lấy được token. Thử đăng nhập lại.','warn'); return; }
 
-      // Lấy danh sách groups trước (GroupMember.Read.All đã được grant)
-      const grpRes=await fetch('https://graph.microsoft.com/v1.0/groups?$select=id,displayName&$top=100',
-        {headers:{'Authorization':'Bearer '+token}});
-      if(!grpRes.ok) throw new Error('Graph API HTTP '+grpRes.status);
-      const groups=((await grpRes.json()).value||[]);
+      // Fetch tất cả items từ Employees list (có paging)
+      let items=[], url=`${SP_EMP_SITE}/_api/web/lists/getbytitle('${SP_EMP_LIST}')/items?$top=500`;
+      while(url){
+        const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+        if(!res.ok) throw new Error('SP HTTP '+res.status);
+        const json=await res.json();
+        items=items.concat(json.d?.results||[]);
+        url=json.d?.__next||null;
+      }
 
-      // Lấy members từng group, gộp lại + dedup theo userPrincipalName
-      const userMap={};
-      await Promise.all(groups.map(async g=>{
-        try{
-          let url=`https://graph.microsoft.com/v1.0/groups/${g.id}/members?$select=displayName,userPrincipalName,department&$top=999`;
-          while(url){
-            const r=await fetch(url,{headers:{'Authorization':'Bearer '+token}});
-            if(!r.ok) return;
-            const j=await r.json();
-            (j.value||[]).forEach(u=>{
-              if(!u.userPrincipalName||u.userPrincipalName.startsWith('#EXT#')) return;
-              const key=u.userPrincipalName.toLowerCase();
-              if(!userMap[key]) userMap[key]={
-                user: u.userPrincipalName.split('@')[0].toLowerCase(),
-                name: u.displayName||'',
-                dept: u.department||g.displayName||'' // fallback tên group
-              };
-              // Ưu tiên department từ AD, không thì dùng tên group
-              if(u.department && !userMap[key].dept) userMap[key].dept=u.department;
-            });
-            url=j['@odata.nextLink']||null;
-          }
-        }catch(e){}
-      }));
+      if(!items.length) throw new Error('Danh sách Employees trống.');
 
-      _map=Object.values(userMap).filter(u=>u.user);
+      // Tự detect cột từ item đầu tiên
+      const sample=items[0];
+      const keys=Object.keys(sample);
+      const pick=(cands)=>cands.find(c=>keys.some(k=>k.toLowerCase()===c.toLowerCase()))||null;
+
+      const colUser =pick(['Email','UserEmail','email','UserName','username','LoginName']);
+      const colName =pick(['FullName','HoTen','Title','DisplayName','TenNhanVien','Name']);
+      const colDept =pick(['Department','PhongBan','Dept','BoPhận','Division','PhongBan_x0020_']);
+
+      if(!colUser && !colName){
+        // Log keys để debug
+        console.warn('Employees list keys:', keys);
+        throw new Error(`Không tìm được cột user/name. Các cột hiện có: ${keys.filter(k=>!k.startsWith('odata')).slice(0,10).join(', ')}`);
+      }
+
+      // Build _map
+      const seen=new Set();
+      _map=items.map(item=>{
+        let rawUser=(colUser?item[colUser]||'':'');
+        // Nếu là email → lấy phần trước @
+        if(rawUser.includes('@')) rawUser=rawUser.split('@')[0];
+        rawUser=rawUser.toLowerCase().trim();
+        if(!rawUser||seen.has(rawUser)) return null;
+        seen.add(rawUser);
+        return{
+          user: rawUser,
+          name: colName?item[colName]||'':'',
+          dept: colDept?item[colDept]||'':''
+        };
+      }).filter(Boolean);
 
       // Lưu local + SP (convert sang CSV text để tương thích)
       const csv='user,ten nhan vien,phong ban\n'+_map.map(u=>`${u.user},${u.name},${u.dept}`).join('\n');
@@ -14996,7 +15009,7 @@ function printQRLabel(){
       console.error('AD sync error:',e);
       toast('❌ Lỗi đồng bộ AD: '+(e?.message||e),'warn');
     }finally{
-      if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-arrows-clockwise"></i> Đồng bộ AD'; }
+      if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-arrows-clockwise"></i> Đồng bộ NV'; }
     }
   };
 
