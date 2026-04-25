@@ -15485,18 +15485,19 @@ function printQRLabel(){
     const dateStr=String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
 
     const machines=_aggByMachine(_raw);
-    const machineRows=machines.map((m,i)=>`
-      <tr>
+    const machineRows=machines.map((m,i)=>{
+      const modelCell=m.model||(m.serial?'':'—');
+      const modelDisplay=m.serial?`<strong>${m.model}</strong> <span style="color:#64748b;font-size:10px">/ ${m.serial}</span>`:`<strong>${m.model||'—'}</strong>`;
+      return`<tr>
         <td style="text-align:center;color:#64748b">${i+1}</td>
-        <td><strong>${m.model||'—'}</strong></td>
-        <td style="color:#64748b">${m.serial||'—'}</td>
+        <td>${modelDisplay}</td>
         <td style="text-align:right">${m.userCount}</td>
         <td style="text-align:right">${m.bw.toLocaleString('vi-VN')}</td>
         <td style="text-align:right">${m.color.toLocaleString('vi-VN')}</td>
         <td style="text-align:right"><strong>${m.total.toLocaleString('vi-VN')}</strong></td>
         <td style="text-align:right">${m.total?Math.round(m.color*100/m.total):0}%</td>
         <td style="text-align:right">${m.scanJobs}</td>
-      </tr>`).join('');
+      </tr>`;}).join('');
 
     const deptRows=depts.map((d,i)=>`
       <tr>
@@ -15550,7 +15551,7 @@ function printQRLabel(){
     </div>
 
     <h2>🖨️ Thống kê theo Máy</h2>
-    <table><thead><tr><th>#</th><th>Model</th><th>Serial</th><th style="text-align:right">Số user</th><th style="text-align:right">Trắng đen</th><th style="text-align:right">In màu</th><th style="text-align:right">Tổng trang</th><th style="text-align:right">% Màu</th><th style="text-align:right">Lượt scan</th></tr></thead>
+    <table><thead><tr><th>#</th><th>Model / Serial</th><th style="text-align:right">Số user</th><th style="text-align:right">Trắng đen</th><th style="text-align:right">In màu</th><th style="text-align:right">Tổng trang</th><th style="text-align:right">% Màu</th><th style="text-align:right">Lượt scan</th></tr></thead>
     <tbody>${machineRows}</tbody></table>
 
     <h2>📋 Thống kê theo Phòng Ban</h2>
