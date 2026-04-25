@@ -4546,18 +4546,13 @@ async function msalInit(){
 
 async function msalGetGraphToken(){
   if(!_msalApp || !_msalAccount) return null;
+  const graphScopes=['GroupMember.Read.All','User.Read'];
   try{
-    const res = await _msalApp.acquireTokenSilent({
-      scopes: ['User.ReadBasic.All','User.Read'],
-      account: _msalAccount,
-    });
+    const res = await _msalApp.acquireTokenSilent({scopes:graphScopes, account:_msalAccount});
     return res.accessToken;
   }catch(e){
     try{
-      const res = await _msalApp.acquireTokenPopup({
-        scopes: ['User.ReadBasic.All','User.Read'],
-        account: _msalAccount,
-      });
+      const res = await _msalApp.acquireTokenPopup({scopes:graphScopes, account:_msalAccount});
       return res.accessToken;
     }catch(e2){ return null; }
   }
@@ -14955,25 +14950,38 @@ function printQRLabel(){
       const token=await msalGetGraphToken();
       if(!token){ toast('⚠️ Không lấy được token Graph API. Thử đăng nhập lại.','warn'); return; }
 
-      // Fetch tất cả users — dùng paging nếu >999 người
-      let users=[], url='https://graph.microsoft.com/v1.0/users?$select=displayName,department,userPrincipalName,accountEnabled&$top=999&$filter=accountEnabled eq true';
-      while(url){
-        const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}});
-        if(!res.ok) throw new Error('Graph API HTTP '+res.status);
-        const json=await res.json();
-        users=users.concat(json.value||[]);
-        url=json['@odata.nextLink']||null; // paging
-      }
+      // Lấy danh sách groups trước (GroupMember.Read.All đã được grant)
+      const grpRes=await fetch('https://graph.microsoft.com/v1.0/groups?$select=id,displayName&$top=100',
+        {headers:{'Authorization':'Bearer '+token}});
+      if(!grpRes.ok) throw new Error('Graph API HTTP '+grpRes.status);
+      const groups=((await grpRes.json()).value||[]);
 
-      // Lọc bỏ service accounts (không có @), build _map
-      const domain=/@(.+)$/.exec(_msalAccount?.username||'')?.[1]||'';
-      _map=users
-        .filter(u=>u.userPrincipalName && !u.userPrincipalName.startsWith('#EXT#'))
-        .map(u=>{
-          const username=u.userPrincipalName.split('@')[0].toLowerCase();
-          return{ user:username, name:u.displayName||'', dept:u.department||'' };
-        })
-        .filter(u=>u.user);
+      // Lấy members từng group, gộp lại + dedup theo userPrincipalName
+      const userMap={};
+      await Promise.all(groups.map(async g=>{
+        try{
+          let url=`https://graph.microsoft.com/v1.0/groups/${g.id}/members?$select=displayName,userPrincipalName,department&$top=999`;
+          while(url){
+            const r=await fetch(url,{headers:{'Authorization':'Bearer '+token}});
+            if(!r.ok) return;
+            const j=await r.json();
+            (j.value||[]).forEach(u=>{
+              if(!u.userPrincipalName||u.userPrincipalName.startsWith('#EXT#')) return;
+              const key=u.userPrincipalName.toLowerCase();
+              if(!userMap[key]) userMap[key]={
+                user: u.userPrincipalName.split('@')[0].toLowerCase(),
+                name: u.displayName||'',
+                dept: u.department||g.displayName||'' // fallback tên group
+              };
+              // Ưu tiên department từ AD, không thì dùng tên group
+              if(u.department && !userMap[key].dept) userMap[key].dept=u.department;
+            });
+            url=j['@odata.nextLink']||null;
+          }
+        }catch(e){}
+      }));
+
+      _map=Object.values(userMap).filter(u=>u.user);
 
       // Lưu local + SP (convert sang CSV text để tương thích)
       const csv='user,ten nhan vien,phong ban\n'+_map.map(u=>`${u.user},${u.name},${u.dept}`).join('\n');
