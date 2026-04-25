@@ -2910,18 +2910,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </table>
         </div>
       </div>
-      <!-- Trend chart -->
-      <div id="fuji-trend-chart" style="display:none;margin-top:20px;padding:18px 20px 16px;border:1px solid var(--border);border-radius:14px;background:var(--surface2);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;">
-              <i class="ph ph-chart-bar" style="color:var(--primary);font-size:16px;"></i> Xu hướng trang in theo chu kỳ
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">So sánh tổng trang in giữa các chu kỳ</div>
-          </div>
-        </div>
-        <div id="fuji-trend-chart-inner" style="overflow-x:auto;"></div>
-      </div>
     </div>
 
     <!-- KPIs -->
@@ -16176,9 +16164,8 @@ function printQRLabel(){
       sel.innerHTML='<option value="">-- Chọn chu kỳ --</option>'
         +opts.map(o=>`<option value="${o.cycle}">${_fujiCycleLabel(o.cycle)}  ·  ${o.note}</option>`).join('');
     }
-    // Cập nhật dropdown so sánh + vẽ trend chart
+    // Cập nhật dropdown so sánh cùng lúc
     _fujiPopulateCmpDropdowns();
-    _fujiRenderTrendChart();
   }
 
   window._fujiQuickPreview=async function(cycle){
