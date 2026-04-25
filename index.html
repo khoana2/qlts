@@ -603,13 +603,10 @@ input[type=checkbox].row-cb{
 .spec-chip .sc-label{color:var(--muted);font-size:10px;}
 
 /* ══════════════════════ EMPLOYEE AUTOCOMPLETE ══════════════════ */
-.emp-ac-wrap{position:relative;display:block;}
 .emp-ac-drop{
-  position:absolute;top:100%;left:0;right:0;z-index:9999;
-  background:var(--card);border:1px solid var(--border);
-  border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);
-  max-height:220px;overflow-y:auto;margin-top:3px;
   display:none;
+  background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);
+  border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);
 }
 .emp-ac-drop.open{display:block;}
 .emp-ac-item{
@@ -6225,73 +6222,88 @@ function _onEmployeesLoaded(){
 }
 
 // ─── Autocomplete helper: gắn vào input, gợi ý từ _qltsEmployees ─────────────
-// opts: { nameField, emailField, deptField }
+// Dropdown được gắn vào body (fixed) để không phá layout form
 function _empAutocomplete(inputEl, opts={}){
-  if(!inputEl) return;
-  // Bọc input trong wrapper nếu chưa có
-  let wrap=inputEl.parentElement;
-  if(!wrap.classList.contains('emp-ac-wrap')){
-    wrap=document.createElement('div');
-    wrap.className='emp-ac-wrap';
-    inputEl.parentNode.insertBefore(wrap, inputEl);
-    wrap.appendChild(inputEl);
-  }
-  // Tạo dropdown
+  if(!inputEl||inputEl._acDone) return;
+  inputEl._acDone=true;
+
+  // Dropdown ở body level, dùng fixed position
   const drop=document.createElement('div');
   drop.className='emp-ac-drop';
-  wrap.appendChild(drop);
+  drop.style.position='fixed';
+  drop.style.zIndex='99999';
+  document.body.appendChild(drop);
 
   let activeIdx=-1;
+  let _matches=[];
 
-  function getEmpField(emp, fieldId){
-    const el=fieldId?document.getElementById(fieldId):null;
-    return el;
+  function reposition(){
+    const r=inputEl.getBoundingClientRect();
+    drop.style.top=(r.bottom+3)+'px';
+    drop.style.left=r.left+'px';
+    drop.style.width=r.width+'px';
+    drop.style.maxHeight='220px';
+    drop.style.overflowY='auto';
   }
 
-  function close(){ drop.classList.remove('open'); activeIdx=-1; }
+  function close(){
+    drop.classList.remove('open');
+    drop.style.display='none';
+    activeIdx=-1;
+  }
 
   function select(emp){
     inputEl.value=emp.name;
     if(opts.emailField){ const el=document.getElementById(opts.emailField); if(el) el.value=emp.user?emp.user+'@ttgvn.com':''; }
-    if(opts.deptField){ const el=document.getElementById(opts.deptField); if(el) el.value=emp.dept; }
+    if(opts.deptField){
+      const el=document.getElementById(opts.deptField);
+      if(el){
+        // select: tìm option khớp hoặc set value trực tiếp
+        const opt=[...el.options].find(o=>o.value===emp.dept||o.text===emp.dept);
+        el.value=opt?opt.value:emp.dept;
+      }
+    }
     close();
     inputEl.dispatchEvent(new Event('change',{bubbles:true}));
   }
 
   function render(q){
     const lq=q.toLowerCase().trim();
-    if(!lq){ close(); return; }
-    const matches=window._qltsEmployees
-      .filter(e=>e.name.toLowerCase().includes(lq)||e.user.includes(lq))
+    if(!lq||!window._qltsEmployees.length){ close(); return; }
+    _matches=window._qltsEmployees
+      .filter(e=>e.name.toLowerCase().includes(lq)||(e.user&&e.user.includes(lq)))
       .slice(0,8);
-    if(!matches.length){ close(); return; }
-    drop.innerHTML=matches.map((e,i)=>`
+    if(!_matches.length){ close(); return; }
+    reposition();
+    drop.style.display='block';
+    drop.innerHTML=_matches.map((e,i)=>`
       <div class="emp-ac-item" data-i="${i}">
-        <span class="emp-ac-name">${esc(e.name)||e.user}</span>
-        <span class="emp-ac-sub">${esc(e.dept)}${e.user?' · '+e.user:''}</span>
+        <span class="emp-ac-name">${esc(e.name)||esc(e.user)}</span>
+        <span class="emp-ac-sub">${esc(e.dept)}${e.user?' · <em>'+esc(e.user)+'</em>':''}</span>
       </div>`).join('');
-    drop._matches=matches;
     drop.classList.add('open');
     activeIdx=-1;
     drop.querySelectorAll('.emp-ac-item').forEach(item=>{
       item.addEventListener('mousedown',ev=>{
         ev.preventDefault();
-        select(matches[+item.dataset.i]);
+        select(_matches[+item.dataset.i]);
       });
     });
   }
 
-  inputEl.addEventListener('input', ()=>render(inputEl.value));
-  inputEl.addEventListener('focus', ()=>{ if(inputEl.value) render(inputEl.value); });
-  inputEl.addEventListener('blur', ()=>setTimeout(close, 150));
-  inputEl.addEventListener('keydown', e=>{
+  inputEl.addEventListener('input',  ()=>render(inputEl.value));
+  inputEl.addEventListener('focus',  ()=>{ if(inputEl.value) render(inputEl.value); });
+  inputEl.addEventListener('blur',   ()=>setTimeout(close, 160));
+  inputEl.addEventListener('keydown',e=>{
     const items=drop.querySelectorAll('.emp-ac-item');
     if(!items.length) return;
     if(e.key==='ArrowDown'){ e.preventDefault(); activeIdx=Math.min(activeIdx+1,items.length-1); items.forEach((el,i)=>el.classList.toggle('active',i===activeIdx)); }
     else if(e.key==='ArrowUp'){ e.preventDefault(); activeIdx=Math.max(activeIdx-1,0); items.forEach((el,i)=>el.classList.toggle('active',i===activeIdx)); }
-    else if(e.key==='Enter'&&activeIdx>=0){ e.preventDefault(); select(drop._matches[activeIdx]); }
+    else if(e.key==='Enter'&&activeIdx>=0){ e.preventDefault(); select(_matches[activeIdx]); }
     else if(e.key==='Escape') close();
   });
+  // Đóng khi scroll modal
+  document.addEventListener('scroll',()=>{ if(drop.classList.contains('open')) reposition(); },{passive:true,capture:true});
 }
 // ═════════════════════════════════════════════════════════════════════
 
