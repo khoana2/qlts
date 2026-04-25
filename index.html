@@ -3087,21 +3087,19 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     </div>
 
     <!-- Chu kỳ trên SharePoint (Fuji_ReportCache) -->
-    <div id="fuji-sp-cycles-wrap" style="display:none;margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-        <i class="ph ph-cloud"></i> Chu kỳ trên SharePoint
-        <span style="font-size:11px;color:var(--muted);font-weight:400;">(xem được trên mọi máy)</span>
+    <div id="fuji-sp-cycles-wrap" style="display:none;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div>
+          <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;">
+            <i class="ph ph-cloud-check" style="color:var(--primary);"></i> Báo cáo đã lưu
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Lưu trữ trên SharePoint · truy cập được trên mọi máy</div>
+        </div>
+        <button class="btn btn-icon-ph" onclick="_fujiSpListCycles()" style="font-size:12px;">
+          <i class="ph ph-arrows-clockwise"></i> Làm mới
+        </button>
       </div>
-      <div id="fuji-sp-cycles-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
-    </div>
-
-    <!-- Chu kỳ đã lưu local (localStorage) -->
-    <div id="fuji-local-cycles-wrap" style="display:none;margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-        <i class="ph ph-hard-drive"></i> Chu kỳ đã lưu (trên máy này)
-        <span style="font-size:11px;color:var(--muted);font-weight:400;" id="fuji-local-cycle-count"></span>
-      </div>
-      <div id="fuji-local-cycles-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      <div id="fuji-sp-cycles-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;"></div>
     </div>
 
     <!-- Bảng Lịch Sử SharePoint -->
@@ -14935,7 +14933,7 @@ function printQRLabel(){
       localStorage.removeItem(_fujiLsKey(cycle));
       const idx=JSON.parse(localStorage.getItem(LS_IDX)||'[]').filter(c=>c!==cycle);
       localStorage.setItem(LS_IDX,JSON.stringify(idx));
-      _fujiRenderLocalCycles();
+      _fujiRenderQuickCycles();
       toast('🗑️ Đã xoá cache chu kỳ '+_fujiCycleLabel(cycle),'ok');
     }catch(e){ toast('❌ Lỗi xoá cache','warn'); }
   };
@@ -15695,32 +15693,73 @@ function printQRLabel(){
     const wrap=$('fuji-sp-cycles-wrap'), list=$('fuji-sp-cycles-list');
     if(!wrap||!list) return;
     wrap.style.display='';
-    list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:6px 0;">Đang tải...</div>';
+    list.innerHTML=`<div style="grid-column:1/-1;color:var(--muted);font-size:12px;padding:20px 0;text-align:center;">
+      <i class="ph ph-spinner" style="animation:spin 1s linear infinite;display:inline-block;"></i> Đang tải...
+    </div>`;
     try{
       const token=await msalGetToken();
       const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiReportCache}')/items?$select=Id,Thang,NguoiLuu,Modified&$orderby=Thang desc&$top=50`;
       const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
       if(!res.ok) throw new Error('HTTP '+res.status);
-      const json=await res.json();
-      const items=json.d?.results||[];
-      if(!items.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;padding:6px 0;">Chưa có chu kỳ nào được lưu.</div>'; return; }
+      const items=(await res.json()).d?.results||[];
+      if(!items.length){
+        list.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:32px 16px;color:var(--muted);">
+          <i class="ph ph-cloud-slash" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4;"></i>
+          Chưa có chu kỳ nào được lưu trên SharePoint.
+        </div>`;
+        return;
+      }
       list.innerHTML='';
-      items.forEach(item=>{
+      // Nhóm theo năm để dễ scan
+      const byYear={};
+      items.forEach(it=>{ const y=it.Thang.slice(0,4); if(!byYear[y]) byYear[y]=[]; byYear[y].push(it); });
+
+      items.forEach((item,idx)=>{
         const dt=new Date(item.Modified);
         const savedAt=String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear();
+        const label=_fujiCycleLabel(item.Thang)||item.Thang;
+        // Màu accent xen kẽ
+        const accent=idx%3===0?'#3b82f6':idx%3===1?'#7c3aed':'#0ea5e9';
+
         const card=document.createElement('div');
-        card.style.cssText='border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--surface2);cursor:pointer;min-width:180px;flex:1;max-width:240px;';
+        card.style.cssText=`
+          border:1px solid var(--border);border-radius:14px;padding:18px 16px 14px;
+          background:var(--surface2);cursor:pointer;position:relative;overflow:hidden;
+          transition:box-shadow .15s,transform .15s;
+        `;
+        card.onmouseenter=()=>{ card.style.boxShadow='0 4px 18px rgba(0,0,0,.1)'; card.style.transform='translateY(-2px)'; };
+        card.onmouseleave=()=>{ card.style.boxShadow=''; card.style.transform=''; };
         card.innerHTML=`
-          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${savedAt} · ${item.NguoiLuu||''}</div>
-          <div style="font-weight:700;font-size:13px;color:var(--primary);">${_fujiCycleLabel(item.Thang)||item.Thang}</div>
-          <div style="font-size:11px;color:#16a34a;margin-top:3px;"><i class="ph ph-cloud-check"></i> Trên SharePoint</div>`;
+          <!-- Accent bar top -->
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${accent};border-radius:14px 14px 0 0;"></div>
+          <!-- Badge + date -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:4px;">
+            <span style="background:${accent}18;color:${accent};font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;display:flex;align-items:center;gap:4px;">
+              <i class="ph ph-cloud-check"></i> SharePoint
+            </span>
+            <span style="font-size:10px;color:var(--muted);">${savedAt}</span>
+          </div>
+          <!-- Cycle label -->
+          <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:6px;">${label}</div>
+          <!-- Who saved -->
+          <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;">
+            <i class="ph ph-user-circle"></i>
+            ${item.NguoiLuu||'—'}
+          </div>
+          <!-- CTA -->
+          <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;font-weight:600;color:${accent};display:flex;align-items:center;gap:4px;">
+              Xem báo cáo <i class="ph ph-arrow-right"></i>
+            </span>
+          </div>`;
         card.addEventListener('click',()=>window._fujiSpLoadReport(item.Thang));
         list.appendChild(card);
       });
-      // Cập nhật dropdowns sau khi biết SP cycles
       _fujiPopulateCmpDropdowns();
     }catch(e){
-      list.innerHTML=`<div style="color:#dc2626;font-size:12px;">Lỗi: ${e?.message||e}</div>`;
+      list.innerHTML=`<div style="grid-column:1/-1;color:#dc2626;font-size:12px;padding:12px 0;">
+        <i class="ph ph-warning-circle"></i> Lỗi: ${e?.message||e}
+      </div>`;
     }
   };
 
@@ -15833,7 +15872,7 @@ function printQRLabel(){
     if(v==='dept')    _renderDeptTable();
     if(v==='compare') _renderCompare();
     if(v==='machine') _renderMachineTable();
-    if(v==='history'){ _fujiRenderLocalCycles(); _fujiPopulateCmpDropdowns(); _fujiSpListCycles(); _fujiSpLoad(); }
+    if(v==='history'){ _fujiPopulateCmpDropdowns(); _fujiSpListCycles(); _fujiSpLoad(); }
   };
 
   // ── Phòng ban aggregation ─────────────────────────────────────────
