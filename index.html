@@ -2869,6 +2869,36 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div style="font-size:12px;color:var(--muted);margin-top:4px;">Có thể chọn / thả <strong>nhiều file cùng lúc</strong> — dữ liệu sẽ được gộp lại. Hỗ trợ: Web Application Print · IPP · LPD · Scanner.</div>
     </div>
 
+    <!-- Quick access: Chu kỳ đã lưu (hiện trên màn hình trống) -->
+    <div id="fuji-quick-cycles" style="margin-top:16px;">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+        <i class="ph ph-clock-counter-clockwise"></i> Xem lại báo cáo chu kỳ đã lưu
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select id="fuji-qc-select" onchange="_fujiQuickPreview(this.value)" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);min-width:260px;cursor:pointer;">
+          <option value="">-- Chọn chu kỳ --</option>
+        </select>
+        <button id="fuji-qc-btn" onclick="_fujiQuickLoad()" style="display:none;" class="btn primary btn-icon-ph">
+          <i class="ph ph-arrow-right"></i> Xem báo cáo
+        </button>
+      </div>
+      <!-- Preview card -->
+      <div id="fuji-qc-preview" style="display:none;margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--surface2);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;" id="fuji-qc-preview-src"></div>
+        <div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px;" id="fuji-qc-preview-label"></div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;" id="fuji-qc-preview-tbl">
+          <thead><tr style="color:var(--muted);">
+            <th style="text-align:left;padding:4px 8px;font-weight:600;">Model / Serial</th>
+            <th style="text-align:right;padding:4px 8px;font-weight:600;">Trắng đen</th>
+            <th style="text-align:right;padding:4px 8px;font-weight:600;">In màu</th>
+            <th style="text-align:right;padding:4px 8px;font-weight:600;">Tổng trang</th>
+            <th style="text-align:right;padding:4px 8px;font-weight:600;">% Màu</th>
+          </tr></thead>
+          <tbody id="fuji-qc-preview-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- KPIs -->
     <div class="fuji-kpi-grid" id="fuji-kpi-wrap" style="display:none">
       <div class="fuji-k"><div class="lbl">Tổng trang</div><div class="val" id="fuji-k-total">—</div></div>
@@ -15169,6 +15199,8 @@ function printQRLabel(){
     }
     const emp=$('fuji-empty'); if(emp) emp.style.display=visible?'none':'';
     const dz=$('fuji-dropzone'); if(dz) dz.style.display=visible?'none':'';
+    // Quick cycles: luôn hiện khi không có data, ẩn khi đang xem report
+    const qc=$('fuji-quick-cycles'); if(qc) qc.style.display=visible?'none':'block';
   }
 
   // ── KPIs ──────────────────────────────────────────────────────────
@@ -16005,11 +16037,123 @@ function printQRLabel(){
   };
 
   // ── Init event listeners (once) ───────────────────────────────────
+  // ── Quick cycles panel (màn hình trống) ──────────────────────────
+  let _qcData={}; // cache: cycle → {agg, machines, source, savedAt}
+
+  async function _fujiRenderQuickCycles(){
+    const sel=$('fuji-qc-select');
+    if(!sel) return;
+    _qcData={};
+    const opts=[];
+
+    // 1. Local cycles
+    try{
+      const lsIdx=JSON.parse(localStorage.getItem(LS_IDX)||'[]');
+      lsIdx.forEach(cycle=>{
+        try{
+          const d=JSON.parse(localStorage.getItem(_fujiLsKey(cycle))||'{}');
+          let savedAt='';
+          if(d.savedAt){ const dt=new Date(d.savedAt); savedAt=String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear(); }
+          _qcData[cycle]={agg:d.agg||[],machines:d.machines||[],source:'local',savedAt};
+          opts.push({cycle,note:`💾 ${savedAt}`});
+        }catch(e){}
+      });
+    }catch(e){}
+
+    // 2. SP cycles (nếu đăng nhập)
+    if(typeof msalGetToken==='function'){
+      try{
+        const token=await msalGetToken();
+        const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiReportCache}')/items?$select=Thang,Modified&$orderby=Thang desc&$top=36`;
+        const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+        if(res.ok){
+          const items=(await res.json()).d?.results||[];
+          items.forEach(item=>{
+            if(_qcData[item.Thang]) return;
+            const dt=new Date(item.Modified);
+            const savedAt=String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear();
+            _qcData[item.Thang]={agg:[],machines:[],source:'sp',savedAt};
+            opts.push({cycle:item.Thang,note:`☁️ ${savedAt}`});
+          });
+        }
+      }catch(e){}
+    }
+
+    // Sắp xếp mới nhất trên trước
+    opts.sort((a,b)=>b.cycle.localeCompare(a.cycle));
+    if(!opts.length){
+      sel.innerHTML='<option value="">-- Chưa có chu kỳ nào được lưu --</option>';
+    } else {
+      sel.innerHTML='<option value="">-- Chọn chu kỳ --</option>'
+        +opts.map(o=>`<option value="${o.cycle}">${_fujiCycleLabel(o.cycle)}  ·  ${o.note}</option>`).join('');
+    }
+    // Cập nhật dropdown so sánh cùng lúc
+    _fujiPopulateCmpDropdowns();
+  }
+
+  window._fujiQuickPreview=async function(cycle){
+    const preview=$('fuji-qc-preview'), btn=$('fuji-qc-btn');
+    if(!preview||!cycle){ if(preview) preview.style.display='none'; if(btn) btn.style.display='none'; return; }
+
+    // Hiện placeholder
+    preview.style.display='';
+    if(btn) btn.style.display='';
+    $('fuji-qc-preview-label').textContent=_fujiCycleLabel(cycle);
+    $('fuji-qc-preview-tbody').innerHTML='<tr><td colspan="5" style="padding:10px 8px;color:var(--muted);">Đang tải...</td></tr>';
+
+    // Load nếu chưa có machines
+    let d=_qcData[cycle];
+    if(d&&d.source==='sp'&&!d.machines.length){
+      try{
+        const token=await msalGetToken();
+        const url=`${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spFujiReportCache}')/items?$filter=Thang eq '${cycle}'&$select=DataJson`;
+        const res=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/json;odata=verbose'}});
+        if(res.ok){
+          const item=((await res.json()).d?.results||[])[0];
+          if(item?.DataJson){ const parsed=JSON.parse(item.DataJson); d.machines=parsed.machines||[]; d.agg=parsed.agg||[]; }
+        }
+      }catch(e){}
+    }
+
+    const src=$('fuji-qc-preview-src');
+    if(src) src.textContent=(d?.source==='sp'?'☁️ SharePoint':'💾 Trên máy này')+(d?.savedAt?' · Lưu '+d.savedAt:'');
+
+    const machines=d?.machines||[];
+    const tbody=$('fuji-qc-preview-tbody');
+    if(!machines.length){
+      tbody.innerHTML='<tr><td colspan="5" style="padding:10px 8px;color:var(--muted);font-size:12px;">Không có thông tin máy.</td></tr>';
+      return;
+    }
+    tbody.innerHTML=machines.map((m,i)=>{
+      const pct=m.total?Math.round(m.color*100/m.total):0;
+      const modelStr=`<strong>${m.model||'—'}</strong>${m.serial?` <span style="color:var(--muted);font-size:11px;">/ ${m.serial}</span>`:''}`;
+      const bg=i%2?'background:var(--surface2);':'';
+      return`<tr style="${bg}">
+        <td style="padding:6px 8px;">${modelStr}</td>
+        <td style="text-align:right;padding:6px 8px;">${(m.bw||0).toLocaleString('vi-VN')}</td>
+        <td style="text-align:right;padding:6px 8px;">${(m.color||0).toLocaleString('vi-VN')}</td>
+        <td style="text-align:right;padding:6px 8px;"><strong>${(m.total||0).toLocaleString('vi-VN')}</strong></td>
+        <td style="text-align:right;padding:6px 8px;">${pct}%</td>
+      </tr>`;
+    }).join('');
+  };
+
+  window._fujiQuickLoad=function(){
+    const cycle=($('fuji-qc-select')||{}).value||'';
+    if(!cycle) return;
+    const d=_qcData[cycle];
+    if(!d){ toast('⚠️ Không tìm thấy dữ liệu.','warn'); return; }
+    if(d.source==='sp') window._fujiSpLoadReport(cycle);
+    else window._fujiLocalLoad(cycle);
+  };
+
   function _initListeners(){
     if(_initialized) return; _initialized=true;
 
     // Populate dropdown so sánh chu kỳ từ localStorage ngay khi load
     _fujiPopulateCmpDropdowns();
+    // Hiện chu kỳ đã lưu trên màn hình trống
+    _fujiRenderQuickCycles();
 
     const on=(id,ev,fn)=>{ const el=$(id); if(el) el.addEventListener(ev,fn); };
 
@@ -16041,6 +16185,7 @@ function printQRLabel(){
       // Ẩn data, hiện drop zone + empty state
       _showData(false);
       _clearErr();
+      _fujiRenderQuickCycles();
       toast('🗑️ Đã xóa dữ liệu. Nạp file CSV mới để bắt đầu lại.','ok');
     });
     on('fuji-btn-export','click',_exportCSV);
