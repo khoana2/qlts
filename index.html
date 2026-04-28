@@ -7647,12 +7647,16 @@ function renderEvents(){
 
   // ── Build unified event list ─────────────────────────────────────
   const allEv = [];
+  // Helper: nhận dạng "kho" dưới mọi dạng
+  const _isKho = v => !v || /^(kho|lưu kho|trong kho|\(kho\)|\(lưu kho\)|kho lưu trữ|lưu trữ)$/i.test((v||'').trim());
+  // Helper: lọc notes là raw SP text format "dd/mm/yyyy: ..."
+  const _cleanNote = n => n && !/^\d{1,2}\/\d{1,2}\/\d{4}/.test((n||'').trim()) ? n : '';
 
   // 1. Từ lịch sử bàn giao (transfers)
   Object.entries(transfers).forEach(([assetId, recs])=>{
     const a = assets.find(x=>x.id===assetId);
     (recs||[]).forEach(rec=>{
-      const type = (!rec.to || rec.to==='Kho') ? 'Thu hồi' : 'Bàn giao';
+      const type = _isKho(rec.to) ? 'Thu hồi' : 'Bàn giao';
       allEv.push({
         date:      rec.date || (rec.ts||'').substring(0,10) || '',
         ts:        rec.ts   || rec.date || '',
@@ -7665,7 +7669,7 @@ function renderEvents(){
         fromDept:  rec.fromDept || '',
         to:        rec.to       || '',
         toDept:    rec.toDept   || '',
-        notes:     rec.notes    || '',
+        notes:     _cleanNote(rec.notes) || '',
         condition: rec.condition|| '',
       });
     });
@@ -7771,11 +7775,15 @@ function renderEvents(){
               ${ev.model?`<span style="font-size:11px;color:var(--muted);">${esc(ev.model)}</span>`:''}
               ${ev.maTaiSan?`<code class="tl-asset-code">[${esc(ev.maTaiSan)}]</code>`:''}
             </div>
-            ${(ev.from||ev.to) ? `
+            ${(ev.from||ev.to||ev.fromDept||ev.toDept) ? `
             <div class="tl-persons">
-              ${ev.from||ev.fromDept ? personChip(ev.from, ev.fromDept) : '<span style="color:var(--muted);font-size:11px;">Kho</span>'}
+              ${(!ev.from&&!ev.fromDept)||_isKho(ev.from)
+                ? '<span style="color:var(--muted);font-size:11px;font-style:italic;">Kho</span>'
+                : personChip(ev.from, ev.fromDept)}
               <i class="ph ph-arrow-right tl-arrow"></i>
-              ${ev.to||ev.toDept ? personChip(ev.to, ev.toDept) : '<span style="color:var(--muted);font-size:11px;">Kho</span>'}
+              ${(!ev.to&&!ev.toDept)||_isKho(ev.to)
+                ? '<span style="color:var(--muted);font-size:11px;font-style:italic;">Kho</span>'
+                : personChip(ev.to, ev.toDept)}
             </div>` : ''}
             ${ev.notes?`<div class="tl-notes">📝 ${esc(ev.notes)}</div>`:''}
             ${ev.condition?`<div class="tl-notes">🔧 Tình trạng: ${esc(ev.condition)}</div>`:''}
@@ -11939,32 +11947,36 @@ async function migrateTransfersToSP(){
 function parseTextTransferHistory(text){
   if(!text) return [];
   const result = [];
-  // Tách theo dấu "→"
-  const parts = text.split('→').map(s=>s.trim()).filter(Boolean);
-  let prevPerson = '';
-  for(const part of parts){
-    // Pattern: dd/mm/yyyy <action>: <name>
-    const m = part.match(/^(\d{1,2}\/\d{1,2}\/\d{4})\s*(Bàn giao|Thu hồi|Bảo trì|Sửa chữa|Lưu kho|Kiểm kê)?[:\s]*(.*)$/i);
+  const _khoVariants = /^(\(kho\)|\(lưu kho\)|kho|lưu kho|trong kho)$/i;
+  const _normKho = v => _khoVariants.test((v||'').trim()) ? '' : (v||'').trim();
+
+  // Mỗi dòng có dạng: "dd/mm/yyyy: from → to"
+  const lines = text.split(/\n|;/).map(s=>s.trim()).filter(Boolean);
+  for(const line of lines){
+    const arrowIdx = line.indexOf('→');
+    if(arrowIdx < 0) continue;
+
+    const leftPart  = line.substring(0, arrowIdx).trim();
+    const rightPart = line.substring(arrowIdx + 1).trim();
+
+    // Parse phần trái: "dd/mm/yyyy[: ][action:] from"
+    const m = leftPart.match(/^(\d{1,2}\/\d{1,2}\/\d{4})\s*(?:Bàn giao|Thu hồi|Bảo trì|Sửa chữa|Lưu kho|Kiểm kê)?[:\s]*(.*)/i);
     if(!m) continue;
-    const [, dateStr, action='', personRaw=''] = m;
-    const person = personRaw.trim();
-    // Đổi dd/mm/yyyy → yyyy-mm-dd
+
+    const [, dateStr, fromRaw=''] = m;
     const [dd, mm, yyyy] = dateStr.split('/');
     const date = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
-    const act  = (action||'').trim();
-    const rec  = {
-      from:      act==='Thu hồi' ? person : prevPerson,
-      fromDept:  '',
-      to:        act==='Thu hồi' ? '(Lưu kho)' : (person||'(Lưu kho)'),
-      toDept:    '',
-      toEmail:   '',
-      date,
-      condition: '',
-      notes:     part.trim(),
-      ts:        new Date(`${yyyy}-${mm}-${dd}`).toISOString(),
-    };
-    result.push(rec);
-    if(person) prevPerson = person;
+
+    const from = _normKho(fromRaw);
+    const to   = _normKho(rightPart);
+
+    result.push({
+      from, fromDept: '',
+      to,   toDept:   '',
+      toEmail: '', date,
+      condition: '', notes: '',
+      ts: new Date(`${yyyy}-${mm}-${dd}`).toISOString(),
+    });
   }
   return result;
 }
