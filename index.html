@@ -710,6 +710,15 @@ input[type=checkbox].row-cb{
   transition:all .15s;color:var(--text);
 }
 .sa-btn:hover{background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-color:#C7D2FE;box-shadow:0 2px 8px rgba(99,102,241,.15);}
+/* ══════════════ HOVER ACTION BAR ══════════════ */
+.ha-wrap{display:flex;gap:2px;justify-content:flex-end;opacity:0;transition:opacity .15s;pointer-events:none;}
+tr:hover .ha-wrap{opacity:1;pointer-events:auto;}
+.ha-btn{width:28px;height:28px;border-radius:6px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background .1s,color .1s;position:relative;}
+.ha-btn:hover{background:var(--surface2);color:var(--text);}
+.ha-btn.danger:hover{background:#FEF2F2;color:#DC2626;}
+.ha-btn i.ph{font-size:14px;line-height:1;}
+.ha-tip{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);font-size:10px;white-space:nowrap;padding:3px 7px;border-radius:4px;opacity:0;pointer-events:none;transition:opacity .1s;z-index:9999;}
+.ha-btn:hover .ha-tip{opacity:1;}
 /* Popover */
 #smart-action-menu{
   position:fixed;z-index:9999;
@@ -2459,7 +2468,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
               <th data-col="ssd">SSD</th>
               <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
-              <th style="width:80px;text-align:center;">Q.Action</th>
+              <th style="width:120px;"></th>
             </tr>
           </thead>
           <tbody id="assets-tbody"></tbody>
@@ -7225,10 +7234,19 @@ function renderTable(){
           ${warrantyBadge(a)}
           ${xacNhanBadge(a.id)}
         </td>
-        <td style="position:relative;z-index:3;">
-          <div class="row-actions">
-            <button class="sa-btn" title="Q.Action" onclick="openSmartAction('${a.id}',this)" style="margin:0 auto;">
-              <span style="font-size:15px;pointer-events:none;line-height:1;">✨</span>
+        <td style="position:relative;z-index:3;text-align:right;">
+          <div class="ha-wrap">
+            <button class="ha-btn" onclick="viewDetail('${a.id}')">
+              <i class="ph ph-eye"></i><span class="ha-tip">Xem</span>
+            </button>
+            <button class="ha-btn" onclick="openEdit('${a.id}')">
+              <i class="ph ph-pencil-simple"></i><span class="ha-tip">Sửa</span>
+            </button>
+            <button class="ha-btn" onclick="openTransfer('${a.id}')">
+              <i class="ph ph-arrows-left-right"></i><span class="ha-tip">Bàn giao</span>
+            </button>
+            <button class="ha-btn danger" onclick="openDelete('${a.id}')">
+              <i class="ph ph-trash"></i><span class="ha-tip">Xóa</span>
             </button>
           </div>
         </td>
