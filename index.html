@@ -5677,6 +5677,12 @@ const SP_DISPLAY_MAP = {
   'Lịch sử bàn giao': '__transferJSON',
   'Công ty':          'congTy',
   'CongTy':           'congTy',
+  'NguonThietBi':     'nguonThietBi',
+  'NCC':              'ncc',
+  'SoHoaDon':         'soHoaDon',
+  'Giá trị':          'giaTri',
+  'GhiChu':           'ghiChu',
+  'Ghichu':           'ghiChu',
 };
 
 // Danh sách công ty TTG (có thể thêm bớt tại đây)
@@ -5930,6 +5936,7 @@ function spItemToAsset(item){
     suaChua,
     congTy:      get('Công ty') || get('CongTy') || '',
     nguonThietBi: get('NguonThietBi') || '',
+    ncc:          get('NCC') || '',
     congTyNguon:  get('CongTyNguon')  || '',
     soHoaDon:     get('SoHoaDon')     || '',
     giaTri:       get('Giá trị') ?? '',
@@ -6018,6 +6025,7 @@ function assetToSpItem(a){
     set('Lịch sử bàn giao', summary);
   }
   set('NguonThietBi', a.nguonThietBi || '');
+  set('NCC',          a.ncc          || '');
   set('CongTyNguon',  a.congTyNguon  || '');
   set('SoHoaDon',     a.soHoaDon     || '');
   set('Ghichu',       a.ghiChu       || '');
