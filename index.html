@@ -1663,6 +1663,51 @@ td, th { font-size: 13px; }
   --surface:#ffffff; --surface2:#f5f6fc;
 }
 
+/* ── Timeline sự kiện ── */
+.tl-wrap{ display:flex;flex-direction:column;gap:0; }
+.tl-date-group{ margin-bottom:4px; }
+.tl-date-label{
+  font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;
+  padding:10px 0 6px;display:flex;align-items:center;gap:8px;
+}
+.tl-date-label::after{ content:'';flex:1;height:1px;background:var(--border); }
+.tl-card{
+  display:flex;align-items:flex-start;gap:12px;
+  background:#fff;border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;margin-bottom:8px;cursor:pointer;
+  transition:box-shadow .15s,border-color .15s;
+}
+.tl-card:hover{ box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:var(--accent2); }
+.tl-icon-wrap{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+}
+.tl-icon-bangiao{ background:#EFF6FF;color:#1D4ED8; }
+.tl-icon-thuhoi{  background:#FEF3C7;color:#B45309; }
+.tl-icon-suachua{ background:#FEF2F2;color:#DC2626; }
+.tl-icon-baotri{  background:#F0FDF4;color:#16A34A; }
+.tl-icon-nangcap{ background:#F5F3FF;color:#7C3AED; }
+.tl-icon-thanhtly{ background:#FFF7ED;color:#EA580C; }
+.tl-icon-other{   background:var(--surface2);color:var(--muted); }
+.tl-body{ flex:1;min-width:0; }
+.tl-top{ display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px; }
+.tl-asset-name{ font-size:13px;font-weight:700;color:var(--text); }
+.tl-asset-code{ font-size:11px;color:var(--accent2);font-family:monospace; }
+.tl-persons{
+  font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin-top:3px;
+}
+.tl-person-chip{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;
+}
+.tl-arrow{ color:var(--muted);font-size:14px; }
+.tl-notes{ font-size:11px;color:var(--muted);margin-top:5px;font-style:italic; }
+.tl-meta{ font-size:11px;color:var(--muted);white-space:nowrap;margin-top:2px; }
+.tl-empty{ text-align:center;padding:48px 0;color:var(--muted); }
+.tl-empty i{ font-size:40px;display:block;margin-bottom:12px; }
+
 /* ── Body & scrollbar ── */
 body{ background:var(--bg); }
 ::-webkit-scrollbar-track{ background:#eef0f8; border-radius:5px; }
@@ -2439,49 +2484,40 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   <!-- ══════════════ EVENTS VIEW ══════════════ -->
   <div class="view" id="view-events">
 
-    <div class="filter-bar" style="margin-top:14px;">
-      <div class="search-wrap">
+    <!-- Filter bar -->
+    <div class="filter-bar" style="margin-top:14px;flex-wrap:wrap;gap:8px;">
+      <div class="search-wrap" style="min-width:220px;">
         <i class="ph ph-magnifying-glass" style="font-size:14px;color:var(--muted);flex-shrink:0;"></i>
-        <input type="text" id="ev-search" placeholder="Tìm theo mã tài sản, nội dung sự kiện…" oninput="renderEvents()"/>
+        <input type="text" id="ev-search" placeholder="Tìm mã TS, tên máy, người dùng…" oninput="renderEvents()"/>
       </div>
       <select class="fsel" id="ev-type" onchange="renderEvents()">
-        <option value="">📋 Loại sự kiện</option>
-        <option>Bàn giao</option><option>Bảo trì</option><option>Sửa chữa</option>
-        <option>Nâng cấp</option><option>Thanh lý</option><option>Thu hồi</option>
+        <option value="">📋 Tất cả loại</option>
+        <option>Bàn giao</option><option>Thu hồi</option><option>Sửa chữa</option>
+        <option>Bảo trì</option><option>Nâng cấp</option><option>Thanh lý</option>
       </select>
-      <select class="fsel" id="ev-company" onchange="renderEvents()">
-        <option value="">🏬 Công ty</option>
+      <select class="fsel" id="ev-dept" onchange="renderEvents()">
+        <option value="">🏢 Bộ phận</option>
+      </select>
+      <select class="fsel" id="ev-range" onchange="renderEvents()">
+        <option value="">📅 Tất cả thời gian</option>
+        <option value="7">7 ngày qua</option>
+        <option value="30">30 ngày qua</option>
+        <option value="90">3 tháng qua</option>
+        <option value="180">6 tháng qua</option>
       </select>
       <span class="filter-count" id="ev-count"></span>
       <button id="btn-migrate-transfer" onclick="migrateTransfersToSP()" style="display:none;"
         class="btn" title="Đẩy toàn bộ lịch sử bàn giao cũ lên SharePoint (chạy 1 lần)">
-        <i class="ph ph-cloud-arrow-up"></i> Migrate lịch sử → SP
+        <i class="ph ph-cloud-arrow-up"></i> Migrate → SP
       </button>
       <button id="btn-set-ttg" onclick="bulkSetCompanyTTG()" style="display:none;margin-left:auto;"
-        class="btn warn btn-icon-ph" title="Gán TTG cho tất cả tài sản chưa có công ty">
-        <i class="ph ph-buildings"></i> Gán TTG cho tất cả
+        class="btn warn btn-icon-ph">
+        <i class="ph ph-buildings"></i> Gán TTG
       </button>
     </div>
 
-    <div class="table-card" style="margin-top:10px;">
-      <div class="table-wrap" style="max-height:calc(100vh - 260px);">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Mã tài sản</th>
-              <th>Tên tài sản</th>
-              <th>Ngày sự kiện</th>
-              <th>Trạng thái</th>
-              <th>Nội dung</th>
-              <th>Kết quả</th>
-              <th>Ghi chú</th>
-            </tr>
-          </thead>
-          <tbody id="events-tbody"></tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Timeline -->
+    <div id="ev-timeline" style="margin-top:12px;padding-bottom:32px;"></div>
   </div>
 
   <!-- ══════════════ LICENSE VIEW ══════════════ -->
@@ -6749,7 +6785,7 @@ function switchTab(t){
   document.getElementById('view-'+t).classList.add('active');
   document.getElementById('tab-'+t).classList.add('active');
   if(t==='dashboard') updateDashboard();
-  if(t==='events')   renderEvents();
+  if(t==='events')   { populateEvDeptSelect(); renderEvents(); }
   if(t==='license')  renderLicenses();
   if(t==='dntt'){        renderDNTT(); _dnttUpdateTplUI(); }
   if(t==='procurement')  renderProcurement();
@@ -7603,41 +7639,162 @@ function xacNhanDetailHTML(assetId){
 
 // ═══════════════════════ EVENTS TAB ═══════════════════════
 function renderEvents(){
-  const q = (document.getElementById('ev-search').value||'').toLowerCase();
-  const et = document.getElementById('ev-type').value;
-  const ec = document.getElementById('ev-company')?.value||'';
+  const q    = (document.getElementById('ev-search')?.value||'').toLowerCase();
+  const et   = document.getElementById('ev-type')?.value||'';
+  const ed   = document.getElementById('ev-dept')?.value||'';
+  const days = parseInt(document.getElementById('ev-range')?.value||'0')||0;
+  const cutoff = days ? new Date(Date.now() - days*86400000) : null;
 
-  const evAssets = assets.filter(a=>{
-    const hasEvent = a.ngaySuKien||a.trangThaiHienTai||a.noiDung||a.ketQua;
-    if(!hasEvent) return false;
-    if(et && a.trangThaiHienTai !== et) return false;
-    if(ec && (a.congTy||'') !== ec) return false;
+  // ── Build unified event list ─────────────────────────────────────
+  const allEv = [];
+
+  // 1. Từ lịch sử bàn giao (transfers)
+  Object.entries(transfers).forEach(([assetId, recs])=>{
+    const a = assets.find(x=>x.id===assetId);
+    (recs||[]).forEach(rec=>{
+      const type = (!rec.to || rec.to==='Kho') ? 'Thu hồi' : 'Bàn giao';
+      allEv.push({
+        date:      rec.date || (rec.ts||'').substring(0,10) || '',
+        ts:        rec.ts   || rec.date || '',
+        type,
+        assetId,
+        maTaiSan:  a?.maTaiSan  || '',
+        tenTaiSan: a?.tenTaiSan || '',
+        model:     a?.model     || '',
+        from:      rec.from     || '',
+        fromDept:  rec.fromDept || '',
+        to:        rec.to       || '',
+        toDept:    rec.toDept   || '',
+        notes:     rec.notes    || '',
+        condition: rec.condition|| '',
+      });
+    });
+  });
+
+  // 2. Từ sự kiện tài sản (trangThaiHienTai không phải Bàn giao/Thu hồi)
+  assets.forEach(a=>{
+    const t = a.trangThaiHienTai||'';
+    if(!t || t==='Bàn giao' || t==='Thu hồi') return;
+    if(!a.ngaySuKien && !a.noiDung) return;
+    allEv.push({
+      date:      a.ngaySuKien||'',
+      ts:        a.ngaySuKien||'',
+      type:      t,
+      assetId:   a.id,
+      maTaiSan:  a.maTaiSan  ||'',
+      tenTaiSan: a.tenTaiSan ||'',
+      model:     a.model     ||'',
+      from: '', fromDept: '',
+      to:        a.nguoiDung ||'',
+      toDept:    a.boPhan    ||'',
+      notes:     [a.noiDung, a.ketQua, a.ghiChu].filter(Boolean).join(' · '),
+      condition: '',
+    });
+  });
+
+  // ── Sort mới nhất trước ──────────────────────────────────────────
+  allEv.sort((a,b)=>{ const da=a.ts||a.date, db=b.ts||b.date; return da<db?1:da>db?-1:0; });
+
+  // ── Filter ──────────────────────────────────────────────────────
+  const filtered = allEv.filter(ev=>{
+    if(et && ev.type !== et) return false;
+    if(ed && ev.fromDept !== ed && ev.toDept !== ed) return false;
+    if(cutoff && ev.date && new Date(ev.date) < cutoff) return false;
     if(q){
-      const hay = [a.maTaiSan,a.tenTaiSan,a.noiDung,a.ketQua,a.trangThaiHienTai,a.congTy].join(' ').toLowerCase();
+      const hay = [ev.maTaiSan,ev.tenTaiSan,ev.model,ev.from,ev.to,ev.fromDept,ev.toDept,ev.notes,ev.type].join(' ').toLowerCase();
       if(!hay.includes(q)) return false;
     }
     return true;
   });
 
-  document.getElementById('ev-count').textContent = `${evAssets.length} sự kiện`;
+  document.getElementById('ev-count').textContent = `${filtered.length} sự kiện`;
 
-  const tbody = document.getElementById('events-tbody');
-  if(!evAssets.length){
-    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="es-icon"><i class="ph ph-clock-counter-clockwise"></i></div><p>Không có sự kiện nào</p></div></td></tr>`;
+  const wrap = document.getElementById('ev-timeline');
+  if(!wrap) return;
+
+  if(!filtered.length){
+    wrap.innerHTML=`<div class="tl-empty"><i class="ph ph-clock-counter-clockwise"></i><p>Không có sự kiện nào phù hợp</p></div>`;
     return;
   }
 
-  tbody.innerHTML = evAssets.map((a,i)=>`
-    <tr>
-      <td class="tbl-num">${i+1}</td>
-      <td><code style="font-size:11px;color:var(--accent2);">${esc(a.maTaiSan||'—')}</code></td>
-      <td><span class="type-badge">${esc(a.tenTaiSan||'—')}</span> ${esc(a.model||'')}</td>
-      <td>${a.ngaySuKien ? new Date(a.ngaySuKien).toLocaleDateString('vi-VN') : '—'}</td>
-      <td>${eventPill(a.trangThaiHienTai)}</td>
-      <td style="max-width:200px;white-space:normal;line-height:1.4;font-size:12px;">${esc(a.noiDung||'—')}</td>
-      <td style="max-width:180px;white-space:normal;font-size:12px;">${esc(a.ketQua||'—')}</td>
-      <td style="max-width:150px;white-space:normal;font-size:12px;color:var(--muted);">${esc(a.ghiChu||'—')}</td>
-    </tr>`).join('');
+  // ── Nhóm theo ngày ──────────────────────────────────────────────
+  const groups = {};
+  filtered.forEach(ev=>{
+    const key = ev.date || 'unknown';
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(ev);
+  });
+
+  const fmtDate = d => {
+    if(!d||d==='unknown') return 'Chưa rõ ngày';
+    try{
+      const dt = new Date(d);
+      return dt.toLocaleDateString('vi-VN',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+    }catch{ return d; }
+  };
+
+  const tlIcon = type=>{
+    const m={
+      'Bàn giao':  ['ph-arrows-left-right','tl-icon-bangiao'],
+      'Thu hồi':   ['ph-package','tl-icon-thuhoi'],
+      'Sửa chữa':  ['ph-wrench','tl-icon-suachua'],
+      'Bảo trì':   ['ph-shield-check','tl-icon-baotri'],
+      'Nâng cấp':  ['ph-arrow-circle-up','tl-icon-nangcap'],
+      'Thanh lý':  ['ph-trash','tl-icon-thanhtly'],
+    };
+    const [ico,cls]=m[type]||['ph-clock-counter-clockwise','tl-icon-other'];
+    return `<div class="tl-icon-wrap ${cls}"><i class="ph ${ico}"></i></div>`;
+  };
+
+  const pillCls = type=>{
+    const m={'Bàn giao':'green','Thu hồi':'gray','Sửa chữa':'yellow','Bảo trì':'blue','Nâng cấp':'blue','Thanh lý':'red'};
+    return m[type]||'gray';
+  };
+
+  const personChip = (name, dept) => {
+    if(!name && !dept) return '';
+    const label = [name, dept?`(${dept})`:''].filter(Boolean).join(' ');
+    return `<span class="tl-person-chip">${esc(label)}</span>`;
+  };
+
+  wrap.innerHTML = Object.entries(groups).map(([date, evs])=>`
+    <div class="tl-date-group">
+      <div class="tl-date-label">${fmtDate(date)}</div>
+      <div class="tl-wrap">
+        ${evs.map(ev=>`
+        <div class="tl-card" onclick="viewDetail('${ev.assetId}')">
+          ${tlIcon(ev.type)}
+          <div class="tl-body">
+            <div class="tl-top">
+              <span class="pill ${pillCls(ev.type)}">${esc(ev.type)}</span>
+              <span class="tl-asset-name">${esc(ev.tenTaiSan||'—')}</span>
+              ${ev.model?`<span style="font-size:11px;color:var(--muted);">${esc(ev.model)}</span>`:''}
+              ${ev.maTaiSan?`<code class="tl-asset-code">[${esc(ev.maTaiSan)}]</code>`:''}
+            </div>
+            ${(ev.from||ev.to) ? `
+            <div class="tl-persons">
+              ${ev.from||ev.fromDept ? personChip(ev.from, ev.fromDept) : '<span style="color:var(--muted);font-size:11px;">Kho</span>'}
+              <i class="ph ph-arrow-right tl-arrow"></i>
+              ${ev.to||ev.toDept ? personChip(ev.to, ev.toDept) : '<span style="color:var(--muted);font-size:11px;">Kho</span>'}
+            </div>` : ''}
+            ${ev.notes?`<div class="tl-notes">📝 ${esc(ev.notes)}</div>`:''}
+            ${ev.condition?`<div class="tl-notes">🔧 Tình trạng: ${esc(ev.condition)}</div>`:''}
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// Populate dept filter cho tab events
+function populateEvDeptSelect(){
+  const sel = document.getElementById('ev-dept');
+  if(!sel) return;
+  const depts = [...new Set(
+    Object.values(transfers).flatMap(recs=>(recs||[]).flatMap(r=>[r.fromDept,r.toDept]))
+    .concat(assets.map(a=>a.boPhan))
+    .filter(Boolean)
+  )].sort();
+  sel.innerHTML = '<option value="">🏢 Bộ phận</option>' + depts.map(d=>`<option>${esc(d)}</option>`).join('');
 }
 
 function eventPill(s){
