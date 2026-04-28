@@ -112,7 +112,7 @@
     /* ── States ── */
     #state-form{}
     #state-loading{display:none;text-align:center;padding:32px 0;}
-    #state-success{display:none;text-align:center;padding:16px 0;}
+    #state-success{display:none;}
     #state-error{display:none;}
 
     .spinner{
@@ -122,9 +122,21 @@
     }
     @keyframes spin{to{transform:rotate(360deg);}}
 
-    .success-icon{font-size:48px;margin-bottom:12px;}
-    .success-title{font-size:20px;font-weight:800;color:var(--green);margin-bottom:6px;}
-    .success-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+    .success-wrap{
+      text-align:center;padding:32px 16px;
+    }
+    .success-icon{font-size:64px;margin-bottom:16px;display:block;}
+    .success-title{font-size:22px;font-weight:800;color:var(--green);margin-bottom:10px;}
+    .success-sub{font-size:14px;color:#475569;line-height:1.7;margin-bottom:20px;}
+    .success-name-badge{
+      display:inline-block;background:#ECFDF5;border:1px solid #A7F3D0;
+      border-radius:8px;padding:8px 18px;font-size:14px;font-weight:700;color:#065F46;
+      margin-bottom:20px;
+    }
+    .success-note{
+      font-size:12px;color:var(--muted);padding:10px 14px;
+      background:#F8FAFC;border:1px solid var(--border);border-radius:8px;
+    }
 
     .error-box{
       background:#FEF2F2;border:1px solid #FECACA;
@@ -189,8 +201,8 @@
               <div class="val" id="info-date">—</div>
             </div>
             <div class="info-item">
-              <div class="lbl">Người bàn giao từ</div>
-              <div class="val" id="info-from">—</div>
+              <div class="lbl">Bàn giao bởi</div>
+              <div class="val">Phòng CNTT - Trung Thuy Group</div>
             </div>
             <div class="info-item full" id="info-notes-row" style="display:none;">
               <div class="lbl">Ghi chú từ IT</div>
@@ -238,12 +250,17 @@
 
       <!-- State: Success -->
       <div id="state-success">
-        <div class="success-icon">✅</div>
-        <div class="success-title">Xác nhận thành công!</div>
-        <div class="success-sub">
-          Thông tin bàn giao đã được ghi nhận và lưu vào hệ thống.<br/>
-          Phòng IT sẽ nhận được thông báo ngay lập tức.<br/><br/>
-          <strong id="success-name"></strong>, cảm ơn bạn đã xác nhận!
+        <div class="success-wrap">
+          <span class="success-icon">✅</span>
+          <div class="success-title">Xác nhận thành công!</div>
+          <div class="success-name-badge">👤 <span id="success-name"></span></div>
+          <div class="success-sub">
+            Thông tin bàn giao thiết bị <strong id="success-asset"></strong> đã được ghi nhận.<br/>
+            Phòng CNTT - Trung Thuy Group sẽ nhận được thông báo ngay lập tức.
+          </div>
+          <div class="success-note">
+            Bạn có thể đóng trang này. Nếu có vấn đề về thiết bị, vui lòng liên hệ Phòng CNTT.
+          </div>
         </div>
       </div>
 
@@ -251,26 +268,28 @@
   </div>
 
   <div class="footer">
-    © 2026 Trung Thuy Group · Hệ thống QLTS · Phòng IT
+    © 2026 Phòng CNTT - Trung Thuy Group · Hệ thống QLTS
   </div>
 
 <script>
 // ── Config ───────────────────────────────────────────────────────────────
-const POWER_AUTOMATE_URL = 'https://default801edb4c29ba4d0780b116a955dbf2.0d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7804b380573345c582231864a12b110c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=cKjODxSdTc-p9t9K7WOnGIxor3AlpdzvSWq2kasWgVU';
+const CONFIRM_API_URL = 'https://default801edb4c29ba4d0780b116a955dbf2.0d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7804b380573345c582231864a12b110c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=cKjODxSdTc-p9t9K7WOnGIxor3AlpdzvSWq2kasWgVU';
 
 // ── Đọc URL params ────────────────────────────────────────────────────────
 const p = new URLSearchParams(window.location.search);
 const params = {
-  id:    p.get('id')   || '',
-  ma:    p.get('ma')   || '',
-  ts:    p.get('ts')   || '',
-  sn:    p.get('sn')   || '',
-  to:    p.get('to')   || '',
-  email: p.get('email')|| '',
-  date:  p.get('date') || '',
-  cond:  p.get('cond') || '',
-  from:  p.get('from') || '',
-  notes: p.get('notes')|| '',
+  id:     p.get('id')     || '',
+  ma:     p.get('ma')     || '',
+  ts:     p.get('ts')     || '',
+  sn:     p.get('sn')     || '',
+  to:     p.get('to')     || '',
+  email:  p.get('email')  || '',
+  date:   p.get('date')   || '',
+  cond:   p.get('cond')   || '',
+  from:   p.get('from')   || '',
+  notes:  p.get('notes')  || '',
+  site:   p.get('site')   || '',   // SP site URL
+  xnlist: p.get('xnlist') || '',   // SP XacNhan list name (theo công ty)
 };
 
 // ── Hiển thị thông tin thiết bị ──────────────────────────────────────────
@@ -280,7 +299,6 @@ setText('info-ts',   params.ts);
 setText('info-ma',   params.ma);
 setText('info-sn',   params.sn);
 setText('info-cond', params.cond);
-setText('info-from', params.from || 'Phòng IT');
 
 if(params.date){
   try{
@@ -299,14 +317,42 @@ if(params.to){
   if(inp) inp.value = params.to;
 }
 
+// ── Lớp 1: Flag chống race condition ─────────────────────────────────────
+let _isSubmitting = false;
+
+// ── Lớp 2: Kiểm tra sessionStorage khi load trang ────────────────────────
+(function checkAlreadySubmitted(){
+  const key = 'qlts_confirmed_' + (params.ma || params.id);
+  if(!key || (!params.ma && !params.id)) return; // không có mã TS thì bỏ qua
+  const saved = sessionStorage.getItem(key);
+  if(saved){
+    try{
+      const info = JSON.parse(saved);
+      // Hiện thẳng màn hình success, không cho submit lại
+      document.getElementById('success-name').textContent = info.name || '';
+      const assetEl2 = document.getElementById('success-asset');
+      if(assetEl2) assetEl2.textContent = [params.ts, params.ma ? `[${params.ma}]` : ''].filter(Boolean).join(' ') || 'thiết bị';
+      const subEl = document.querySelector('.success-sub');
+      if(subEl) subEl.innerHTML =
+        'Thiết bị <strong>' + (params.ts||params.ma||'') + '</strong> đã được xác nhận trước đó.<br/>' +
+        '<span style="font-size:11px;color:#94A3B8;">Thời gian: ' + (info.time||'') + '</span>';
+      setState('success');
+    } catch(_){}
+  }
+})();
+
 // ── Toggle nút submit ─────────────────────────────────────────────────────
 function toggleSubmit(){
+  if(_isSubmitting) return; // đang gửi thì không toggle
   const checked = document.getElementById('cb-confirm').checked;
   document.getElementById('btn-submit').disabled = !checked;
 }
 
 // ── Submit xác nhận ───────────────────────────────────────────────────────
 async function submitConfirm(){
+  // Lớp 1: chặn gọi lại khi đang xử lý
+  if(_isSubmitting) return;
+
   const name  = document.getElementById('inp-name').value.trim();
   const notes = document.getElementById('inp-notes').value.trim();
 
@@ -319,8 +365,19 @@ async function submitConfirm(){
   }
 
   hideError();
+
+  // Khoá submit + đổi text nút thành spinner
+  _isSubmitting = true;
+  const btnSubmit = document.getElementById('btn-submit');
+  const btnOrigText = btnSubmit ? btnSubmit.textContent : '';
+  if(btnSubmit){
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = '⏳ Đang gửi…';
+  }
+
   setState('loading');
 
+  const now = new Date().toISOString();
   const payload = {
     assetId:         params.id,
     maTaiSan:        params.ma,
@@ -332,33 +389,52 @@ async function submitConfirm(){
     tinhTrang:       params.cond,
     ghiChuNguoiNhan: notes,
     trangThai:       'Đã xác nhận',
-    thoiGianXacNhan: new Date().toISOString(),
+    thoiGianXacNhan: now,
+    idempotencyKey:  (params.ma || params.id || 'x') + '-' + now,
+    // SP routing — giúp PA flow ghi đúng list theo công ty
+    spSiteUrl:       params.site,
+    spListName:      params.xnlist,
   };
 
   try {
-    const resp = await fetch(POWER_AUTOMATE_URL, {
+    const resp = await fetch(CONFIRM_API_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(payload),
     });
 
     if(resp.ok || resp.status === 202){
+      // Lớp 2: lưu sessionStorage để chặn submit lại nếu mở lại link
+      const key = 'qlts_confirmed_' + (params.ma || params.id);
+      if(key) sessionStorage.setItem(key, JSON.stringify({
+        name, time: new Date().toLocaleString('vi-VN')
+      }));
+
       document.getElementById('success-name').textContent = name;
+      const assetEl = document.getElementById('success-asset');
+      if(assetEl) assetEl.textContent = [params.ts, params.ma ? `[${params.ma}]` : ''].filter(Boolean).join(' ') || 'thiết bị';
       setState('success');
+      // Không reset _isSubmitting — giữ khoá vĩnh viễn sau khi thành công
     } else {
       throw new Error('HTTP ' + resp.status);
     }
   } catch(e){
+    // Chỉ mở khoá khi lỗi để user có thể thử lại
+    _isSubmitting = false;
     setState('form');
+    if(btnSubmit){
+      btnSubmit.disabled = !document.getElementById('cb-confirm').checked;
+      btnSubmit.textContent = btnOrigText;
+    }
     showError('Gửi xác nhận thất bại: ' + e.message + '. Vui lòng thử lại hoặc liên hệ phòng IT.');
   }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function setState(s){
-  document.getElementById('state-form').style.display    = s==='form'    ? '' : 'none';
-  document.getElementById('state-loading').style.display = s==='loading' ? '' : 'none';
-  document.getElementById('state-success').style.display = s==='success' ? '' : 'none';
+  document.getElementById('state-form').style.display    = s==='form'    ? 'block' : 'none';
+  document.getElementById('state-loading').style.display = s==='loading' ? 'block' : 'none';
+  document.getElementById('state-success').style.display = s==='success' ? 'block' : 'none';
 }
 function showError(msg){
   const el=document.getElementById('state-error');
