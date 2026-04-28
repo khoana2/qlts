@@ -10088,14 +10088,32 @@ async function confirmTransfer(){
 function deleteTransfer(assetId, idx, btn){
   if(!confirm('Xóa dòng lịch sử bàn giao này?')) return;
   if(!transfers[assetId]) return;
+  const rec = transfers[assetId][idx];
   transfers[assetId].splice(idx, 1);
   if(transfers[assetId].length === 0) delete transfers[assetId];
   saveTransfers();
+  // Xóa trên SharePoint nếu có _spId
+  if(_msalAccount && rec?._spId){
+    msalSpDeleteTransfer(rec._spId).catch(e=>console.warn('[TRANSFER] SP delete failed:', e.message));
+  }
   toast('🗑️ Đã xóa dòng lịch sử bàn giao!','warn');
   // Re-open detail to refresh
   const id = detailId;
   closeModal('modal-detail');
   viewDetail(id);
+}
+
+async function msalSpDeleteTransfer(spId){
+  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')/items(${spId})`;
+  await fetch(url, {
+    method: 'DELETE',
+    headers:{
+      'Authorization': `Bearer ${_msalToken}`,
+      'Accept':        'application/json;odata=nometadata',
+      'IF-MATCH':      '*',
+    }
+  });
+  console.log('[TRANSFER] Deleted SP item', spId);
 }
 
 function printHandover(){
@@ -11878,7 +11896,7 @@ async function msalSpLoadXacNhan(){
 async function msalSpLoadTransfers(){
   if(!_msalAccount) return;
   const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')/items`;
-  const url  = `${base}?$select=Title,MaTaiSan,TuNguoi,DenNguoi,TuBoPhan,DenBoPhan,ToEmail,NgayBanGiao,TinhTrang,GhiChu,ThoiGian&$top=2000&$orderby=ThoiGian asc`;
+  const url  = `${base}?$select=Id,Title,MaTaiSan,TuNguoi,DenNguoi,TuBoPhan,DenBoPhan,ToEmail,NgayBanGiao,TinhTrang,GhiChu,ThoiGian&$top=2000&$orderby=ThoiGian asc`;
   try{
     const data = await msalSpReq(url);
     if(!data.value?.length) return;
@@ -11889,6 +11907,7 @@ async function msalSpLoadTransfers(){
       if(!aid) continue;
       if(!loaded[aid]) loaded[aid] = [];
       loaded[aid].push({
+        _spId:     item.Id,
         from:      item.TuNguoi    ||'',
         fromDept:  item.TuBoPhan   ||'',
         to:        item.DenNguoi   ||'',
