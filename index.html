@@ -14482,8 +14482,15 @@ function writeAudit(module, action, objName, details, oldObj, newObj){
 
   // Build diff for edit actions
   if(action === 'edit' && oldObj && newObj){
-    const WATCH_ASSET = ['tenTaiSan','maTaiSan','serial','model','nguoiDung','boPhan',
-                         'tinhTrang','ngayMua','ngayHetBH','congTy','trangThaiHienTai','giaTri'];
+    const WATCH_ASSET = [
+      'tenTaiSan','maTaiSan','serial','model',
+      'nguoiDung','email','boPhan','congTy',
+      'cpu','ram','ssd','gpu','manHinh',
+      'tinhTrang','trangThaiHienTai',
+      'ngayMua','ngayHetBH','ngaySuKien',
+      'nguonThietBi','ncc','soHoaDon','giaTri','congTyNguon',
+      'noiDung','ketQua','suaChua','ghiChu',
+    ];
     const WATCH_LIC   = ['ten','type','ngayHetHan','ngayMua','congTy','ncc','giaTri','goi','tongSeat','tienTe'];
     const fields      = module === 'license' ? WATCH_LIC : WATCH_ASSET;
     fields.forEach(f => {
@@ -14493,7 +14500,7 @@ function writeAudit(module, action, objName, details, oldObj, newObj){
         entry.diff.push({ field: f, old: o, new: n });
       }
     });
-    if(!entry.diff.length) return; // nothing actually changed — skip
+    if(!entry.diff.length) entry.details = '(không có trường nào thay đổi được theo dõi)';
   }
 
   // Lưu local (luôn luôn — fallback khi offline)
