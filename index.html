@@ -10162,14 +10162,22 @@ function deleteProc(id, btn){
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function confirmTransfer(){
+  // Chống double-click
+  const _submitBtn = document.querySelector('#modal-transfer .modal-foot .btn.primary');
+  if(_submitBtn){
+    if(_submitBtn.disabled) return;
+    _submitBtn.disabled = true;
+  }
+  const _reenable = () => { if(_submitBtn) _submitBtn.disabled = false; };
+
   const id = document.getElementById('tr-asset-id').value;
   const newUser = document.getElementById('tr-new-user').value.trim();
   const date = document.getElementById('tr-date').value;
-  if(!newUser){ toast('⚠️ Vui lòng nhập tên người nhận!','bad'); return; }
-  if(!date){ toast('⚠️ Vui lòng chọn ngày bàn giao!','bad'); return; }
+  if(!newUser){ toast('⚠️ Vui lòng nhập tên người nhận!','bad'); _reenable(); return; }
+  if(!date){ toast('⚠️ Vui lòng chọn ngày bàn giao!','bad'); _reenable(); return; }
 
   const a = assets.find(x=>x.id===id);
-  if(!a) return;
+  if(!a){ _reenable(); return; }
 
   // Record transfer history
   if(!transfers[id]) transfers[id] = [];
@@ -10251,6 +10259,7 @@ async function confirmTransfer(){
     spStatusBar(`🔗 SharePoint — đã đồng bộ`,'ok');
     setTimeout(()=>spStatusBar(`🔗 SharePoint — ${assets.length} tài sản`,'ok'),2000);
   }
+  _reenable();
 }
 
 function deleteTransfer(assetId, idx, btn){
