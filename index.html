@@ -2506,10 +2506,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <option value="180">6 tháng qua</option>
       </select>
       <span class="filter-count" id="ev-count"></span>
-      <button id="btn-migrate-transfer" onclick="migrateTransfersToSP()" style="display:none;"
-        class="btn" title="Đẩy toàn bộ lịch sử bàn giao cũ lên SharePoint (chạy 1 lần)">
-        <i class="ph ph-cloud-arrow-up"></i> Migrate → SP
-      </button>
       <button id="btn-set-ttg" onclick="bulkSetCompanyTTG()" style="display:none;margin-left:auto;"
         class="btn warn btn-icon-ph">
         <i class="ph ph-buildings"></i> Gán TTG
@@ -6685,8 +6681,7 @@ function applyRoleUI(){
   show('tab-auditlog', isGlobalAdmin);
   // ── Tab Báo Cáo In — admin trở lên thấy ──
   show('tab-fuji', isAdmin);
-  // ── Nút migrate / set-ttg — chỉ global_admin / admin thấy ──
-  show('btn-migrate-transfer', isGlobalAdmin && !!_msalAccount);
+  // ── Nút set-ttg — chỉ global_admin thấy ──
   show('btn-set-ttg',          isGlobalAdmin && !!_msalAccount);
   // ── Context Switcher — chỉ global_admin thấy khi đã login ──
   const hasCompanyMaps = Object.keys(COMPANY_GROUP_MAP).length > 0;
