@@ -1978,7 +1978,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   </div>
 
   <div class="login-footer">
-    © 2026 Trung Thuy Group · QLTS CNTT v1.0
+    © 2026 Phòng CNTT - Trung Thuy Group · QLTS CNTT v1.0
     <span style="opacity:.5;">·</span>
     <a href="#" onclick="toggleChangelog(event)">Xem thay đổi</a>
   </div>
@@ -2003,7 +2003,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       Đăng nhập lại
     </button>
   </div>
-  <div class="login-footer">© 2026 Trung Thuy Group · QLTS CNTT v1.0</div>
+  <div class="login-footer">© 2026 Phòng CNTT - Trung Thuy Group · QLTS CNTT v1.0</div>
 </div>
 <!-- ══════════════════════════════════════════ -->
 
@@ -10140,8 +10140,8 @@ function doPrint(id, idx){
       <div style="padding:12px 16px;background:#f9f9f9;border:1px solid #ddd;border-radius:6px;">
         <div style="font-weight:bold;font-size:13px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">II. Bên Giao</div>
         <div style="font-size:13px;">
-          <div>Họ tên: <strong>${esc(t.from||'(Lưu kho)')}</strong></div>
-          ${t.fromDept?`<div style="margin-top:4px;">Bộ phận: ${esc(t.fromDept)}</div>`:''}
+          <div>Bộ phận: <strong>Phòng CNTT</strong></div>
+          <div style="margin-top:4px;">Công ty: Trung Thuy Group</div>
         </div>
       </div>
       <div style="padding:12px 16px;background:#f0f7ff;border:1px solid #b0d0f0;border-radius:6px;">
@@ -10168,8 +10168,8 @@ function doPrint(id, idx){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:30px;text-align:center;font-size:13px;">
       <div>
         <div style="font-weight:bold;text-transform:uppercase;margin-bottom:60px;">Bên Giao</div>
-        <div style="border-top:1px solid #000;padding-top:6px;">${esc(t.from||'')}</div>
-        <div style="font-size:11px;color:#555;">${esc(t.fromDept||'')}</div>
+        <div style="border-top:1px solid #000;padding-top:6px;">(Phòng CNTT)</div>
+        <div style="font-size:11px;color:#555;">Phòng CNTT - Trung Thuy Group</div>
       </div>
       <div>
         <div style="font-weight:bold;text-transform:uppercase;margin-bottom:60px;">Bên Nhận</div>
@@ -10216,11 +10216,11 @@ async function sendHandoverFormEmail(rec, asset){
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;max-width:600px;">
   <div style="background:#1D4ED8;padding:16px 24px;border-radius:8px 8px 0 0;">
     <div style="color:#fff;font-size:18px;font-weight:700;">🔄 Bàn Giao Tài Sản CNTT</div>
-    <div style="color:#BFDBFE;font-size:12px;margin-top:4px;">Trung Thuy Group — Hệ thống QLTS</div>
+    <div style="color:#BFDBFE;font-size:12px;margin-top:4px;">Phòng CNTT - Trung Thuy Group — Hệ thống QLTS</div>
   </div>
   <div style="background:#F8FAFC;padding:20px 24px;border:1px solid #E2E8F0;border-top:none;">
     <p>Kính gửi <strong>${esc(rec.to)}</strong>,</p>
-    <p>Bạn vừa được bàn giao thiết bị CNTT từ Trung Thuy Group. Vui lòng kiểm tra thông tin và <strong>xác nhận bàn giao</strong> bằng nút bên dưới.</p>
+    <p>Bạn vừa được bàn giao thiết bị CNTT từ Phòng CNTT - Trung Thuy Group. Vui lòng kiểm tra thông tin và <strong>xác nhận bàn giao</strong> bằng nút bên dưới.</p>
 
     <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
       <tr style="background:#EFF6FF;">
@@ -10230,10 +10230,6 @@ async function sendHandoverFormEmail(rec, asset){
       <tr>
         <td style="padding:8px 12px;font-weight:600;border:1px solid #E2E8F0;">🔢 Serial</td>
         <td style="padding:8px 12px;border:1px solid #E2E8F0;">${esc(asset.serial||'—')}</td>
-      </tr>
-      <tr style="background:#F8FAFC;">
-        <td style="padding:8px 12px;font-weight:600;border:1px solid #E2E8F0;">👤 Bàn giao từ</td>
-        <td style="padding:8px 12px;border:1px solid #E2E8F0;">${esc(fromStr)}</td>
       </tr>
       <tr>
         <td style="padding:8px 12px;font-weight:600;border:1px solid #E2E8F0;">📅 Ngày bàn giao</td>
@@ -10258,7 +10254,7 @@ async function sendHandoverFormEmail(rec, asset){
 
     <p style="font-size:12px;color:#94A3B8;text-align:center;margin-top:16px;">
       Nếu bạn không nhận được thiết bị này, vui lòng liên hệ phòng IT.<br>
-      Email này được gửi tự động từ hệ thống QLTS — Trung Thuy Group.
+      Email này được gửi tự động từ hệ thống QLTS — Phòng CNTT - Trung Thuy Group.
     </p>
   </div>
 </div>`;
