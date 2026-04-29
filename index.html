@@ -46,10 +46,10 @@
   --panel2:rgba(255,255,255,0.09);
   --header:rgba(255,255,255,0.15);
   --border:rgba(255,255,255,0.28);
-  --text:#ffffff;
-  --muted:rgba(255,255,255,0.65);
-  --accent:#ffffff;
-  --accent2:rgba(255,255,255,0.85);
+  --text:#f5ede0;
+  --muted:rgba(230,185,130,0.68);
+  --accent:#f5ede0;
+  --accent2:rgba(245,218,172,0.88);
   --green:#4ade80;
   --yellow:#fbbf24;
   --red:#f87171;
@@ -375,9 +375,7 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 #assets-table.hide-model th[data-col="model"],#assets-table.hide-model td[data-col="model"]{display:none;}
 #assets-table.hide-serial th[data-col="serial"],#assets-table.hide-serial td[data-col="serial"]{display:none;}
 #assets-table.hide-boPhan th[data-col="boPhan"],#assets-table.hide-boPhan td[data-col="boPhan"]{display:none;}
-#assets-table.hide-cpu th[data-col="cpu"],#assets-table.hide-cpu td[data-col="cpu"]{display:none;}
-#assets-table.hide-ram th[data-col="ram"],#assets-table.hide-ram td[data-col="ram"]{display:none;}
-#assets-table.hide-ssd th[data-col="ssd"],#assets-table.hide-ssd td[data-col="ssd"]{display:none;}
+#assets-table.hide-specs th[data-col="specs"],#assets-table.hide-specs td[data-col="specs"]{display:none;}
 #assets-table.hide-depreciation th[data-col="depreciation"],#assets-table.hide-depreciation td[data-col="depreciation"]{display:none;}
 
 /* ── Sticky first columns ──
@@ -1149,9 +1147,7 @@ tr:hover .eye-btn{
   .table-wrap{ overflow-x:auto;-webkit-overflow-scrolling:touch; }
   .data-table th, .data-table td{ font-size:11.5px;padding:8px 8px; }
   /* Ẩn bớt cột ít quan trọng trên mobile */
-  [data-col="cpu"],
-  [data-col="ram"],
-  [data-col="ssd"],
+  [data-col="specs"],
   [data-col="depreciation"]{ display:none; }
   .cb-col{ width:32px;min-width:32px; }
 
@@ -1957,7 +1953,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 body{
   background:url('bg.png') center/cover fixed;
   background-color:#1a0f0a;
-  color:#ffffff;
+  color:#f5ede0;
   min-height:100vh;
 }
 /* Very subtle dark overlay — just enough for text readability */
@@ -2850,6 +2846,42 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(0
   border-color:rgba(255,255,255,0.08) !important;
   color:rgba(255,255,255,0.88) !important;
 }
+
+/* ═══ GLASS-EXTRA-V2 ═══ */
+/* ── Lịch Sử (tl-card) ── */
+.tl-card{background:rgba(255,255,255,0.07) !important;border-color:rgba(255,255,255,0.16) !important;backdrop-filter:blur(20px) !important;-webkit-backdrop-filter:blur(20px) !important;}
+.tl-card:hover{background:rgba(255,255,255,0.11) !important;border-color:rgba(255,255,255,0.28) !important;}
+.tl-asset-name{color:#f5ede0 !important;}
+.tl-person-chip{background:rgba(255,255,255,0.1) !important;border-color:rgba(255,255,255,0.18) !important;color:rgba(245,218,172,0.9) !important;}
+.tl-date-label{color:rgba(245,218,172,0.75) !important;}
+.tl-date-label::after{background:rgba(255,255,255,0.12) !important;}
+.tl-icon-bangiao{background:rgba(29,78,216,0.25) !important;color:#93c5fd !important;}
+.tl-icon-thuhoi{background:rgba(180,83,9,0.25) !important;color:#fde68a !important;}
+.tl-icon-suachua{background:rgba(220,38,38,0.25) !important;color:#fca5a5 !important;}
+.tl-icon-baotri{background:rgba(22,163,74,0.25) !important;color:#86efac !important;}
+.tl-icon-nangcap{background:rgba(124,58,237,0.25) !important;color:#c4b5fd !important;}
+.tl-icon-thanhtly{background:rgba(234,88,12,0.25) !important;color:#fdba74 !important;}
+.tl-icon-other{background:rgba(255,255,255,0.08) !important;}
+/* ── Mua Sắm (proc-card) ── */
+.proc-card{background:rgba(255,255,255,0.07) !important;border-color:rgba(255,255,255,0.16) !important;backdrop-filter:blur(20px) !important;-webkit-backdrop-filter:blur(20px) !important;}
+.proc-card:hover{background:rgba(255,255,255,0.11) !important;box-shadow:0 4px 24px rgba(0,0,0,0.2) !important;}
+.proc-ncc-col{background:rgba(255,255,255,0.06) !important;border-color:rgba(255,255,255,0.14) !important;}
+.proc-ncc-col.col-best{background:rgba(16,185,129,0.12) !important;border-color:rgba(16,185,129,0.35) !important;}
+.proc-live-total{color:#f5ede0 !important;}
+.proc-ncc-table tr.selected-ncc td{background:rgba(37,99,235,0.18) !important;}
+.proc-ncc-table tr.best-price td{background:rgba(16,185,129,0.1) !important;}
+.proc-status-badge.draft{background:rgba(148,163,184,0.15) !important;color:rgba(245,218,172,0.8) !important;}
+.proc-status-badge.da_mua{background:rgba(139,92,246,0.18) !important;color:#c4b5fd !important;}
+/* ── Báo Cáo In (Fuji) ── */
+#view-fuji .fuji-k{background:rgba(255,255,255,0.07) !important;border-color:rgba(255,255,255,0.16) !important;backdrop-filter:blur(20px) !important;-webkit-backdrop-filter:blur(20px) !important;}
+#view-fuji .fuji-drop{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.2) !important;}
+#view-fuji .fuji-drop.drag{background:rgba(59,130,246,0.15) !important;border-color:rgba(96,165,250,0.5) !important;}
+#view-fuji .fuji-vtab{background:rgba(255,255,255,0.07) !important;border-color:rgba(255,255,255,0.18) !important;color:rgba(245,218,172,0.85) !important;}
+#view-fuji .fuji-vtab.active{background:rgba(255,255,255,0.18) !important;border-color:rgba(255,255,255,0.35) !important;color:#f5ede0 !important;}
+#fuji-err{background:rgba(248,113,113,0.15) !important;border-color:rgba(248,113,113,0.3) !important;color:#fca5a5 !important;}
+#fuji-cache-banner{background:rgba(96,165,250,0.12) !important;border-color:rgba(96,165,250,0.25) !important;color:#93c5fd !important;}
+#fuji-qc-preview{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.15) !important;}
+#fuji-cycle-bar{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.14) !important;}
 </style>
 </head>
 <body>
@@ -3385,9 +3417,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(0
             <label><input type="checkbox" checked onchange="toggleCol('model',this.checked)"> Model</label>
             <label><input type="checkbox" checked onchange="toggleCol('serial',this.checked)"> Serial</label>
             <label><input type="checkbox" checked onchange="toggleCol('boPhan',this.checked)"> Bộ phận</label>
-            <label><input type="checkbox" checked onchange="toggleCol('cpu',this.checked)"> CPU</label>
-            <label><input type="checkbox" checked onchange="toggleCol('ram',this.checked)"> RAM</label>
-            <label><input type="checkbox" checked onchange="toggleCol('ssd',this.checked)"> SSD</label>
+            <label><input type="checkbox" checked onchange="toggleCol('specs',this.checked)"> Cấu hình</label>
             <label><input type="checkbox" onchange="toggleCol('depreciation',this.checked)"> <i class="ph ph-chart-line-down" style="font-size:12px;color:var(--muted);"></i> Khấu hao</label>
           </div>
         </div>
@@ -3404,9 +3434,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(0
               <th data-col="serial">Serial</th>
               <th class="sortable" onclick="sortBy('nguoiDung')">Người dùng <span class="sort-icon">↕</span></th>
               <th data-col="boPhan" class="sortable" onclick="sortBy('boPhan')">Bộ phận <span class="sort-icon">↕</span></th>
-              <th data-col="cpu">CPU</th>
-              <th data-col="ram">RAM</th>
-              <th data-col="ssd">SSD</th>
+              <th data-col="specs" style="min-width:140px;">Cấu hình</th>
               <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
               <th style="width:120px;"></th>
@@ -8166,9 +8194,9 @@ function renderTable(){
           ${a.email?`<a class="mail-link" href="mailto:${esc(a.email)}">${esc(a.email)}</a>`:''}
         </td>
         <td data-col="boPhan" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;">${esc(a.boPhan||'—')}</td>
-        <td data-col="cpu" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted);">${esc(a.cpu||'—')}</td>
-        <td data-col="ram">${esc(a.ram||'—')}</td>
-        <td data-col="ssd">${esc(a.ssd||'—')}</td>
+        <td data-col="specs" style="min-width:130px;max-width:180px;">
+          ${[a.cpu&&`<div style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="opacity:.6;font-size:9.5px;">CPU</span> ${esc(a.cpu)}</div>`,a.ram&&`<div style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="opacity:.6;font-size:9.5px;">RAM</span> ${esc(a.ram)}</div>`,a.ssd&&`<div style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="opacity:.6;font-size:9.5px;">SSD</span> ${esc(a.ssd)}</div>`].filter(Boolean).join('')||'<span style="color:var(--muted);">—</span>'}
+        </td>
         <td data-col="depreciation" style="text-align:right;">${(()=>{
           const d = calcDepreciation(a);
           if(!d) return '<span style="color:var(--muted);font-size:11px;">—</span>';
