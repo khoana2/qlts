@@ -380,23 +380,8 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 
 /* ── Sticky first columns ──
    background: var(--row-bg) đọc từ CSS variable định nghĩa trên <tr>
-   → tự cập nhật khi hover/selected/status mà không cần override riêng */
-#assets-table tbody .cb-col,
-#assets-table tbody .sc-num,
-#assets-table tbody .sc-ma,
-#assets-table tbody .sc-ten{
-  position:sticky;z-index:2;
-  background:var(--row-bg,#FFFFFF);
-}
-#assets-table .cb-col{left:0;}
-#assets-table .sc-num{left:38px;}
-#assets-table .sc-ma {left:74px;}
-#assets-table .sc-ten{left:190px;}
-/* Thead sticky: nền cố định (không dùng variable) */
-#assets-table thead .cb-col,
-#assets-table thead .sc-num,
-#assets-table thead .sc-ma,
-#assets-table thead .sc-ten{position:sticky;z-index:11;background:#F8FAFC;}
+   → sticky columns removed */
+/* sticky thead removed */
 /* COL TOGGLE DROPDOWN */
 .col-toggle-wrap{position:relative;display:inline-block;}
 .col-toggle-menu{
@@ -1839,10 +1824,7 @@ thead th{
   background:#f5f6fc; color:#6366f1; font-size:11px; font-weight:700;
   border-bottom:1px solid var(--border); letter-spacing:.05em;
 }
-#assets-table thead .cb-col,
-#assets-table thead .sc-num,
-#assets-table thead .sc-ma,
-#assets-table thead .sc-ten{ background:#f5f6fc; }
+
 tbody td{ border-bottom:1px solid #f0f1f8; color:#374151; }
 tbody tr:hover td{ background:#f0f0ff; }
 tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd; }
@@ -2603,43 +2585,10 @@ code{color:rgba(255,255,255,0.82) !important;font-family:ui-monospace,'SF Mono',
    STICKY COLUMN FIX — blur 60px ẩn content cuộn sau,
    nền khớp hoàn toàn với glass table rows
    ══════════════════════════════════════════════════════ */
-#assets-table tbody .cb-col,
-#assets-table tbody .sc-num,
-#assets-table tbody .sc-ma,
-#assets-table tbody .sc-ten{
-  background:rgba(255,255,255,0.04) !important;
-  backdrop-filter:blur(60px) saturate(160%);
-  -webkit-backdrop-filter:blur(60px) saturate(160%);
-}
-tbody tr:hover .cb-col,
-tbody tr:hover .sc-num,
-tbody tr:hover .sc-ma,
-tbody tr:hover .sc-ten{background:rgba(255,255,255,0.06) !important;}
-tbody tr.selected .cb-col,
-tbody tr.selected .sc-num,
-tbody tr.selected .sc-ma,
-tbody tr.selected .sc-ten{background:rgba(255,255,255,0.1) !important;}
-tbody tr.row-kho .cb-col,
-tbody tr.row-kho .sc-num,
-tbody tr.row-kho .sc-ma,
-tbody tr.row-kho .sc-ten{background:rgba(251,191,36,0.06) !important;}
-tbody tr.row-hong .cb-col,
-tbody tr.row-hong .sc-num,
-tbody tr.row-hong .sc-ma,
-tbody tr.row-hong .sc-ten{background:rgba(248,113,113,0.06) !important;}
-tbody tr.row-sua .cb-col,
-tbody tr.row-sua .sc-num,
-tbody tr.row-sua .sc-ma,
-tbody tr.row-sua .sc-ten{background:rgba(251,146,60,0.06) !important;}
 
-#assets-table thead .cb-col,
-#assets-table thead .sc-num,
-#assets-table thead .sc-ma,
-#assets-table thead .sc-ten{
-  background:rgba(255,255,255,0.07) !important;
-  backdrop-filter:blur(60px) saturate(160%);
-  -webkit-backdrop-filter:blur(60px) saturate(160%);
-}
+
+
+
 
 /* ══════════════════════════════════════════════════════
    COMPREHENSIVE LIGHT-MODE OVERRIDES
@@ -8346,7 +8295,7 @@ function renderTable(){
   // Sync header checkbox (checked / indeterminate)
   _syncSelectAllCb();
   // Re-compute sticky column left offsets from actual rendered widths
-  requestAnimationFrame(_setStickyOffsets);
+
 }
 
 // ═══════════════════════ BULK SELECT & ACTIONS ═══════════════════════
@@ -8580,23 +8529,7 @@ function calcDepreciation(asset){
 }
 
 // ─── Sticky columns: tính left theo chiều rộng thực tế sau render ────────────
-function _setStickyOffsets(){
-  const thead = document.querySelector('#assets-table thead tr');
-  if(!thead) return;
-  const ths = thead.querySelectorAll('th');
-  // col index: 0=cb-col, 1=sc-num, 2=sc-ma, 3=sc-ten
-  let left = 0;
-  [0,1,2,3].forEach(i => {
-    const th = ths[i];
-    if(!th) return;
-    const w = th.getBoundingClientRect().width;
-    // apply to all cells in this column (both thead and tbody)
-    const cls = ['cb-col','sc-num','sc-ma','sc-ten'][i];
-    document.querySelectorAll(`#assets-table .${cls}`)
-      .forEach(el => { el.style.left = left + 'px'; });
-    left += w;
-  });
-}
+
 
 function renderPager(){
   const total = Math.ceil(filtered.length / perPage);
