@@ -949,7 +949,7 @@ tr:hover .eye-btn{
   padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:12px;
 }
 .ai-verdict.good {background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;}
-.ai-verdict.warn {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A;}
+.ai-verdict.warn {background:rgba(217,119,6,0.3);color:#fde68a;border:1px solid #FDE68A;}
 .ai-verdict.bad  {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;}
 .ai-footer{
   display:flex;align-items:center;gap:6px;
@@ -1707,7 +1707,7 @@ td, th { font-size: 13px; }
 .tl-icon-suachua{ background:#FEF2F2;color:#DC2626; }
 .tl-icon-baotri{  background:#F0FDF4;color:#16A34A; }
 .tl-icon-nangcap{ background:#F5F3FF;color:#7C3AED; }
-.tl-icon-thanhtly{ background:#FFF7ED;color:#EA580C; }
+.tl-icon-thanhtly{ background:rgba(234,88,12,0.3);color:#fdba74; }
 .tl-icon-other{   background:var(--surface2);color:var(--muted); }
 .tl-body{ flex:1;min-width:0; }
 .tl-top{ display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px; }
@@ -2882,6 +2882,55 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(0
 #fuji-cache-banner{background:rgba(96,165,250,0.12) !important;border-color:rgba(96,165,250,0.25) !important;color:#93c5fd !important;}
 #fuji-qc-preview{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.15) !important;}
 #fuji-cycle-bar{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.14) !important;}
+
+/* ═══ GLASS-EXTRA-V3 ═══ */
+/* ── KPI icons dark glass ── */
+.kpi.blue   .kpi-icon{background:rgba(99,102,241,0.25) !important;color:#c4b5fd !important;}
+.kpi.green  .kpi-icon{background:rgba(16,185,129,0.25) !important;color:#86efac !important;}
+.kpi.yellow .kpi-icon{background:rgba(251,191,36,0.25) !important;color:#fde68a !important;}
+.kpi.red    .kpi-icon{background:rgba(248,113,113,0.25) !important;color:#fca5a5 !important;}
+.kpi.purple .kpi-icon{background:rgba(192,132,252,0.25) !important;color:#d8b4fe !important;}
+
+/* ── Smart Action Menu header ── */
+.sa-header-name{color:#f5ede0 !important;}
+.sa-header-code{color:rgba(245,218,172,0.6) !important;}
+.sa-section{color:rgba(245,218,172,0.45) !important;}
+.sa-item{color:rgba(245,225,195,0.92) !important;}
+.sa-divider{background:rgba(255,255,255,0.1) !important;height:0.5px;}
+
+/* ── eye-btn always slightly visible ── */
+.eye-btn{color:rgba(255,255,255,0.22) !important;}
+tr:hover .eye-btn{color:rgba(245,218,172,0.9) !important;}
+.eye-btn:hover{background:rgba(255,255,255,0.14) !important;color:#f5ede0 !important;}
+
+/* ── Row more menu glass ── */
+.row-more-menu{
+  background:rgba(20,12,8,0.75) !important;
+  border-color:rgba(255,255,255,0.18) !important;
+  backdrop-filter:blur(40px) !important;
+  -webkit-backdrop-filter:blur(40px) !important;
+}
+.row-more-menu button{color:rgba(245,225,195,0.9) !important;}
+.row-more-menu button:hover{background:rgba(255,255,255,0.1) !important;}
+.row-more-menu button.danger{color:#fca5a5 !important;}
+.row-more-menu button.danger:hover{background:rgba(248,113,113,0.12) !important;}
+.row-more-menu .menu-sep{border-top-color:rgba(255,255,255,0.1) !important;}
+
+/* ── Action btn default icon colors (clear, not hidden) ── */
+.action-btn{color:rgba(245,218,172,0.75) !important;}
+.action-btn.edit{color:#93c5fd !important;}
+.action-btn.view{color:#c4b5fd !important;}
+.action-btn.transfer{color:#86efac !important;}
+.action-btn.del,.action-btn.delete{color:#fca5a5 !important;}
+.action-btn.attach{color:#fdba74 !important;}
+.action-btn.xfer-co{color:#d8b4fe !important;}
+
+/* ── lf2-icon (login feature icons) ── */
+.lf2-icon{color:#93c5fd !important;}
+
+/* ── Sort icon ── */
+thead th .sort-icon{color:rgba(245,218,172,0.5);}
+thead th.sorted .sort-icon{color:#fde68a !important;}
 </style>
 </head>
 <body>
@@ -9486,18 +9535,18 @@ function openSmartAction(assetId, triggerEl){
       <div class="sa-header-name">${esc(a.tenTaiSan||'Tài sản')}</div>
       <div class="sa-header-code">${esc(a.maTaiSan||'—')} · ${esc(a.nguoiDung||'Chưa cấp phát')}</div>
     </div>
-    <button class="sa-item" onclick="saAct('view')"><i class="ph ph-eye" style="background:#E6F1FB;color:#185FA5;"></i> Xem chi tiết</button>
-    <button class="sa-item" onclick="saAct('edit')"><i class="ph ph-pencil-simple" style="background:#EEEDFE;color:#534AB7;"></i> Chỉnh sửa</button>
-    <button class="sa-item" onclick="saAct('transfer')"><i class="ph ph-arrows-left-right" style="background:#EAF3DE;color:#3B6D11;"></i> Bàn giao</button>
-    <button class="sa-item" onclick="saAct('attach')"><i class="ph ph-paperclip" style="background:#FFF7ED;color:#EA580C;"></i> Hồ sơ & Đính kèm</button>
-    ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="background:#F3F0FF;color:#7C3AED;"></i> Chuyển công ty</button>` : ''}
+    <button class="sa-item" onclick="saAct('view')"><i class="ph ph-eye" style="background:rgba(24,95,165,0.3);color:#93c5fd;"></i> Xem chi tiết</button>
+    <button class="sa-item" onclick="saAct('edit')"><i class="ph ph-pencil-simple" style="background:rgba(99,102,241,0.3);color:#c4b5fd;"></i> Chỉnh sửa</button>
+    <button class="sa-item" onclick="saAct('transfer')"><i class="ph ph-arrows-left-right" style="background:rgba(16,185,129,0.3);color:#86efac;"></i> Bàn giao</button>
+    <button class="sa-item" onclick="saAct('attach')"><i class="ph ph-paperclip" style="background:rgba(234,88,12,0.3);color:#fdba74;"></i> Hồ sơ & Đính kèm</button>
+    ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="background:rgba(124,58,237,0.3);color:#c4b5fd;"></i> Chuyển công ty</button>` : ''}
     <div class="sa-divider"></div>
     ${a.tinhTrang !== 'Hỏng' && a.tinhTrang !== 'Sửa chữa'
-      ? `<button class="sa-item" onclick="saAct('report-damage')" style="color:#FF3B30;"><i class="ph ph-warning" style="background:#FFEEEE;color:#FF3B30;"></i> Báo hỏng</button>`
-      : `<button class="sa-item" onclick="saAct('report-damage')" style="color:#059669;"><i class="ph ph-wrench" style="background:#EAF3DE;color:#3B6D11;"></i> Đổi về Đang dùng</button>`}
-    ${a.nguoiDung ? `<button class="sa-item" onclick="saAct('recall')" style="color:#B45309;"><i class="ph ph-package" style="background:#FFFBEB;color:#D97706;"></i> Thu hồi về kho</button>` : ''}
+      ? `<button class="sa-item" onclick="saAct('report-damage')" style="color:#FF3B30;"><i class="ph ph-warning" style="background:rgba(255,59,48,0.3);color:#fca5a5;"></i> Báo hỏng</button>`
+      : `<button class="sa-item" onclick="saAct('report-damage')" style="color:#059669;"><i class="ph ph-wrench" style="background:rgba(16,185,129,0.3);color:#86efac;"></i> Đổi về Đang dùng</button>`}
+    ${a.nguoiDung ? `<button class="sa-item" onclick="saAct('recall')" style="color:#B45309;"><i class="ph ph-package" style="background:rgba(217,119,6,0.3);color:#fde68a;"></i> Thu hồi về kho</button>` : ''}
     <div class="sa-divider"></div>
-    <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash" style="background:#FFEEEE;color:#FF3B30;"></i> Xóa tài sản</button>`;
+    <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash" style="background:rgba(255,59,48,0.3);color:#fca5a5;"></i> Xóa tài sản</button>`;
 
   // ── Vị trí: bung từ nút xuống, canh phải ──
   menu.classList.add('open');
@@ -13376,7 +13425,7 @@ function dnttStatusBadge(s){
     submitted: '<span style="background:#EFF6FF;color:#2563EB;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">📤 Chờ duyệt</span>',
     pending:   '<span style="background:#EFF6FF;color:#2563EB;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">📤 Chờ duyệt</span>',
     approved:  '<span style="background:#F0FDF4;color:#16A34A;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">✅ Đã duyệt</span>',
-    paid:      '<span style="background:#FFF7ED;color:#EA580C;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">💳 Đã TT</span>',
+    paid:      '<span style="background:rgba(234,88,12,0.3);color:#fdba74;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">💳 Đã TT</span>',
   };
   return map[s] || map['draft'];
 }
@@ -13443,7 +13492,7 @@ function renderDNTT(){
           : d.trangThai==='submitted'
           ? `<button class="btn success btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Duyệt phiếu" onclick="approveDNTT('${d.id}')"><i class="ph ph-check-circle"></i> Duyệt</button>`
           : d.trangThai==='approved'
-          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF7ED;color:#EA580C;border-color:#FED7AA;" title="Đánh dấu đã thanh toán" onclick="markPaidDNTT('${d.id}')"><i class="ph ph-credit-card"></i></button>`
+          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:rgba(234,88,12,0.3);color:#fdba74;border-color:#FED7AA;" title="Đánh dấu đã thanh toán" onclick="markPaidDNTT('${d.id}')"><i class="ph ph-credit-card"></i></button>`
           : ''}
         <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openDNTTEdit('${d.id}')"><i class="ph ph-pencil-simple"></i></button>
         <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#6366f1;" title="In phiếu" onclick="printDNTT('${d.id}')"><i class="ph ph-printer"></i></button>
