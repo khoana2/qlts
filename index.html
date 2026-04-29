@@ -1724,12 +1724,14 @@ body{ background:var(--bg); }
   box-shadow:0 1px 4px rgba(99,102,241,.08);
 }
 .brand-icon{
-  background:#fff;
+  background:rgba(255,255,255,0.15) !important;
+  border:1px solid rgba(255,255,255,0.3) !important;
   border-radius:10px; padding:7px;
-  box-shadow:0 4px 14px rgba(139,115,85,.18);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 4px 14px rgba(0,0,0,0.15);
 }
-.brand-text h1{ color:var(--text); font-size:13px; }
-.brand-text p{ color:var(--muted); }
+.brand-text h1{ color:#fff; font-size:13px; text-shadow:0 1px 4px rgba(0,0,0,0.4); }
+.brand-text p{ color:rgba(255,255,255,0.65); }
 
 /* ── Sidebar ── */
 .sidebar{
@@ -2949,6 +2951,58 @@ thead th.sorted .sort-icon{color:#fde68a !important;}
 
 /* ── Sidebar username ── */
 .sidebar-uname{color:#f5ede0 !important;}
+
+/* ═══ GLASS-VISIBILITY-FIX ═══ */
+/* Sidebar section labels — tăng độ sáng */
+.sidebar-section{color:rgba(251,191,36,0.80) !important;}
+
+/* Smart Action: section label — tăng rõ hơn */
+.sa-section{color:rgba(245,218,172,0.70) !important;}
+
+/* KPI sub text */
+.kpi-label{color:rgba(255,255,255,0.82) !important;}
+.kpi-sub{color:rgba(255,255,255,0.68) !important;}
+.kpi-val{color:#fff !important;text-shadow:0 1px 4px rgba(0,0,0,0.25) !important;}
+
+/* Table meta / pagination */
+.tbl-meta{color:rgba(255,255,255,0.72) !important;}
+.tbl-num{color:rgba(255,255,255,0.68) !important;}
+.filter-count{color:rgba(255,255,255,0.72) !important;}
+
+/* Global search icon */
+.global-search-icon{color:rgba(255,255,255,0.70) !important;}
+.gs-kbd{color:rgba(255,255,255,0.65) !important;}
+
+/* Login footer + stat label */
+.login-footer{color:rgba(255,255,255,0.55) !important;}
+.login-stat-lbl{color:rgba(255,255,255,0.70) !important;}
+
+/* Audit log meta */
+.al-time,.al-user{color:rgba(255,255,255,0.72) !important;}
+
+/* Proc NCC header */
+.proc-ncc-table th{color:rgba(255,255,255,0.80) !important;}
+
+/* lf2 feature icons: màu riêng từng loại */
+.login-left .lf2-item:nth-child(1) .lf2-icon{color:#86efac !important;background:rgba(74,222,128,0.18) !important;}
+.login-left .lf2-item:nth-child(2) .lf2-icon{color:#fde68a !important;background:rgba(251,191,36,0.18) !important;}
+.login-left .lf2-item:nth-child(3) .lf2-icon{color:#93c5fd !important;background:rgba(96,165,250,0.18) !important;}
+.login-left .lf2-item:nth-child(4) .lf2-icon{color:#c4b5fd !important;background:rgba(192,132,252,0.18) !important;}
+.login-left .lf2-item:nth-child(5) .lf2-icon{color:#fca5a5 !important;background:rgba(248,113,113,0.18) !important;}
+.login-left .lf2-item:nth-child(6) .lf2-icon{color:#6ee7b7 !important;background:rgba(52,211,153,0.18) !important;}
+
+/* Advanced filter label */
+.adv-group label{color:rgba(255,255,255,0.75) !important;}
+
+/* Section divider text */
+.section-divider span{color:rgba(255,255,255,0.88) !important;}
+
+/* Detail cell label */
+.detail-cell .dc-label{color:rgba(255,255,255,0.68) !important;}
+
+/* Event date / timeline */
+.event-date{color:rgba(255,255,255,0.68) !important;}
+.event-body p{color:rgba(255,255,255,0.78) !important;}
 </style>
 </head>
 <body>
@@ -3122,15 +3176,15 @@ thead th.sorted .sort-icon{color:#fde68a !important;}
     <div class="brand">
       <div class="brand-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="20" height="20">
-          <rect x="0"  y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
-          <rect x="13" y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
-          <rect x="26" y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
-          <rect x="0"  y="13" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
-          <rect x="13" y="13" width="10" height="10" rx="2" fill="#8B7355"/>
-          <rect x="26" y="13" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
-          <rect x="0"  y="26" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
-          <rect x="13" y="26" width="10" height="10" rx="2" fill="#8B7355"/>
-          <rect x="26" y="26" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+          <rect x="0"  y="0"  width="10" height="10" rx="2" fill="#fff"/>
+          <rect x="13" y="0"  width="10" height="10" rx="2" fill="#fff"/>
+          <rect x="26" y="0"  width="10" height="10" rx="2" fill="#fff"/>
+          <rect x="0"  y="13" width="10" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/>
+          <rect x="13" y="13" width="10" height="10" rx="2" fill="#fff"/>
+          <rect x="26" y="13" width="10" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/>
+          <rect x="0"  y="26" width="10" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/>
+          <rect x="13" y="26" width="10" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/>
+          <rect x="26" y="26" width="10" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/>
         </svg>
       </div>
       <div class="brand-text">
