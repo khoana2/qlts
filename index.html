@@ -711,10 +711,22 @@ input[type=checkbox].row-cb{
 }
 .sa-btn:hover{background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-color:#C7D2FE;box-shadow:0 2px 8px rgba(99,102,241,.15);}
 /* ══════════════ EYE TRIGGER + iOS GLASS MENU ══════════════ */
-.eye-btn{width:28px;height:28px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:transparent;transition:color .15s;margin-left:auto;}
-tr:hover .eye-btn{color:var(--muted);}
-.eye-btn:hover{color:var(--text)!important;}
-.eye-btn svg{width:15px;height:15px;}
+.eye-btn{
+  width:28px;height:28px;border-radius:8px;border:none;
+  background:transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:transparent;
+  transition:color .15s, background .15s;
+  margin-left:auto;
+}
+tr:hover .eye-btn{
+  color:var(--accent);
+}
+.eye-btn:hover{
+  background:rgba(99,102,241,0.1)!important;
+  color:var(--accent)!important;
+}
+.eye-btn svg{width:16px;height:16px;}
 /* iOS glass popover */
 #smart-action-menu{
   position:fixed;z-index:9999;
@@ -7238,13 +7250,13 @@ function renderTable(){
         </td>
         <td style="position:relative;z-index:3;text-align:right;">
           <button class="eye-btn" onclick="openSmartAction('${a.id}',this)">
-            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="18" height="18">
-              <rect x="1" y="2" width="18" height="7" rx="3.5" fill="currentColor" opacity="0.18"/>
-              <rect x="1" y="2" width="18" height="7" rx="3.5" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
-              <circle cx="14.5" cy="5.5" r="2.5" fill="currentColor" opacity="0.85"/>
-              <rect x="1" y="11" width="18" height="7" rx="3.5" fill="currentColor" opacity="0.18"/>
-              <rect x="1" y="11" width="18" height="7" rx="3.5" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
-              <circle cx="5.5" cy="14.5" r="2.5" fill="currentColor" opacity="0.85"/>
+            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+              <rect x="1" y="1.5" width="18" height="7.5" rx="3.75" fill="currentColor" opacity="0.2"/>
+              <rect x="1" y="1.5" width="18" height="7.5" rx="3.75" stroke="currentColor" stroke-width="1"/>
+              <circle cx="14.5" cy="5.25" r="2.8" fill="currentColor"/>
+              <rect x="1" y="11" width="18" height="7.5" rx="3.75" fill="currentColor" opacity="0.2"/>
+              <rect x="1" y="11" width="18" height="7.5" rx="3.75" stroke="currentColor" stroke-width="1"/>
+              <circle cx="5.5" cy="14.75" r="2.8" fill="currentColor"/>
             </svg>
           </button>
         </td>
