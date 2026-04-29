@@ -2096,16 +2096,15 @@ body::before{
   -webkit-backdrop-filter:blur(20px) saturate(150%);
 }
 thead th{
-  background:rgba(255,255,255,0.05);
-  border-bottom:1px solid rgba(255,255,255,0.14);
-  color:rgba(255,255,255,0.65);
+  background:rgba(15,10,5,0.55) !important;
+  backdrop-filter:blur(48px) saturate(180%) !important;
+  -webkit-backdrop-filter:blur(48px) saturate(180%) !important;
+  border-bottom:1px solid rgba(255,255,255,0.16) !important;
+  color:rgba(245,218,172,0.75) !important;
+  letter-spacing:.06em !important;
 }
-#assets-table thead .cb-col,
-#assets-table thead .sc-num,
-#assets-table thead .sc-ma,
-#assets-table thead .sc-ten{background:rgba(255,255,255,0.06);}
-thead th.sortable:hover{color:#fff;}
-thead th.sorted .sort-icon{color:#fff;}
+thead th.sortable:hover{color:#f5ede0 !important;}
+thead th.sorted .sort-icon{color:#fde68a !important;}
 tbody td{
   border-bottom:1px solid rgba(255,255,255,0.06);
   color:rgba(255,255,255,0.92);
