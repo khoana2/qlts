@@ -8509,11 +8509,14 @@ async function geminiHealthCheck(assetId){
 let _saCurrentId = null;
 
 function openSmartAction(assetId, triggerEl){
+  const menu = document.getElementById('smart-action-menu');
+  // Toggle: click cùng nút thì đóng lại
+  if(menu.classList.contains('open') && _saCurrentId === assetId){
+    closeSmartAction(); return;
+  }
   const a = assets.find(x => x.id === assetId);
   if(!a) return;
   _saCurrentId = assetId;
-
-  const menu = document.getElementById('smart-action-menu');
   const isAdmin = _userRole === 'global_admin' || _userRole === 'admin';
 
   // ── Render nội dung menu ──
