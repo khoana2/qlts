@@ -2931,6 +2931,64 @@ tr:hover .eye-btn{color:rgba(245,218,172,0.9) !important;}
 /* ── Sort icon ── */
 thead th .sort-icon{color:rgba(245,218,172,0.5);}
 thead th.sorted .sort-icon{color:#fde68a !important;}
+
+/* ═══ SIDEBAR-GLASS-V2 ═══ */
+/* ── Active nav tab: warm amber indicator ── */
+.nav-tab.active{
+  background:rgba(255,255,255,0.13) !important;
+  color:#f5ede0 !important;
+  border-left:3px solid rgba(251,191,36,0.7) !important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18),0 2px 14px rgba(0,0,0,0.1) !important;
+  padding-left:calc(14px - 3px) !important;
+}
+/* ── Tab icons colored by section ── */
+#tab-dashboard .tab-icon i{color:#93c5fd;}
+#tab-assets    .tab-icon i{color:#86efac;}
+#tab-events    .tab-icon i{color:#c4b5fd;}
+#tab-license   .tab-icon i{color:#fde68a;}
+#tab-dntt      .tab-icon i{color:#fdba74;}
+#tab-procurement .tab-icon i{color:#6ee7b7;}
+#tab-roles     .tab-icon i{color:#f9a8d4;}
+#tab-auditlog  .tab-icon i{color:#a5b4fc;}
+#tab-fuji      .tab-icon i{color:#7dd3fc;}
+/* Active tab icon: brighter */
+.nav-tab.active .tab-icon i{
+  filter:brightness(1.3) !important;
+  text-shadow:0 0 8px currentColor !important;
+}
+/* ── Icon wrap: subtle colored square ── */
+.tab-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:7px;flex-shrink:0;
+  background:rgba(255,255,255,0.08);
+  transition:background .15s;
+}
+.nav-tab:hover .tab-icon{background:rgba(255,255,255,0.14);}
+.nav-tab.active .tab-icon{background:rgba(255,255,255,0.16);}
+
+/* ── Role badges colored ── */
+.sidebar-role-badge.global_admin{background:rgba(124,58,237,0.28) !important;color:#c4b5fd !important;border-color:rgba(124,58,237,0.4) !important;}
+.sidebar-role-badge.company_admin{background:rgba(217,119,6,0.25) !important;color:#fde68a !important;border-color:rgba(217,119,6,0.4) !important;}
+.sidebar-role-badge.member{background:rgba(16,185,129,0.22) !important;color:#86efac !important;border-color:rgba(16,185,129,0.38) !important;}
+.sidebar-role-badge.viewer{background:rgba(255,255,255,0.1) !important;color:rgba(245,218,172,0.65) !important;border-color:rgba(255,255,255,0.2) !important;}
+
+/* ── Sidebar section label ── */
+.sidebar-section{
+  color:rgba(251,191,36,0.55) !important;
+  font-size:9.5px !important;letter-spacing:.14em !important;
+  text-transform:uppercase !important;font-weight:800 !important;
+  margin:8px 0 4px !important;
+}
+
+/* ── Sidebar avatar ── */
+.sidebar-avatar{
+  background:rgba(251,191,36,0.22) !important;
+  color:#fde68a !important;
+  border:1px solid rgba(251,191,36,0.3) !important;
+}
+
+/* ── Sidebar username ── */
+.sidebar-uname{color:#f5ede0 !important;}
 </style>
 </head>
 <body>
@@ -8244,7 +8302,13 @@ function renderTable(){
         </td>
         <td data-col="boPhan" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;">${esc(a.boPhan||'—')}</td>
         <td data-col="specs" style="min-width:130px;max-width:180px;">
-          ${[a.cpu&&`<div style="font-size:10.5px;color:rgba(245,225,195,0.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:rgba(245,218,172,0.5);font-size:9px;font-weight:600;letter-spacing:.04em;">CPU </span>${esc(a.cpu)}</div>`,a.ram&&`<div style="font-size:10.5px;color:rgba(245,225,195,0.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:rgba(245,218,172,0.5);font-size:9px;font-weight:600;letter-spacing:.04em;">RAM </span>${esc(a.ram)}</div>`,a.ssd&&`<div style="font-size:10.5px;color:rgba(245,225,195,0.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:rgba(245,218,172,0.5);font-size:9px;font-weight:600;letter-spacing:.04em;">SSD </span>${esc(a.ssd)}</div>`].filter(Boolean).join('')||'<span style="color:rgba(245,218,172,0.4);">—</span>'}
+          <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start;">
+            ${[
+              a.cpu&&`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(96,165,250,0.18);border:1px solid rgba(96,165,250,0.28);border-radius:5px;padding:1px 6px;font-size:10px;color:#93c5fd;white-space:nowrap;overflow:hidden;max-width:100%;margin-bottom:2px;"><b style="font-weight:700;font-size:8.5px;letter-spacing:.05em;opacity:.7;">CPU</b> ${esc(a.cpu)}</span>`,
+              a.ram&&`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(74,222,128,0.16);border:1px solid rgba(74,222,128,0.28);border-radius:5px;padding:1px 6px;font-size:10px;color:#86efac;white-space:nowrap;overflow:hidden;max-width:100%;margin-bottom:2px;"><b style="font-weight:700;font-size:8.5px;letter-spacing:.05em;opacity:.7;">RAM</b> ${esc(a.ram)}</span>`,
+              a.ssd&&`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(251,191,36,0.16);border:1px solid rgba(251,191,36,0.28);border-radius:5px;padding:1px 6px;font-size:10px;color:#fde68a;white-space:nowrap;overflow:hidden;max-width:100%;"><b style="font-weight:700;font-size:8.5px;letter-spacing:.05em;opacity:.7;">SSD</b> ${esc(a.ssd)}</span>`
+            ].filter(Boolean).join('')||'<span style="color:rgba(245,218,172,0.35);font-size:11px;">—</span>'}
+          </div>
         </td>
         <td data-col="depreciation" style="text-align:right;">${(()=>{
           const d = calcDepreciation(a);
