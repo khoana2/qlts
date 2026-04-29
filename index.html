@@ -1340,35 +1340,25 @@ tr:hover .eye-btn{
 #login-screen{
   position:fixed;inset:0;z-index:9999;
   background:transparent;
-  display:flex;align-items:center;justify-content:center;
-  flex-direction:column;
+  display:flex;align-items:stretch;justify-content:flex-start;
+  flex-direction:row;
   transition:opacity .4s ease;
+  overflow:hidden;
 }
 #login-screen.hiding{opacity:0;pointer-events:none;}
-/* gradient phía trên để card dễ đọc */
 #login-screen::before{
   content:'';position:absolute;inset:0;
-  background:linear-gradient(to bottom,
-    rgba(245,240,232,.0) 0%,
-    rgba(245,240,232,.0) 40%,
-    rgba(245,240,232,.85) 65%,
-    rgba(245,240,232,1) 100%);
-  pointer-events:none;
+  pointer-events:none;z-index:0;
 }
 .login-skyline{ display:none; }
 .login-card{
   position:relative;z-index:1;
-  display:flex;flex-direction:column;align-items:center;
-  text-align:center;
+  display:flex;flex-direction:column;align-items:stretch;
+  text-align:left;
   animation:loginFadeIn .6s ease-out both;
-  max-width:440px;width:100%;padding:32px 36px;
-  background:rgba(255,255,255,.88);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  border:1px solid rgba(255,255,255,.9);
-  border-radius:24px;
-  box-shadow:0 8px 40px rgba(0,0,0,.12);
-  /* đẩy card lên trên để không bị che bởi skyline */
-  margin-bottom:32vh;
+  width:100%;padding:36px 32px;
+  border-radius:20px;
+  margin-bottom:0;
 }
 @keyframes loginFadeIn{
   from{opacity:0;transform:translateY(20px);}
@@ -1383,8 +1373,8 @@ tr:hover .eye-btn{
   animation:logoPulse 3s ease-in-out infinite;
 }
 @keyframes logoPulse{
-  0%,100%{box-shadow:0 8px 28px rgba(139,115,85,.22);}
-  50%{box-shadow:0 14px 38px rgba(139,115,85,.38);}
+  0%,100%{box-shadow:0 8px 32px rgba(6,182,212,.35),0 0 0 1px rgba(255,255,255,.15);}
+  50%{box-shadow:0 12px 48px rgba(168,85,247,.5),0 0 0 1px rgba(255,255,255,.2);}
 }
 .login-brand{
   font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
@@ -1965,7 +1955,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 
 /* ── Base & Background ── */
 body{
-  background:url('bg.jpg') center/cover fixed;
+  background:url('bg.png') center/cover fixed;
   background-color:#1a0f0a;
   color:#ffffff;
   min-height:100vh;
@@ -2438,49 +2428,160 @@ code{color:rgba(255,255,255,0.82) !important;font-family:ui-monospace,'SF Mono',
 /* ── Chart card head override ── */
 .chart-card .chart-head{color:rgba(255,255,255,0.85);}
 
-/* ── Login Screen — city bg.jpg + ultra-transparent glass card ── */
-/* Override splash-bg to show city image */
+/* ══════════════════════════════════════════════════════
+   LOGIN SCREEN — SPLIT LAYOUT (Left: Brand | Right: Card)
+   ══════════════════════════════════════════════════════ */
 #splash-bg{
-  background:url('bg.jpg') center/cover fixed !important;
-  background-color:#1a0f0a !important;
+  background:url('bg.png') center/cover fixed !important;
+  background-color:#0a0810 !important;
+}
+#login-screen{
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  padding:0 !important;
 }
 #login-screen::before{
-  background:rgba(0,0,0,0.12);
+  background:linear-gradient(135deg,rgba(0,0,0,0.55) 0%,rgba(10,5,25,0.42) 100%);
 }
-.login-card{
-  background:rgba(255,255,255,0.08);
-  border:1px solid rgba(255,255,255,0.25);
-  box-shadow:0 24px 80px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.4);
-  backdrop-filter:blur(60px) saturate(200%) brightness(1.12);
-  -webkit-backdrop-filter:blur(60px) saturate(200%) brightness(1.12);
+
+/* ── Left: Branding panel ── */
+.login-left{
+  flex:1;padding:60px 48px 60px 64px;
+  display:flex;flex-direction:column;justify-content:center;gap:0;
+  position:relative;z-index:1;
 }
-.login-logo{
-  background:rgba(255,255,255,0.12);
-  box-shadow:0 4px 20px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.4);
+.login-left .login-logo{
+  width:72px;height:72px;border-radius:22px;
+  background:linear-gradient(135deg,#06b6d4,#a855f7);
+  display:flex;align-items:center;justify-content:center;
+  padding:0;margin:0 0 24px;
+  box-shadow:0 8px 32px rgba(6,182,212,0.35),0 0 0 1px rgba(255,255,255,0.15);
+  animation:logoPulse 3s ease-in-out infinite;
 }
-.login-title{color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.35);}
-.login-title span{
-  background:linear-gradient(90deg,rgba(255,255,255,0.95),rgba(255,220,180,0.9));
+.login-left .login-logo svg rect{fill:#fff;}
+.login-left .login-brand{
+  font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(6,182,212,0.9);margin:0 0 12px;
+}
+.login-left .login-title{
+  font-size:42px;font-weight:900;color:#fff;
+  letter-spacing:-.03em;line-height:1.1;margin:0 0 16px;
+  text-shadow:0 2px 20px rgba(0,0,0,0.4);
+}
+.login-left .login-title span{
+  background:linear-gradient(90deg,#06b6d4,#a855f7);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
-.login-desc{color:rgba(255,255,255,0.72);}
-.login-brand{color:rgba(255,220,180,0.85);letter-spacing:.18em;}
-.login-note{color:rgba(255,255,255,0.55);}
-.login-divider{background:rgba(255,255,255,0.12);}
-.login-stat-num{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.3);}
-.login-stat-lbl{color:rgba(255,255,255,0.6);}
-.login-footer{color:rgba(255,255,255,0.5);}
-.login-footer a{color:rgba(255,255,255,0.6);border-bottom-color:rgba(255,255,255,0.2);}
-.login-footer a:hover{color:#fff;}
+.login-left .login-desc{
+  font-size:15px;color:rgba(255,255,255,0.65);
+  line-height:1.65;margin:0 0 36px;max-width:480px;
+}
+/* Feature cards on left */
+.login-left .login-features-v2{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:480px;
+}
+.login-left .lf2-item{
+  background:rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:18px;padding:18px 14px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  transition:background .2s,border-color .2s;
+}
+.login-left .lf2-item:hover{
+  background:rgba(255,255,255,0.12);
+  border-color:rgba(6,182,212,0.4);
+}
+.login-left .lf2-icon{
+  width:44px;height:44px;border-radius:14px;
+  background:linear-gradient(135deg,rgba(6,182,212,0.2),rgba(168,85,247,0.2));
+  border:1px solid rgba(255,255,255,0.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:#fff;
+}
+.login-left .lf2-name{
+  font-size:11.5px;font-weight:600;color:rgba(255,255,255,0.8);text-align:center;
+}
+
+/* ── Right: Login card ── */
+.login-right{
+  flex:0 0 460px;width:460px;
+  display:flex;align-items:center;justify-content:center;
+  padding:40px 48px 40px 24px;
+  position:relative;z-index:1;min-height:100vh;
+}
+.login-card{
+  width:100%;
+  background:rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:24px;padding:40px 36px;
+  box-shadow:0 32px 80px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.3);
+  backdrop-filter:blur(60px) saturate(200%) brightness(1.1);
+  -webkit-backdrop-filter:blur(60px) saturate(200%) brightness(1.1);
+  /* No centered absolute positioning */
+  position:static;margin:0;
+}
+.login-card-title{
+  font-size:22px;font-weight:800;color:#fff;
+  text-align:center;margin-bottom:6px;
+  letter-spacing:-.02em;
+}
+.login-card-sub{
+  font-size:13px;color:rgba(255,255,255,0.6);
+  text-align:center;margin-bottom:28px;
+}
+
+/* Hide old logo/brand/title/desc inside card (moved to left) */
+.login-card .login-logo,
+.login-card .login-brand,
+.login-card .login-title,
+.login-card .login-desc,
+.login-card .login-features-v2{display:none !important;}
+
+/* ── Neon gradient button ── */
 .login-btn{
-  background:rgba(255,255,255,0.85);color:#1a0f0a;
-  box-shadow:0 4px 24px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.95);
+  background:linear-gradient(90deg,#06b6d4 0%,#818cf8 50%,#a855f7 100%);
+  background-size:200% auto;
+  border:none;color:#fff;font-weight:700;font-size:15px;
+  box-shadow:0 4px 24px rgba(6,182,212,0.4),0 0 0 1px rgba(255,255,255,0.1);
+  transition:background-position .4s ease,box-shadow .2s;
+  border-radius:14px;
 }
-.login-btn:hover{background:rgba(255,255,255,0.95);box-shadow:0 8px 36px rgba(0,0,0,0.22);}
+.login-btn:hover{
+  background-position:right center;
+  box-shadow:0 8px 40px rgba(168,85,247,0.5),0 0 0 1px rgba(255,255,255,0.15);
+  transform:translateY(-1px);
+}
+
+/* Guest button */
 .login-guest-btn{
-  background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.22);color:rgba(255,255,255,0.8);
+  background:rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.18);
+  color:rgba(255,255,255,0.75);
+  border-radius:12px;margin-top:10px;
+  backdrop-filter:blur(10px);
 }
-.login-guest-btn:hover{background:rgba(255,255,255,0.16);color:#fff;}
+.login-guest-btn:hover{background:rgba(255,255,255,0.12);color:#fff;}
+
+/* Note, divider, stats */
+.login-note{color:rgba(255,255,255,0.5);font-size:11px;margin-top:10px;}
+.login-divider{background:rgba(255,255,255,0.1);height:1px;margin:20px 0;}
+.login-stat-num{color:#fff;font-size:20px;font-weight:800;}
+.login-stat-lbl{color:rgba(255,255,255,0.55);font-size:10px;}
+.login-stat{border-right:1px solid rgba(255,255,255,0.12);}
+.login-stat:last-child{border-right:none;}
+
+/* Footer */
+.login-footer{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  color:rgba(255,255,255,0.4);font-size:11px;z-index:2;white-space:nowrap;
+}
+.login-footer a{color:rgba(255,255,255,0.5);border-bottom-color:rgba(255,255,255,0.2);}
+.login-footer a:hover{color:#fff;}
+
+/* Local warn */
+.login-local-warn{color:rgba(255,220,100,0.9) !important;background:rgba(245,158,11,0.1) !important;border-color:rgba(245,158,11,0.3) !important;}
 
 /* ── Sync bar / misc ── */
 .sync-bar{color:rgba(255,255,255,0.65);}
@@ -2751,96 +2852,120 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(0
 <div id="login-screen">
   <div class="login-skyline"></div>
 
-  <div class="login-card">
+  <!-- ── LEFT: Branding ── -->
+  <div class="login-left">
     <div class="login-logo">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="44" height="44">
-        <!-- Hàng trên: 3 ô đặc (ngang chữ T) -->
-        <rect x="0"  y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
-        <rect x="13" y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
-        <rect x="26" y="0"  width="10" height="10" rx="2" fill="#8B7355"/>
-        <!-- Hàng giữa: chỉ ô giữa đặc (thân chữ T) -->
-        <rect x="0"  y="13" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
-        <rect x="13" y="13" width="10" height="10" rx="2" fill="#8B7355"/>
-        <rect x="26" y="13" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
-        <!-- Hàng dưới: chỉ ô giữa đặc (thân chữ T) -->
-        <rect x="0"  y="26" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
-        <rect x="13" y="26" width="10" height="10" rx="2" fill="#8B7355"/>
-        <rect x="26" y="26" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36">
+        <rect x="0"  y="0"  width="10" height="10" rx="2" fill="#fff"/>
+        <rect x="13" y="0"  width="10" height="10" rx="2" fill="#fff"/>
+        <rect x="26" y="0"  width="10" height="10" rx="2" fill="#fff"/>
+        <rect x="0"  y="13" width="10" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/>
+        <rect x="13" y="13" width="10" height="10" rx="2" fill="#fff"/>
+        <rect x="26" y="13" width="10" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/>
+        <rect x="0"  y="26" width="10" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/>
+        <rect x="13" y="26" width="10" height="10" rx="2" fill="#fff"/>
+        <rect x="26" y="26" width="10" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/>
       </svg>
     </div>
 
     <div class="login-brand">Trung Thuy Group</div>
 
-    <h1 class="login-title">Quản Lý <span>Tài Sản CNTT</span></h1>
+    <h1 class="login-title">Quản Lý<br><span>Tài Sản CNTT</span></h1>
 
     <p class="login-desc">
-      Hệ thống quản lý tài sản công nghệ thông tin nội bộ.
+      Hệ thống quản lý tài sản công nghệ thông tin tập trung — theo dõi, bàn giao, cảnh báo hết hạn và đồng bộ SharePoint theo thời gian thực.
     </p>
 
-    <button class="login-btn" id="login-ms-btn" onclick="loginScreenSignIn()">
-      <svg viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-        <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-        <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-        <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-      </svg>
-      Đăng nhập với Microsoft
-    </button>
-
-    <div class="login-note">Đăng nhập an toàn qua tài khoản Microsoft tổ chức</div>
-
-    <!-- Guest mode button -->
-    <button class="login-guest-btn" onclick="enterGuestMode()">
-      <i class="ph ph-eye"></i> Xem thử không cần đăng nhập
-    </button>
-
-    <div class="login-loading" id="login-loading">
-      <div class="ld-dots">
-        <div class="ld-dot"></div>
-        <div class="ld-dot"></div>
-        <div class="ld-dot"></div>
-      </div>
-      <div class="ld-text" id="login-loading-text">Đang kết nối Microsoft 365…</div>
-    </div>
-    <div class="login-error" id="login-error"></div>
-
-    <div class="login-divider"></div>
-
-    <!-- Stats từ localStorage (nếu có dữ liệu cũ) -->
-    <div class="login-stats" id="login-stats" style="display:none;">
-      <div class="login-stat">
-        <div class="login-stat-num" id="ls-assets">0</div>
-        <div class="login-stat-lbl">Tài sản</div>
-      </div>
-      <div class="login-stat">
-        <div class="login-stat-num" id="ls-licenses">0</div>
-        <div class="login-stat-lbl">License</div>
-      </div>
-      <div class="login-stat">
-        <div class="login-stat-num" id="ls-dntt">0</div>
-        <div class="login-stat-lbl">Đề nghị TT</div>
-      </div>
-    </div>
-
-    <!-- Features grid -->
+    <!-- Feature cards -->
     <div class="login-features-v2">
-      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-package"></i></div><div class="lf2-name">Tài Sản</div></div>
-      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-key"></i></div><div class="lf2-name">License</div></div>
-      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-clock-counter-clockwise"></i></div><div class="lf2-name">Lịch Sử</div></div>
-      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-chart-bar"></i></div><div class="lf2-name">Dashboard</div></div>
-      <div class="lf2-item"><div class="lf2-icon"><i class="ph ph-cloud"></i></div><div class="lf2-name">SharePoint</div></div>
+      <div class="lf2-item">
+        <div class="lf2-icon"><i class="ph ph-package"></i></div>
+        <div class="lf2-name">Tài Sản</div>
+      </div>
+      <div class="lf2-item">
+        <div class="lf2-icon"><i class="ph ph-key"></i></div>
+        <div class="lf2-name">License</div>
+      </div>
+      <div class="lf2-item">
+        <div class="lf2-icon"><i class="ph ph-cloud-arrow-up"></i></div>
+        <div class="lf2-name">SharePoint</div>
+      </div>
+      <div class="lf2-item">
+        <div class="lf2-icon"><i class="ph ph-chart-bar"></i></div>
+        <div class="lf2-name">Dashboard</div>
+      </div>
+      <div class="lf2-item">
+        <div class="lf2-icon"><i class="ph ph-bell-ringing"></i></div>
+        <div class="lf2-name">Cảnh Báo</div>
+      </div>
+      <div class="lf2-item">
+        <div class="lf2-icon"><i class="ph ph-shield-check"></i></div>
+        <div class="lf2-name">Bảo Mật</div>
+      </div>
     </div>
+  </div>
 
-    <div class="login-local-warn" id="login-local-warn" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#92400E;font-size:12px;line-height:1.5;text-align:left;">
-      ⚠️ <strong>Đang chạy local (file://)</strong><br>
-      Azure AD không hỗ trợ đăng nhập qua <code>file://</code>.<br>
-      Vui lòng deploy lên <strong>GitHub Pages</strong> hoặc dùng Live Server để test.
+  <!-- ── RIGHT: Login card ── -->
+  <div class="login-right">
+    <div class="login-card">
+      <div class="login-card-title">Chào mừng trở lại</div>
+      <div class="login-card-sub">Đăng nhập để truy cập hệ thống</div>
+
+      <button class="login-btn" id="login-ms-btn" onclick="loginScreenSignIn()">
+        <svg viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg" width="18" height="18">
+          <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+          <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+          <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+        </svg>
+        Đăng nhập với Microsoft
+      </button>
+
+      <div class="login-note">Đăng nhập an toàn qua tài khoản Microsoft tổ chức</div>
+
+      <button class="login-guest-btn" onclick="enterGuestMode()">
+        <i class="ph ph-eye"></i> Xem thử không cần đăng nhập
+      </button>
+
+      <div class="login-loading" id="login-loading">
+        <div class="ld-dots">
+          <div class="ld-dot"></div>
+          <div class="ld-dot"></div>
+          <div class="ld-dot"></div>
+        </div>
+        <div class="ld-text" id="login-loading-text">Đang kết nối Microsoft 365…</div>
+      </div>
+      <div class="login-error" id="login-error"></div>
+
+      <div class="login-divider"></div>
+
+      <!-- Stats -->
+      <div class="login-stats" id="login-stats" style="display:none;">
+        <div class="login-stat">
+          <div class="login-stat-num" id="ls-assets">0</div>
+          <div class="login-stat-lbl">Tài sản</div>
+        </div>
+        <div class="login-stat">
+          <div class="login-stat-num" id="ls-licenses">0</div>
+          <div class="login-stat-lbl">License</div>
+        </div>
+        <div class="login-stat">
+          <div class="login-stat-num" id="ls-dntt">0</div>
+          <div class="login-stat-lbl">Đề nghị TT</div>
+        </div>
+      </div>
+
+      <div class="login-local-warn" id="login-local-warn" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;font-size:12px;line-height:1.5;text-align:left;">
+        ⚠️ <strong>Đang chạy local (file://)</strong><br>
+        Azure AD không hỗ trợ đăng nhập qua <code>file://</code>.<br>
+        Vui lòng deploy lên <strong>GitHub Pages</strong> hoặc dùng Live Server để test.
+      </div>
     </div>
   </div>
 
   <div class="login-footer">
-    © 2026 Phòng CNTT - Trung Thuy Group · QLTS CNTT v1.0
-    <span style="opacity:.5;">·</span>
+    © 2026 Phòng CNTT – Trung Thuy Group · QLTS CNTT v1.0
+    <span style="opacity:.4;margin:0 6px;">·</span>
     <a href="#" onclick="toggleChangelog(event)">Xem thay đổi</a>
   </div>
 </div>
