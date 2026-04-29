@@ -710,48 +710,50 @@ input[type=checkbox].row-cb{
   transition:all .15s;color:var(--text);
 }
 .sa-btn:hover{background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-color:#C7D2FE;box-shadow:0 2px 8px rgba(99,102,241,.15);}
-/* ══════════════ HOVER ACTION BAR ══════════════ */
-.ha-wrap{display:flex;gap:2px;justify-content:flex-end;opacity:0;transition:opacity .15s;pointer-events:none;}
-tr:hover .ha-wrap{opacity:1;pointer-events:auto;}
-.ha-btn{width:28px;height:28px;border-radius:6px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background .1s,color .1s;position:relative;}
-.ha-btn:hover{background:var(--surface2);color:var(--text);}
-.ha-btn.danger:hover{background:#FEF2F2;color:#DC2626;}
-.ha-btn i.ph{font-size:14px;line-height:1;}
-.ha-tip{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);font-size:10px;white-space:nowrap;padding:3px 7px;border-radius:4px;opacity:0;pointer-events:none;transition:opacity .1s;z-index:9999;}
-.ha-btn:hover .ha-tip{opacity:1;}
-/* Popover */
+/* ══════════════ EYE TRIGGER + iOS GLASS MENU ══════════════ */
+.eye-btn{width:28px;height:28px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:transparent;transition:color .15s;margin-left:auto;}
+tr:hover .eye-btn{color:var(--muted);}
+.eye-btn:hover{color:var(--text)!important;}
+.eye-btn svg{width:15px;height:15px;}
+/* iOS glass popover */
 #smart-action-menu{
   position:fixed;z-index:9999;
-  background:#FFFFFF;border:1px solid var(--border);border-radius:14px;
-  box-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
-  min-width:210px;padding:6px;
+  width:max-content;
+  background:rgba(242,242,247,0.92);
+  -webkit-backdrop-filter:blur(40px) saturate(180%);
+  backdrop-filter:blur(40px) saturate(180%);
+  border-radius:14px;overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,.15),0 2px 8px rgba(0,0,0,.08);
+  border:0.5px solid rgba(255,255,255,0.7);
   display:none;
-  animation:saFadeIn .12s ease;
+  transform-origin:top right;
+  animation:saPopIn .22s cubic-bezier(.34,1.56,.64,1);
 }
-@keyframes saFadeIn{from{opacity:0;transform:scale(.95) translateY(-4px);}to{opacity:1;transform:scale(1) translateY(0);}}
+@keyframes saPopIn{from{opacity:0;transform:scale(0.82);}to{opacity:1;transform:scale(1);}}
 #smart-action-menu.open{display:block;}
 /* Header */
 .sa-header{
-  padding:9px 10px 7px;border-bottom:1px solid var(--border);margin-bottom:4px;
+  padding:9px 14px 8px;border-bottom:0.5px solid rgba(60,60,67,0.1);
 }
-.sa-header-name{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}
-.sa-header-code{font-size:11px;color:var(--muted);margin-top:1px;}
+.sa-header-name{font-size:12.5px;font-weight:600;color:#1c1c1e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
+.sa-header-code{font-size:11px;color:rgba(60,60,67,0.6);margin-top:1px;}
 /* Section label */
 .sa-section{
-  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--muted);padding:6px 10px 2px;
+  font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:rgba(60,60,67,0.45);padding:7px 14px 2px;
 }
 /* Action item */
 .sa-item{
-  display:flex;align-items:center;gap:9px;
-  padding:7px 10px;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;cursor:pointer;border-radius:0;
   font-size:13px;color:var(--text);border:none;background:none;width:100%;text-align:left;
   transition:background .1s;
 }
-.sa-item:hover{background:#F1F5F9;}
-.sa-item i.ph{font-size:15px;width:18px;text-align:center;flex-shrink:0;}
-.sa-item.danger{color:#DC2626;}
-.sa-item.danger:hover{background:#FEF2F2;}
+.sa-item:not(:last-child){border-bottom:0.5px solid rgba(60,60,67,0.08);}
+.sa-item:hover{background:rgba(0,0,0,0.04);}
+.sa-item i.ph{font-size:14px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;}
+.sa-item.danger{color:#FF3B30;}
+.sa-item.danger:hover{background:rgba(255,59,48,0.05);}
 .sa-item.ai-item{color:var(--muted);cursor:default;opacity:.7;}
 .sa-item.ai-item:hover{background:none;}
 
@@ -893,7 +895,7 @@ tr:hover .ha-wrap{opacity:1;pointer-events:auto;}
 .lc-legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 0 4px;font-size:11px;}
 .lc-legend-item{display:flex;align-items:center;gap:5px;color:var(--muted);}
 .lc-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.sa-divider{height:1px;background:var(--border);margin:4px 0;}
+.sa-divider{height:0.5px;background:rgba(60,60,67,0.12);margin:0;}
 /* AI badge */
 .sa-ai-badge{
   font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto;flex-shrink:0;
@@ -7235,20 +7237,9 @@ function renderTable(){
           ${xacNhanBadge(a.id)}
         </td>
         <td style="position:relative;z-index:3;text-align:right;">
-          <div class="ha-wrap">
-            <button class="ha-btn" onclick="viewDetail('${a.id}')">
-              <i class="ph ph-eye"></i><span class="ha-tip">Xem</span>
-            </button>
-            <button class="ha-btn" onclick="openEdit('${a.id}')">
-              <i class="ph ph-pencil-simple"></i><span class="ha-tip">Sửa</span>
-            </button>
-            <button class="ha-btn" onclick="openTransfer('${a.id}')">
-              <i class="ph ph-arrows-left-right"></i><span class="ha-tip">Bàn giao</span>
-            </button>
-            <button class="ha-btn danger" onclick="openDelete('${a.id}')">
-              <i class="ph ph-trash"></i><span class="ha-tip">Xóa</span>
-            </button>
-          </div>
+          <button class="eye-btn" onclick="openSmartAction('${a.id}',this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
         </td>
       </tr>`;
     }).join('');
@@ -8509,74 +8500,37 @@ function openSmartAction(assetId, triggerEl){
   // ── Render nội dung menu ──
   menu.innerHTML = `
     <div class="sa-header">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-        <div class="sa-header-name"><i class="ph ph-laptop" style="font-size:12px;margin-right:4px;"></i>${esc(a.tenTaiSan||'Tài sản')}</div>
-        <span style="font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);white-space:nowrap;">Q.Action</span>
-      </div>
+      <div class="sa-header-name">${esc(a.tenTaiSan||'Tài sản')}</div>
       <div class="sa-header-code">${esc(a.maTaiSan||'—')} · ${esc(a.nguoiDung||'Chưa cấp phát')}</div>
     </div>
-
-    <button class="sa-item" onclick="saAct('view')"><i class="ph ph-eye" style="color:var(--accent);"></i> Xem chi tiết</button>
-    <button class="sa-item" onclick="saAct('edit')"><i class="ph ph-pencil-simple" style="color:var(--accent2);"></i> Chỉnh sửa</button>
-
+    <button class="sa-item" onclick="saAct('view')"><i class="ph ph-eye" style="background:#E6F1FB;color:#185FA5;"></i> Xem chi tiết</button>
+    <button class="sa-item" onclick="saAct('edit')"><i class="ph ph-pencil-simple" style="background:#EEEDFE;color:#534AB7;"></i> Chỉnh sửa</button>
+    <button class="sa-item" onclick="saAct('transfer')"><i class="ph ph-arrows-left-right" style="background:#EAF3DE;color:#3B6D11;"></i> Bàn giao</button>
+    <button class="sa-item" onclick="saAct('attach')"><i class="ph ph-paperclip" style="background:#FFF7ED;color:#EA580C;"></i> Hồ sơ & Đính kèm</button>
+    ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="background:#F3F0FF;color:#7C3AED;"></i> Chuyển công ty</button>` : ''}
     <div class="sa-divider"></div>
-    <div class="sa-section">Quản lý</div>
-    <button class="sa-item" onclick="saAct('transfer')"><i class="ph ph-arrows-left-right" style="color:#059669;"></i> Bàn giao</button>
-    <button class="sa-item" onclick="saAct('attach')"><i class="ph ph-paperclip" style="color:#EA580C;"></i> Hồ sơ & Đính kèm</button>
-    <button class="sa-item" onclick="saAct('qr')"><i class="ph ph-qr-code" style="color:#0891B2;"></i> QR Code / In nhãn</button>
-    ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="color:#7C3AED;"></i> Chuyển công ty</button>` : ''}
-
-    <div class="sa-divider"></div>
-    <div class="sa-section">Trạng thái nhanh</div>
     ${a.tinhTrang !== 'Hỏng' && a.tinhTrang !== 'Sửa chữa'
-      ? `<button class="sa-item" onclick="saAct('report-damage')" style="color:#DC2626;">
-           <i class="ph ph-warning" style="color:#DC2626;"></i> Báo hỏng
-         </button>`
-      : `<button class="sa-item" onclick="saAct('report-damage')" style="color:#059669;">
-           <i class="ph ph-wrench" style="color:#059669;"></i> Đang sửa chữa — đổi trạng thái
-         </button>`}
-    ${a.nguoiDung
-      ? `<button class="sa-item" onclick="saAct('recall')" style="color:#B45309;">
-           <i class="ph ph-package" style="color:#D97706;"></i> Thu hồi về kho
-         </button>`
-      : ''}
-
+      ? `<button class="sa-item" onclick="saAct('report-damage')" style="color:#FF3B30;"><i class="ph ph-warning" style="background:#FFEEEE;color:#FF3B30;"></i> Báo hỏng</button>`
+      : `<button class="sa-item" onclick="saAct('report-damage')" style="color:#059669;"><i class="ph ph-wrench" style="background:#EAF3DE;color:#3B6D11;"></i> Đổi về Đang dùng</button>`}
+    ${a.nguoiDung ? `<button class="sa-item" onclick="saAct('recall')" style="color:#B45309;"><i class="ph ph-package" style="background:#FFFBEB;color:#D97706;"></i> Thu hồi về kho</button>` : ''}
     <div class="sa-divider"></div>
-    <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash"></i> Xóa tài sản</button>
+    <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash" style="background:#FFEEEE;color:#FF3B30;"></i> Xóa tài sản</button>`;
 
-    <!-- AI Health Check — tạm ẩn, bật lại khi cần:
-    <div class="sa-divider"></div>
-    <div class="sa-section">✨ AI</div>
-    <button class="sa-item" onclick="saAct('ai-health')" style="background:linear-gradient(135deg,rgba(129,140,248,.08),rgba(167,139,250,.08));">
-      <i class="ph ph-sparkle" style="color:#818CF8;"></i>
-      <span>Asset Health Check</span>
-      <span class="sa-ai-badge">Gemini</span>
-    </button>
-    -->`;
-
-  // ── Vị trí popover: ngang hàng nút, mở sang trái ──
+  // ── Vị trí: bung từ nút xuống, canh phải ──
   menu.classList.add('open');
-  const rect  = triggerEl.getBoundingClientRect();
-  const mw    = menu.offsetWidth  || 220;
-  const mh    = menu.offsetHeight || 280;
-  const vw    = window.innerWidth;
-  const vh    = window.innerHeight;
-
-  // Mặc định: top ngang với nút, left sát bên trái nút
-  let top  = rect.top;
-  let left = rect.left - mw - 6;
-
-  // Nếu tràn trái thì mở sang phải
-  if(left < 8) left = rect.right + 6;
-  // Nếu tràn phải thì kéo vào
-  if(left + mw > vw - 8) left = vw - mw - 8;
-  // Nếu tràn dưới thì đẩy lên
-  if(top + mh > vh - 12) top = vh - mh - 12;
-  // Không vượt quá đỉnh
+  const rect = triggerEl.getBoundingClientRect();
+  const mw   = menu.offsetWidth  || 200;
+  const mh   = menu.offsetHeight || 260;
+  const vw   = window.innerWidth;
+  const vh   = window.innerHeight;
+  let top  = rect.bottom + 6;
+  let left = rect.right - mw;
+  if(left < 8) left = 8;
+  if(top + mh > vh - 12) top = rect.top - mh - 6;
   if(top < 8) top = 8;
-
   menu.style.top  = top  + 'px';
   menu.style.left = left + 'px';
+  menu.style.right = 'auto';
 }
 
 function saAct(action){
