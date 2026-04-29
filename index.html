@@ -7238,7 +7238,14 @@ function renderTable(){
         </td>
         <td style="position:relative;z-index:3;text-align:right;">
           <button class="eye-btn" onclick="openSmartAction('${a.id}',this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="18" height="18">
+              <rect x="1" y="2" width="18" height="7" rx="3.5" fill="currentColor" opacity="0.18"/>
+              <rect x="1" y="2" width="18" height="7" rx="3.5" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
+              <circle cx="14.5" cy="5.5" r="2.5" fill="currentColor" opacity="0.85"/>
+              <rect x="1" y="11" width="18" height="7" rx="3.5" fill="currentColor" opacity="0.18"/>
+              <rect x="1" y="11" width="18" height="7" rx="3.5" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
+              <circle cx="5.5" cy="14.5" r="2.5" fill="currentColor" opacity="0.85"/>
+            </svg>
           </button>
         </td>
       </tr>`;
@@ -8642,7 +8649,7 @@ async function saRecall(id){
 document.addEventListener('click', e => {
   const menu = document.getElementById('smart-action-menu');
   if(!menu?.classList.contains('open')) return;
-  if(!menu.contains(e.target) && !e.target.closest('.sa-btn')) closeSmartAction();
+  if(!menu.contains(e.target) && !e.target.closest('.eye-btn')) closeSmartAction();
 });
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape') closeSmartAction();
