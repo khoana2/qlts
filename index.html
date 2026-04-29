@@ -724,12 +724,12 @@ tr:hover .eye-btn{
 #smart-action-menu{
   position:fixed;z-index:9999;
   width:max-content;
-  background:rgba(255,255,255,0.5);
-  -webkit-backdrop-filter:blur(60px) saturate(200%) brightness(1.08);
-  backdrop-filter:blur(60px) saturate(200%) brightness(1.08);
+  background:rgba(22,12,5,0.82);
+  -webkit-backdrop-filter:blur(60px) saturate(160%) brightness(0.65);
+  backdrop-filter:blur(60px) saturate(160%) brightness(0.65);
   border-radius:16px;overflow:hidden;
-  box-shadow:0 20px 60px rgba(0,0,0,.2),0 2px 10px rgba(0,0,0,.08),inset 0 0.5px 0 rgba(255,255,255,0.95);
-  border:0.5px solid rgba(255,255,255,0.65);
+  box-shadow:0 20px 60px rgba(0,0,0,.35),0 2px 10px rgba(0,0,0,.15),inset 0 0.5px 0 rgba(255,255,255,0.18);
+  border:0.5px solid rgba(255,255,255,0.22);
   display:none;
   transform-origin:top right;
   animation:saPopIn .22s cubic-bezier(.34,1.56,.64,1);
@@ -2198,25 +2198,25 @@ tbody tr.row-sua td:first-child{border-left:3px solid rgba(251,146,60,0.9);}
 .col-toggle-menu label{color:rgba(255,255,255,0.85);}
 .col-toggle-menu label:hover{background:rgba(255,255,255,0.1);}
 
-/* ── Modal — ultra-transparent liquid glass ── */
-.modal-backdrop{background:rgba(0,0,0,0.3);}
+/* ── Modal — dark glass (đủ tối để chữ đọc được) ── */
+.modal-backdrop{background:rgba(0,0,0,0.45);}
 .modal{
-  background:rgba(255,255,255,0.07);
+  background:rgba(20,12,5,0.78);
   border:1px solid rgba(255,255,255,0.22);
-  box-shadow:0 24px 80px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.35);
-  backdrop-filter:blur(60px) saturate(200%) brightness(1.1);
-  -webkit-backdrop-filter:blur(60px) saturate(200%) brightness(1.1);
+  box-shadow:0 24px 80px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.2);
+  backdrop-filter:blur(60px) saturate(160%) brightness(0.7);
+  -webkit-backdrop-filter:blur(60px) saturate(160%) brightness(0.7);
 }
 .modal-head{
   background:rgba(255,255,255,0.06);
-  border-bottom:1px solid rgba(255,255,255,0.14);
+  border-bottom:1px solid rgba(255,255,255,0.12);
 }
-.modal-head h2{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,0.4);}
+.modal-head h2{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,0.5);}
 .modal-foot{
   background:rgba(255,255,255,0.04);
   border-top:1px solid rgba(255,255,255,0.1);
 }
-.modal-body{color:rgba(255,255,255,0.9);}
+.modal-body{color:rgba(255,255,255,0.92);}
 
 /* ── Form Fields ── */
 .field label{color:rgba(255,255,255,0.65);}
@@ -2268,24 +2268,25 @@ tbody tr.row-sua td:first-child{border-left:3px solid rgba(251,146,60,0.9);}
 .toast.warn .t-dot{background:#fbbf24;}
 .toast .t-msg{color:rgba(255,255,255,0.9);}
 
-/* ── Smart Action Menu — liquid glass ── */
+/* ── Smart Action Menu — dark glass (nền tối để chữ đọc được) ── */
 #smart-action-menu{
-  background:rgba(255,255,255,0.2);
-  -webkit-backdrop-filter:blur(60px) saturate(200%) brightness(1.1);
-  backdrop-filter:blur(60px) saturate(200%) brightness(1.1);
-  box-shadow:0 20px 60px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.5);
-  border:0.5px solid rgba(255,255,255,0.35);
+  background:rgba(22,12,5,0.82);
+  -webkit-backdrop-filter:blur(60px) saturate(160%) brightness(0.65);
+  backdrop-filter:blur(60px) saturate(160%) brightness(0.65);
+  box-shadow:0 20px 60px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.18);
+  border:0.5px solid rgba(255,255,255,0.22);
 }
-.sa-item{color:rgba(255,255,255,0.9);}
-.sa-item:hover{background:rgba(255,255,255,0.15);}
-.sa-item .sa-icon{color:#fff;opacity:0.85;}
+.sa-header{background:rgba(255,255,255,0.05);border-bottom-color:rgba(255,255,255,0.1);}
+.sa-item{color:rgba(245,225,195,0.95);}
+.sa-item:hover{background:rgba(255,255,255,0.1);}
+.sa-item .sa-icon{opacity:1;}
 .sa-item.danger{color:#fca5a5;}
 .sa-item.danger:hover{background:rgba(248,113,113,0.15);}
 .sa-item.danger .sa-icon{color:#fca5a5;}
 .sa-item.warn{color:#fde68a;}
 .sa-item.warn:hover{background:rgba(251,191,36,0.12);}
 .sa-item.warn .sa-icon{color:#fde68a;}
-.sa-divider{background:rgba(255,255,255,0.12);}
+.sa-divider{background:rgba(255,255,255,0.08);height:1px;}
 
 /* ── Employee Autocomplete ── */
 .emp-ac-drop{
@@ -2953,6 +2954,29 @@ thead th.sorted .sort-icon{color:#fde68a !important;}
 .sidebar-uname{color:#f5ede0 !important;}
 
 /* ═══ GLASS-VISIBILITY-FIX ═══ */
+/* Smart action menu: buộc nền tối để chữ đọc được */
+#smart-action-menu{
+  background:rgba(22,12,5,0.84) !important;
+  backdrop-filter:blur(60px) saturate(160%) brightness(0.65) !important;
+  -webkit-backdrop-filter:blur(60px) saturate(160%) brightness(0.65) !important;
+  border:0.5px solid rgba(255,255,255,0.22) !important;
+  box-shadow:0 20px 60px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.14) !important;
+}
+.sa-item{color:rgba(245,225,195,0.95) !important;}
+.sa-item:hover{background:rgba(255,255,255,0.1) !important;}
+.sa-item.danger{color:#fca5a5 !important;}
+.sa-item.warn{color:#fde68a !important;}
+/* Modal: đủ tối để form text đọc được */
+.modal{
+  background:rgba(20,12,5,0.80) !important;
+  backdrop-filter:blur(60px) saturate(160%) brightness(0.68) !important;
+  -webkit-backdrop-filter:blur(60px) saturate(160%) brightness(0.68) !important;
+}
+.modal-head h2{color:#fff !important;}
+.modal-body{color:rgba(255,255,255,0.92) !important;}
+.field label{color:rgba(255,255,255,0.75) !important;}
+.field input,.field select,.field textarea{color:#fff !important;background:rgba(255,255,255,0.1) !important;border-color:rgba(255,255,255,0.2) !important;}
+
 /* Sidebar section labels — tăng độ sáng */
 .sidebar-section{color:rgba(251,191,36,0.80) !important;}
 
