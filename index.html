@@ -2395,6 +2395,43 @@ tbody tr.row-sua td:first-child{border-left:3px solid rgba(251,146,60,0.9);}
 /* ── Global search icon ── */
 .global-search-icon{color:rgba(255,255,255,0.55);}
 
+/* ── Asset code (Mã TS) — monospace, soft white ── */
+code{color:rgba(255,255,255,0.82) !important;font-family:ui-monospace,'SF Mono','Fira Code',monospace;}
+.ma-ts-link{color:rgba(255,255,255,0.82) !important;text-decoration:none;}
+.ma-ts-link:hover{color:#fff !important;text-decoration:underline !important;}
+.tl-asset-code{color:rgba(255,255,255,0.65) !important;}
+
+/* ── Type badge — glass pill ── */
+.type-badge{
+  background:rgba(255,255,255,0.12) !important;
+  border:1px solid rgba(255,255,255,0.22) !important;
+  color:#fff !important;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  font-weight:600;
+}
+
+/* ── Quick filter chips — glass ── */
+.qf-chip{
+  background:rgba(255,255,255,0.08) !important;
+  border:1px solid rgba(255,255,255,0.18) !important;
+  color:rgba(255,255,255,0.75) !important;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.qf-chip.active{
+  background:rgba(255,255,255,0.2) !important;
+  border-color:rgba(255,255,255,0.38) !important;
+  color:#fff !important;
+}
+.qf-chip:hover{
+  background:rgba(255,255,255,0.15) !important;
+  color:#fff !important;
+}
+
+/* ── Filter bar label ── */
+.filter-count{color:rgba(255,255,255,0.55) !important;}
+
 /* ── Context Switcher badge ── */
 .ctx-badge{background:rgba(255,255,255,0.18);color:#fff;border-color:rgba(255,255,255,0.3);}
 
@@ -2457,37 +2494,45 @@ tbody tr.row-sua td:first-child{border-left:3px solid rgba(251,146,60,0.9);}
 .kpi{transition:transform .2s ease,box-shadow .2s ease,background .2s ease,border-color .2s ease;}
 
 /* ══════════════════════════════════════════════════════
-   STICKY COLUMN FIX — cần nền đặc hơn để che content
-   cuộn phía sau khi kéo ngang
+   STICKY COLUMN FIX — blur 60px ẩn content cuộn sau,
+   nền khớp hoàn toàn với glass table rows
    ══════════════════════════════════════════════════════ */
 #assets-table tbody .cb-col,
 #assets-table tbody .sc-num,
 #assets-table tbody .sc-ma,
 #assets-table tbody .sc-ten{
-  background:rgba(30,18,8,0.45) !important;
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
+  background:rgba(255,255,255,0.04) !important;
+  backdrop-filter:blur(60px) saturate(160%);
+  -webkit-backdrop-filter:blur(60px) saturate(160%);
 }
 tbody tr:hover .cb-col,
 tbody tr:hover .sc-num,
 tbody tr:hover .sc-ma,
-tbody tr:hover .sc-ten{background:rgba(40,25,10,0.5) !important;}
+tbody tr:hover .sc-ten{background:rgba(255,255,255,0.06) !important;}
+tbody tr.selected .cb-col,
+tbody tr.selected .sc-num,
+tbody tr.selected .sc-ma,
+tbody tr.selected .sc-ten{background:rgba(255,255,255,0.1) !important;}
 tbody tr.row-kho .cb-col,
 tbody tr.row-kho .sc-num,
 tbody tr.row-kho .sc-ma,
-tbody tr.row-kho .sc-ten{background:rgba(80,55,10,0.45) !important;}
+tbody tr.row-kho .sc-ten{background:rgba(251,191,36,0.06) !important;}
 tbody tr.row-hong .cb-col,
 tbody tr.row-hong .sc-num,
 tbody tr.row-hong .sc-ma,
-tbody tr.row-hong .sc-ten{background:rgba(80,15,15,0.45) !important;}
+tbody tr.row-hong .sc-ten{background:rgba(248,113,113,0.06) !important;}
+tbody tr.row-sua .cb-col,
+tbody tr.row-sua .sc-num,
+tbody tr.row-sua .sc-ma,
+tbody tr.row-sua .sc-ten{background:rgba(251,146,60,0.06) !important;}
 
 #assets-table thead .cb-col,
 #assets-table thead .sc-num,
 #assets-table thead .sc-ma,
 #assets-table thead .sc-ten{
-  background:rgba(20,12,5,0.6) !important;
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
+  background:rgba(255,255,255,0.07) !important;
+  backdrop-filter:blur(60px) saturate(160%);
+  -webkit-backdrop-filter:blur(60px) saturate(160%);
 }
 
 /* ══════════════════════════════════════════════════════
