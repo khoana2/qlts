@@ -213,7 +213,7 @@ body{
 }
 
 /* ── CONTENT AREA ── */
-.content{flex:1;padding:16px 16px 40px;min-width:0;overflow-x:auto;overflow-y:clip;}
+.content{flex:1;padding:16px 16px 40px;min-width:0;overflow-x:auto;}
 
 /* BUTTONS */
 .btn{
@@ -327,10 +327,10 @@ body{
   border:1px solid var(--border);border-radius:var(--radius);
   box-shadow:var(--shadow);overflow:clip;
 }
-.table-wrap{width:100%;overflow-x:auto;overflow-y:clip;}
+.table-wrap{width:100%;overflow:auto;max-height:calc(100vh - 280px);min-height:320px;}
 table{width:100%;border-collapse:separate;border-spacing:0;min-width:1300px;}
 thead th{
-  position:sticky;top:53px;z-index:10;
+  position:sticky;top:0;z-index:10;
   background:#F8FAFC;border-bottom:1px solid var(--border);
   color:var(--muted);text-align:left;font-size:11px;
   padding:10px 10px;white-space:nowrap;user-select:none;
@@ -1091,7 +1091,7 @@ tr:hover .eye-btn{
 
   /* ── Tables ── */
   .table-card{ border-radius:10px;overflow:hidden; }
-  .table-wrap{ overflow-x:auto;-webkit-overflow-scrolling:touch; }
+  .table-wrap{ overflow:auto;max-height:calc(100vh - 200px);min-height:260px;-webkit-overflow-scrolling:touch; }
   .data-table th, .data-table td{ font-size:11.5px;padding:8px 8px; }
   /* Ẩn bớt cột ít quan trọng trên mobile */
   [data-col="cpu"],
