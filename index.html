@@ -11932,7 +11932,7 @@ async function msalSpPushTransfer(assetId, rec){
     ThoiGian:     rec.ts       || new Date().toISOString(),
   });
   try{
-    await fetch(base, {
+    const res = await fetch(base, {
       method:'POST',
       headers:{
         'Authorization': `Bearer ${_msalToken}`,
@@ -11941,6 +11941,14 @@ async function msalSpPushTransfer(assetId, rec){
       },
       body
     });
+    if(res.ok){
+      // Ghi _spId vào local record để lần sau merge không bị duplicate
+      const json = await res.json().catch(()=>null);
+      if(json?.ID && rec){
+        rec._spId = json.ID;
+        saveTransfers();
+      }
+    }
   }catch(e){ console.warn('[TRANSFER] push error:', e.message); }
 }
 
@@ -12026,8 +12034,8 @@ async function msalSpLoadTransfers(){
     // Merge: SP là nguồn chính, nhưng giữ lại local record chưa có trên SP
     for(const [aid, spRecs] of Object.entries(loaded)){
       const localRecs = transfers[aid] || [];
-      // Normalize ts: SP trả về không có milliseconds ("...Z" vs "...000Z")
-      const _normTs = ts => { try{ return new Date(ts).getTime(); }catch(e){ return null; } };
+      // Normalize ts theo giây (SP cắt milliseconds: "T07:00:00.123Z" → "T07:00:00Z")
+      const _normTs = ts => { try{ return Math.floor(new Date(ts).getTime()/1000); }catch(e){ return null; } };
       const spTs = new Set(spRecs.map(r => _normTs(r.ts)).filter(Boolean));
       // Chỉ giữ local record nào chưa có _spId VÀ ts chưa có trong SP
       const localOnly = localRecs.filter(r => !r._spId && r.ts && !spTs.has(_normTs(r.ts)));
