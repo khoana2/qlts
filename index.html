@@ -2878,6 +2878,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <input type="date" class="fsel" id="al-filter-date" onchange="renderAuditLog()" style="padding:5px 10px;font-size:12px;" title="Lọc theo ngày">
         <button class="btn btn-icon-ph" onclick="clearAuditLogFilters()"><i class="ph ph-x"></i> Xóa lọc</button>
         <button class="btn danger btn-icon-ph" onclick="confirmClearAuditLog()" style="font-size:11.5px;"><i class="ph ph-trash"></i> Xóa log</button>
+        <button class="btn btn-icon-ph" onclick="deduplicateSpTransfers()" style="font-size:11.5px;background:#FFF7ED;border-color:#FB923C;color:#C2410C;" title="Xóa các bản ghi bàn giao trùng lặp trên SharePoint">
+          <i class="ph ph-broom"></i> Dọn duplicate bàn giao
+        </button>
       </div>
     </div>
 
@@ -11952,7 +11955,85 @@ async function msalSpPushTransfer(assetId, rec){
   }catch(e){ console.warn('[TRANSFER] push error:', e.message); }
 }
 
-// ─── Load xác nhận bàn giao từ Quan_Ly_XacNhan_BanGiao ───────────────────────
+// ─── Dọn dẹp duplicate transfer records trên SharePoint ─────────────────────
+async function deduplicateSpTransfers(){
+  if(!_msalAccount){ toast('Cần đăng nhập SharePoint trước.','warn'); return; }
+  if(!confirm('Hàm này sẽ tải toàn bộ lịch sử bàn giao từ SharePoint, tìm các bản ghi trùng lặp (cùng tài sản + cùng thời gian ±1s) và xóa bản thừa. Tiếp tục?')) return;
+
+  const btn = document.querySelector('button[onclick="deduplicateSpTransfers()"]');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner" style="animation:spin 1s linear infinite;display:inline-block;"></i> Đang xử lý…'; }
+  toast('Đang tải dữ liệu từ SharePoint…','info');
+
+  try{
+    const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')/items`;
+    // Load tất cả, phân trang 500 items
+    let allItems = [], url = `${base}?$select=Id,Title,TuNguoi,DenNguoi,ThoiGian&$top=500&$orderby=ThoiGian asc`;
+    while(url){
+      const data = await msalSpReq(url);
+      allItems = allItems.concat(data.value || []);
+      url = data['odata.nextLink'] || null;
+    }
+    console.log('[DEDUP] Tổng items SP:', allItems.length);
+
+    // Nhóm theo assetId (Title) + ts truncate về giây
+    const _sec = ts => { try{ return Math.floor(new Date(ts).getTime()/1000); }catch(e){ return 0; } };
+    const groups = {};
+    for(const item of allItems){
+      const key = `${item.Title||''}__${_sec(item.ThoiGian)}`;
+      if(!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    }
+
+    // Tìm nhóm có >= 2 items → giữ item có ID nhỏ nhất (tạo trước), xóa phần còn lại
+    const toDelete = [];
+    for(const [key, items] of Object.entries(groups)){
+      if(items.length < 2) continue;
+      items.sort((a,b) => a.Id - b.Id); // giữ bản cũ nhất
+      for(let i=1; i<items.length; i++) toDelete.push(items[i].Id);
+    }
+
+    console.log('[DEDUP] Cần xóa:', toDelete.length, 'items');
+    if(!toDelete.length){
+      toast('✅ Không có bản ghi trùng lặp nào!','ok');
+      return;
+    }
+
+    if(!confirm(`Tìm thấy ${toDelete.length} bản ghi trùng lặp. Xóa ngay?`)) return;
+
+    // Xóa từng item (SP không hỗ trợ batch delete đơn giản)
+    let deleted = 0, failed = 0;
+    for(const spId of toDelete){
+      try{
+        await msalSpReq(
+          `${base}(${spId})`,
+          { method:'DELETE', headers:{ 'IF-MATCH':'*' } }
+        );
+        deleted++;
+      }catch(e){
+        console.warn('[DEDUP] Xóa lỗi ID', spId, e.message);
+        failed++;
+      }
+    }
+
+    // Reload lại transfers local từ SP để sync
+    await msalSpLoadTransfers();
+    saveTransfers();
+
+    const msg = failed
+      ? `✅ Đã xóa ${deleted} bản trùng. ⚠️ ${failed} bản lỗi (xem console).`
+      : `✅ Đã xóa ${deleted} bản ghi trùng lặp thành công!`;
+    toast(msg, failed ? 'warn' : 'ok');
+    console.log('[DEDUP] Hoàn tất. Deleted:', deleted, 'Failed:', failed);
+
+  }catch(e){
+    console.error('[DEDUP] Lỗi:', e);
+    toast('❌ Lỗi: ' + (e?.message || e), 'bad');
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-broom"></i> Dọn duplicate bàn giao'; }
+  }
+}
+
+// ─── Load xác nhận bàn giao từ Quan_Ly_XacNhan_BanGiao ─────────────────────
 async function msalSpLoadXacNhan(){
   if(!_msalAccount) return;
 
