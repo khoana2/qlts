@@ -12026,9 +12026,11 @@ async function msalSpLoadTransfers(){
     // Merge: SP là nguồn chính, nhưng giữ lại local record chưa có trên SP
     for(const [aid, spRecs] of Object.entries(loaded)){
       const localRecs = transfers[aid] || [];
-      const spTs = new Set(spRecs.map(r => r.ts).filter(Boolean));
+      // Normalize ts: SP trả về không có milliseconds ("...Z" vs "...000Z")
+      const _normTs = ts => { try{ return new Date(ts).getTime(); }catch(e){ return null; } };
+      const spTs = new Set(spRecs.map(r => _normTs(r.ts)).filter(Boolean));
       // Chỉ giữ local record nào chưa có _spId VÀ ts chưa có trong SP
-      const localOnly = localRecs.filter(r => !r._spId && r.ts && !spTs.has(r.ts));
+      const localOnly = localRecs.filter(r => !r._spId && r.ts && !spTs.has(_normTs(r.ts)));
       const merged = [...spRecs, ...localOnly];
       merged.sort((a,b) => (a.ts||a.date||'') < (b.ts||b.date||'') ? -1 : 1);
       transfers[aid] = merged;
