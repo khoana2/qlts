@@ -5143,6 +5143,7 @@ async function msalSpLoad(){
       assets = all.map(i=>spItemToAsset(i));
       saveToStorage(); saveTransfers(); saveRepairs();
       populateDeptSelects(); applyFilters(); updateDashboard(); renderEvents(); updateTopbarSub();
+      loadRepairsSP(); // load phiếu sửa chữa từ SP list riêng
       console.log(`[QLTS] Đã tải ${assets.length} tài sản từ SharePoint`);
     } else {
       console.log('[QLTS] SharePoint List đang trống');
@@ -5884,7 +5885,8 @@ function fsSave(){
 }
 
 // ═══════════════════════ SHAREPOINT CONFIG ═══════════════════════
-const SP_LIST_NAME = 'Quan_Ly_Tai_San_CNTT';
+const SP_LIST_NAME        = 'Quan_Ly_Tai_San_CNTT';
+const SP_REPAIR_LIST_NAME = 'Quan_Ly_Sua_Chua';
 const SP_SITE_FALLBACK = 'https://ttgvncom.sharepoint.com/teams/qlts';
 let SP_SITE = '';
 let SP_MODE = false;          // true khi đang chạy trong SharePoint
@@ -12332,6 +12334,112 @@ function saveRepairs(){
   try{ localStorage.setItem(LS_REPAIRS, JSON.stringify(repairs)); }catch(e){}
 }
 
+// ═══════════════════════ SHAREPOINT — REPAIR LIST ═══════════════════════
+const _RLIST = ()=> `${SP_SITE}/_api/web/lists/getbytitle('${SP_REPAIR_LIST_NAME}')`;
+
+// map rec → SP body
+function _repToSpBody(assetId, rec){
+  const a = assets.find(x=>x.id===assetId);
+  const body = {
+    '__metadata':  { type: `SP.Data.${SP_REPAIR_LIST_NAME.replace(/_/g,'')}ListItem` },
+    Title:         a?.maTaiSan || assetId,
+    AssetId:       assetId,
+    MoTaLoi:       rec.issue        || '',
+    DonViSua:      rec.vendor       || '',
+    GhiChu:        rec.notes        || '',
+    TrangThai:     rec.status       || 'dang_sua',
+  };
+  if(rec.chiPhi)            body.ChiPhi      = rec.chiPhi;
+  if(rec.dateIn)            body.NgayGuiSua  = rec.dateIn + 'T00:00:00Z';
+  if(rec.estimatedReturn)   body.DuKienNhan  = rec.estimatedReturn + 'T00:00:00Z';
+  if(rec.dateOut)           body.NgayNhanLai = rec.dateOut + 'T00:00:00Z';
+  return body;
+}
+
+// map SP item → rec
+function _spToRec(item){
+  return {
+    spId:            item.ID,
+    issue:           item.MoTaLoi       || '',
+    vendor:          item.DonViSua      || '',
+    notes:           item.GhiChu        || '',
+    status:          item.TrangThai     || 'dang_sua',
+    chiPhi:          item.ChiPhi        || null,
+    dateIn:          item.NgayGuiSua    ? item.NgayGuiSua.substring(0,10)  : '',
+    estimatedReturn: item.DuKienNhan    ? item.DuKienNhan.substring(0,10)  : '',
+    dateOut:         item.NgayNhanLai   ? item.NgayNhanLai.substring(0,10) : '',
+    ts:              item.Modified      || '',
+  };
+}
+
+// Load tất cả phiếu từ SP về repairs map
+async function loadRepairsSP(){
+  if(!SP_MODE && !_msalAccount) return;
+  try {
+    let url = `${_RLIST()}/items?$top=2000&$orderby=ID asc&$select=ID,Title,AssetId,MoTaLoi,DonViSua,GhiChu,TrangThai,ChiPhi,NgayGuiSua,DuKienNhan,NgayNhanLai,Modified`;
+    const items = [];
+    while(url){
+      const data = await spReq(url);
+      items.push(...(data.value||[]));
+      url = data['odata.nextLink'] || null;
+    }
+    // rebuild repairs map từ SP
+    const newRepairs = {};
+    for(const item of items){
+      const aid = item.AssetId;
+      if(!aid) continue;
+      if(!newRepairs[aid]) newRepairs[aid] = [];
+      newRepairs[aid].push(_spToRec(item));
+    }
+    repairs = newRepairs;
+    saveRepairs(); // cache sang localStorage
+    _updateRepairBadge();
+    console.log(`[SP Repair] Loaded ${items.length} phiếu`);
+  } catch(e){
+    console.warn('[SP Repair] loadRepairsSP error:', e);
+  }
+}
+
+// Tạo mới phiếu trên SP → trả về spId
+async function spRepairCreate(assetId, rec){
+  try {
+    const body = _repToSpBody(assetId, rec);
+    const res = await spReq(`${_RLIST()}/items`, { method:'POST', body: JSON.stringify(body) });
+    return res?.ID || null;
+  } catch(e){
+    console.warn('[SP Repair] create error:', e);
+    return null;
+  }
+}
+
+// Cập nhật phiếu đã có trên SP
+async function spRepairUpdate(spId, assetId, rec){
+  try {
+    const body = _repToSpBody(assetId, rec);
+    delete body.__metadata;
+    await spReq(`${_RLIST()}/items(${spId})`,{
+      method:'POST',
+      headers:{'X-HTTP-Method':'MERGE','IF-MATCH':'*'},
+      body: JSON.stringify(body)
+    });
+  } catch(e){
+    console.warn('[SP Repair] update error:', e);
+  }
+}
+
+// Xóa phiếu trên SP
+async function spRepairDelete(spId){
+  try {
+    await spReq(`${_RLIST()}/items(${spId})`,{
+      method:'POST',
+      headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'},
+      body:''
+    });
+  } catch(e){
+    console.warn('[SP Repair] delete error:', e);
+  }
+}
+
 // ── Mở modal thêm phiếu mới ──
 function openRepairNew(assetId){
   document.getElementById('rep-modal-title').textContent = 'Gửi Sửa Chữa';
@@ -12422,7 +12530,10 @@ function saveRepairRecord(){
     ts: new Date().toISOString(),
   };
   if(!repairs[assetId]) repairs[assetId] = [];
-  if(idxRaw !== ''){
+  const isEdit = idxRaw !== '';
+  const existingSpId = isEdit ? (repairs[assetId][parseInt(idxRaw)]?.spId || null) : null;
+  if(existingSpId) rec.spId = existingSpId; // giữ lại spId khi edit
+  if(isEdit){
     repairs[assetId][parseInt(idxRaw)] = rec;
   } else {
     repairs[assetId].push(rec);
@@ -12438,15 +12549,28 @@ function saveRepairRecord(){
   toast('✅ Đã lưu phiếu sửa chữa','ok');
   _updateRepairBadge();
   if(document.getElementById('view-repairs').classList.contains('active')) renderRepairs();
+  // ── Đồng bộ lên SharePoint ──
+  if(SP_MODE || _msalAccount){
+    const newIdx = isEdit ? parseInt(idxRaw) : repairs[assetId].length - 1;
+    if(existingSpId){
+      spRepairUpdate(existingSpId, assetId, rec);
+    } else {
+      spRepairCreate(assetId, rec).then(spId=>{
+        if(spId){ repairs[assetId][newIdx].spId = spId; saveRepairs(); }
+      });
+    }
+  }
 }
 
 // ── Xóa phiếu ──
 function deleteRepairRecord(assetId, idx){
   if(!confirm('Xóa phiếu sửa chữa này?')) return;
+  const spId = repairs[assetId]?.[idx]?.spId || null;
   repairs[assetId].splice(idx,1);
   if(!repairs[assetId].length) delete repairs[assetId];
   saveRepairs();
   _updateRepairBadge();
+  if(spId && (SP_MODE || _msalAccount)) spRepairDelete(spId);
   renderRepairs();
   toast('Đã xóa phiếu sửa chữa','ok');
 }
