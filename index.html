@@ -7783,11 +7783,30 @@ function renderEvents(){
     });
   });
 
+  // ── Dedup: loại bỏ event trùng (cùng tài sản + ngày + người giao + người nhận) ──
+  // Ưu tiên giữ entry có nhiều thông tin hơn (dept, condition)
+  const _dedup = new Map();
+  allEv.forEach(ev=>{
+    const key = [ev.assetId, ev.date, ev.type,
+      (ev.from||'').trim().toLowerCase(),
+      (ev.to  ||'').trim().toLowerCase()
+    ].join('|');
+    const existing = _dedup.get(key);
+    // Giữ cái có nhiều thông tin hơn (fromDept, condition, notes)
+    if(!existing ||
+      (!existing.fromDept && ev.fromDept) ||
+      (!existing.condition && ev.condition) ||
+      (!existing.notes && ev.notes)){
+      _dedup.set(key, ev);
+    }
+  });
+  const allEvDeduped = [..._dedup.values()];
+
   // ── Sort mới nhất trước ──────────────────────────────────────────
-  allEv.sort((a,b)=>{ const da=a.ts||a.date, db=b.ts||b.date; return da<db?1:da>db?-1:0; });
+  allEvDeduped.sort((a,b)=>{ const da=a.ts||a.date, db=b.ts||b.date; return da<db?1:da>db?-1:0; });
 
   // ── Filter ──────────────────────────────────────────────────────
-  const filtered = allEv.filter(ev=>{
+  const filtered = allEvDeduped.filter(ev=>{
     if(et && ev.type !== et) return false;
     if(ed && ev.fromDept !== ed && ev.toDept !== ed) return false;
     if(cutoff && ev.date && new Date(ev.date) < cutoff) return false;
