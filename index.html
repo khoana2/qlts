@@ -353,8 +353,8 @@ tbody tr:hover td  {background:#f0f0ff;}
 tbody tr.selected  {--row-bg:#ede9fe;}
 tbody tr.selected td{background:#ede9fe!important;border-bottom-color:#c4b5fd;}
 /* ROW HIGHLIGHT BY STATUS */
-tbody tr.row-kho td{background:#FFFBEB;}
-tbody tr.row-kho td:first-child{border-left:3px solid #F59E0B;}
+/* tbody tr.row-kho td{background:#FFFBEB;} */
+/* tbody tr.row-kho td:first-child{border-left:3px solid #F59E0B;} */
 tbody tr.row-hong td{background:#FEF2F2;}
 tbody tr.row-hong td:first-child{border-left:3px solid #EF4444;}
 tbody tr.row-sua td{background:#FFF7ED;}
@@ -365,9 +365,7 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 #assets-table.hide-model th[data-col="model"],#assets-table.hide-model td[data-col="model"]{display:none;}
 #assets-table.hide-serial th[data-col="serial"],#assets-table.hide-serial td[data-col="serial"]{display:none;}
 #assets-table.hide-boPhan th[data-col="boPhan"],#assets-table.hide-boPhan td[data-col="boPhan"]{display:none;}
-#assets-table.hide-cpu th[data-col="cpu"],#assets-table.hide-cpu td[data-col="cpu"]{display:none;}
-#assets-table.hide-ram th[data-col="ram"],#assets-table.hide-ram td[data-col="ram"]{display:none;}
-#assets-table.hide-ssd th[data-col="ssd"],#assets-table.hide-ssd td[data-col="ssd"]{display:none;}
+#assets-table.hide-spec th[data-col="spec"],#assets-table.hide-spec td[data-col="spec"]{display:none;}
 #assets-table.hide-depreciation th[data-col="depreciation"],#assets-table.hide-depreciation td[data-col="depreciation"]{display:none;}
 
 /* ── Sticky first columns ──
@@ -2522,9 +2520,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <label><input type="checkbox" checked onchange="toggleCol('model',this.checked)"> Model</label>
             <label><input type="checkbox" checked onchange="toggleCol('serial',this.checked)"> Serial</label>
             <label><input type="checkbox" checked onchange="toggleCol('boPhan',this.checked)"> Bộ phận</label>
-            <label><input type="checkbox" checked onchange="toggleCol('cpu',this.checked)"> CPU</label>
-            <label><input type="checkbox" checked onchange="toggleCol('ram',this.checked)"> RAM</label>
-            <label><input type="checkbox" checked onchange="toggleCol('ssd',this.checked)"> SSD</label>
+            <label><input type="checkbox" checked onchange="toggleCol('spec',this.checked)"> Cấu hình (CPU/RAM/SSD)</label>
             <label><input type="checkbox" onchange="toggleCol('depreciation',this.checked)"> <i class="ph ph-chart-line-down" style="font-size:12px;color:var(--muted);"></i> Khấu hao</label>
           </div>
         </div>
@@ -2541,9 +2537,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
               <th data-col="serial">Serial</th>
               <th class="sortable" onclick="sortBy('nguoiDung')">Người dùng <span class="sort-icon">↕</span></th>
               <th data-col="boPhan" class="sortable" onclick="sortBy('boPhan')">Bộ phận <span class="sort-icon">↕</span></th>
-              <th data-col="cpu">CPU</th>
-              <th data-col="ram">RAM</th>
-              <th data-col="ssd">SSD</th>
+              <th data-col="spec" style="min-width:160px;">Cấu hình</th>
               <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
               <th style="width:120px;"></th>
@@ -7297,9 +7291,11 @@ function renderTable(){
           ${a.email?`<a class="mail-link" href="mailto:${esc(a.email)}">${esc(a.email)}</a>`:''}
         </td>
         <td data-col="boPhan" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;">${esc(a.boPhan||'—')}</td>
-        <td data-col="cpu" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted);">${esc(a.cpu||'—')}</td>
-        <td data-col="ram">${esc(a.ram||'—')}</td>
-        <td data-col="ssd">${esc(a.ssd||'—')}</td>
+        <td data-col="spec" style="font-size:11.5px;white-space:nowrap;">
+          ${a.cpu?`<div style="color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;max-width:180px;">${esc(a.cpu)}</div>`:''}
+          ${(a.ram||a.ssd)?`<div style="color:var(--muted);font-size:11px;margin-top:2px;">${[a.ram,a.ssd].filter(Boolean).map(s=>esc(s)).join(' · ')}</div>`:''}
+          ${(!a.cpu&&!a.ram&&!a.ssd)?'<span style="color:var(--muted);">—</span>':''}
+        </td>
         <td data-col="depreciation" style="text-align:right;">${(()=>{
           const d = calcDepreciation(a);
           if(!d) return '<span style="color:var(--muted);font-size:11px;">—</span>';
@@ -7312,7 +7308,7 @@ function renderTable(){
           ${warrantyBadge(a)}
           ${xacNhanBadge(a.id)}
         </td>
-        <td style="position:relative;z-index:3;text-align:right;">
+        <td style="text-align:right;">
           <button class="eye-btn" onclick="openSmartAction('${a.id}',this)">
             <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
               <rect x="1" y="1.5" width="18" height="7.5" rx="3.75" fill="currentColor" opacity="0.2"/>
@@ -7535,6 +7531,18 @@ function initColVisibility(){
     if(cb) cb.checked = false;
   });
 }
+// Migrate old col keys: cpu/ram/ssd → spec
+(function(){
+  const key = COL_STORAGE_KEY;
+  let cols = [];
+  try{ cols = JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){}
+  const oldKeys = ['cpu','ram','ssd'];
+  const hadOld = oldKeys.some(k=>cols.includes(k));
+  cols = cols.filter(c=>!oldKeys.includes(c));
+  if(hadOld && !cols.includes('spec')) cols.push('spec');
+  hiddenCols = cols;
+  localStorage.setItem(key, JSON.stringify(cols));
+})();
 document.addEventListener('DOMContentLoaded', initColVisibility);
 
 // ─── Wire employee autocomplete vào các form input ───────────────────────────
