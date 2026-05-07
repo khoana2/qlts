@@ -327,7 +327,7 @@ body{
   border:1px solid var(--border);border-radius:var(--radius);
   box-shadow:var(--shadow);overflow:clip;
 }
-.table-wrap{width:100%;overflow-x:auto;overflow-y:visible;}
+.table-wrap{width:100%;overflow-x:auto;overflow-y:clip;}
 table{width:100%;border-collapse:separate;border-spacing:0;min-width:1300px;}
 thead th{
   position:sticky;top:53px;z-index:10;
@@ -341,7 +341,7 @@ thead th.sortable:hover{color:var(--text);}
 thead th .sort-icon{margin-left:4px;opacity:.45;}
 thead th.sorted .sort-icon{opacity:1;color:var(--accent);}
 tbody td{
-  border-bottom:1px solid #F1F5F9;
+  border-bottom:1px solid #E2E8F0;
   padding:10px 10px;font-size:13.5px;color:#1E293B;
   white-space:nowrap;vertical-align:middle;
 }
@@ -584,7 +584,7 @@ input[type=checkbox].row-cb{
 
 /* DETAIL MODAL */
 .detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;}
-.detail-cell{padding:10px 12px;border-bottom:1px solid #F1F5F9;}
+.detail-cell{padding:10px 12px;border-bottom:1px solid #E2E8F0;}
 .detail-cell:nth-child(3n){border-right:none;}
 .detail-cell .dc-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;}
 .detail-cell .dc-val{font-size:13px;color:var(--text);}
@@ -911,49 +911,6 @@ tr:hover .eye-btn{
   font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto;flex-shrink:0;
   background:linear-gradient(135deg,#818CF8,#A78BFA);color:#fff;font-weight:600;
 }
-/* ══════════════ AI HEALTH CHECK MODAL ══════════════ */
-.ai-modal-body{padding:20px 18px;}
-.ai-asset-pill{
-  display:inline-flex;align-items:center;gap:7px;
-  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
-  border:1px solid #C7D2FE;border-radius:20px;
-  padding:5px 12px;font-size:12px;margin-bottom:14px;
-}
-.ai-loading{
-  display:flex;flex-direction:column;align-items:center;gap:12px;
-  padding:32px 0;color:var(--muted);font-size:13px;
-}
-.ai-spinner{
-  width:32px;height:32px;border:3px solid #E0E7FF;
-  border-top-color:#818CF8;border-radius:50%;
-  animation:aiSpin .8s linear infinite;
-}
-@keyframes aiSpin{to{transform:rotate(360deg);}}
-.ai-result{font-size:13.5px;line-height:1.7;color:var(--text);}
-.ai-result-box{
-  background:#FAFAFA;border:1px solid var(--border);
-  border-radius:10px;padding:14px 16px;margin-top:4px;
-}
-.ai-verdict{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:12px;
-}
-.ai-verdict.good {background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;}
-.ai-verdict.warn {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A;}
-.ai-verdict.bad  {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;}
-.ai-footer{
-  display:flex;align-items:center;gap:6px;
-  margin-top:14px;padding-top:12px;border-top:1px solid var(--border);
-  font-size:11px;color:var(--muted);
-}
-/* API key setup */
-.ai-setup{text-align:center;padding:24px 16px;}
-.ai-setup input{
-  width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;
-  font-size:13px;margin:10px 0;outline:none;
-}
-.ai-setup input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
-
 /* ── Attachment Modal ── */
 .attach-item{
   display:flex;align-items:center;gap:10px;
@@ -1853,7 +1810,7 @@ thead th{
 #assets-table thead .sc-num,
 #assets-table thead .sc-ma,
 #assets-table thead .sc-ten{ background:#f5f6fc; }
-tbody td{ border-bottom:1px solid #f0f1f8; color:#374151; }
+tbody td{ border-bottom:1px solid #E2E8F0; color:#374151; }
 tbody tr:hover td{ background:#f0f0ff; }
 tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd; }
 .tbl-footer{ background:#f5f6fc; border-top:1px solid var(--border); }
@@ -3915,21 +3872,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 <!-- ═══ PRINT AREA (hidden, only shown on print) ═══ -->
 <div id="print-area"></div>
 
-<!-- ══════════════ AI HEALTH CHECK MODAL ══════════════ -->
-<div class="modal-backdrop" id="modal-ai" onclick="if(event.target===this)closeModal('modal-ai')">
-  <div class="modal" style="max-width:500px;">
-    <div class="modal-head">
-      <h2>✨ Smart Assistant</h2>
-      <button class="modal-close" onclick="closeModal('modal-ai')"><i class="ph ph-x"></i></button>
-    </div>
-    <div class="ai-modal-body" id="ai-modal-body"><!-- populated by JS --></div>
-    <div class="modal-foot" id="ai-modal-foot" style="display:none;">
-      <button class="btn" onclick="closeModal('modal-ai')">Đóng</button>
-      <button class="btn" style="color:var(--muted);font-size:12px;" onclick="aiClearKey()"><i class="ph ph-key"></i> Đổi API Key</button>
-    </div>
-  </div>
-</div>
-
 <!-- ══════════════ SMART ACTION POPOVER ══════════════ -->
 <div id="smart-action-menu" role="menu" aria-label="Q.Action"></div>
 
@@ -5132,7 +5074,18 @@ async function msalSpPushAsset(id){
       toast('☁️ Đã cập nhật SharePoint (ID: '+a._spId+')','ok');
     } else {
       const res = await msalSpReq(base,{ method:'POST', body:JSON.stringify(body) });
-      if(res?.ID){ a._spId=res.ID; a.id='sp_'+res.ID; saveToStorage(); }
+      if(res?.ID){
+        a._spId=res.ID;
+        const oldId=a.id;
+        a.id='sp_'+res.ID;
+        // Migrate lịch sử bàn giao sang id mới
+        if(transfers[oldId]){
+          transfers[a.id]=transfers[oldId];
+          delete transfers[oldId];
+          saveTransfers();
+        }
+        saveToStorage();
+      }
       toast('☁️ Đã tạo mới trên SharePoint (ID: '+res?.ID+')','ok');
     }
   };
@@ -5753,6 +5706,9 @@ async function fsInitLoad(){
 function fsSave(){
   if(_fileHandle) _writeFileData(_fileHandle).then(()=>{
     fsbSetState('📂 ' + _fileHandle.name, 's-ok');
+  }).catch(e=>{
+    console.error('[fsSave] Ghi file thất bại:', e);
+    toast('❌ Không ghi được file: ' + e.message, 'bad');
   });
 }
 
@@ -6204,7 +6160,14 @@ async function spPushAsset(id){
       const res = await spCreate(body);
       if(res && res.ID){
         a._spId = res.ID;
+        const oldId = a.id;
         a.id = 'sp_' + res.ID;
+        // Migrate lịch sử bàn giao sang id mới
+        if(transfers[oldId]){
+          transfers[a.id] = transfers[oldId];
+          delete transfers[oldId];
+          saveTransfers();
+        }
         saveToStorage();
       }
     }
@@ -7263,7 +7226,7 @@ function renderTable(){
   const pageData = filtered.slice(start, start+perPage);
 
   if(!pageData.length){
-    tbody.innerHTML = `<tr><td colspan="13">
+    tbody.innerHTML = `<tr><td colspan="12">
       <div class="empty-state">
         <div class="es-icon"><i class="ph ph-magnifying-glass"></i></div>
         <p>Không tìm thấy tài sản nào</p>
@@ -8472,129 +8435,6 @@ async function spDeleteAttach(spId, filename){
 }
 // ════════════════════════════════════════════════════════════════════════════
 
-// ═══════════════════════ SMART ASSISTANT — Azure Function ═══════════════════════
-// Điền URL Azure Function sau khi deploy
-const AI_FUNCTION_URL = 'https://qlts.khoa-na.workers.dev/';
-
-function aiClearKey(){
-  closeModal('modal-ai');
-}
-
-async function geminiHealthCheck(assetId){
-  const a = assets.find(x=>x.id===assetId);
-  if(!a) return;
-
-  const body = document.getElementById('ai-modal-body');
-  const foot = document.getElementById('ai-modal-foot');
-  foot.style.display = 'none';
-
-  // Kiểm tra Azure Function URL đã cấu hình chưa
-  if(AI_FUNCTION_URL.includes('<your-function-app>')){
-    body.innerHTML = `
-      <div class="ai-setup">
-        <div style="font-size:28px;margin-bottom:8px;">⚙️</div>
-        <p style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Chưa cấu hình Azure Function</p>
-        <p style="font-size:12px;color:var(--muted);line-height:1.6;">
-          Cần deploy Azure Function và điền URL vào biến <code>AI_FUNCTION_URL</code> trong file index.html.<br><br>
-          Xem hướng dẫn trong thư mục <code>azure-function/</code>.
-        </p>
-      </div>`;
-    foot.style.display = 'flex';
-    openModal('modal-ai');
-    return;
-  }
-
-  // Lấy Azure AD token (đã có sẵn từ MSAL)
-  let token = '';
-  try{ token = await msalGetToken(); }catch(e){ /* nếu chưa login thì bỏ qua */ }
-
-  // Hiện loading
-  body.innerHTML = `
-    <div class="ai-loading">
-      <div class="ai-spinner"></div>
-      <span>✨ Đang phân tích tài sản…</span>
-      <span style="font-size:11px;opacity:.6;">Powered by Google Gemini · gemini-2.5-flash</span>
-    </div>`;
-  openModal('modal-ai');
-
-  // Chuẩn bị dữ liệu gửi lên Azure Function
-  const depr = calcDepreciation(a);
-  const assetData = {
-    tenTaiSan: a.tenTaiSan, model: a.model, maTaiSan: a.maTaiSan,
-    ngayMua: a.ngayMua, giaTri: a.giaTri, tinhTrang: a.tinhTrang,
-    nguoiDung: a.nguoiDung, boPhan: a.boPhan, ghiChu: a.ghiChu,
-    depreciation: depr,
-  };
-
-  try{
-    const res = await fetch(AI_FUNCTION_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
-      },
-      body: JSON.stringify({ assetData }),
-    });
-
-    if(!res.ok){
-      const e = await res.json().catch(()=>({}));
-      throw new Error(e.error || `HTTP ${res.status}`);
-    }
-
-    const json = await res.json();
-    const vcls = json.verdict || 'warn';
-
-    body.innerHTML = `
-      <div class="ai-asset-pill">
-        <i class="ph ph-laptop" style="font-size:13px;color:#818CF8;"></i>
-        <strong>${esc(a.tenTaiSan||'Tài sản')}</strong>
-        <span style="color:var(--muted);">${esc(a.maTaiSan||'')}</span>
-      </div>
-      <span class="ai-verdict ${vcls}">
-        ${ vcls==='good'?'✅':vcls==='warn'?'⚠️':'🔴' } ${esc(json.verdict_label||vcls)}
-      </span>
-      <div class="ai-result-box">
-        <div class="ai-result">${esc(json.summary||'')}</div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Khuyến nghị</div>
-          <div class="ai-result" style="font-weight:600;">${esc(json.recommendation||'')}</div>
-        </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Lý do</div>
-          <div class="ai-result" style="color:var(--muted);">${esc(json.reason||'')}</div>
-        </div>
-      </div>
-      <div class="ai-footer">
-        <i class="ph ph-sparkle" style="font-size:13px;color:#818CF8;"></i>
-        Powered by Google Gemini · gemini-2.5-flash · qua Azure Function
-      </div>`;
-    foot.style.display = 'flex';
-
-  }catch(e){
-    const msg = e.message || '';
-    const isAuth  = msg.includes('401') || msg.includes('Unauthorized');
-    const isQuota = msg.includes('quota') || msg.includes('429');
-    body.innerHTML = `
-      <div style="text-align:center;padding:20px 0;">
-        <i class="ph ph-warning-circle" style="font-size:28px;color:var(--red);"></i>
-        <p style="font-size:13px;color:var(--red);margin-top:10px;font-weight:600;">
-          ${isAuth ? '❌ Chưa đăng nhập Azure AD' : isQuota ? '⚠️ Hết quota Gemini API' : '❌ Lỗi kết nối'}
-        </p>
-        <p style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5;">
-          ${isQuota
-            ? `Gemini free tier giới hạn 15 request/phút và 1.500 request/ngày.<br>
-               Vui lòng thử lại sau ít phút, hoặc vào
-               <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary);">AI Studio</a>
-               để kiểm tra quota.`
-            : esc(msg.substring(0,200))
-          }
-        </p>
-      </div>`;
-    foot.style.display = 'flex';
-  }
-}
-// ════════════════════════════════════════════════════════
-
 // ═══════════════════════ SMART ACTION ═══════════════════════
 let _saCurrentId = null;
 
@@ -8657,7 +8497,6 @@ function saAct(action){
   if(action === 'delete')        openDelete(id);
   if(action === 'report-damage') saReportDamage(id);
   if(action === 'recall')        saRecall(id);
-  if(action === 'ai-health')     geminiHealthCheck(id);
   if(action === 'qr')            openQRCode(id);
 }
 
@@ -15165,7 +15004,7 @@ function printQRLabel(){
   #qr-print-wrap{padding:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;margin-bottom:14px;}
   #qr-print-wrap canvas,#qr-print-wrap img{display:block;}
   .label-fields{width:100%;font-size:11.5px;border-collapse:collapse;}
-  .label-fields td{padding:3px 6px;border-top:1px solid #f1f5f9;}
+  .label-fields td{padding:3px 6px;border-top:1px solid #E2E8F0;}
   .label-fields .lbl{color:#64748b;white-space:nowrap;font-weight:500;width:80px;}
   .label-fields .val{color:#0f172a;font-weight:700;word-break:break-all;}
   .label-search-hint{
@@ -16660,7 +16499,7 @@ function printQRLabel(){
       h2{font-size:13px;font-weight:700;color:#1e293b;margin:16px 0 8px;border-bottom:2px solid #3b82f6;padding-bottom:4px;}
       table{width:100%;border-collapse:collapse;font-size:11px;}
       th{background:#1e40af;color:#fff;padding:6px 8px;text-align:left;font-weight:600;}
-      td{padding:5px 8px;border-bottom:1px solid #f1f5f9;}
+      td{padding:5px 8px;border-bottom:1px solid #E2E8F0;}
       tr:nth-child(even) td{background:#f8fafc;}
       .footer{margin-top:20px;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:8px;}
       @media print{body{padding:16px 20px;} @page{margin:12mm;}}
@@ -17029,7 +16868,7 @@ function printQRLabel(){
       h2{font-size:13px;font-weight:700;color:#1e293b;margin:18px 0 8px;border-bottom:2px solid #3b82f6;padding-bottom:4px;}
       table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px;}
       .r{text-align:right;}
-      td{padding:6px 10px;border-bottom:1px solid #f1f5f9;}
+      td{padding:6px 10px;border-bottom:1px solid #E2E8F0;}
       tr:nth-child(even) td{background:#f8fafc;}
       .legend{display:flex;gap:24px;margin-bottom:8px;font-size:10px;color:#64748b;}
       .legend span{font-weight:700;color:#1e293b;}
