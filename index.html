@@ -7418,7 +7418,7 @@ function renderTable(){
         : (a.tinhTrang==='Thanh lý'?'row-thanh-ly'
         : (['Lưu Kho','Trong kho'].includes(a.tinhTrang)||!a.nguoiDung)?'row-kho':'')));
       return `
-      <tr class="${rowClass}" data-id="${a.id}">
+      <tr class="${rowClass}" data-id="${a.id}" ondblclick="viewDetail('${a.id}')" style="cursor:pointer;">
         <td class="cb-col"><input type="checkbox" class="row-cb" ${isSel?'checked':''} onchange="toggleSelectRow('${a.id}',this.checked)"/></td>
         <td class="tbl-num sc-num">${start+i+1}</td>
         <td class="sc-ma"><code style="font-size:11px;color:var(--accent2);">${esc(a.maTaiSan||'—')}</code></td>
@@ -7449,8 +7449,8 @@ function renderTable(){
             ${warrantyBadge(a)}
           </div>
         </td>
-        <td style="text-align:right;">
-          <button class="eye-btn" onclick="openSmartAction('${a.id}',this)">
+        <td style="text-align:right;" ondblclick="event.stopPropagation()">
+          <button class="eye-btn" onclick="event.stopPropagation();openSmartAction('${a.id}',this)">
             <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
               <rect x="1" y="1.5" width="18" height="7.5" rx="3.75" fill="currentColor" opacity="0.2"/>
               <rect x="1" y="1.5" width="18" height="7.5" rx="3.75" stroke="currentColor" stroke-width="1"/>
