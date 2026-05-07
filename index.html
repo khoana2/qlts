@@ -1687,21 +1687,29 @@ td, th { font-size: 13px; }
 }
 
 /* ── Timeline sự kiện ── */
-.tl-wrap{ display:flex;flex-direction:column;gap:0; }
-.tl-date-group{ margin-bottom:4px; }
+.tl-date-group{ margin-bottom:18px; }
 .tl-date-label{
   font-size:11px;font-weight:700;color:var(--muted);
   text-transform:uppercase;letter-spacing:.06em;
-  padding:10px 0 6px;display:flex;align-items:center;gap:8px;
+  padding:10px 0 8px;display:flex;align-items:center;gap:8px;
 }
 .tl-date-label::after{ content:'';flex:1;height:1px;background:var(--border); }
+/* Container 1 ngày — 1 khung duy nhất */
+.tl-wrap{
+  background:#fff;border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 2px 12px rgba(99,102,241,.05),inset 0 1px 0 rgba(255,255,255,.9);
+}
+/* Mỗi event là row bên trong */
 .tl-card{
   display:flex;align-items:flex-start;gap:12px;
-  background:#fff;border:1px solid var(--border);border-radius:12px;
-  padding:12px 14px;margin-bottom:8px;cursor:pointer;
-  transition:box-shadow .15s,border-color .15s;
+  background:transparent;border:none;border-radius:0;
+  border-bottom:1px solid var(--border);
+  padding:12px 14px;cursor:pointer;
+  transition:background .12s;
 }
-.tl-card:hover{ box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:var(--accent2); }
+.tl-card:last-child{ border-bottom:none; }
+.tl-card:hover{ background:#F8FAFF; }
 .tl-icon-wrap{
   width:36px;height:36px;border-radius:10px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;font-size:17px;
@@ -1947,6 +1955,62 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 }
 
 /* ĐNTT print uses window.open() popup */
+
+/* ── Subtle glass accents — giữ light mode, thêm chiều sâu ── */
+/* Topbar: frosted nhẹ */
+.topbar{
+  background:rgba(255,255,255,0.85) !important;
+  backdrop-filter:blur(20px) saturate(140%);
+  -webkit-backdrop-filter:blur(20px) saturate(140%);
+  border-bottom:1px solid rgba(224,227,240,0.9) !important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.8),0 2px 12px rgba(99,102,241,.06) !important;
+}
+
+/* KPI cards: glass shine */
+.kpi{
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  background:rgba(255,255,255,0.88) !important;
+  border:1px solid rgba(255,255,255,0.95) !important;
+  box-shadow:0 4px 20px rgba(99,102,241,.08),inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+.kpi:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 32px rgba(99,102,241,.12),inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+
+/* Modal: glass card */
+.modal{
+  backdrop-filter:blur(24px) saturate(150%);
+  -webkit-backdrop-filter:blur(24px) saturate(150%);
+  background:rgba(255,255,255,0.9) !important;
+  border:1px solid rgba(255,255,255,0.95) !important;
+  box-shadow:0 24px 80px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+
+/* Table card: tinh tế */
+.table-card{
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  background:rgba(255,255,255,0.92) !important;
+}
+
+/* Smart action menu: glass sáng + chữ tối */
+#smart-action-menu{
+  background:rgba(255,255,255,0.82) !important;
+  backdrop-filter:blur(40px) saturate(160%) !important;
+  -webkit-backdrop-filter:blur(40px) saturate(160%) !important;
+  border:0.5px solid rgba(255,255,255,0.9) !important;
+  box-shadow:0 12px 48px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+.sa-header-name{color:#1c1c1e !important;}
+.sa-header-code{color:rgba(60,60,67,0.55) !important;}
+.sa-section{color:rgba(60,60,67,0.48) !important;}
+.sa-item{color:#1c1c1e !important;}
+.sa-item:hover{background:rgba(0,0,0,0.05) !important;}
+.sa-item.danger{color:#dc2626 !important;}
+.sa-item.warn{color:#b45309 !important;}
+.sa-divider{background:rgba(0,0,0,0.06) !important;}
 </style>
 </head>
 <body>
@@ -2116,7 +2180,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <rect x="13" y="13" width="10" height="10" rx="2" fill="#8B7355"/>
           <rect x="26" y="13" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
           <rect x="0"  y="26" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
-          <rect x="13" y="26" width="10" height="10" rx="2" fill="#8B7355"/>
+          <rect x="13" y="26" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
           <rect x="26" y="26" width="10" height="10" rx="2" fill="none" stroke="#8B7355" stroke-width="1.8"/>
         </svg>
       </div>
