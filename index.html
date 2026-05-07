@@ -2243,6 +2243,13 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <button class="nav-tab" onclick="switchTab('procurement')" id="tab-procurement">
           <span class="tab-icon"><i class="ph ph-shopping-cart"></i></span> Mua Sắm
         </button>
+        <button class="nav-tab" onclick="switchTab('repairs')" id="tab-repairs">
+          <span class="tab-icon"><i class="ph ph-wrench"></i></span> Sửa Chữa
+          <span class="tab-expiry-badge" id="tab-repairs-badge" style="display:none;"></span>
+        </button>
+        <button class="nav-tab" onclick="switchTab('report')" id="tab-report">
+          <span class="tab-icon"><i class="ph ph-file-text"></i></span> Báo Cáo
+        </button>
         <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">
           <span class="tab-icon"><i class="ph ph-users-three"></i></span> Phân Quyền
         </button>
@@ -2904,6 +2911,117 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     <div id="al-empty" style="display:none;text-align:center;padding:40px;color:var(--muted);">
       <i class="ph ph-scroll" style="font-size:36px;opacity:.3;display:block;margin-bottom:8px;"></i>
       Chưa có nhật ký nào.
+    </div>
+  </div>
+
+  <!-- ══════════════ VIEW: SỬA CHỮA ══════════════ -->
+  <div class="view" id="view-repairs">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;"><i class="ph ph-wrench"></i> Theo Dõi Sửa Chữa</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Lịch sử và trạng thái sửa chữa tài sản</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select class="fsel" id="rep-f-status" onchange="renderRepairs()">
+          <option value="">Tất cả trạng thái</option>
+          <option value="dang_sua">🔧 Đang sửa</option>
+          <option value="hoan_thanh">✅ Hoàn thành</option>
+          <option value="khong_sua_duoc">❌ Không sửa được</option>
+        </select>
+        <div class="search-wrap" style="min-width:220px;">
+          <i class="ph ph-magnifying-glass" style="font-size:13px;color:var(--muted);"></i>
+          <input type="text" id="rep-search" placeholder="Tìm tên, mã tài sản, đơn vị sửa…" oninput="renderRepairs()" style="background:transparent;border:none;outline:none;font-size:13px;padding:7px 0;flex:1;"/>
+        </div>
+      </div>
+    </div>
+    <!-- KPI strip -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+      <div class="rpt-kpi" style="border-left:3px solid #F97316;">
+        <div class="lbl"><i class="ph ph-wrench"></i> Đang sửa</div>
+        <div class="val" id="rep-kpi-active" style="color:#EA580C;">0</div>
+      </div>
+      <div class="rpt-kpi" style="border-left:3px solid #10B981;">
+        <div class="lbl"><i class="ph ph-check-circle"></i> Hoàn thành</div>
+        <div class="val" id="rep-kpi-done" style="color:#059669;">0</div>
+      </div>
+      <div class="rpt-kpi" style="border-left:3px solid #EF4444;">
+        <div class="lbl"><i class="ph ph-x-circle"></i> Không sửa được</div>
+        <div class="val" id="rep-kpi-failed" style="color:#DC2626;">0</div>
+      </div>
+    </div>
+    <div id="rep-list"></div>
+  </div>
+
+  <!-- ══════════════ VIEW: BÁO CÁO TỔNG HỢP ══════════════ -->
+  <div class="view" id="view-report">
+    <div id="rpt-toolbar" style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;"><i class="ph ph-file-text"></i> Báo Cáo Tổng Hợp</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="rpt-subtitle">Tổng quan tài sản toàn công ty</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select class="fsel" id="rpt-f-company" onchange="renderReport()"><option value="">🏬 Tất cả công ty</option></select>
+        <select class="fsel" id="rpt-f-dept" onchange="renderReport()"><option value="">🏢 Tất cả phòng ban</option></select>
+        <select class="fsel" id="rpt-f-status" onchange="renderReport()">
+          <option value="">🏷️ Tất cả trạng thái</option>
+          <option>Đang dùng</option><option>Lưu Kho</option>
+          <option>Sửa chữa</option><option>Hỏng</option><option>Thanh lý</option>
+        </select>
+        <button class="btn btn-icon-ph" onclick="window.print()" style="background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8;">
+          <i class="ph ph-printer"></i> In / PDF
+        </button>
+      </div>
+    </div>
+    <div id="rpt-body"></div>
+  </div>
+
+  <!-- ══════════════ MODAL: THÊM/SỬA PHIẾU SỬA CHỮA ══════════════ -->
+  <div id="modal-repair" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border-radius:16px;width:100%;max-width:520px;box-shadow:0 8px 40px rgba(0,0,0,.3);display:flex;flex-direction:column;max-height:90vh;">
+      <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <h3 id="rep-modal-title" style="margin:0;font-size:16px;font-weight:700;">Gửi Sửa Chữa</h3>
+        <button onclick="closeModal('modal-repair')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">✕</button>
+      </div>
+      <div class="modal-body" style="padding:18px 20px;overflow-y:auto;">
+        <input type="hidden" id="rep-asset-id"/>
+        <input type="hidden" id="rep-record-idx"/>
+        <div class="field"><label>Tài sản</label>
+          <input type="text" id="rep-asset-name" class="finput" readonly style="background:#F8FAFC;"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field"><label>Ngày gửi sửa <span style="color:red">*</span></label>
+            <input type="date" id="rep-date-in" class="finput"/>
+          </div>
+          <div class="field"><label>Dự kiến nhận lại</label>
+            <input type="date" id="rep-est-return" class="finput"/>
+          </div>
+        </div>
+        <div class="field"><label>Mô tả lỗi <span style="color:red">*</span></label>
+          <textarea id="rep-issue" class="finput" rows="2" placeholder="Mô tả sự cố, hư hỏng…"></textarea>
+        </div>
+        <div class="field"><label>Đơn vị / trung tâm sửa chữa</label>
+          <input type="text" id="rep-vendor" class="finput" placeholder="VD: Trung tâm bảo hành Dell, FPT Service…"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="rep-return-row">
+          <div class="field"><label>Ngày nhận lại</label>
+            <input type="date" id="rep-date-out" class="finput"/>
+          </div>
+          <div class="field"><label>Trạng thái</label>
+            <select id="rep-status" class="finput">
+              <option value="dang_sua">🔧 Đang sửa</option>
+              <option value="hoan_thanh">✅ Hoàn thành</option>
+              <option value="khong_sua_duoc">❌ Không sửa được</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Ghi chú</label>
+          <textarea id="rep-notes" class="finput" rows="2" placeholder="Chi tiết thêm…"></textarea>
+        </div>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn" onclick="closeModal('modal-repair')">Hủy</button>
+        <button class="btn primary btn-icon-ph" onclick="saveRepairRecord()"><i class="ph ph-floppy-disk"></i> Lưu</button>
+      </div>
     </div>
   </div>
 
@@ -4973,7 +5091,7 @@ async function msalSpLoad(){
     if(all.length){
       transfers = {};
       assets = all.map(i=>spItemToAsset(i));
-      saveToStorage(); saveTransfers();
+      saveToStorage(); saveTransfers(); saveRepairs();
       populateDeptSelects(); applyFilters(); updateDashboard(); renderEvents(); updateTopbarSub();
       console.log(`[QLTS] Đã tải ${assets.length} tài sản từ SharePoint`);
     } else {
@@ -5412,7 +5530,7 @@ function enterGuestMode(){
   msalSetBar('👁 Chế độ xem thử','s-warn');
   // Load local data bình thường (không cần token)
   loadData(); loadTransfers(); loadLicenses(); loadLicAttachTags();
-  loadLicHistory(); loadDNTT(); loadXacNhan();
+  loadLicHistory(); loadDNTT(); loadXacNhan(); loadRepairs(); _updateRepairBadge();
   renderTable(); renderLicenses(); renderDNTT(); renderEvents();
   try{ updateDashboard(); }catch(e){}
   toast('👋 Đang dùng chế độ xem thử — dữ liệu chỉ lưu trên máy này','warn');
@@ -5754,6 +5872,7 @@ const SP_DISPLAY_MAP = {
   'Giá trị':          'giaTri',
   'GhiChu':           'ghiChu',
   'Ghichu':           'ghiChu',
+  'RepairsJSON':      '__repairsJSON',  // dữ liệu sửa chữa — SP column: Multiple lines of text
 };
 
 // Danh sách công ty TTG (có thể thêm bớt tại đây)
@@ -5802,6 +5921,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadLicAttachTags();        // load tag file đính kèm theo dòng
   loadDNTT();                 // load danh sách đề nghị thanh toán
   loadDNTTVendors();          // load sổ địa chỉ NCC
+  loadRepairs();              // load dữ liệu sửa chữa
+  _updateRepairBadge();       // cập nhật badge sửa chữa đang active
   populateDeptSelects();
   applyFilters();
   updateDashboard();
@@ -6015,6 +6136,9 @@ function spItemToAsset(item){
     updatedAt: item.Modified || new Date().toISOString(),
   };
   if(transferList.length) transfers[id] = transferList;
+  // Đọc lịch sử sửa chữa từ SP về repairs map
+  const repairsRaw = get('RepairsJSON');
+  if(repairsRaw){ try{ const _r=JSON.parse(repairsRaw); if(Array.isArray(_r)&&_r.length) repairs[id]=_r; }catch(x){} }
   return asset;
 }
 
@@ -6102,6 +6226,10 @@ function assetToSpItem(a){
   set('Ghichu',       a.ghiChu       || '');
   if(a.giaTri !== '' && a.giaTri !== undefined && a.giaTri !== null)
     set('Giá trị', Number(a.giaTri));
+  // Lịch sử sửa chữa → RepairsJSON column (Multiple lines of text trên SP)
+  const _assetRepairs = repairs[a.id];
+  if(_assetRepairs && _assetRepairs.length)
+    set('RepairsJSON', JSON.stringify(_assetRepairs));
   return body;
 }
 
@@ -6833,6 +6961,8 @@ function switchTab(t){
   if(t==='roles')        renderRolesTable();
   if(t==='auditlog')     renderAuditLog();
   if(t==='fuji')         fujiOnTabOpen();
+  if(t==='repairs')      renderRepairs();
+  if(t==='report')       renderReport();
   // Sync bottom nav
   setBottomNav(t);
   // Đóng sidebar drawer trên mobile sau khi chọn tab
@@ -8782,7 +8912,8 @@ function viewDetail(id){
       ${dc('Sửa chữa', esc(a.suaChua||'—'), 'span3')}
       ${dc('Ghi chú', esc(a.ghiChu||'—'), 'span3')}
     </div>
-    ${transferHTML}`;
+    ${transferHTML}
+    ${_repairDetailHtml(a.id)}`;
 
   openModal('modal-detail');
 }
@@ -12134,6 +12265,424 @@ async function msalSpLoadTransfers(){
 
 </script>
 
+<script>
+// ═══════════════════════════════════════════════════════════
+//  SỬA CHỮA — Repair Tracking
+// ═══════════════════════════════════════════════════════════
+const LS_REPAIRS = 'qlts_repairs_v1';
+let repairs = {};
+
+function loadRepairs(){
+  try{ repairs = JSON.parse(localStorage.getItem(LS_REPAIRS)||'{}'); }
+  catch(e){ repairs = {}; }
+}
+function saveRepairs(){
+  try{ localStorage.setItem(LS_REPAIRS, JSON.stringify(repairs)); }catch(e){}
+}
+
+// ── Mở modal thêm phiếu mới ──
+function openRepairNew(assetId){
+  const a = assets.find(x=>x.id===assetId);
+  if(!a) return;
+  document.getElementById('rep-modal-title').textContent = 'Gửi Sửa Chữa';
+  document.getElementById('rep-asset-id').value  = assetId;
+  document.getElementById('rep-record-idx').value = '';
+  document.getElementById('rep-asset-name').value = `${a.maTaiSan||''} — ${a.tenTaiSan||''} ${a.model||''}`.trim();
+  document.getElementById('rep-date-in').value    = new Date().toISOString().slice(0,10);
+  document.getElementById('rep-est-return').value = '';
+  document.getElementById('rep-issue').value      = '';
+  document.getElementById('rep-vendor').value     = '';
+  document.getElementById('rep-date-out').value   = '';
+  document.getElementById('rep-status').value     = 'dang_sua';
+  document.getElementById('rep-notes').value      = '';
+  document.getElementById('modal-repair').style.display='flex';
+}
+
+// ── Mở modal chỉnh sửa phiếu đã có ──
+function openRepairEdit(assetId, idx){
+  const rec = (repairs[assetId]||[])[idx];
+  if(!rec) return;
+  const a = assets.find(x=>x.id===assetId);
+  document.getElementById('rep-modal-title').textContent = 'Chỉnh Sửa Phiếu Sửa Chữa';
+  document.getElementById('rep-asset-id').value  = assetId;
+  document.getElementById('rep-record-idx').value = idx;
+  document.getElementById('rep-asset-name').value = `${a?.maTaiSan||''} — ${a?.tenTaiSan||''} ${a?.model||''}`.trim();
+  document.getElementById('rep-date-in').value    = rec.dateIn||'';
+  document.getElementById('rep-est-return').value = rec.estimatedReturn||'';
+  document.getElementById('rep-issue').value      = rec.issue||'';
+  document.getElementById('rep-vendor').value     = rec.vendor||'';
+  document.getElementById('rep-date-out').value   = rec.dateOut||'';
+  document.getElementById('rep-status').value     = rec.status||'dang_sua';
+  document.getElementById('rep-notes').value      = rec.notes||'';
+  document.getElementById('modal-repair').style.display='flex';
+}
+
+// ── Lưu phiếu ──
+function saveRepairRecord(){
+  const assetId = document.getElementById('rep-asset-id').value;
+  const idxRaw  = document.getElementById('rep-record-idx').value;
+  const dateIn  = document.getElementById('rep-date-in').value;
+  const issue   = document.getElementById('rep-issue').value.trim();
+  if(!dateIn){ toast('Vui lòng chọn ngày gửi sửa','warn'); return; }
+  if(!issue){  toast('Vui lòng mô tả lỗi','warn'); return; }
+  const rec = {
+    dateIn,
+    estimatedReturn: document.getElementById('rep-est-return').value,
+    issue,
+    vendor:  document.getElementById('rep-vendor').value.trim(),
+    dateOut: document.getElementById('rep-date-out').value,
+    status:  document.getElementById('rep-status').value,
+    notes:   document.getElementById('rep-notes').value.trim(),
+    ts: new Date().toISOString(),
+  };
+  if(!repairs[assetId]) repairs[assetId] = [];
+  if(idxRaw !== ''){
+    repairs[assetId][parseInt(idxRaw)] = rec;
+  } else {
+    repairs[assetId].push(rec);
+  }
+  // Cập nhật tình trạng asset nếu đang sửa
+  const a = assets.find(x=>x.id===assetId);
+  if(a && rec.status === 'dang_sua') a.tinhTrang = 'Sửa chữa';
+  else if(a && rec.status === 'hoan_thanh' && a.tinhTrang === 'Sửa chữa') a.tinhTrang = 'Đang dùng';
+  saveRepairs();
+  saveToStorage();
+  applyFilters();
+  closeModal('modal-repair');
+  toast('✅ Đã lưu phiếu sửa chữa','ok');
+  _updateRepairBadge();
+  if(document.getElementById('view-repairs').classList.contains('active')) renderRepairs();
+}
+
+// ── Xóa phiếu ──
+function deleteRepairRecord(assetId, idx){
+  if(!confirm('Xóa phiếu sửa chữa này?')) return;
+  repairs[assetId].splice(idx,1);
+  if(!repairs[assetId].length) delete repairs[assetId];
+  saveRepairs();
+  _updateRepairBadge();
+  renderRepairs();
+  toast('Đã xóa phiếu sửa chữa','ok');
+}
+
+// ── Badge sidebar ──
+function _updateRepairBadge(){
+  const n = Object.values(repairs).flat().filter(r=>r.status==='dang_sua').length;
+  const b = document.getElementById('tab-repairs-badge');
+  if(!b) return;
+  if(n>0){ b.style.display='inline-flex'; b.textContent=n; b.style.cssText+=';background:#F97316;color:#fff;'; }
+  else b.style.display='none';
+}
+
+// ── Label helper ──
+function _repStatusLabel(s){
+  return s==='hoan_thanh'?'✅ Hoàn thành':s==='khong_sua_duoc'?'❌ Không sửa được':'🔧 Đang sửa';
+}
+
+// ── Render danh sách sửa chữa ──
+function renderRepairs(){
+  const statusF = document.getElementById('rep-f-status')?.value||'';
+  const q = (document.getElementById('rep-search')?.value||'').toLowerCase().trim();
+
+  // Flatten all records kèm assetId
+  let rows = [];
+  for(const [aid, recs] of Object.entries(repairs)){
+    const a = assets.find(x=>x.id===aid);
+    recs.forEach((r,i)=>{ rows.push({assetId:aid, idx:i, rec:r, asset:a}); });
+  }
+
+  // Filter
+  if(statusF) rows = rows.filter(r=>r.rec.status===statusF);
+  if(q) rows = rows.filter(r=>{
+    const hay = [r.asset?.maTaiSan,r.asset?.tenTaiSan,r.asset?.model,r.rec.vendor,r.rec.issue]
+      .join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+
+  // Sort: đang sửa lên trước, mới nhất trước
+  rows.sort((a,b)=>{
+    const sp = {dang_sua:0,khong_sua_duoc:1,hoan_thanh:2};
+    if(sp[a.rec.status]!==sp[b.rec.status]) return sp[a.rec.status]-sp[b.rec.status];
+    return (b.rec.dateIn||'')>(a.rec.dateIn||'') ? 1 : -1;
+  });
+
+  // KPIs
+  const all = Object.values(repairs).flat();
+  document.getElementById('rep-kpi-active').textContent  = all.filter(r=>r.status==='dang_sua').length;
+  document.getElementById('rep-kpi-done').textContent    = all.filter(r=>r.status==='hoan_thanh').length;
+  document.getElementById('rep-kpi-failed').textContent  = all.filter(r=>r.status==='khong_sua_duoc').length;
+
+  const list = document.getElementById('rep-list');
+  if(!rows.length){
+    list.innerHTML=`<div style="text-align:center;padding:48px;color:var(--muted);">
+      <i class="ph ph-wrench" style="font-size:40px;display:block;margin-bottom:10px;opacity:.3;"></i>
+      ${statusF||q ? 'Không tìm thấy phiếu nào phù hợp.' : 'Chưa có phiếu sửa chữa nào.'}
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = rows.map(({assetId,idx,rec,asset})=>{
+    const statusClass = rec.status||'dang_sua';
+    const dateInFmt = rec.dateIn ? new Date(rec.dateIn).toLocaleDateString('vi-VN') : '—';
+    const dateOutFmt = rec.dateOut ? new Date(rec.dateOut).toLocaleDateString('vi-VN') : null;
+    const estFmt = rec.estimatedReturn ? new Date(rec.estimatedReturn).toLocaleDateString('vi-VN') : null;
+    const overdue = rec.status==='dang_sua' && rec.estimatedReturn && new Date(rec.estimatedReturn)<new Date();
+    return `<div class="rep-card ${statusClass}">
+      <div class="rep-card-icon"><i class="ph ph-wrench"></i></div>
+      <div class="rep-card-body">
+        <div class="rep-card-title">
+          <span class="rep-status-badge ${statusClass}">${_repStatusLabel(rec.status)}</span>
+          &nbsp;
+          <a href="#" onclick="event.preventDefault();switchTab('assets');setTimeout(()=>viewDetail('${assetId}'),300)" style="color:var(--accent);font-weight:600;">
+            ${esc(asset?.maTaiSan||assetId)}
+          </a>
+          — ${esc(asset?.tenTaiSan||'')} ${esc(asset?.model||'')}
+          ${asset?.nguoiDung?`<span style="color:var(--muted);font-size:12px;"> · ${esc(asset.nguoiDung)}</span>`:''}
+        </div>
+        <div class="rep-card-meta">
+          <span><i class="ph ph-calendar"></i> Gửi: <b>${dateInFmt}</b></span>
+          ${estFmt?`<span style="${overdue?'color:#DC2626;font-weight:600;':''}"><i class="ph ph-clock"></i> Dự kiến: <b>${estFmt}</b>${overdue?' ⚠️ Quá hạn':''}</span>`:''}
+          ${dateOutFmt?`<span><i class="ph ph-check"></i> Nhận lại: <b>${dateOutFmt}</b></span>`:''}
+          ${rec.vendor?`<span><i class="ph ph-buildings"></i> ${esc(rec.vendor)}</span>`:''}
+        </div>
+        <div style="font-size:12.5px;color:var(--text);margin-top:5px;">${esc(rec.issue)}</div>
+        ${rec.notes?`<div style="font-size:11.5px;color:var(--muted);margin-top:3px;font-style:italic;">${esc(rec.notes)}</div>`:''}
+      </div>
+      <div class="rep-card-actions">
+        <button class="btn btn-icon-ph" style="font-size:11px;padding:3px 9px;" onclick="openRepairEdit('${assetId}',${idx})"><i class="ph ph-pencil"></i> Sửa</button>
+        <button class="btn danger btn-icon-ph" style="font-size:11px;padding:3px 9px;" onclick="deleteRepairRecord('${assetId}',${idx})"><i class="ph ph-trash"></i> Xóa</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BÁO CÁO TỔNG HỢP — Summary Report
+// ═══════════════════════════════════════════════════════════
+function renderReport(){
+  const fCompany = document.getElementById('rpt-f-company')?.value||'';
+  const fDept    = document.getElementById('rpt-f-dept')?.value||'';
+  const fStatus  = document.getElementById('rpt-f-status')?.value||'';
+
+  // Populate selects
+  const companies = [...new Set(assets.map(a=>a.congTy||'').filter(Boolean))].sort();
+  const selC = document.getElementById('rpt-f-company');
+  if(selC && selC.options.length<=1){
+    companies.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; selC.appendChild(o); });
+    if(fCompany) selC.value=fCompany;
+  }
+
+  let data = assets;
+  if(fCompany) data = data.filter(a=>(a.congTy||')===fCompany));
+  if(fStatus)  data = data.filter(a=>a.tinhTrang===fStatus);
+
+  // Refresh dept select based on company filter
+  const selD = document.getElementById('rpt-f-dept');
+  if(selD){
+    const depts = [...new Set(data.map(a=>a.boPhan||'').filter(Boolean))].sort();
+    selD.innerHTML = '<option value="">🏢 Tất cả phòng ban</option>';
+    depts.forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; selD.appendChild(o); });
+    if(fDept) selD.value=fDept;
+  }
+  if(fDept) data = data.filter(a=>(a.boPhan||'')===fDept);
+
+  const total = data.length;
+  const now = new Date();
+  const inRepair   = data.filter(a=>a.tinhTrang==='Sửa chữa').length;
+  const inWarehouse= data.filter(a=>['Lưu Kho','Trong kho'].includes(a.tinhTrang)).length;
+  const inUse      = data.filter(a=>a.tinhTrang==='Đang dùng').length;
+  const expired    = data.filter(a=>a.ngayHetBH && new Date(a.ngayHetBH)<now).length;
+  const soon       = data.filter(a=>{
+    if(!a.ngayHetBH) return false;
+    const d=Math.round((new Date(a.ngayHetBH)-now)/86400000);
+    return d>=0&&d<=90;
+  }).length;
+  const deprecTotal= data.reduce((s,a)=>{
+    const d=calcDepreciation(a); return s+(d&&!d.fullyDepreciated?d.remaining:0);
+  },0);
+
+  // By type
+  const byType={};
+  data.forEach(a=>{ const t=a.tenTaiSan||'Khác'; byType[t]=(byType[t]||0)+1; });
+
+  // By department
+  const byDept={};
+  data.forEach(a=>{
+    const d=a.boPhan||'(Chưa phân)';
+    if(!byDept[d]) byDept[d]={total:0,active:0,warehouse:0,repair:0,broken:0};
+    byDept[d].total++;
+    if(a.tinhTrang==='Đang dùng') byDept[d].active++;
+    else if(['Lưu Kho','Trong kho'].includes(a.tinhTrang)) byDept[d].warehouse++;
+    else if(a.tinhTrang==='Sửa chữa') byDept[d].repair++;
+    else if(a.tinhTrang==='Hỏng') byDept[d].broken++;
+  });
+
+  // By status
+  const byStatus={};
+  data.forEach(a=>{ const s=a.tinhTrang||'Không rõ'; byStatus[s]=(byStatus[s]||0)+1; });
+
+  const subtitle = [fCompany,fDept,fStatus].filter(Boolean).join(' · ') || 'Toàn công ty';
+  document.getElementById('rpt-subtitle').textContent = subtitle;
+  document.title = `Báo Cáo Tài Sản — ${subtitle}`;
+
+  const fmtN = n => n.toLocaleString('vi-VN');
+  const genDate = new Date().toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  document.getElementById('rpt-body').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <span>Xuất lúc: ${genDate}</span>
+      <span>Dữ liệu: ${fmtN(total)} tài sản</span>
+    </div>
+
+    <!-- KPIs -->
+    <div class="rpt-kpi-grid">
+      <div class="rpt-kpi" style="border-left:3px solid var(--accent);">
+        <div class="lbl">Tổng tài sản</div>
+        <div class="val">${fmtN(total)}</div>
+        <div class="sub">toàn bộ trạng thái</div>
+      </div>
+      <div class="rpt-kpi" style="border-left:3px solid #10B981;">
+        <div class="lbl">Đang sử dụng</div>
+        <div class="val" style="color:#059669;">${fmtN(inUse)}</div>
+        <div class="sub">${total?Math.round(inUse/total*100):0}% tổng số</div>
+      </div>
+      <div class="rpt-kpi" style="border-left:3px solid #6366F1;">
+        <div class="lbl">Trong kho</div>
+        <div class="val" style="color:#4F46E5;">${fmtN(inWarehouse)}</div>
+        <div class="sub">chờ cấp phát</div>
+      </div>
+      <div class="rpt-kpi" style="border-left:3px solid #F97316;">
+        <div class="lbl">Đang sửa chữa</div>
+        <div class="val" style="color:#EA580C;">${fmtN(inRepair)}</div>
+        <div class="sub">${soon} BH hết trong 90 ngày</div>
+      </div>
+    </div>
+
+    <!-- Theo phòng ban -->
+    <div class="rpt-section">
+      <h3><i class="ph ph-buildings"></i> Phân Bổ Theo Phòng Ban</h3>
+      <table class="rpt-table">
+        <thead><tr>
+          <th>Phòng ban</th>
+          <th class="num">Tổng</th>
+          <th class="num">Đang dùng</th>
+          <th class="num">Trong kho</th>
+          <th class="num">Sửa chữa</th>
+          <th class="num">Hỏng</th>
+        </tr></thead>
+        <tbody>
+          ${Object.entries(byDept).sort((a,b)=>b[1].total-a[1].total).map(([dept,s])=>`
+            <tr>
+              <td>${esc(dept)}</td>
+              <td class="num bold">${fmtN(s.total)}</td>
+              <td class="num" style="color:#059669;">${fmtN(s.active)}</td>
+              <td class="num" style="color:#4F46E5;">${fmtN(s.warehouse)}</td>
+              <td class="num" style="color:#EA580C;">${fmtN(s.repair)}</td>
+              <td class="num" style="color:#DC2626;">${fmtN(s.broken)}</td>
+            </tr>`).join('')}
+          <tr style="background:#F8FAFC;font-weight:700;border-top:2px solid var(--border);">
+            <td>Tổng cộng</td>
+            <td class="num">${fmtN(total)}</td>
+            <td class="num" style="color:#059669;">${fmtN(inUse)}</td>
+            <td class="num" style="color:#4F46E5;">${fmtN(inWarehouse)}</td>
+            <td class="num" style="color:#EA580C;">${fmtN(inRepair)}</td>
+            <td class="num" style="color:#DC2626;">${fmtN(data.filter(a=>a.tinhTrang==='Hỏng').length)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Theo loại tài sản -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="rpt-section">
+        <h3><i class="ph ph-package"></i> Theo Loại Tài Sản</h3>
+        <table class="rpt-table">
+          <thead><tr><th>Loại</th><th class="num">Số lượng</th><th class="num">%</th></tr></thead>
+          <tbody>
+            ${Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`
+              <tr><td>${esc(t)}</td><td class="num bold">${fmtN(n)}</td>
+              <td class="num" style="color:var(--muted);">${total?Math.round(n/total*100):0}%</td></tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="rpt-section">
+        <h3><i class="ph ph-tag"></i> Theo Trạng Thái</h3>
+        <table class="rpt-table">
+          <thead><tr><th>Trạng thái</th><th class="num">Số lượng</th><th class="num">%</th></tr></thead>
+          <tbody>
+            ${Object.entries(byStatus).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`
+              <tr><td>${esc(s)}</td><td class="num bold">${fmtN(n)}</td>
+              <td class="num" style="color:var(--muted);">${total?Math.round(n/total*100):0}%</td></tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Bảo hành -->
+    <div class="rpt-section">
+      <h3><i class="ph ph-shield-check"></i> Tình Trạng Bảo Hành</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+        <div style="text-align:center;padding:12px;background:#FEF2F2;border-radius:10px;">
+          <div style="font-size:22px;font-weight:700;color:#DC2626;">${fmtN(expired)}</div>
+          <div style="font-size:12px;color:#991B1B;margin-top:2px;">❌ Đã hết bảo hành</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:#FFFBEB;border-radius:10px;">
+          <div style="font-size:22px;font-weight:700;color:#D97706;">${fmtN(soon)}</div>
+          <div style="font-size:12px;color:#92400E;margin-top:2px;">⚠️ Hết BH trong 90 ngày</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:#ECFDF5;border-radius:10px;">
+          <div style="font-size:22px;font-weight:700;color:#059669;">${fmtN(data.filter(a=>a.ngayHetBH&&new Date(a.ngayHetBH)>now&&Math.round((new Date(a.ngayHetBH)-now)/86400000)>90).length)}</div>
+          <div style="font-size:12px;color:#065F46;margin-top:2px;">✅ Còn bảo hành (&gt; 90 ngày)</div>
+        </div>
+      </div>
+    </div>
+    ${deprecTotal>0?`
+    <div class="rpt-section">
+      <h3><i class="ph ph-chart-line-down"></i> Khấu Hao</h3>
+      <div style="font-size:14px;">Tổng giá trị còn lại (chưa khấu hao hết):
+        <span style="font-size:20px;font-weight:700;color:var(--accent);margin-left:8px;">${deprecTotal.toLocaleString('vi-VN')} ₫</span>
+      </div>
+    </div>`:''}
+  `;
+}
+
+// ── Gán vào asset detail modal: thêm nút "Gửi sửa" và hiển thị lịch sử ──
+function _repairDetailHtml(assetId){
+  const recs = repairs[assetId]||[];
+  if(!recs.length) return `
+    <div style="margin-top:14px;padding:12px;background:rgba(249,115,22,.04);border:1px dashed rgba(249,115,22,.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;"><i class="ph ph-wrench"></i> Chưa có lịch sử sửa chữa</span>
+      <button class="btn btn-icon-ph" style="padding:5px 12px;font-size:12px;" onclick="closeModal('modal-detail');openRepairNew('${assetId}')"><i class="ph ph-plus"></i> Gửi sửa</button>
+    </div>`;
+  return `
+    <div style="margin-top:16px;">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+        <span><i class="ph ph-wrench"></i> Lịch sử sửa chữa (${recs.length} lần)</span>
+        <button class="btn btn-icon-ph" style="padding:3px 10px;font-size:11px;" onclick="closeModal('modal-detail');openRepairNew('${assetId}')"><i class="ph ph-plus"></i> Gửi sửa mới</button>
+      </div>
+      ${[...recs].reverse().map((r,ri)=>{
+        const i = recs.length-1-ri;
+        const sc = r.status||'dang_sua';
+        return `<div style="background:#F8FAFC;border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span class="rep-status-badge ${sc}">${_repStatusLabel(sc)}</span>
+            <span style="font-size:11px;color:var(--muted);">${r.dateIn?new Date(r.dateIn).toLocaleDateString('vi-VN'):''}</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text);">${esc(r.issue)}</div>
+          ${r.vendor?`<div style="font-size:11.5px;color:var(--muted);margin-top:2px;"><i class="ph ph-buildings"></i> ${esc(r.vendor)}</div>`:''}
+          ${r.dateOut?`<div style="font-size:11.5px;color:#059669;margin-top:2px;"><i class="ph ph-check"></i> Nhận lại: ${new Date(r.dateOut).toLocaleDateString('vi-VN')}</div>`:''}
+          ${r.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">${esc(r.notes)}</div>`:''}
+          <div style="margin-top:6px;display:flex;gap:6px;">
+            <button class="btn btn-icon-ph" style="font-size:10px;padding:2px 8px;" onclick="closeModal('modal-detail');openRepairEdit('${assetId}',${i})"><i class="ph ph-pencil"></i> Sửa</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+</script>
+
 <!-- ══════════════ MODAL: PHÂN QUYỀN — THÊM/SỬA THÀNH VIÊN ══════════════ -->
 <div id="modal-role-form" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border-radius:14px;padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.4);">
@@ -15107,6 +15656,43 @@ function printQRLabel(){
     .toolbar{display:none!important;}
     .label-sheet{box-shadow:none;border:1px solid #ddd;}
   }
+</style>
+<style>
+/* ═══════════ SỬA CHỮA ═══════════ */
+.rep-status-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;}
+.rep-status-badge.dang_sua{background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;}
+.rep-status-badge.hoan_thanh{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;}
+.rep-status-badge.khong_sua_duoc{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;}
+.rep-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start;}
+.rep-card-icon{width:36px;height:36px;border-radius:9px;background:#FFF7ED;border:1px solid #FED7AA;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#EA580C;font-size:16px;}
+.rep-card.hoan_thanh .rep-card-icon{background:#ECFDF5;border-color:#A7F3D0;color:#059669;}
+.rep-card.khong_sua_duoc .rep-card-icon{background:#FEF2F2;border-color:#FECACA;color:#DC2626;}
+.rep-card-body{flex:1;min-width:0;}
+.rep-card-title{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.rep-card-meta{font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px;}
+.rep-card-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+/* ═══════════ BÁO CÁO TỔNG HỢP ═══════════ */
+.rpt-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+@media(max-width:900px){.rpt-kpi-grid{grid-template-columns:repeat(2,1fr);}}
+.rpt-kpi{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+.rpt-kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.rpt-kpi .val{font-size:24px;font-weight:700;margin-top:4px;color:var(--text);}
+.rpt-kpi .sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.rpt-section{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.rpt-section h3{font-size:13px;font-weight:700;color:var(--text);margin:0 0 12px;display:flex;align-items:center;gap:6px;}
+.rpt-table{width:100%;border-collapse:collapse;font-size:13px;}
+.rpt-table th{background:#F8FAFC;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+.rpt-table td{padding:8px 10px;border-bottom:1px solid #F1F5F9;color:var(--text);}
+.rpt-table tr:last-child td{border-bottom:none;}
+.rpt-table .num{text-align:right;font-variant-numeric:tabular-nums;}
+.rpt-table .bold{font-weight:600;}
+@media print{
+  .topbar,.sidebar,.filter-bar,.bottom-nav,.fab-add,.btn-icon-ph,#rpt-toolbar{display:none!important;}
+  .content{padding:0!important;}
+  .rpt-kpi-grid{grid-template-columns:repeat(4,1fr)!important;}
+  .rpt-section{break-inside:avoid;border:1px solid #ddd!important;}
+  body{background:#fff!important;}
+}
 </style>
 </head>
 <body>
