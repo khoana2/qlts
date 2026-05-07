@@ -355,8 +355,8 @@ tbody tr.selected td{background:#ede9fe!important;border-bottom-color:#c4b5fd;}
 /* ROW HIGHLIGHT BY STATUS */
 /* tbody tr.row-kho td{background:#FFFBEB;} */
 /* tbody tr.row-kho td:first-child{border-left:3px solid #F59E0B;} */
-tbody tr.row-hong td{background:#FEF2F2;}
-tbody tr.row-hong td:first-child{border-left:3px solid #EF4444;}
+/* tbody tr.row-hong td{background:#FEF2F2;} */
+/* tbody tr.row-hong td:first-child{border-left:3px solid #EF4444;} */
 tbody tr.row-sua td{background:#FFF7ED;}
 tbody tr.row-sua td:first-child{border-left:3px solid #F97316;}
 tbody tr.row-thanh-ly td{opacity:.5;}
@@ -7800,7 +7800,7 @@ function statusPill(s){
 function warrantyBadge(a){
   if(!a.ngayHetBH) return '';
   const diffD = Math.round((new Date(a.ngayHetBH)-new Date())/86400000);
-  if(diffD<0) return `<span class="warn-badge expired" title="Hết BH ${Math.abs(diffD)}d trước">Hết BH</span>`;
+  if(diffD<0) return '';
   if(diffD<=90) return `<span class="warn-badge soon" title="Hết BH ${new Date(a.ngayHetBH).toLocaleDateString('vi-VN')}">BH: ${diffD}d</span>`;
   return `<span class="warn-badge ok" title="Hết BH ${new Date(a.ngayHetBH).toLocaleDateString('vi-VN')}">BH: ${diffD}d</span>`;
 }
