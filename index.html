@@ -2247,9 +2247,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <span class="tab-icon"><i class="ph ph-wrench"></i></span> Sửa Chữa
           <span class="tab-expiry-badge" id="tab-repairs-badge" style="display:none;"></span>
         </button>
-        <button class="nav-tab" onclick="switchTab('report')" id="tab-report">
-          <span class="tab-icon"><i class="ph ph-file-text"></i></span> Báo Cáo
-        </button>
         <button class="nav-tab" onclick="switchTab('roles')" id="tab-roles" style="display:none">
           <span class="tab-icon"><i class="ph ph-users-three"></i></span> Phân Quyền
         </button>
@@ -2916,64 +2913,64 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 
   <!-- ══════════════ VIEW: SỬA CHỮA ══════════════ -->
   <div class="view" id="view-repairs">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <div>
-        <div style="font-size:16px;font-weight:700;"><i class="ph ph-wrench"></i> Theo Dõi Sửa Chữa</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Lịch sử và trạng thái sửa chữa tài sản</div>
+
+    <!-- Page header -->
+    <div class="rep-page-head">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="rep-page-icon"><i class="ph ph-wrench"></i></div>
+        <div>
+          <div style="font-size:17px;font-weight:800;color:var(--text);line-height:1.2;">Theo Dõi Sửa Chữa</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Quản lý phiếu gửi sửa và lịch sử thiết bị</div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <select class="fsel" id="rep-f-status" onchange="renderRepairs()">
-          <option value="">Tất cả trạng thái</option>
-          <option value="dang_sua">🔧 Đang sửa</option>
-          <option value="hoan_thanh">✅ Hoàn thành</option>
-          <option value="khong_sua_duoc">❌ Không sửa được</option>
-        </select>
-        <div class="search-wrap" style="min-width:220px;">
-          <i class="ph ph-magnifying-glass" style="font-size:13px;color:var(--muted);"></i>
-          <input type="text" id="rep-search" placeholder="Tìm tên, mã tài sản, đơn vị sửa…" oninput="renderRepairs()" style="background:transparent;border:none;outline:none;font-size:13px;padding:7px 0;flex:1;"/>
+      <button class="btn primary btn-icon-ph" onclick="openRepairNew('')">
+        <i class="ph ph-plus"></i> Thêm phiếu
+      </button>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="rep-kpi-row">
+      <div class="rep-kpi-card rep-kpi-orange">
+        <div class="rep-kpi-icon-wrap"><i class="ph ph-clock"></i></div>
+        <div>
+          <div class="rep-kpi-num" id="rep-kpi-active">0</div>
+          <div class="rep-kpi-lbl">Đang sửa</div>
+        </div>
+      </div>
+      <div class="rep-kpi-card rep-kpi-green">
+        <div class="rep-kpi-icon-wrap"><i class="ph ph-check-circle"></i></div>
+        <div>
+          <div class="rep-kpi-num" id="rep-kpi-done">0</div>
+          <div class="rep-kpi-lbl">Hoàn thành</div>
+        </div>
+      </div>
+      <div class="rep-kpi-card rep-kpi-red">
+        <div class="rep-kpi-icon-wrap"><i class="ph ph-x-circle"></i></div>
+        <div>
+          <div class="rep-kpi-num" id="rep-kpi-failed">0</div>
+          <div class="rep-kpi-lbl">Không sửa được</div>
         </div>
       </div>
     </div>
-    <!-- KPI strip -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
-      <div class="rpt-kpi" style="border-left:3px solid #F97316;">
-        <div class="lbl"><i class="ph ph-wrench"></i> Đang sửa</div>
-        <div class="val" id="rep-kpi-active" style="color:#EA580C;">0</div>
-      </div>
-      <div class="rpt-kpi" style="border-left:3px solid #10B981;">
-        <div class="lbl"><i class="ph ph-check-circle"></i> Hoàn thành</div>
-        <div class="val" id="rep-kpi-done" style="color:#059669;">0</div>
-      </div>
-      <div class="rpt-kpi" style="border-left:3px solid #EF4444;">
-        <div class="lbl"><i class="ph ph-x-circle"></i> Không sửa được</div>
-        <div class="val" id="rep-kpi-failed" style="color:#DC2626;">0</div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar" style="margin-top:0;margin-bottom:12px;">
+      <select class="fsel" id="rep-f-status" onchange="renderRepairs()">
+        <option value="">Tất cả trạng thái</option>
+        <option value="dang_sua">🔧 Đang sửa</option>
+        <option value="hoan_thanh">✅ Hoàn thành</option>
+        <option value="khong_sua_duoc">❌ Không sửa được</option>
+      </select>
+      <div class="search-wrap" style="min-width:240px;flex:1;">
+        <i class="ph ph-magnifying-glass" style="font-size:13px;color:var(--muted);"></i>
+        <input type="text" id="rep-search" placeholder="Tìm tên thiết bị, mã TS, đơn vị sửa…" oninput="renderRepairs()"/>
       </div>
     </div>
+
     <div id="rep-list"></div>
   </div>
 
-  <!-- ══════════════ VIEW: BÁO CÁO TỔNG HỢP ══════════════ -->
-  <div class="view" id="view-report">
-    <div id="rpt-toolbar" style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <div>
-        <div style="font-size:16px;font-weight:700;"><i class="ph ph-file-text"></i> Báo Cáo Tổng Hợp</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="rpt-subtitle">Tổng quan tài sản toàn công ty</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <select class="fsel" id="rpt-f-company" onchange="renderReport()"><option value="">🏬 Tất cả công ty</option></select>
-        <select class="fsel" id="rpt-f-dept" onchange="renderReport()"><option value="">🏢 Tất cả phòng ban</option></select>
-        <select class="fsel" id="rpt-f-status" onchange="renderReport()">
-          <option value="">🏷️ Tất cả trạng thái</option>
-          <option>Đang dùng</option><option>Lưu Kho</option>
-          <option>Sửa chữa</option><option>Hỏng</option><option>Thanh lý</option>
-        </select>
-        <button class="btn btn-icon-ph" onclick="window.print()" style="background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8;">
-          <i class="ph ph-printer"></i> In / PDF
-        </button>
-      </div>
-    </div>
-    <div id="rpt-body"></div>
-  </div>
+
 
   <!-- ══════════════ MODAL: THÊM/SỬA PHIẾU SỬA CHỮA ══════════════ -->
   <div id="modal-repair" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
@@ -6962,7 +6959,6 @@ function switchTab(t){
   if(t==='auditlog')     renderAuditLog();
   if(t==='fuji')         fujiOnTabOpen();
   if(t==='repairs')      renderRepairs();
-  if(t==='report')       renderReport();
   // Sync bottom nav
   setBottomNav(t);
   // Đóng sidebar drawer trên mobile sau khi chọn tab
@@ -12414,239 +12410,60 @@ function renderRepairs(){
 
   const list = document.getElementById('rep-list');
   if(!rows.length){
-    list.innerHTML=`<div style="text-align:center;padding:48px;color:var(--muted);">
-      <i class="ph ph-wrench" style="font-size:40px;display:block;margin-bottom:10px;opacity:.3;"></i>
-      ${statusF||q ? 'Không tìm thấy phiếu nào phù hợp.' : 'Chưa có phiếu sửa chữa nào.'}
+    list.innerHTML=`<div style="text-align:center;padding:56px 20px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);">
+      <div style="width:56px;height:56px;background:#F1F5F9;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;color:#94A3B8;">
+        <i class="ph ph-wrench"></i>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;">
+        ${statusF||q ? 'Không tìm thấy phiếu nào phù hợp' : 'Chưa có phiếu sửa chữa nào'}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">
+        ${statusF||q ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.' : 'Gửi phiếu đầu tiên để bắt đầu theo dõi.'}
+      </div>
+      ${!statusF&&!q?`<button class="btn primary btn-icon-ph" onclick="openRepairNew('')"><i class="ph ph-plus"></i> Thêm phiếu</button>`:''}
     </div>`;
     return;
   }
 
   list.innerHTML = rows.map(({assetId,idx,rec,asset})=>{
     const statusClass = rec.status||'dang_sua';
-    const dateInFmt = rec.dateIn ? new Date(rec.dateIn).toLocaleDateString('vi-VN') : '—';
-    const dateOutFmt = rec.dateOut ? new Date(rec.dateOut).toLocaleDateString('vi-VN') : null;
-    const estFmt = rec.estimatedReturn ? new Date(rec.estimatedReturn).toLocaleDateString('vi-VN') : null;
-    const overdue = rec.status==='dang_sua' && rec.estimatedReturn && new Date(rec.estimatedReturn)<new Date();
+    const dateInFmt   = rec.dateIn ? new Date(rec.dateIn).toLocaleDateString('vi-VN') : '—';
+    const dateOutFmt  = rec.dateOut ? new Date(rec.dateOut).toLocaleDateString('vi-VN') : null;
+    const estFmt      = rec.estimatedReturn ? new Date(rec.estimatedReturn).toLocaleDateString('vi-VN') : null;
+    const overdue     = rec.status==='dang_sua' && rec.estimatedReturn && new Date(rec.estimatedReturn)<new Date();
+    const iconMap     = {dang_sua:'ph-clock',hoan_thanh:'ph-check-circle',khong_sua_duoc:'ph-x-circle'};
+    const assetName   = [asset?.tenTaiSan, asset?.model].filter(Boolean).join(' ');
     return `<div class="rep-card ${statusClass}">
-      <div class="rep-card-icon"><i class="ph ph-wrench"></i></div>
-      <div class="rep-card-body">
-        <div class="rep-card-title">
-          <span class="rep-status-badge ${statusClass}">${_repStatusLabel(rec.status)}</span>
-          &nbsp;
-          <a href="#" onclick="event.preventDefault();switchTab('assets');setTimeout(()=>viewDetail('${assetId}'),300)" style="color:var(--accent);font-weight:600;">
-            ${esc(asset?.maTaiSan||assetId)}
-          </a>
-          — ${esc(asset?.tenTaiSan||'')} ${esc(asset?.model||'')}
-          ${asset?.nguoiDung?`<span style="color:var(--muted);font-size:12px;"> · ${esc(asset.nguoiDung)}</span>`:''}
+      <div class="rep-card-stripe"></div>
+      <div class="rep-card-inner">
+        <div class="rep-card-icon"><i class="ph ${iconMap[statusClass]||'ph-wrench'}"></i></div>
+        <div class="rep-card-body">
+          <div class="rep-card-top">
+            <span class="rep-status-badge ${statusClass}">${_repStatusLabel(rec.status)}</span>
+            <a class="rep-card-asset" href="#" onclick="event.preventDefault();switchTab('assets');setTimeout(()=>viewDetail('${assetId}'),50)">
+              ${esc(asset?.maTaiSan||assetId)}
+            </a>
+            ${assetName?`<span style="color:var(--muted);font-size:12px;">— ${esc(assetName)}</span>`:''}
+          </div>
+          ${asset?.nguoiDung?`<div class="rep-card-user"><i class="ph ph-user" style="font-size:11px;"></i> ${esc(asset.nguoiDung)}${asset.boPhan?` · ${esc(asset.boPhan)}`:''}</div>`:''}
+          ${rec.issue?`<div class="rep-card-issue">${esc(rec.issue)}</div>`:''}
+          ${rec.notes?`<div class="rep-card-notes">"${esc(rec.notes)}"</div>`:''}
+          <div class="rep-card-footer">
+            <span><i class="ph ph-calendar-blank"></i> Gửi: <b>${dateInFmt}</b></span>
+            ${estFmt?`<span class="${overdue?'rep-overdue':''}"><i class="ph ph-clock"></i> Dự kiến: <b>${estFmt}</b>${overdue?' ⚠️':''}</span>`:''}
+            ${dateOutFmt?`<span><i class="ph ph-check"></i> Nhận lại: <b>${dateOutFmt}</b></span>`:''}
+            ${rec.vendor?`<span><i class="ph ph-buildings"></i> <b>${esc(rec.vendor)}</b></span>`:''}
+          </div>
         </div>
-        <div class="rep-card-meta">
-          <span><i class="ph ph-calendar"></i> Gửi: <b>${dateInFmt}</b></span>
-          ${estFmt?`<span style="${overdue?'color:#DC2626;font-weight:600;':''}"><i class="ph ph-clock"></i> Dự kiến: <b>${estFmt}</b>${overdue?' ⚠️ Quá hạn':''}</span>`:''}
-          ${dateOutFmt?`<span><i class="ph ph-check"></i> Nhận lại: <b>${dateOutFmt}</b></span>`:''}
-          ${rec.vendor?`<span><i class="ph ph-buildings"></i> ${esc(rec.vendor)}</span>`:''}
+        <div class="rep-card-actions">
+          <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="openRepairEdit('${assetId}',${idx})"><i class="ph ph-pencil-simple"></i> Sửa</button>
+          <button class="btn danger btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="deleteRepairRecord('${assetId}',${idx})"><i class="ph ph-trash"></i> Xóa</button>
         </div>
-        <div style="font-size:12.5px;color:var(--text);margin-top:5px;">${esc(rec.issue)}</div>
-        ${rec.notes?`<div style="font-size:11.5px;color:var(--muted);margin-top:3px;font-style:italic;">${esc(rec.notes)}</div>`:''}
-      </div>
-      <div class="rep-card-actions">
-        <button class="btn btn-icon-ph" style="font-size:11px;padding:3px 9px;" onclick="openRepairEdit('${assetId}',${idx})"><i class="ph ph-pencil"></i> Sửa</button>
-        <button class="btn danger btn-icon-ph" style="font-size:11px;padding:3px 9px;" onclick="deleteRepairRecord('${assetId}',${idx})"><i class="ph ph-trash"></i> Xóa</button>
       </div>
     </div>`;
   }).join('');
 }
 
-// ═══════════════════════════════════════════════════════════
-//  BÁO CÁO TỔNG HỢP — Summary Report
-// ═══════════════════════════════════════════════════════════
-function renderReport(){
-  const fCompany = document.getElementById('rpt-f-company')?.value||'';
-  const fDept    = document.getElementById('rpt-f-dept')?.value||'';
-  const fStatus  = document.getElementById('rpt-f-status')?.value||'';
-
-  // Populate selects
-  const companies = [...new Set(assets.map(a=>a.congTy||'').filter(Boolean))].sort();
-  const selC = document.getElementById('rpt-f-company');
-  if(selC && selC.options.length<=1){
-    companies.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; selC.appendChild(o); });
-    if(fCompany) selC.value=fCompany;
-  }
-
-  let data = assets;
-  if(fCompany) data = data.filter(a=>(a.congTy||'')===fCompany);
-  if(fStatus)  data = data.filter(a=>a.tinhTrang===fStatus);
-
-  // Refresh dept select based on company filter
-  const selD = document.getElementById('rpt-f-dept');
-  if(selD){
-    const depts = [...new Set(data.map(a=>a.boPhan||'').filter(Boolean))].sort();
-    selD.innerHTML = '<option value="">🏢 Tất cả phòng ban</option>';
-    depts.forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; selD.appendChild(o); });
-    if(fDept) selD.value=fDept;
-  }
-  if(fDept) data = data.filter(a=>(a.boPhan||'')===fDept);
-
-  const total = data.length;
-  const now = new Date();
-  const inRepair   = data.filter(a=>a.tinhTrang==='Sửa chữa').length;
-  const inWarehouse= data.filter(a=>['Lưu Kho','Trong kho'].includes(a.tinhTrang)).length;
-  const inUse      = data.filter(a=>a.tinhTrang==='Đang dùng').length;
-  const expired    = data.filter(a=>a.ngayHetBH && new Date(a.ngayHetBH)<now).length;
-  const soon       = data.filter(a=>{
-    if(!a.ngayHetBH) return false;
-    const d=Math.round((new Date(a.ngayHetBH)-now)/86400000);
-    return d>=0&&d<=90;
-  }).length;
-  const deprecTotal= data.reduce((s,a)=>{
-    const d=calcDepreciation(a); return s+(d&&!d.fullyDepreciated?d.remaining:0);
-  },0);
-
-  // By type
-  const byType={};
-  data.forEach(a=>{ const t=a.tenTaiSan||'Khác'; byType[t]=(byType[t]||0)+1; });
-
-  // By department
-  const byDept={};
-  data.forEach(a=>{
-    const d=a.boPhan||'(Chưa phân)';
-    if(!byDept[d]) byDept[d]={total:0,active:0,warehouse:0,repair:0,broken:0};
-    byDept[d].total++;
-    if(a.tinhTrang==='Đang dùng') byDept[d].active++;
-    else if(['Lưu Kho','Trong kho'].includes(a.tinhTrang)) byDept[d].warehouse++;
-    else if(a.tinhTrang==='Sửa chữa') byDept[d].repair++;
-    else if(a.tinhTrang==='Hỏng') byDept[d].broken++;
-  });
-
-  // By status
-  const byStatus={};
-  data.forEach(a=>{ const s=a.tinhTrang||'Không rõ'; byStatus[s]=(byStatus[s]||0)+1; });
-
-  const subtitle = [fCompany,fDept,fStatus].filter(Boolean).join(' · ') || 'Toàn công ty';
-  document.getElementById('rpt-subtitle').textContent = subtitle;
-  document.title = `Báo Cáo Tài Sản — ${subtitle}`;
-
-  const fmtN = n => n.toLocaleString('vi-VN');
-  const genDate = new Date().toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-
-  document.getElementById('rpt-body').innerHTML = `
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
-      <span>Xuất lúc: ${genDate}</span>
-      <span>Dữ liệu: ${fmtN(total)} tài sản</span>
-    </div>
-
-    <!-- KPIs -->
-    <div class="rpt-kpi-grid">
-      <div class="rpt-kpi" style="border-left:3px solid var(--accent);">
-        <div class="lbl">Tổng tài sản</div>
-        <div class="val">${fmtN(total)}</div>
-        <div class="sub">toàn bộ trạng thái</div>
-      </div>
-      <div class="rpt-kpi" style="border-left:3px solid #10B981;">
-        <div class="lbl">Đang sử dụng</div>
-        <div class="val" style="color:#059669;">${fmtN(inUse)}</div>
-        <div class="sub">${total?Math.round(inUse/total*100):0}% tổng số</div>
-      </div>
-      <div class="rpt-kpi" style="border-left:3px solid #6366F1;">
-        <div class="lbl">Trong kho</div>
-        <div class="val" style="color:#4F46E5;">${fmtN(inWarehouse)}</div>
-        <div class="sub">chờ cấp phát</div>
-      </div>
-      <div class="rpt-kpi" style="border-left:3px solid #F97316;">
-        <div class="lbl">Đang sửa chữa</div>
-        <div class="val" style="color:#EA580C;">${fmtN(inRepair)}</div>
-        <div class="sub">${soon} BH hết trong 90 ngày</div>
-      </div>
-    </div>
-
-    <!-- Theo phòng ban -->
-    <div class="rpt-section">
-      <h3><i class="ph ph-buildings"></i> Phân Bổ Theo Phòng Ban</h3>
-      <table class="rpt-table">
-        <thead><tr>
-          <th>Phòng ban</th>
-          <th class="num">Tổng</th>
-          <th class="num">Đang dùng</th>
-          <th class="num">Trong kho</th>
-          <th class="num">Sửa chữa</th>
-          <th class="num">Hỏng</th>
-        </tr></thead>
-        <tbody>
-          ${Object.entries(byDept).sort((a,b)=>b[1].total-a[1].total).map(([dept,s])=>`
-            <tr>
-              <td>${esc(dept)}</td>
-              <td class="num bold">${fmtN(s.total)}</td>
-              <td class="num" style="color:#059669;">${fmtN(s.active)}</td>
-              <td class="num" style="color:#4F46E5;">${fmtN(s.warehouse)}</td>
-              <td class="num" style="color:#EA580C;">${fmtN(s.repair)}</td>
-              <td class="num" style="color:#DC2626;">${fmtN(s.broken)}</td>
-            </tr>`).join('')}
-          <tr style="background:#F8FAFC;font-weight:700;border-top:2px solid var(--border);">
-            <td>Tổng cộng</td>
-            <td class="num">${fmtN(total)}</td>
-            <td class="num" style="color:#059669;">${fmtN(inUse)}</td>
-            <td class="num" style="color:#4F46E5;">${fmtN(inWarehouse)}</td>
-            <td class="num" style="color:#EA580C;">${fmtN(inRepair)}</td>
-            <td class="num" style="color:#DC2626;">${fmtN(data.filter(a=>a.tinhTrang==='Hỏng').length)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Theo loại tài sản -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-      <div class="rpt-section">
-        <h3><i class="ph ph-package"></i> Theo Loại Tài Sản</h3>
-        <table class="rpt-table">
-          <thead><tr><th>Loại</th><th class="num">Số lượng</th><th class="num">%</th></tr></thead>
-          <tbody>
-            ${Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`
-              <tr><td>${esc(t)}</td><td class="num bold">${fmtN(n)}</td>
-              <td class="num" style="color:var(--muted);">${total?Math.round(n/total*100):0}%</td></tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-      <div class="rpt-section">
-        <h3><i class="ph ph-tag"></i> Theo Trạng Thái</h3>
-        <table class="rpt-table">
-          <thead><tr><th>Trạng thái</th><th class="num">Số lượng</th><th class="num">%</th></tr></thead>
-          <tbody>
-            ${Object.entries(byStatus).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`
-              <tr><td>${esc(s)}</td><td class="num bold">${fmtN(n)}</td>
-              <td class="num" style="color:var(--muted);">${total?Math.round(n/total*100):0}%</td></tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Bảo hành -->
-    <div class="rpt-section">
-      <h3><i class="ph ph-shield-check"></i> Tình Trạng Bảo Hành</h3>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
-        <div style="text-align:center;padding:12px;background:#FEF2F2;border-radius:10px;">
-          <div style="font-size:22px;font-weight:700;color:#DC2626;">${fmtN(expired)}</div>
-          <div style="font-size:12px;color:#991B1B;margin-top:2px;">❌ Đã hết bảo hành</div>
-        </div>
-        <div style="text-align:center;padding:12px;background:#FFFBEB;border-radius:10px;">
-          <div style="font-size:22px;font-weight:700;color:#D97706;">${fmtN(soon)}</div>
-          <div style="font-size:12px;color:#92400E;margin-top:2px;">⚠️ Hết BH trong 90 ngày</div>
-        </div>
-        <div style="text-align:center;padding:12px;background:#ECFDF5;border-radius:10px;">
-          <div style="font-size:22px;font-weight:700;color:#059669;">${fmtN(data.filter(a=>a.ngayHetBH&&new Date(a.ngayHetBH)>now&&Math.round((new Date(a.ngayHetBH)-now)/86400000)>90).length)}</div>
-          <div style="font-size:12px;color:#065F46;margin-top:2px;">✅ Còn bảo hành (&gt; 90 ngày)</div>
-        </div>
-      </div>
-    </div>
-    ${deprecTotal>0?`
-    <div class="rpt-section">
-      <h3><i class="ph ph-chart-line-down"></i> Khấu Hao</h3>
-      <div style="font-size:14px;">Tổng giá trị còn lại (chưa khấu hao hết):
-        <span style="font-size:20px;font-weight:700;color:var(--accent);margin-left:8px;">${deprecTotal.toLocaleString('vi-VN')} ₫</span>
-      </div>
-    </div>`:''}
-  `;
-}
 
 // ── Gán vào asset detail modal: thêm nút "Gửi sửa" và hiển thị lịch sử ──
 function _repairDetailHtml(assetId){
@@ -15658,41 +15475,53 @@ function printQRLabel(){
   }
 </style>
 <style>
-/* ═══════════ SỬA CHỮA ═══════════ */
-.rep-status-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;}
-.rep-status-badge.dang_sua{background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;}
-.rep-status-badge.hoan_thanh{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;}
-.rep-status-badge.khong_sua_duoc{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;}
-.rep-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start;}
-.rep-card-icon{width:36px;height:36px;border-radius:9px;background:#FFF7ED;border:1px solid #FED7AA;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#EA580C;font-size:16px;}
-.rep-card.hoan_thanh .rep-card-icon{background:#ECFDF5;border-color:#A7F3D0;color:#059669;}
+/* ═══════════ SỬA CHỮA — REPAIR TRACKING ═══════════ */
+/* Page header */
+.rep-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;margin-bottom:16px;}
+.rep-page-icon{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#F97316,#EF4444);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(249,115,22,.3);}
+.rep-page-icon i{font-size:20px;color:#fff;}
+/* KPI row */
+.rep-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
+.rep-kpi-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.rep-kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.rep-kpi-orange::before{background:linear-gradient(90deg,#F97316,#FBBF24);}
+.rep-kpi-green::before{background:linear-gradient(90deg,#10B981,#34D399);}
+.rep-kpi-red::before{background:linear-gradient(90deg,#EF4444,#F97316);}
+.rep-kpi-icon-wrap{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.rep-kpi-orange .rep-kpi-icon-wrap{background:#FFF7ED;color:#EA580C;}
+.rep-kpi-green  .rep-kpi-icon-wrap{background:#ECFDF5;color:#059669;}
+.rep-kpi-red    .rep-kpi-icon-wrap{background:#FEF2F2;color:#DC2626;}
+.rep-kpi-num{font-size:28px;font-weight:800;line-height:1;letter-spacing:-.02em;color:var(--text);}
+.rep-kpi-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;}
+/* Status badge */
+.rep-status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;}
+.rep-status-badge.dang_sua{background:#FFF7ED;color:#C2410C;border-color:#FED7AA;}
+.rep-status-badge.hoan_thanh{background:#ECFDF5;color:#065F46;border-color:#A7F3D0;}
+.rep-status-badge.khong_sua_duoc{background:#FEF2F2;color:#991B1B;border-color:#FECACA;}
+/* Repair card */
+.rep-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:0;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .15s,border-color .15s;}
+.rep-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.09);border-color:#CBD5E1;}
+.rep-card-stripe{height:3px;}
+.rep-card.dang_sua       .rep-card-stripe{background:linear-gradient(90deg,#F97316,#FBBF24);}
+.rep-card.hoan_thanh     .rep-card-stripe{background:linear-gradient(90deg,#10B981,#34D399);}
+.rep-card.khong_sua_duoc .rep-card-stripe{background:linear-gradient(90deg,#EF4444,#F97316);}
+.rep-card-inner{padding:14px 16px;display:flex;align-items:flex-start;gap:12px;}
+.rep-card-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;border:1px solid;}
+.rep-card.dang_sua       .rep-card-icon{background:#FFF7ED;border-color:#FED7AA;color:#EA580C;}
+.rep-card.hoan_thanh     .rep-card-icon{background:#ECFDF5;border-color:#A7F3D0;color:#059669;}
 .rep-card.khong_sua_duoc .rep-card-icon{background:#FEF2F2;border-color:#FECACA;color:#DC2626;}
 .rep-card-body{flex:1;min-width:0;}
-.rep-card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;}
-.rep-card-meta{font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px;}
-.rep-card-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
-/* ═══════════ BÁO CÁO TỔNG HỢP ═══════════ */
-.rpt-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
-@media(max-width:900px){.rpt-kpi-grid{grid-template-columns:repeat(2,1fr);}}
-.rpt-kpi{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
-.rpt-kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
-.rpt-kpi .val{font-size:24px;font-weight:700;margin-top:4px;color:var(--text);}
-.rpt-kpi .sub{font-size:11px;color:var(--muted);margin-top:2px;}
-.rpt-section{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
-.rpt-section h3{font-size:13px;font-weight:700;color:var(--text);margin:0 0 12px;display:flex;align-items:center;gap:6px;}
-.rpt-table{width:100%;border-collapse:collapse;font-size:13px;}
-.rpt-table th{background:#F8FAFC;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
-.rpt-table td{padding:8px 10px;border-bottom:1px solid #F1F5F9;color:var(--text);}
-.rpt-table tr:last-child td{border-bottom:none;}
-.rpt-table .num{text-align:right;font-variant-numeric:tabular-nums;}
-.rpt-table .bold{font-weight:600;}
-@media print{
-  .topbar,.sidebar,.filter-bar,.bottom-nav,.fab-add,.btn-icon-ph,#rpt-toolbar{display:none!important;}
-  .content{padding:0!important;}
-  .rpt-kpi-grid{grid-template-columns:repeat(4,1fr)!important;}
-  .rpt-section{break-inside:avoid;border:1px solid #ddd!important;}
-  body{background:#fff!important;}
-}
+.rep-card-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;}
+.rep-card-asset{font-size:13px;font-weight:700;color:var(--text);}
+.rep-card-user{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.rep-card-issue{font-size:12.5px;color:var(--text);margin:6px 0 0;line-height:1.5;opacity:.85;}
+.rep-card-notes{font-size:11.5px;color:var(--muted);margin-top:4px;font-style:italic;}
+.rep-card-footer{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid #F1F5F9;}
+.rep-card-footer span{font-size:11.5px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;}
+.rep-card-footer span b{color:var(--text);font-weight:600;}
+.rep-overdue{color:#DC2626!important;font-weight:700!important;}
+.rep-overdue b{color:#DC2626!important;}
+.rep-card-actions{display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
 </style>
 </head>
 <body>
