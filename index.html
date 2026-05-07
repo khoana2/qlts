@@ -17145,4 +17145,95 @@ function printQRLabel(){
         <td style="text-align:center;color:#64748b">${i+1}</td>
         <td><strong>${d.dept}</strong></td>
         <td style="text-align:right">${d.userCount}</td>
-    
+        <td style="text-align:right">${d.bw.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right">${d.color.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right"><strong>${d.total.toLocaleString('vi-VN')}</strong></td>
+        <td style="text-align:right">${d.total?Math.round(d.color*100/d.total):0}%</td>
+      </tr>`).join('');
+
+    const top10Rows=top10arr.map((u,i)=>`
+      <tr>
+        <td style="text-align:center;color:#64748b">${i+1}</td>
+        <td><strong>${u.name||u.user}</strong><br><span style="color:#64748b;font-size:11px">${u.dept||''}</span></td>
+        <td style="text-align:right">${u.bw.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right">${u.color.toLocaleString('vi-VN')}</td>
+        <td style="text-align:right"><strong>${u.total.toLocaleString('vi-VN')}</strong></td>
+        <td style="text-align:right">${u.total?Math.round(u.color*100/u.total):0}%</td>
+      </tr>`).join('');
+
+    const pw=window.open('','_blank','width=960,height=720,scrollbars=yes,resizable=yes');
+    if(!pw){ if(typeof toast==='function') toast('⚠️ Trình duyệt chặn popup — hãy cho phép popup và thử lại','warn'); return; }
+    pw.document.write(`<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8">
+<title>Báo Cáo In Ấn Fuji — ${period}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:24px;}
+.report-wrap{max-width:860px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.1);overflow:hidden;}
+.report-head{background:linear-gradient(135deg,#1e293b,#334155);color:#fff;padding:20px 24px;}
+.report-head h1{font-size:18px;font-weight:700;margin-bottom:4px;}
+.report-head p{font-size:12px;color:#94a3b8;}
+.report-body{padding:20px 24px;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;}
+.kpi .lbl{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;}
+.kpi .val{font-size:22px;font-weight:700;color:#1e293b;margin-top:2px;}
+.kpi .sub{font-size:11px;color:#94a3b8;margin-top:1px;}
+h2{font-size:13px;font-weight:700;color:#1e293b;margin:18px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:6px;}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;}
+th{background:#f8fafc;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;text-align:left;border-bottom:2px solid #e2e8f0;}
+th.r,td.r{text-align:right;}
+td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#1e293b;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f8fafc;}
+.toolbar{display:flex;gap:10px;padding:14px 24px;border-top:1px solid #e2e8f0;background:#f8fafc;}
+.btn-print{background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-close{background:#e2e8f0;color:#334155;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;}
+@media print{
+  body{background:#fff;padding:0;}
+  .toolbar{display:none!important;}
+  .report-wrap{box-shadow:none;border-radius:0;}
+  @page{size:A4;margin:15mm 12mm;}
+}
+</style></head><body>
+<div class="report-wrap">
+  <div class="report-head">
+    <h1>📊 Báo Cáo In Ấn Fuji Xerox</h1>
+    <p>Kỳ báo cáo: <strong style="color:#e2e8f0">${period}</strong> &nbsp;·&nbsp; Xuất ngày: ${dateStr} &nbsp;·&nbsp; ${users} người dùng</p>
+  </div>
+  <div class="report-body">
+    <div class="kpi-row">
+      <div class="kpi"><div class="lbl">Tổng trang in</div><div class="val">${totalPages.toLocaleString('vi-VN')}</div><div class="sub">BW + Màu</div></div>
+      <div class="kpi"><div class="lbl">Trang đen trắng</div><div class="val">${totalBW.toLocaleString('vi-VN')}</div><div class="sub">${totalPages?Math.round(totalBW*100/totalPages):0}% tổng</div></div>
+      <div class="kpi"><div class="lbl">Trang màu</div><div class="val">${totalColor.toLocaleString('vi-VN')}</div><div class="sub">${pctColor}% tổng</div></div>
+      <div class="kpi"><div class="lbl">Người dùng</div><div class="val">${users}</div><div class="sub">có phát sinh in</div></div>
+    </div>
+    <h2>🏢 Theo Phòng Ban</h2>
+    <table>
+      <thead><tr><th>#</th><th>Phòng Ban</th><th class="r">Người dùng</th><th class="r">BW</th><th class="r">Màu</th><th class="r">Tổng</th><th class="r">% Màu</th></tr></thead>
+      <tbody>${deptRows}</tbody>
+    </table>
+    <h2>🖨️ Theo Máy</h2>
+    <table>
+      <thead><tr><th>#</th><th>Model / Serial</th><th class="r">Người dùng</th><th class="r">BW</th><th class="r">Màu</th><th class="r">Tổng</th><th class="r">% Màu</th><th class="r">Jobs</th></tr></thead>
+      <tbody>${machineRows}</tbody>
+    </table>
+    <h2>👤 Top 10 Người Dùng</h2>
+    <table>
+      <thead><tr><th>#</th><th>Họ tên / Phòng ban</th><th class="r">BW</th><th class="r">Màu</th><th class="r">Tổng</th><th class="r">% Màu</th></tr></thead>
+      <tbody>${top10Rows}</tbody>
+    </table>
+  </div>
+  <div class="toolbar">
+    <button class="btn-print" onclick="window.print()">🖨️ In / Lưu PDF</button>
+    <button class="btn-close" onclick="window.close()">✕ Đóng</button>
+  </div>
+</div>
+</body></html>`);
+    pw.document.close();
+  }; // end fujiExportPDF
+
+})(); // end Fuji IIFE
+</script>
+</body>
+</html>
