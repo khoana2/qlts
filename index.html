@@ -325,12 +325,12 @@ body{
 .table-card{
   margin-top:10px;background:#FFFFFF;
   border:1px solid var(--border);border-radius:var(--radius);
-  box-shadow:var(--shadow);overflow:hidden;
+  box-shadow:var(--shadow);overflow:clip;
 }
-.table-wrap{width:100%;overflow:auto;max-height:calc(100vh - 300px);}
+.table-wrap{width:100%;overflow-x:auto;overflow-y:visible;}
 table{width:100%;border-collapse:separate;border-spacing:0;min-width:1300px;}
 thead th{
-  position:sticky;top:0;z-index:10;
+  position:sticky;top:53px;z-index:10;
   background:#F8FAFC;border-bottom:1px solid var(--border);
   color:var(--muted);text-align:left;font-size:11px;
   padding:10px 10px;white-space:nowrap;user-select:none;
@@ -2691,7 +2691,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     </div>
 
     <div class="table-card" id="lic-table-card" style="margin-top:10px;">
-      <div class="table-wrap" style="max-height:calc(100vh - 340px);">
+      <div class="table-wrap">
         <table>
           <thead>
             <tr>
