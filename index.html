@@ -7431,9 +7431,10 @@ function renderTable(){
         </td>
         <td data-col="boPhan" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;">${esc(a.boPhan||'—')}</td>
         <td data-col="spec" style="font-size:11.5px;white-space:nowrap;">
-          ${a.cpu?`<div style="color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;max-width:180px;">${esc(a.cpu)}</div>`:''}
-          ${(a.ram||a.ssd)?`<div style="color:var(--muted);font-size:11px;margin-top:2px;">${[a.ram,a.ssd].filter(Boolean).map(s=>esc(s)).join(' · ')}</div>`:''}
-          ${(!a.cpu&&!a.ram&&!a.ssd)?'<span style="color:var(--muted);">—</span>':''}
+          ${a.cpu?`<div style="color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;max-width:190px;">${esc(a.cpu)}</div>`:''}
+          ${(a.ram||a.ssd)?`<div style="color:var(--muted);font-size:11px;margin-top:2px;">${[a.ram&&`<b style="color:var(--text)">RAM</b> ${esc(a.ram)}`,a.ssd&&`<b style="color:var(--text)">SSD</b> ${esc(a.ssd)}`].filter(Boolean).join(' · ')}</div>`:''}
+          ${a.gpu?`<div style="color:var(--muted);font-size:11px;margin-top:1px;"><b style="color:var(--text)">GPU</b> ${esc(a.gpu)}</div>`:''}
+          ${(!a.cpu&&!a.ram&&!a.ssd&&!a.gpu)?'<span style="color:var(--muted);">—</span>':''}
         </td>
         <td data-col="depreciation" style="text-align:right;">${(()=>{
           const d = calcDepreciation(a);
@@ -7443,9 +7444,10 @@ function renderTable(){
             + `<br><span style="font-size:10px;color:var(--muted);">${d.pct}% · ${d.years}năm</span>`;
         })()}</td>
         <td>
-          ${statusPill(a.tinhTrang)}
-          ${warrantyBadge(a)}
-          ${xacNhanBadge(a.id)}
+          <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+            <div style="display:flex;align-items:center;gap:4px;">${statusPill(a.tinhTrang)}${xacNhanBadge(a.id)}</div>
+            ${warrantyBadge(a)}
+          </div>
         </td>
         <td style="text-align:right;">
           <button class="eye-btn" onclick="openSmartAction('${a.id}',this)">
