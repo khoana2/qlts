@@ -594,11 +594,13 @@ input[type=checkbox].row-cb{
   border:1px solid #BFDBFE;border-radius:10px;margin:10px 0;
 }
 .spec-chip{
-  padding:4px 10px;border-radius:6px;font-size:12px;
-  background:#FFFFFF;border:1px solid #E2E8F0;
-  display:flex;align-items:center;gap:5px;
+  padding:6px 12px;border-radius:8px;font-size:13px;font-weight:700;
+  background:#F8FAFF;border:1px solid #DBEAFE;
+  display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  min-width:72px;
 }
-.spec-chip .sc-label{color:var(--muted);font-size:11px;}
+.spec-chip .sc-label{color:var(--muted);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;}
+.spec-chip .sc-val{color:var(--text);font-size:13px;font-weight:700;line-height:1.3;}
 
 /* ══════════════════════ EMPLOYEE AUTOCOMPLETE ══════════════════ */
 .emp-ac-drop{
@@ -8817,12 +8819,13 @@ function viewDetail(id){
   const resyncBtn = document.getElementById('detail-resync-btn');
   if(resyncBtn) resyncBtn.style.display = (_msalAccount || SP_MODE) ? 'inline-flex' : 'none';
 
+  const _sc=(label,val)=>`<div class="spec-chip"><span class="sc-label">${label}</span><span class="sc-val">${esc(val)}</span></div>`;
   const specs = [
-    a.cpu&&`<div class="spec-chip"><span class="sc-label">CPU</span> ${esc(a.cpu)}</div>`,
-    a.ram&&`<div class="spec-chip"><span class="sc-label">RAM</span> ${esc(a.ram)}</div>`,
-    a.ssd&&`<div class="spec-chip"><span class="sc-label">SSD</span> ${esc(a.ssd)}</div>`,
-    a.gpu&&`<div class="spec-chip"><span class="sc-label">GPU</span> ${esc(a.gpu)}</div>`,
-    a.manHinh&&`<div class="spec-chip"><span class="sc-label">Màn hình</span> ${esc(a.manHinh)}</div>`,
+    a.cpu    && _sc('CPU',       a.cpu),
+    a.ram    && _sc('RAM',       a.ram),
+    a.ssd    && _sc('SSD',       a.ssd),
+    a.gpu    && _sc('Card đồ họa', a.gpu),
+    a.manHinh&& _sc('Màn hình',  a.manHinh),
   ].filter(Boolean).join('');
 
   // Build transfer history HTML
@@ -8923,12 +8926,12 @@ function viewDetail(id){
       ${dc('Trạng thái', statusPill(a.tinhTrang))}
       ${dc('Model', esc(a.model||'—'))}
       ${dc('Serial', `<code>${esc(a.serial||'—')}</code>`)}
+      ${dc('Hết bảo hành', bhDetailHtml)}
       ${dc('Người sử dụng', esc(a.nguoiDung||'—'))}
       ${dc('Email', a.email?`<a class="mail-link" href="mailto:${esc(a.email)}">${esc(a.email)}</a>`:'—')}
       ${dc('Bộ phận', esc(a.boPhan||'—'))}
       ${dc('Ngày sự kiện', a.ngaySuKien?new Date(a.ngaySuKien).toLocaleDateString('vi-VN'):'—')}
       ${dc('Ngày mua', a.ngayMua?new Date(a.ngayMua).toLocaleDateString('vi-VN'):'—')}
-      ${dc('Hết bảo hành', bhDetailHtml)}
       ${a.nguonThietBi ? dc('Nguồn thiết bị', `<span style="background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:600;">${esc(a.nguonThietBi)}</span>`) : ''}
       ${a.congTyNguon  ? dc('Công ty nguồn', esc(a.congTyNguon)) : ''}
       ${a.soHoaDon     ? dc('Số hóa đơn / PO', `<code style="color:var(--accent2)">${esc(a.soHoaDon)}</code>`) : ''}
