@@ -3027,8 +3027,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div class="modal-body" style="padding:18px 20px;overflow-y:auto;">
         <input type="hidden" id="rep-asset-id"/>
         <input type="hidden" id="rep-record-idx"/>
-        <div class="field"><label>Tài sản</label>
-          <input type="text" id="rep-asset-name" class="finput" readonly style="background:#F8FAFC;"/>
+        <div class="field"><label>Tài sản <span style="color:red">*</span></label>
+          <input type="text" id="rep-asset-name" class="finput" readonly style="background:#F8FAFC;" placeholder="Chọn hoặc tìm tài sản…" autocomplete="off"/>
+          <datalist id="rep-asset-datalist"></datalist>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="field"><label>Ngày gửi sửa <span style="color:red">*</span></label>
@@ -12323,12 +12324,8 @@ function saveRepairs(){
 
 // ── Mở modal thêm phiếu mới ──
 function openRepairNew(assetId){
-  const a = assets.find(x=>x.id===assetId);
-  if(!a) return;
   document.getElementById('rep-modal-title').textContent = 'Gửi Sửa Chữa';
-  document.getElementById('rep-asset-id').value  = assetId;
   document.getElementById('rep-record-idx').value = '';
-  document.getElementById('rep-asset-name').value = `${a.maTaiSan||''} — ${a.tenTaiSan||''} ${a.model||''}`.trim();
   document.getElementById('rep-date-in').value    = new Date().toISOString().slice(0,10);
   document.getElementById('rep-est-return').value = '';
   document.getElementById('rep-issue').value      = '';
@@ -12336,6 +12333,39 @@ function openRepairNew(assetId){
   document.getElementById('rep-date-out').value   = '';
   document.getElementById('rep-status').value     = 'dang_sua';
   document.getElementById('rep-notes').value      = '';
+
+  const nameEl = document.getElementById('rep-asset-name');
+  const idEl   = document.getElementById('rep-asset-id');
+  if(assetId){
+    const a = assets.find(x=>x.id===assetId);
+    if(!a){ toast('Không tìm thấy tài sản','warn'); return; }
+    idEl.value       = assetId;
+    nameEl.value     = `${a.maTaiSan||''} — ${a.tenTaiSan||''} ${a.model||''}`.trim();
+    nameEl.readOnly  = true;
+    nameEl.style.background = '#F8FAFC';
+    nameEl.removeAttribute('list');
+    nameEl.oninput   = null;
+  } else {
+    // No pre-selected asset — populate datalist and allow typing/searching
+    const dl = document.getElementById('rep-asset-datalist');
+    if(dl) dl.innerHTML = assets.map(a=>{
+      const label = [a.maTaiSan, a.tenTaiSan, a.model].filter(Boolean).join(' — ');
+      return `<option value="${esc(label)}"></option>`;
+    }).join('');
+    idEl.value            = '';
+    nameEl.value          = '';
+    nameEl.readOnly       = false;
+    nameEl.style.background = '';
+    nameEl.setAttribute('list','rep-asset-datalist');
+    nameEl.oninput = function(){
+      const v = nameEl.value.trim();
+      const match = assets.find(a=>{
+        const label = [a.maTaiSan, a.tenTaiSan, a.model].filter(Boolean).join(' — ');
+        return label===v || (a.maTaiSan && (v===a.maTaiSan || v.startsWith(a.maTaiSan+' ')));
+      });
+      idEl.value = match ? match.id : '';
+    };
+  }
   document.getElementById('modal-repair').style.display='flex';
 }
 
@@ -12364,6 +12394,7 @@ function saveRepairRecord(){
   const idxRaw  = document.getElementById('rep-record-idx').value;
   const dateIn  = document.getElementById('rep-date-in').value;
   const issue   = document.getElementById('rep-issue').value.trim();
+  if(!assetId){ toast('Vui lòng chọn tài sản','warn'); document.getElementById('rep-asset-name').focus(); return; }
   if(!dateIn){ toast('Vui lòng chọn ngày gửi sửa','warn'); return; }
   if(!issue){  toast('Vui lòng mô tả lỗi','warn'); return; }
   const rec = {
@@ -12465,7 +12496,6 @@ function renderRepairs(){
       <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">
         ${statusF||q ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.' : 'Gửi phiếu đầu tiên để bắt đầu theo dõi.'}
       </div>
-      ${!statusF&&!q?`<button class="btn primary btn-icon-ph" onclick="openRepairNew('')"><i class="ph ph-plus"></i> Thêm phiếu</button>`:''}
     </div>`;
     return;
   }
