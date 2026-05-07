@@ -3044,8 +3044,13 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div class="field"><label>Mô tả lỗi <span style="color:red">*</span></label>
           <textarea id="rep-issue" class="finput" rows="2" placeholder="Mô tả sự cố, hư hỏng…"></textarea>
         </div>
-        <div class="field"><label>Đơn vị / trung tâm sửa chữa</label>
-          <input type="text" id="rep-vendor" class="finput" placeholder="VD: Trung tâm bảo hành Dell, FPT Service…"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field"><label>Đơn vị / trung tâm sửa chữa</label>
+            <input type="text" id="rep-vendor" class="finput" placeholder="VD: FPT Service, Dell…"/>
+          </div>
+          <div class="field"><label>Chi phí thực tế (₫)</label>
+            <input type="number" id="rep-chi-phi" class="finput" placeholder="0" min="0" step="1000"/>
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="rep-return-row">
           <div class="field"><label>Ngày nhận lại</label>
@@ -12338,6 +12343,7 @@ function openRepairNew(assetId){
   document.getElementById('rep-date-out').value   = '';
   document.getElementById('rep-status').value     = 'dang_sua';
   document.getElementById('rep-notes').value      = '';
+  document.getElementById('rep-chi-phi').value    = '';
 
   const nameEl = document.getElementById('rep-asset-name');
   const idEl   = document.getElementById('rep-asset-id');
@@ -12390,6 +12396,7 @@ function openRepairEdit(assetId, idx){
   document.getElementById('rep-date-out').value   = rec.dateOut||'';
   document.getElementById('rep-status').value     = rec.status||'dang_sua';
   document.getElementById('rep-notes').value      = rec.notes||'';
+  document.getElementById('rep-chi-phi').value    = rec.chiPhi||'';
   document.getElementById('modal-repair').style.display='flex';
 }
 
@@ -12402,6 +12409,7 @@ function saveRepairRecord(){
   if(!assetId){ toast('Vui lòng chọn tài sản','warn'); document.getElementById('rep-asset-name').focus(); return; }
   if(!dateIn){ toast('Vui lòng chọn ngày gửi sửa','warn'); return; }
   if(!issue){  toast('Vui lòng mô tả lỗi','warn'); return; }
+  const _cpRaw = parseFloat(document.getElementById('rep-chi-phi').value);
   const rec = {
     dateIn,
     estimatedReturn: document.getElementById('rep-est-return').value,
@@ -12410,6 +12418,7 @@ function saveRepairRecord(){
     dateOut: document.getElementById('rep-date-out').value,
     status:  document.getElementById('rep-status').value,
     notes:   document.getElementById('rep-notes').value.trim(),
+    chiPhi:  (!isNaN(_cpRaw) && _cpRaw > 0) ? _cpRaw : null,
     ts: new Date().toISOString(),
   };
   if(!repairs[assetId]) repairs[assetId] = [];
@@ -12533,6 +12542,7 @@ function renderRepairs(){
             ${estFmt?`<span class="${overdue?'rep-overdue':''}"><i class="ph ph-clock"></i> Dự kiến: <b>${estFmt}</b>${overdue?' ⚠️':''}</span>`:''}
             ${dateOutFmt?`<span><i class="ph ph-check"></i> Nhận lại: <b>${dateOutFmt}</b></span>`:''}
             ${rec.vendor?`<span><i class="ph ph-buildings"></i> <b>${esc(rec.vendor)}</b></span>`:''}
+            ${rec.chiPhi?`<span style="color:#059669;font-weight:600;"><i class="ph ph-currency-circle-dollar"></i> <b>${rec.chiPhi.toLocaleString('vi-VN')} ₫</b></span>`:''}
           </div>
         </div>
         <div class="rep-card-actions">
@@ -12570,6 +12580,7 @@ function _repairDetailHtml(assetId){
           <div style="font-size:12.5px;color:var(--text);">${esc(r.issue)}</div>
           ${r.vendor?`<div style="font-size:11.5px;color:var(--muted);margin-top:2px;"><i class="ph ph-buildings"></i> ${esc(r.vendor)}</div>`:''}
           ${r.dateOut?`<div style="font-size:11.5px;color:#059669;margin-top:2px;"><i class="ph ph-check"></i> Nhận lại: ${new Date(r.dateOut).toLocaleDateString('vi-VN')}</div>`:''}
+          ${r.chiPhi?`<div style="font-size:12px;color:#059669;font-weight:700;margin-top:3px;"><i class="ph ph-currency-circle-dollar"></i> Chi phí: ${r.chiPhi.toLocaleString('vi-VN')} ₫</div>`:''}
           ${r.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">${esc(r.notes)}</div>`:''}
           <div style="margin-top:6px;display:flex;gap:6px;">
             <button class="btn btn-icon-ph" style="font-size:10px;padding:2px 8px;" onclick="closeModal('modal-detail');openRepairEdit('${assetId}',${i})"><i class="ph ph-pencil"></i> Sửa</button>
