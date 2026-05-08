@@ -2970,9 +2970,14 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <div style="font-size:12px;color:var(--muted);margin-top:2px;">Quản lý phiếu gửi sửa và lịch sử thiết bị</div>
         </div>
       </div>
-      <button class="btn primary btn-icon-ph" onclick="openRepairNew('')">
-        <i class="ph ph-plus"></i> Thêm phiếu
-      </button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-icon-ph" id="rep-sync-btn" onclick="syncAllRepairsToSP()" style="display:none;">
+          <i class="ph ph-cloud-arrow-up"></i> Sync SP
+        </button>
+        <button class="btn primary btn-icon-ph" onclick="openRepairNew('')">
+          <i class="ph ph-plus"></i> Thêm phiếu
+        </button>
+      </div>
     </div>
 
     <!-- KPI strip -->
@@ -5144,6 +5149,7 @@ async function msalSpLoad(){
       saveToStorage(); saveTransfers(); saveRepairs();
       populateDeptSelects(); applyFilters(); updateDashboard(); renderEvents(); updateTopbarSub();
       loadRepairsSP(); // load phiếu sửa chữa từ SP list riêng
+      _updateRepairSyncBtn();
       console.log(`[QLTS] Đã tải ${assets.length} tài sản từ SharePoint`);
     } else {
       console.log('[QLTS] SharePoint List đang trống');
@@ -12438,6 +12444,33 @@ async function spRepairDelete(spId){
   } catch(e){
     console.warn('[SP Repair] delete error:', e);
   }
+}
+
+// Đồng bộ tất cả phiếu chưa có spId lên SP
+async function syncAllRepairsToSP(){
+  if(!SP_MODE && !_msalAccount){ toast('Chưa kết nối SharePoint','warn'); return; }
+  const btn = document.getElementById('rep-sync-btn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner"></i> Đang sync…'; }
+  let pushed=0, skipped=0, failed=0;
+  for(const [assetId, recs] of Object.entries(repairs)){
+    for(let i=0; i<recs.length; i++){
+      const rec = recs[i];
+      if(rec.spId){ skipped++; continue; } // đã có trên SP
+      const spId = await spRepairCreate(assetId, rec);
+      if(spId){ repairs[assetId][i].spId = spId; pushed++; }
+      else { failed++; }
+    }
+  }
+  saveRepairs();
+  if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-cloud-arrow-up"></i> Sync SP'; }
+  if(failed===0) toast(`✅ Đã sync ${pushed} phiếu lên SharePoint${skipped?' ('+skipped+' đã có)':''}`, 'ok');
+  else toast(`⚠️ Sync xong: ${pushed} thành công, ${failed} lỗi`, 'warn');
+}
+
+// Hiện/ẩn nút Sync SP tùy trạng thái kết nối
+function _updateRepairSyncBtn(){
+  const btn = document.getElementById('rep-sync-btn');
+  if(btn) btn.style.display = (SP_MODE||_msalAccount) ? 'inline-flex' : 'none';
 }
 
 // ── Mở modal thêm phiếu mới ──
