@@ -2367,6 +2367,180 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   font-weight:600; cursor:pointer; white-space:nowrap;
 }
 /* ═════════════════════════════════════════════════════════ */
+
+/* ══════════════════ MOBILE OPTIMIZATION ══════════════════ */
+
+/* ── Touch targets ── */
+@media (max-width:768px){
+  .btn, .action-btn, .qf-chip, .btn-hamburger {
+    min-height:40px;
+  }
+  .action-btn { width:36px; height:36px; }
+  input, select, textarea {
+    font-size:16px !important; /* ngăn iOS zoom khi focus */
+    min-height:42px;
+  }
+  .per-page-sel { min-height:36px; }
+}
+
+/* ── Asset table: ẩn cột phụ trên tablet ── */
+@media (max-width:768px){
+  #assets-table [data-col="serial"],
+  #assets-table th:has(+ [data-col="serial"]) { display:none; }
+  #assets-table [data-col="spec"] { max-width:120px; }
+  #assets-table [data-col="depreciation"] { display:none; }
+}
+
+/* ── Asset table → card view trên mobile ── */
+@media (max-width:600px){
+  .table-wrap { overflow-x:hidden !important; }
+
+  #assets-table thead { display:none; }
+
+  #assets-table tbody tr {
+    display:block;
+    border:1px solid var(--border);
+    border-radius:12px;
+    margin:8px 12px;
+    padding:12px;
+    background:var(--surface);
+    box-shadow:0 1px 4px rgba(0,0,0,.06);
+    cursor:pointer;
+  }
+  #assets-table tbody tr.row-hong  { border-left:3px solid #EF4444; }
+  #assets-table tbody tr.row-sua   { border-left:3px solid #F59E0B; }
+  #assets-table tbody tr.row-kho   { border-left:3px solid #94A3B8; }
+
+  #assets-table tbody td {
+    display:none; /* ẩn hết mặc định */
+    padding:0;
+    border:none;
+  }
+
+  /* Chỉ hiện các cột quan trọng */
+  #assets-table tbody td.sc-ten,
+  #assets-table tbody td[data-col="model"],
+  #assets-table tbody td:nth-child(7),  /* người dùng */
+  #assets-table tbody td:nth-child(11), /* trạng thái */
+  #assets-table tbody td:last-child     /* actions */ {
+    display:block;
+  }
+
+  #assets-table tbody td.sc-ten {
+    font-size:14px; font-weight:700;
+    color:var(--text); margin-bottom:4px;
+  }
+  #assets-table tbody td[data-col="model"] {
+    font-size:12px; color:var(--muted);
+    margin-bottom:6px;
+  }
+  #assets-table tbody td:nth-child(7) {
+    font-size:12px; color:var(--text);
+    margin-bottom:6px;
+  }
+  #assets-table tbody td:nth-child(11) {
+    margin-bottom:8px;
+  }
+  #assets-table tbody td:last-child {
+    padding-top:8px;
+    border-top:1px solid var(--border);
+    margin-top:4px;
+  }
+
+  /* Ẩn checkbox + số thứ tự trên card */
+  #assets-table tbody td.cb-col,
+  #assets-table tbody td.sc-num,
+  #assets-table tbody td.sc-ma { display:none !important; }
+
+  /* Quick filter chips scroll ngang */
+  .qf-chips {
+    flex-wrap:nowrap !important;
+    overflow-x:auto;
+    padding-bottom:6px !important;
+    scrollbar-width:none;
+  }
+  .qf-chips::-webkit-scrollbar { display:none; }
+  .qf-chip { flex-shrink:0; }
+  .col-toggle-wrap { display:none !important; } /* ẩn column toggle trên mobile */
+
+  /* Pagination gọn hơn */
+  .pager .page-btn:not(.active):not(:first-child):not(:last-child) {
+    display:none;
+  }
+  .tbl-footer { flex-direction:column; gap:8px; align-items:center; }
+}
+
+/* ── Adv filter row: bottom sheet trên mobile ── */
+@media (max-width:600px){
+  #adv-filter-row {
+    position:fixed !important;
+    bottom:0; left:0; right:0;
+    background:var(--surface);
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -8px 32px rgba(0,0,0,.15);
+    padding:20px 16px 32px !important;
+    z-index:9900;
+    max-height:80vh; overflow-y:auto;
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.34,1.1,.64,1);
+    display:flex !important; /* luôn render, dùng transform thay display */
+  }
+  #adv-filter-row.open {
+    transform:translateY(0) !important;
+  }
+  #adv-filter-row::before {
+    content:'';
+    display:block;
+    width:40px; height:4px;
+    background:var(--border);
+    border-radius:2px;
+    margin:0 auto 16px;
+    position:absolute;
+    top:10px; left:50%; transform:translateX(-50%);
+  }
+  #adv-filter-row .adv-row {
+    flex-direction:column;
+    gap:10px;
+    width:100%;
+  }
+  #adv-filter-row select,
+  #adv-filter-row input {
+    width:100% !important;
+    box-sizing:border-box;
+  }
+}
+
+/* ── AI advisor full-width trên mobile ── */
+@media (max-width:600px){
+  #ai-advisor-wrap {
+    margin:10px 0 0;
+    border-radius:0;
+    border-left:none;
+    border-right:none;
+  }
+  #ai-advisor-messages { max-height:200px; }
+}
+
+/* ── Modal full-screen trên mobile ── */
+@media (max-width:600px){
+  .modal {
+    margin:0 !important;
+    max-width:100vw !important;
+    width:100vw !important;
+    border-radius:16px 16px 0 0 !important;
+    position:fixed !important;
+    bottom:0; left:0; right:0;
+    max-height:92dvh !important;
+  }
+  #modal-detail .modal {
+    transform:translateY(100%);
+  }
+  #modal-detail.open .modal {
+    transform:translateY(0) !important;
+  }
+  .modal-body { max-height:calc(92dvh - 120px) !important; }
+}
+/* ══════════════════════════════════════════════════════════ */
 </style>
 </head>
 <body>
