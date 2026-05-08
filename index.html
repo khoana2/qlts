@@ -8113,6 +8113,12 @@ document.addEventListener('DOMContentLoaded', function(){
     emailField: 'tr-new-email',
     deptField:  'tr-new-dept'
   });
+  // Form Mua Sắm: Người đề xuất
+  _empAutocomplete(document.getElementById('proc-f-nguoidexuat'), {});
+  // Form ĐNTT: Người lập phiếu
+  _empAutocomplete(document.getElementById('dntt-f-nguoilap'), {});
+  // Form Sửa Chữa: Người nhận máy (supp-receiver)
+  _empAutocomplete(document.getElementById('supp-receiver'), {});
 });
 
 // ─── Tính khấu hao đường thẳng ───────────────────────────────────────────────
