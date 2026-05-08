@@ -12382,7 +12382,7 @@ function _spToRec(item){
 async function loadRepairsSP(){
   if(!SP_MODE && !_msalAccount) return;
   try {
-    let url = `${_RLIST()}/items?$top=2000&$orderby=ID asc&$select=ID,Title,AssetId,MoTaLoi,DonViSua,GhiChu,TrangThai,ChiPhi,NgayGuiSua,DuKienNhan,NgayNhanLai,Modified`;
+    let url = `${_RLIST()}/items?$top=2000&$orderby=ID asc`;
     const items = [];
     while(url){
       const data = await spReq(url);
