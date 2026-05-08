@@ -762,17 +762,34 @@ input[type=checkbox].row-cb{
 .emp-ac-drop{
   display:none;
   background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);
-  border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);
+  border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;
 }
 .emp-ac-drop.open{display:block;}
+.emp-ac-sep{
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);padding:6px 12px 4px;background:var(--surface2,#f8fafc);
+  border-bottom:1px solid var(--border);
+}
 .emp-ac-item{
-  padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;
+  padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;
   border-bottom:1px solid var(--border);transition:background .12s;
 }
 .emp-ac-item:last-child{border-bottom:none;}
-.emp-ac-item:hover,.emp-ac-item.active{background:var(--hover);}
-.emp-ac-name{font-size:13px;font-weight:600;color:var(--text);}
-.emp-ac-sub{font-size:11px;color:var(--muted);}
+.emp-ac-item:hover,.emp-ac-item.active{background:var(--accent-light,#EFF6FF);}
+.emp-ac-avatar{
+  width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent,#6366F1),var(--accent2,#8B5CF6));
+  color:#fff;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+.emp-ac-info{flex:1;min-width:0;}
+.emp-ac-name{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:5px;}
+.emp-ac-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.emp-ac-badge{
+  font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;
+  background:rgba(99,102,241,.12);color:#6366F1;flex-shrink:0;
+}
+.emp-ac-loading{padding:10px 14px;font-size:12px;color:var(--muted);text-align:center;}
 /* ═══════════════════════════ TOASTS ═══════════════════════════ */
 .toast-wrap{position:fixed;right:14px;bottom:14px;z-index:500;display:flex;flex-direction:column;gap:8px;}
 .toast{
@@ -6708,81 +6725,123 @@ async function _syncEmployees(){
 
 // ─── Autocomplete helper: gắn vào input, gợi ý từ _qltsEmployees ─────────────
 // Dropdown được gắn vào body (fixed) để không phá layout form
+// ── Azure AD Graph user search ───────────────────────────────────────────────
+// Cache token Graph để tái dùng cho photo fetch
+let _graphTokenCache = null;
+async function _getGraphBearerToken(){
+  const scopes=['https://graph.microsoft.com/User.ReadBasic.All'];
+  try{ const r=await _msalApp.acquireTokenSilent({scopes,account:_msalAccount}); return r.accessToken; }
+  catch(e){ const r=await _msalApp.acquireTokenPopup({scopes,account:_msalAccount}); return r.accessToken; }
+}
+
+// Cache ảnh đã fetch để không gọi lại
+const _photoCache = new Map();
+
+async function _loadGraphPhoto(upn, token, avatarEl){
+  if(!upn) return;
+  if(_photoCache.has(upn)){
+    const src=_photoCache.get(upn);
+    if(src && avatarEl) _applyPhotoToAvatar(avatarEl, src);
+    return;
+  }
+  try{
+    const res=await fetch(
+      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/photos/48x48/$value`,
+      {headers:{Authorization:`Bearer ${token}`}}
+    );
+    if(!res.ok){ _photoCache.set(upn,null); return; }
+    const blob=await res.blob();
+    const src=URL.createObjectURL(blob);
+    _photoCache.set(upn, src);
+    if(avatarEl) _applyPhotoToAvatar(avatarEl, src);
+  }catch(e){ _photoCache.set(upn,null); }
+}
+
+function _applyPhotoToAvatar(el, src){
+  if(!el||!src) return;
+  el.innerHTML=`<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="">`;
+}
+
+async function searchGraphUsers(query){
+  if(!window._msalAccount || !window._msalApp) return [];
+  try{
+    const token = await _getGraphBearerToken();
+    _graphTokenCache = token;
+    const q=encodeURIComponent(query);
+    const url=`https://graph.microsoft.com/v1.0/users?$search="displayName:${q}"&$select=displayName,mail,jobTitle,department,userPrincipalName&$top=8&$orderby=displayName`;
+    const res=await fetch(url,{headers:{Authorization:`Bearer ${token}`,'ConsistencyLevel':'eventual'}});
+    if(!res.ok) return [];
+    const data=await res.json();
+    return (data.value||[]).map(u=>({
+      name:u.displayName||'',
+      email:u.mail||u.userPrincipalName||'',
+      upn:u.userPrincipalName||'',
+      dept:u.department||'',
+      title:u.jobTitle||'',
+      _fromGraph:true
+    }));
+  }catch(e){ console.warn('[GraphUsers]',e); return []; }
+}
+
 function _empAutocomplete(inputEl, opts={}){
   if(!inputEl||inputEl._acDone) return;
   inputEl._acDone=true;
 
-  // Dropdown ở body level, dùng fixed position
   const drop=document.createElement('div');
   drop.className='emp-ac-drop';
-  drop.style.position='fixed';
-  drop.style.zIndex='99999';
+  drop.style.cssText='position:fixed;z-index:99999;max-height:280px;overflow-y:auto;';
   document.body.appendChild(drop);
 
   let activeIdx=-1;
   let _matches=[];
+  let _graphTimer=null;
 
   function reposition(){
     const r=inputEl.getBoundingClientRect();
-    drop.style.top=(r.bottom+3)+'px';
+    drop.style.top=(r.bottom+4)+'px';
     drop.style.left=r.left+'px';
-    drop.style.width=r.width+'px';
-    drop.style.maxHeight='220px';
-    drop.style.overflowY='auto';
+    drop.style.width=Math.max(r.width,320)+'px';
   }
 
   function close(){
     drop.classList.remove('open');
     drop.style.display='none';
     activeIdx=-1;
+    if(_graphTimer){ clearTimeout(_graphTimer); _graphTimer=null; }
+  }
+
+  function _initials(name){
+    return name.split(' ').filter(Boolean).slice(-2).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  }
+
+  function _setDept(dept){
+    if(!opts.deptField||!dept) return;
+    const el=document.getElementById(opts.deptField);
+    if(!el) return;
+    if(el.tagName==='SELECT'){
+      const dL=dept.toLowerCase().trim();
+      const opt=[...el.options].find(o=>o.text.toLowerCase().trim()===dL||o.value.toLowerCase().trim()===dL);
+      if(opt){ el.value=opt.value; }
+      else{
+        const o=document.createElement('option');
+        o.value=dept; o.textContent=dept;
+        el.appendChild(o); el.value=dept;
+      }
+    } else { el.value=dept; }
   }
 
   function select(emp){
-    inputEl.value=emp.name;
+    inputEl.value=emp.name||'';
     if(opts.emailField){
       const el=document.getElementById(opts.emailField);
-      if(el) el.value=emp.user?emp.user+'@ttgvn.com':'';
+      if(el) el.value=emp.email||(emp.user?emp.user+'@ttgvn.com':'');
     }
-    if(opts.deptField){
-      const el=document.getElementById(opts.deptField);
-      if(el){
-        if(el.tagName==='SELECT'){
-          // Tìm option khớp (so sánh không phân biệt dấu/hoa thường)
-          const deptLow=emp.dept.toLowerCase().trim();
-          const opt=[...el.options].find(o=>o.text.toLowerCase().trim()===deptLow||o.value.toLowerCase().trim()===deptLow);
-          if(opt) el.value=opt.value;
-          else {
-            // Thêm option mới nếu chưa có
-            const newOpt=document.createElement('option');
-            newOpt.value=emp.dept; newOpt.textContent=emp.dept;
-            el.appendChild(newOpt);
-            el.value=emp.dept;
-          }
-        } else {
-          el.value=emp.dept;
-        }
-      }
-    }
+    _setDept(emp.dept||'');
     close();
     inputEl.dispatchEvent(new Event('change',{bubbles:true}));
   }
 
-  function render(q){
-    const lq=q.toLowerCase().trim();
-    if(!lq||!window._qltsEmployees.length){ close(); return; }
-    _matches=window._qltsEmployees
-      .filter(e=>e.name.toLowerCase().includes(lq)||(e.user&&e.user.includes(lq)))
-      .slice(0,8);
-    if(!_matches.length){ close(); return; }
-    reposition();
-    drop.style.display='block';
-    drop.innerHTML=_matches.map((e,i)=>`
-      <div class="emp-ac-item" data-i="${i}">
-        <span class="emp-ac-name">${esc(e.name)||esc(e.user)}</span>
-        <span class="emp-ac-sub">${esc(e.dept)}${e.user?' · <em>'+esc(e.user)+'</em>':''}</span>
-      </div>`).join('');
-    drop.classList.add('open');
-    activeIdx=-1;
+  function _bindItems(){
     drop.querySelectorAll('.emp-ac-item').forEach(item=>{
       item.addEventListener('mousedown',ev=>{
         ev.preventDefault();
@@ -6791,9 +6850,108 @@ function _empAutocomplete(inputEl, opts={}){
     });
   }
 
+  function _itemHtml(e,i){
+    const av=_initials(e.name||e.email||'?');
+    const badge=e._fromGraph?'<span class="emp-ac-badge">AD</span>':'';
+    const sub=[e.title,e.dept,e.email||e.user].filter(Boolean).join(' · ');
+    const upnAttr=e.upn?`data-upn="${esc(e.upn)}"`:'';
+    // Nếu đã cache ảnh → dùng luôn, chưa → initials trước
+    const cachedSrc=e.upn&&_photoCache.get(e.upn);
+    const avatarInner=cachedSrc
+      ? `<img src="${cachedSrc}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="">`
+      : av;
+    return `<div class="emp-ac-item" data-i="${i}">
+      <div class="emp-ac-avatar" ${upnAttr}>${avatarInner}</div>
+      <div class="emp-ac-info">
+        <div class="emp-ac-name">${esc(e.name||e.email)}${badge}</div>
+        <div class="emp-ac-sub">${esc(sub)}</div>
+      </div>
+    </div>`;
+  }
+
+  function _renderMatches(localList, graphList){
+    // Merge: Graph ưu tiên, dedup theo email
+    const seen=new Set();
+    const merged=[];
+    [...graphList,...localList].forEach(e=>{
+      const key=(e.email||e.user||e.name||'').toLowerCase();
+      if(!seen.has(key)){ seen.add(key); merged.push(e); }
+    });
+    _matches=merged.slice(0,10);
+    if(!_matches.length){ close(); return; }
+    reposition();
+    drop.style.display='block';
+
+    const hasGraph=graphList.length>0;
+    const hasLocal=localList.length>0;
+    let html='';
+    if(hasGraph && hasLocal){
+      const gIds=new Set(graphList.map(e=>(e.email||'').toLowerCase()));
+      const gItems=_matches.filter(e=>e._fromGraph);
+      const lItems=_matches.filter(e=>!e._fromGraph && !gIds.has((e.email||e.user||'').toLowerCase()+'@ttgvn.com'.replace('@ttgvn.com@ttgvn.com','@ttgvn.com')));
+      if(gItems.length){
+        html+=`<div class="emp-ac-sep">Azure AD</div>`;
+        html+=gItems.map((e,i)=>_itemHtml(e,_matches.indexOf(e))).join('');
+      }
+      if(lItems.length){
+        html+=`<div class="emp-ac-sep">Danh sách nội bộ</div>`;
+        html+=lItems.map(e=>_itemHtml(e,_matches.indexOf(e))).join('');
+      }
+    } else {
+      html=_matches.map((e,i)=>_itemHtml(e,i)).join('');
+    }
+    drop.innerHTML=html;
+    drop.classList.add('open');
+    activeIdx=-1;
+    _bindItems();
+
+    // Lazy-load ảnh thật cho Graph results
+    if(_graphTokenCache){
+      drop.querySelectorAll('.emp-ac-avatar[data-upn]').forEach(avEl=>{
+        const upn=avEl.dataset.upn;
+        if(upn && !avEl.querySelector('img')){
+          _loadGraphPhoto(upn, _graphTokenCache, avEl);
+        }
+      });
+    }
+  }
+
+  function render(q){
+    const lq=(q||'').toLowerCase().trim();
+    if(lq.length<2){ close(); return; }
+
+    // Local results ngay lập tức
+    const localRes=(window._qltsEmployees||[])
+      .filter(e=>(e.name||'').toLowerCase().includes(lq)||((e.user||'').includes(lq)))
+      .slice(0,6)
+      .map(e=>({...e, email:e.email||(e.user?e.user+'@ttgvn.com':'')}));
+
+    if(localRes.length){
+      _renderMatches(localRes, []);
+    } else {
+      // Chưa có local → show loading nếu MSAL available
+      if(window._msalAccount){
+        reposition();
+        drop.style.display='block';
+        drop.innerHTML=`<div class="emp-ac-loading">🔍 Đang tìm trong Azure AD…</div>`;
+        drop.classList.add('open');
+      }
+    }
+
+    // Graph search sau 380ms debounce
+    if(_graphTimer) clearTimeout(_graphTimer);
+    if(window._msalAccount){
+      _graphTimer=setTimeout(async()=>{
+        const graphRes=await searchGraphUsers(lq);
+        if((inputEl.value||'').toLowerCase().trim()!==lq) return; // stale
+        _renderMatches(localRes, graphRes);
+      }, 380);
+    }
+  }
+
   inputEl.addEventListener('input',  ()=>render(inputEl.value));
-  inputEl.addEventListener('focus',  ()=>{ if(inputEl.value) render(inputEl.value); });
-  inputEl.addEventListener('blur',   ()=>setTimeout(close, 160));
+  inputEl.addEventListener('focus',  ()=>{ if((inputEl.value||'').length>=2) render(inputEl.value); });
+  inputEl.addEventListener('blur',   ()=>setTimeout(close, 180));
   inputEl.addEventListener('keydown',e=>{
     const items=drop.querySelectorAll('.emp-ac-item');
     if(!items.length) return;
@@ -6802,7 +6960,6 @@ function _empAutocomplete(inputEl, opts={}){
     else if(e.key==='Enter'&&activeIdx>=0){ e.preventDefault(); select(_matches[activeIdx]); }
     else if(e.key==='Escape') close();
   });
-  // Đóng khi scroll modal
   document.addEventListener('scroll',()=>{ if(drop.classList.contains('open')) reposition(); },{passive:true,capture:true});
 }
 // ═════════════════════════════════════════════════════════════════════
@@ -17699,3 +17856,4 @@ tr:nth-child(even){background:#f8fafc;}
 </script>
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
