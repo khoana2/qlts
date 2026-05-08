@@ -2248,6 +2248,63 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 #ai-advisor-header .ai-title { font-weight:700; font-size:13px; color:#3730A3; flex:1; }
 #ai-advisor-header .ai-model { font-size:10px; color:#818CF8; }
 #ai-advisor-body { padding:14px 16px; }
+
+#ai-advisor-messages {
+  max-height:260px; overflow-y:auto; padding:12px 14px;
+  display:flex; flex-direction:column; gap:10px;
+  scroll-behavior:smooth;
+}
+.ai-msg { display:flex; flex-direction:column; gap:3px; }
+.ai-msg.user { align-items:flex-end; }
+.ai-msg.bot  { align-items:flex-start; }
+.ai-msg .bubble {
+  max-width:88%; padding:9px 13px; border-radius:14px;
+  font-size:12.5px; line-height:1.6; word-break:break-word;
+}
+.ai-msg.user .bubble {
+  background:linear-gradient(135deg,#6366F1,#8B5CF6);
+  color:#fff; border-bottom-right-radius:4px;
+}
+.ai-msg.bot .bubble {
+  background:#fff; border:1px solid #C7D2FE;
+  color:#1E1B4B; border-bottom-left-radius:4px;
+}
+.ai-msg .bubble h4 {
+  font-size:11px; font-weight:700; color:#6366F1;
+  text-transform:uppercase; letter-spacing:.5px; margin:6px 0 3px;
+}
+.ai-msg.user .bubble h4 { color:rgba(255,255,255,.8); }
+.ai-msg .bubble ul { margin:4px 0; padding-left:16px; }
+.ai-msg .bubble li { margin-bottom:2px; }
+.ai-typing .bubble { display:flex; gap:4px; align-items:center; padding:12px 14px; }
+.ai-typing .dot {
+  width:6px; height:6px; border-radius:50%; background:#A5B4FC;
+  animation:aiDot 1.2s infinite;
+}
+.ai-typing .dot:nth-child(2){animation-delay:.2s}
+.ai-typing .dot:nth-child(3){animation-delay:.4s}
+@keyframes aiDot{0%,80%,100%{transform:scale(.8);opacity:.5}40%{transform:scale(1.1);opacity:1}}
+#ai-advisor-input-row {
+  display:flex; gap:8px; padding:10px 12px;
+  border-top:1px solid #C7D2FE; flex-shrink:0;
+}
+#ai-advisor-input {
+  flex:1; border:1.5px solid #C7D2FE; border-radius:20px;
+  padding:8px 14px; font-size:12.5px; outline:none;
+  background:#fff; color:#1E1B4B;
+  transition:border-color .15s;
+}
+#ai-advisor-input:focus { border-color:#6366F1; }
+#ai-advisor-send {
+  width:34px; height:34px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,#6366F1,#8B5CF6);
+  color:#fff; border:none; cursor:pointer; align-self:center;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; transition:transform .15s;
+}
+#ai-advisor-send:hover { transform:scale(1.1); }
+#ai-advisor-send:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
 #ai-advisor-loading {
   display:flex; align-items:center; gap:10px;
   color:#6366F1; font-size:13px; padding:4px 0;
@@ -3943,20 +4000,18 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     <div id="ai-advisor-wrap" class="hidden">
       <div id="ai-advisor-header">
         <div class="ai-icon">✦</div>
-        <div class="ai-title">Tư vấn AI — Groq AI</div>
-        <div class="ai-model">llama-3.1-8b (Groq)</div>
+        <div class="ai-title">Tư vấn AI — Groq</div>
+        <div class="ai-model">llama-3.1-8b</div>
       </div>
-      <div id="ai-advisor-body">
-        <div id="ai-advisor-loading" style="display:none">
-          <div class="ai-spinner"></div>
-          <span>Đang phân tích thiết bị...</span>
-        </div>
-        <div id="ai-advisor-error" style="display:none">⚠️ <span id="ai-error-msg"></span></div>
-        <div id="ai-advisor-result"></div>
+      <div id="ai-advisor-messages"></div>
+      <div id="ai-advisor-input-row">
+        <input id="ai-advisor-input" placeholder="Hỏi về thiết bị này... (vd: hư pin có nên sửa không?)"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiQuestion()}">
+        <button id="ai-advisor-send" onclick="sendAiQuestion()"><i class="ph ph-paper-plane-right"></i></button>
       </div>
     </div>
     <div class="modal-foot" style="justify-content:space-between;">
-      <button id="btn-ai-advisor" onclick="runAiAdvisor()">
+      <button id="btn-ai-advisor" onclick="openAiChat()">
         ✦ Tư vấn AI
       </button>
       <button class="btn" onclick="closeModal('modal-detail')">Đóng</button>
@@ -18072,43 +18127,46 @@ tr:nth-child(even) td{background:#f8fafc;}
 </script>
 
 <script>
-// ══════════════════════ GEMINI AI ADVISOR ══════════════════════
+// ══════════════════════ AI ADVISOR CHAT (Groq) ══════════════════════
 const _AI_KEY_LS = 'qlts_groq_key_v1';
+let _aiChatHistory = []; // lịch sử chat với AI
+let _aiAssetContext = ''; // context tài sản hiện tại
 
 function _getAiKey(){ return localStorage.getItem(_AI_KEY_LS)||''; }
 function _setAiKey(k){ localStorage.setItem(_AI_KEY_LS, k.trim()); }
 
-async function runAiAdvisor(){
+// Mở chat panel khi click nút "Tư vấn AI"
+function openAiChat(){
   const assetId = window._detailAssetId;
   const a = assetId ? assets.find(x=>x.id===assetId) : null;
   if(!a){ toast('Không tìm thấy tài sản','bad'); return; }
 
-  // Kiểm tra API key
-  let apiKey = _getAiKey();
-  if(!apiKey){
-    _showAiKeyBanner();
-    return;
-  }
-
-  // Hiện panel, reset state
   const wrap = document.getElementById('ai-advisor-wrap');
-  const loading = document.getElementById('ai-advisor-loading');
-  const result  = document.getElementById('ai-advisor-result');
-  const errEl   = document.getElementById('ai-advisor-error');
-  const errMsg  = document.getElementById('ai-error-msg');
-  const btn     = document.getElementById('btn-ai-advisor');
-
   wrap.classList.remove('hidden');
-  loading.style.display='flex';
-  result.innerHTML='';
-  errEl.style.display='none';
-  btn.disabled=true;
-  btn.innerHTML='✦ Đang phân tích...';
-
-  // Cuộn xuống panel
   setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 
-  // Build prompt
+  // Kiểm tra API key
+  if(!_getAiKey()){ _showAiKeyBanner(); return; }
+
+  // Nếu là tài sản mới → reset chat
+  if(window._detailAssetId !== _aiLastAssetId){
+    _aiLastAssetId = window._detailAssetId;
+    _aiChatHistory = [];
+    document.getElementById('ai-advisor-messages').innerHTML = '';
+    _buildAssetContext(a);
+    // Tin nhắn chào
+    _addAiMsg('bot',
+      `Tôi đã đọc thông tin của <strong>${a.tenTaiSan||'thiết bị'} ${a.model||''}</strong>. Bạn có câu hỏi gì về thiết bị này không?<br>` +
+      `<span style="color:#818CF8;font-size:11px">Ví dụ: "hư pin có nên sửa không?", "máy cũ quá rồi có nên thay không?"</span>`
+    );
+  }
+
+  setTimeout(()=>document.getElementById('ai-advisor-input')?.focus(), 200);
+}
+
+let _aiLastAssetId = null;
+
+function _buildAssetContext(a){
   const dep = calcDepreciation(a);
   const repList = repairs[a.id]||[];
   const totalRepCost = repList.reduce((s,r)=>s+(parseFloat(r.chiPhi||0)||0),0);
@@ -18116,119 +18174,128 @@ async function runAiAdvisor(){
     ? ((Date.now()-new Date(a.ngayMua))/(1000*60*60*24*365)).toFixed(1)
     : 'không rõ';
   const repHistory = repList.length
-    ? repList.map(r=>`- ${r.ngay||'?'}: ${r.moTa||''} | Chi phí: ${r.chiPhi?Number(r.chiPhi).toLocaleString('vi-VN')+' VNĐ':'?'} | Kết quả: ${r.ketQua||'?'}`).join('\n')
-    : 'Chưa có lịch sử sửa chữa';
+    ? repList.map(r=>`- ${r.ngay||'?'}: ${r.moTa||''} (${r.chiPhi?Number(r.chiPhi).toLocaleString('vi-VN')+' VNĐ':'?'}, kết quả: ${r.ketQua||'?'})`).join('\n')
+    : 'Chưa có lịch sử sửa chữa.';
 
-  const prompt = `Bạn là chuyên gia quản lý tài sản IT tại Việt Nam. Phân tích thiết bị sau và đưa ra lời khuyên CỤ THỂ: nên SỬA CHỮA, NÂNG CẤP hay THANH LÝ mua mới.
+  _aiAssetContext = `Bạn là chuyên gia quản lý tài sản IT tại Việt Nam. Người dùng sẽ hỏi về thiết bị dưới đây — hãy tư vấn ngắn gọn, thực tế, bằng tiếng Việt.
 
 THÔNG TIN THIẾT BỊ:
 - Tên: ${a.tenTaiSan||'?'} | Model: ${a.model||'?'}
 - CPU: ${a.cpu||'?'} | RAM: ${a.ram||'?'} | SSD: ${a.ssd||'?'}
 - Người dùng: ${a.nguoiDung||'?'} | Phòng ban: ${a.boPhan||'?'}
-- Tuổi thiết bị: ${ageYears} năm (mua ${a.ngayMua||'không rõ'})
+- Tuổi: ${ageYears} năm (mua ${a.ngayMua||'?'})
 - Giá trị ban đầu: ${a.giaTri?Number(a.giaTri).toLocaleString('vi-VN')+' VNĐ':'?'}
-- Khấu hao còn lại: ${dep?dep.pct+'% (còn '+dep.remaining.toLocaleString('vi-VN')+' VNĐ)':'?'}
-- Bảo hành đến: ${a.baoHanhDen||'Đã hết/không rõ'}
-- Tình trạng hiện tại: ${a.tinhTrang||'?'}
+- Khấu hao còn lại: ${dep?dep.pct+'% ('+dep.remaining.toLocaleString('vi-VN')+' VNĐ)':'?'}
+- Bảo hành: ${a.baoHanhDen||'Đã hết/không rõ'}
+- Tình trạng: ${a.tinhTrang||'?'}
 - Ghi chú: ${a.ghiChu||'Không có'}
 
-LỊCH SỬ SỬA CHỮA (${repList.length} lần | Tổng chi phí: ${totalRepCost.toLocaleString('vi-VN')} VNĐ):
-${repHistory}
-
-Hãy trả lời theo cấu trúc sau (dùng tiếng Việt):
-**QUYẾT ĐỊNH:** [SỬA CHỮA / NÂNG CẤP / THANH LÝ & MUA MỚI]
-
-**LÝ DO:**
-(2-3 lý do chính, ngắn gọn)
-
-**CHI PHÍ ƯỚC TÍNH:**
-(ước tính chi phí thực hiện quyết định trên)
-
-**KHUYẾN NGHỊ THÊM:**
-(1-2 gợi ý thực tế cho IT manager)`;
-
-  try {
-    const res = await fetch(
-      `https://api.groq.com/openai/v1/chat/completions`,
-      {
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body:JSON.stringify({
-          model:'llama-3.1-8b-instant',
-          messages:[{role:'user',content:prompt}],
-          temperature:0.4,
-          max_tokens:800
-        })
-      }
-    );
-    const data = await res.json();
-    if(!res.ok){
-      const msg = data?.error?.message||'Lỗi không xác định';
-      if(msg.includes('API_KEY')||msg.includes('key')){
-        errMsg.textContent='API key không hợp lệ. Nhấn "Tư vấn AI" lại để nhập key mới.';
-        _setAiKey(''); // xóa key lỗi
-      } else {
-        errMsg.textContent = msg;
-      }
-      errEl.style.display='flex';
-      loading.style.display='none';
-      btn.disabled=false; btn.innerHTML='✦ Tư vấn AI';
-      return;
-    }
-    const text = data?.choices?.[0]?.message?.content||'';
-    loading.style.display='none';
-    result.innerHTML = _renderAiResponse(text);
-  } catch(e){
-    errMsg.textContent = 'Không kết nối được — kiểm tra mạng và thử lại.';
-    errEl.style.display='flex';
-    loading.style.display='none';
-  }
-  btn.disabled=false;
-  btn.innerHTML='✦ Tư vấn AI';
+LỊCH SỬ SỬA CHỮA (${repList.length} lần | Tổng: ${totalRepCost.toLocaleString('vi-VN')} VNĐ):
+${repHistory}`;
 }
 
-function _renderAiResponse(text){
-  // Parse verdict
-  const verdictMatch = text.match(/\*\*QUYẾT ĐỊNH:\*\*\s*([^\n]+)/i);
-  const verdict = verdictMatch ? verdictMatch[1].trim() : '';
-  let verdictClass='ai-verdict-repair', verdictIcon='🔧';
-  if(/thanh lý|mua mới|thay mới/i.test(verdict)){
-    verdictClass='ai-verdict-liquidate'; verdictIcon='♻️';
-  } else if(/nâng cấp|upgrade/i.test(verdict)){
-    verdictClass='ai-verdict-upgrade'; verdictIcon='⬆️';
-  } else if(/mua mới/i.test(verdict)){
-    verdictClass='ai-verdict-new'; verdictIcon='🆕';
+async function sendAiQuestion(){
+  const inp = document.getElementById('ai-advisor-input');
+  const question = inp?.value?.trim();
+  if(!question) return;
+
+  const apiKey = _getAiKey();
+  if(!apiKey){ _showAiKeyBanner(); return; }
+
+  inp.value = '';
+  _addAiMsg('user', question);
+  _showAiTyping();
+
+  const sendBtn = document.getElementById('ai-advisor-send');
+  if(sendBtn) sendBtn.disabled = true;
+
+  // Build messages cho Groq
+  const messages = [
+    { role:'system', content: _aiAssetContext },
+    ..._aiChatHistory,
+    { role:'user', content: question }
+  ];
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body: JSON.stringify({
+        model:'llama-3.1-8b-instant',
+        messages,
+        temperature:0.5,
+        max_tokens:600
+      })
+    });
+    const data = await res.json();
+    _removeAiTyping();
+
+    if(!res.ok){
+      const msg = data?.error?.message||'Lỗi không xác định';
+      _addAiMsg('bot', '⚠️ '+msg);
+    } else {
+      const answer = data?.choices?.[0]?.message?.content||'';
+      _aiChatHistory.push({role:'user',content:question});
+      _aiChatHistory.push({role:'assistant',content:answer});
+      if(_aiChatHistory.length > 12) _aiChatHistory = _aiChatHistory.slice(-12);
+      _addAiMsg('bot', _fmtAiText(answer));
+    }
+  } catch(e){
+    _removeAiTyping();
+    _addAiMsg('bot','⚠️ Không kết nối được — kiểm tra mạng và thử lại.');
   }
 
-  // Format markdown đơn giản
-  let html = '';
-  if(verdict){
-    html += `<div class="ai-verdict ${verdictClass}">${verdictIcon} ${verdict}</div>`;
-  }
-  // Convert **bold**, *italic*, bullet points
-  const body = text
-    .replace(/\*\*QUYẾT ĐỊNH:\*\*[^\n]*/,'') // bỏ dòng verdict đã render
-    .replace(/\*\*([^*]+)\*\*/g,'<h4>$1</h4>')
+  if(sendBtn) sendBtn.disabled = false;
+  inp?.focus();
+}
+
+function _addAiMsg(role, html){
+  const wrap = document.getElementById('ai-advisor-messages');
+  if(!wrap) return;
+  const div = document.createElement('div');
+  div.className = 'ai-msg '+role;
+  div.innerHTML = `<div class="bubble">${html}</div>`;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function _showAiTyping(){
+  const wrap = document.getElementById('ai-advisor-messages');
+  if(!wrap) return;
+  const div = document.createElement('div');
+  div.id='ai-typing-indicator';
+  div.className='ai-msg bot ai-typing';
+  div.innerHTML='<div class="bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+function _removeAiTyping(){
+  document.getElementById('ai-typing-indicator')?.remove();
+}
+
+function _fmtAiText(text){
+  return text
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/^#{1,3}\s+(.+)$/gm,'<h4>$1</h4>')
     .replace(/^[-•]\s+(.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>)+/gs, s=>`<ul>${s}</ul>`)
+    .replace(/(<li>.*<\/li>\n?)+/g,s=>'<ul>'+s+'</ul>')
     .replace(/\n{2,}/g,'</p><p>')
     .replace(/\n/g,'<br>');
-  html += `<div>${body}</div>`;
-  return html;
 }
 
 function _showAiKeyBanner(){
   const wrap = document.getElementById('ai-advisor-wrap');
-  const body  = document.getElementById('ai-advisor-body');
   wrap.classList.remove('hidden');
-  document.getElementById('ai-advisor-result').innerHTML = `
+  const msgs = document.getElementById('ai-advisor-messages');
+  if(msgs) msgs.innerHTML = `
     <div id="ai-key-banner">
       <div style="flex-basis:100%;font-weight:600">🔑 Nhập Groq API Key (miễn phí)</div>
       <div style="flex-basis:100%;color:#6366F1;font-size:11.5px">
-        Lấy key tại <a href="https://console.groq.com" target="_blank" style="color:#6366F1;font-weight:600">aistudio.google.com</a> → đăng nhập Gmail → "Create API Key" → copy dán vào đây.
+        Lấy key miễn phí tại <a href="https://console.groq.com/keys" target="_blank" style="color:#6366F1;font-weight:600">console.groq.com</a> → đăng nhập → "Create API Key" → copy dán vào đây.
       </div>
-      <input id="ai-key-input" type="password" placeholder="gsk_..." autocomplete="off">
-      <button class="btn-save-key" onclick="_saveAiKey()">Lưu & Phân tích</button>
+      <input id="ai-key-input" type="password" placeholder="gsk_..." autocomplete="off"
+        onkeydown="if(event.key==='Enter')_saveAiKey()">
+      <button class="btn-save-key" onclick="_saveAiKey()">Lưu & Bắt đầu</button>
     </div>`;
   setTimeout(()=>document.getElementById('ai-key-input')?.focus(),100);
 }
@@ -18237,21 +18304,17 @@ function _saveAiKey(){
   const k = document.getElementById('ai-key-input')?.value?.trim();
   if(!k||k.length<10){ toast('API key không hợp lệ','bad'); return; }
   _setAiKey(k);
-  document.getElementById('ai-advisor-result').innerHTML='';
-  runAiAdvisor();
+  document.getElementById('ai-advisor-messages').innerHTML='';
+  openAiChat();
 }
 
-// Reset AI panel khi đóng modal
-const _origCloseModal = typeof closeModal==='function' ? closeModal : null;
+// Reset khi đóng modal
 document.addEventListener('DOMContentLoaded',()=>{
-  // Patch closeModal để reset AI panel
   const orig = window.closeModal;
   window.closeModal = function(id){
     if(id==='modal-detail'){
       const wrap=document.getElementById('ai-advisor-wrap');
       if(wrap) wrap.classList.add('hidden');
-      const result=document.getElementById('ai-advisor-result');
-      if(result) result.innerHTML='';
     }
     orig && orig(id);
   };
