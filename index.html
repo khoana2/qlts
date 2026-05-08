@@ -2221,6 +2221,173 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 .rep-overdue{color:#DC2626!important;font-weight:700!important;}
 .rep-overdue b{color:#DC2626!important;}
 .rep-card-actions{display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
+
+/* ══════════════════ QLTS BOT PANEL ══════════════════ */
+#qlts-bot-toggle {
+  position:fixed; bottom:20px; right:20px; z-index:9990;
+  width:52px; height:52px; border-radius:50%;
+  background:linear-gradient(135deg,#0EA5E9,#6366F1);
+  color:#fff; font-size:22px; border:none; cursor:pointer;
+  box-shadow:0 4px 20px rgba(14,165,233,.45);
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .15s,box-shadow .15s;
+}
+#qlts-bot-toggle:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(14,165,233,.55); }
+#qlts-bot-toggle.open { background:linear-gradient(135deg,#EF4444,#F97316); }
+#qlts-bot-badge {
+  position:absolute; top:-3px; right:-3px;
+  width:16px; height:16px; border-radius:50%; background:#22C55E;
+  font-size:9px; color:#fff; display:flex; align-items:center; justify-content:center;
+  font-weight:700; border:2px solid #fff; display:none;
+}
+#qlts-bot-panel {
+  position:fixed; bottom:82px; right:20px; z-index:9989;
+  width:360px; height:520px;
+  background:var(--surface,#fff); border-radius:18px;
+  box-shadow:0 12px 48px rgba(0,0,0,.22);
+  display:flex; flex-direction:column;
+  border:1px solid var(--border,#E2E8F0);
+  transform:scale(.92) translateY(16px); opacity:0;
+  pointer-events:none;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1), opacity .18s;
+}
+#qlts-bot-panel.open {
+  transform:scale(1) translateY(0); opacity:1; pointer-events:all;
+}
+#qlts-bot-header {
+  display:flex; align-items:center; gap:10px;
+  padding:14px 16px; border-bottom:1px solid var(--border,#E2E8F0);
+  border-radius:18px 18px 0 0;
+  background:linear-gradient(135deg,#0EA5E9,#6366F1);
+  color:#fff; flex-shrink:0;
+}
+#qlts-bot-header .bot-avatar {
+  width:34px; height:34px; border-radius:50%;
+  background:rgba(255,255,255,.2); display:flex;
+  align-items:center; justify-content:center; font-size:18px; flex-shrink:0;
+}
+#qlts-bot-header .bot-info { flex:1; min-width:0; }
+#qlts-bot-header .bot-name { font-weight:700; font-size:14px; }
+#qlts-bot-header .bot-status { font-size:11px; opacity:.8; }
+#qlts-bot-header .bot-close {
+  background:rgba(255,255,255,.15); border:none; color:#fff;
+  width:28px; height:28px; border-radius:50%; cursor:pointer;
+  font-size:14px; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; transition:background .15s;
+}
+#qlts-bot-header .bot-close:hover { background:rgba(255,255,255,.3); }
+#qlts-bot-messages {
+  flex:1; overflow-y:auto; padding:14px;
+  display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth;
+}
+.bot-msg { display:flex; gap:8px; align-items:flex-end; }
+.bot-msg.user { flex-direction:row-reverse; }
+.bot-msg .bubble {
+  max-width:78%; padding:9px 13px; border-radius:16px;
+  font-size:13px; line-height:1.55;
+  word-break:break-word;
+}
+.bot-msg.bot .bubble {
+  background:var(--bg,#F8FAFC); border:1px solid var(--border,#E2E8F0);
+  color:var(--text,#0F172A); border-bottom-left-radius:4px;
+}
+.bot-msg.user .bubble {
+  background:linear-gradient(135deg,#0EA5E9,#6366F1);
+  color:#fff; border-bottom-right-radius:4px;
+}
+.bot-msg .msg-time { font-size:10px; color:var(--muted,#94A3B8); flex-shrink:0; margin-bottom:2px; }
+.bot-msg.user .msg-time { text-align:right; }
+.bot-typing .bubble { display:flex; gap:5px; align-items:center; padding:12px 14px; }
+.bot-typing .dot {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--muted,#94A3B8);
+  animation:botDot 1.2s infinite;
+}
+.bot-typing .dot:nth-child(2) { animation-delay:.2s; }
+.bot-typing .dot:nth-child(3) { animation-delay:.4s; }
+@keyframes botDot { 0%,80%,100%{transform:scale(.8);opacity:.5} 40%{transform:scale(1.1);opacity:1} }
+#qlts-bot-chips {
+  padding:6px 12px; display:flex; gap:6px; flex-wrap:wrap; flex-shrink:0;
+  border-top:1px solid var(--border,#E2E8F0);
+}
+.bot-chip {
+  background:var(--bg,#F1F5F9); border:1px solid var(--border,#E2E8F0);
+  border-radius:20px; padding:4px 11px; font-size:11.5px;
+  cursor:pointer; color:var(--text,#334155); white-space:nowrap;
+  transition:background .15s,border-color .15s;
+}
+.bot-chip:hover { background:#EFF6FF; border-color:#93C5FD; color:#1D4ED8; }
+#qlts-bot-input-row {
+  display:flex; gap:8px; padding:10px 12px;
+  border-top:1px solid var(--border,#E2E8F0); flex-shrink:0;
+  border-radius:0 0 18px 18px;
+}
+#qlts-bot-input {
+  flex:1; border:1.5px solid var(--border,#E2E8F0); border-radius:22px;
+  padding:8px 14px; font-size:13px; background:var(--bg,#F8FAFC);
+  color:var(--text,#0F172A); outline:none;
+  transition:border-color .15s;
+}
+#qlts-bot-input:focus { border-color:#0EA5E9; }
+
+#qlts-bot-claude-btn {
+  width:36px; height:36px; border-radius:50%;
+  background:linear-gradient(135deg,#6366F1,#8B5CF6);
+  color:#fff; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; flex-shrink:0;
+  transition:transform .15s; align-self:center;
+  position:relative;
+}
+#qlts-bot-claude-btn:hover { transform:scale(1.1); }
+#qlts-bot-claude-btn title-tip {
+  position:absolute; bottom:42px; right:0;
+  background:#1E293B; color:#fff; font-size:10px;
+  padding:3px 7px; border-radius:6px; white-space:nowrap;
+  opacity:0; pointer-events:none; transition:opacity .15s;
+}
+#qlts-bot-claude-btn:hover::after {
+  content:'Hỏi Claude sâu hơn'; position:absolute;
+  bottom:42px; right:0; background:#1E293B; color:#fff;
+  font-size:10px; padding:3px 8px; border-radius:6px;
+  white-space:nowrap; pointer-events:none;
+}
+.bot-claude-footer {
+  margin-top:8px; padding-top:7px;
+  border-top:1px dashed var(--border,#E2E8F0);
+  display:flex; align-items:center; gap:6px;
+}
+.bot-claude-footer-btn {
+  background:linear-gradient(135deg,#6366F1,#8B5CF6);
+  color:#fff; border:none; border-radius:20px;
+  padding:4px 12px; font-size:11.5px; cursor:pointer;
+  display:flex; align-items:center; gap:5px;
+  transition:opacity .15s;
+}
+.bot-claude-footer-btn:hover { opacity:.85; }
+.bot-claude-footer-text { font-size:11px; color:var(--muted,#94A3B8); }
+
+#qlts-bot-send {
+  width:36px; height:36px; border-radius:50%;
+  background:linear-gradient(135deg,#0EA5E9,#6366F1);
+  color:#fff; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; flex-shrink:0;
+  transition:transform .15s; align-self:center;
+}
+#qlts-bot-send:hover { transform:scale(1.1); }
+.bot-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
+.bot-table th { background:#0EA5E915; padding:4px 6px; text-align:left; font-weight:600; color:#0369A1; }
+.bot-table td { padding:4px 6px; border-bottom:1px solid #E2E8F0; }
+.bot-table tr:last-child td { border-bottom:none; }
+.bot-pill {
+  display:inline-block; padding:1px 7px; border-radius:20px; font-size:10.5px; font-weight:600;
+}
+.bot-pill-red { background:#FEE2E2; color:#DC2626; }
+.bot-pill-yellow { background:#FEF3C7; color:#D97706; }
+.bot-pill-green { background:#D1FAE5; color:#059669; }
+.bot-pill-blue { background:#DBEAFE; color:#2563EB; }
+/* ═════════════════════════════════════════════════════ */
 </style>
 </head>
 <body>
@@ -8159,6 +8326,351 @@ document.addEventListener('DOMContentLoaded', function(){
   // Form Sửa Chữa: Người nhận máy (supp-receiver)
   _empAutocomplete(document.getElementById('supp-receiver'), {});
 });
+
+
+// ══════════════════════ QLTS BOT AGENT ══════════════════════
+(function(){
+  let _botOpen = false;
+  let _botHistory = []; // {role:'bot'|'user', text}
+
+  window.qltsBotToggle = function(){
+    _botOpen = !_botOpen;
+    const panel = document.getElementById('qlts-bot-panel');
+    const btn   = document.getElementById('qlts-bot-toggle');
+    if(!panel||!btn) return;
+    panel.classList.toggle('open', _botOpen);
+    btn.classList.toggle('open', _botOpen);
+    if(_botOpen && _botHistory.length===0) _botGreet();
+  };
+
+  window.qltsBotAsk = function(text){
+    const inp = document.getElementById('qlts-bot-input');
+    if(inp) inp.value = text;
+    qltsBotSend();
+  };
+
+  window.qltsBotSend = function(){
+    const inp = document.getElementById('qlts-bot-input');
+    if(!inp) return;
+    const text = inp.value.trim();
+    if(!text) return;
+    inp.value = '';
+    _addMsg('user', text);
+    _showTyping();
+    setTimeout(()=>{
+      _removeTyping();
+      const reply = _processQuery(text);
+      _addMsg('bot', reply);
+    }, 420);
+  };
+
+  function _botGreet(){
+    const hour = new Date().getHours();
+    const greet = hour<12 ? 'Chào buổi sáng' : hour<18 ? 'Chào buổi chiều' : 'Chào buổi tối';
+    const total = (typeof assets!=='undefined') ? assets.length : 0;
+    _addMsg('bot',
+      `👋 <strong>${greet}!</strong> Tôi là QLTS Assistant — đang quản lý <strong>${total} tài sản</strong>.<br>` +
+      `Bạn có thể hỏi tôi về bảo hành, giá trị, sửa chữa, thanh lý... hoặc chọn gợi ý bên dưới.`
+    );
+  }
+
+  function _addMsg(role, html){
+    const wrap = document.getElementById('qlts-bot-messages');
+    if(!wrap) return;
+    _botHistory.push({role,html});
+    const now = new Date();
+    const time = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    const div = document.createElement('div');
+    div.className = 'bot-msg ' + role;
+    div.innerHTML = `
+      <div class="bubble">${html}</div>
+      <div class="msg-time">${time}</div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function _showTyping(){
+    const wrap = document.getElementById('qlts-bot-messages');
+    if(!wrap) return;
+    const div = document.createElement('div');
+    div.id = 'bot-typing';
+    div.className = 'bot-msg bot bot-typing';
+    div.innerHTML = '<div class="bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function _removeTyping(){
+    const el = document.getElementById('bot-typing');
+    if(el) el.remove();
+  }
+
+  // ── Số format ──────────────────────────────────────────────
+  function _fmt(n){ return Math.round(n).toLocaleString('vi-VN'); }
+  function _fmtM(n){
+    if(n>=1e9) return (n/1e9).toFixed(1).replace('.0','')+'B';
+    if(n>=1e6) return (n/1e6).toFixed(1).replace('.0','')+'M';
+    return _fmt(n);
+  }
+  function _pill(txt,cls){ return `<span class="bot-pill bot-pill-${cls}">${txt}</span>`; }
+  function _age(ngay){ return ngay ? ((Date.now()-new Date(ngay))/(1000*60*60*24*365)).toFixed(1) : null; }
+
+  // ── Lấy data an toàn ───────────────────────────────────────
+  function _assets(){ return (typeof assets!=='undefined' && Array.isArray(assets)) ? assets : []; }
+  function _repairs(id){ return (typeof repairs!=='undefined' && repairs[id]) ? repairs[id] : []; }
+  function _repCost(id){ return _repairs(id).reduce((s,r)=>s+(parseFloat(r.chiPhi||0)||0),0); }
+
+  // ── Xử lý câu hỏi ─────────────────────────────────────────
+  function _processQuery(raw){
+    const q = raw.toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g,'')  // bỏ dấu để match dễ
+      .replace(/[áàảãạăắặẳẵặâấầẩẫậ]/g,'a')
+      .replace(/[éèẻẽẹêếềểễệ]/g,'e')
+      .replace(/[íìỉĩị]/g,'i')
+      .replace(/[óòỏõọôốồổỗộơớờởỡợ]/g,'o')
+      .replace(/[úùủũụưứừửữự]/g,'u')
+      .replace(/[ýỳỷỹỵ]/g,'y')
+      .replace(/[đ]/g,'d');
+    const orig = raw.toLowerCase();
+
+    const A = _assets();
+    if(!A.length) return '⚠️ Chưa có dữ liệu tài sản. Vui lòng đăng nhập hoặc thêm tài sản trước nhé.';
+
+    // ── Bảo hành ────────────────────────────────────────────
+    if(/bao hanh|het bh|het han|warranty|sap het/.test(q)){
+      const today = new Date();
+      const soon = A.filter(a=>{
+        if(!a.baoHanhDen) return false;
+        const d = Math.round((new Date(a.baoHanhDen)-today)/86400000);
+        return d>=0 && d<=90;
+      }).sort((a,b)=>new Date(a.baoHanhDen)-new Date(b.baoHanhDen));
+
+      const expired = A.filter(a=>{
+        if(!a.baoHanhDen) return false;
+        return new Date(a.baoHanhDen) < today;
+      }).length;
+
+      if(!soon.length) return `✅ Không có tài sản nào sắp hết bảo hành trong 90 ngày tới.<br><small style="color:var(--muted)">(Đã hết hạn: ${expired} máy)</small>`;
+
+      let rows = soon.slice(0,8).map(a=>{
+        const d = Math.round((new Date(a.baoHanhDen)-today)/86400000);
+        const cls = d<=14?'red':d<=30?'yellow':'blue';
+        return `<tr><td>${a.tenTaiSan||'?'}</td><td>${a.model||'—'}</td><td>${a.nguoiDung||'—'}</td><td>${_pill(d+' ngày',cls)}</td></tr>`;
+      }).join('');
+      return `🛡️ <strong>${soon.length} tài sản sắp hết bảo hành</strong> (≤90 ngày):<br>
+        <table class="bot-table"><thead><tr><th>Loại</th><th>Model</th><th>Người dùng</th><th>Còn lại</th></tr></thead>
+        <tbody>${rows}</tbody></table>${soon.length>8?`<small style="color:var(--muted)">...và ${soon.length-8} máy khác</small>`:''}
+        <br><small style="color:var(--muted)">Đã hết hạn: ${expired} máy</small>`;
+    }
+
+    // ── Thanh lý / nên thanh lý ─────────────────────────────
+    if(/thanh ly|lý|retire|liquidat|nen thanh|should retire/.test(q)){
+      const today = Date.now();
+      const scored = A.map(a=>{
+        const ageY = a.ngayMua ? (today-new Date(a.ngayMua))/(1000*60*60*24*365) : 0;
+        const dep  = (typeof calcDepreciation==='function') ? calcDepreciation(a) : null;
+        const depPct = dep ? dep.pct : 50;
+        const rc   = _repCost(a.id);
+        const val  = parseFloat(a.giaTri)||0;
+        const repRatio = val>0 ? rc/val : 0;
+        // Score: tuổi>5 +3, khấu hao<20% +2, sửa>30% giá trị +2, hỏng +2
+        let score = 0;
+        if(ageY>=5) score+=3; else if(ageY>=3) score+=1;
+        if(depPct<=20) score+=2; else if(depPct<=40) score+=1;
+        if(repRatio>=0.3) score+=2; else if(repRatio>=0.15) score+=1;
+        if((a.tinhTrang||'').match(/hỏng|hư|bad/i)) score+=2;
+        return {...a, _score:score, _ageY:ageY, _depPct:depPct, _rc:rc};
+      }).filter(a=>a._score>=3).sort((a,b)=>b._score-a._score);
+
+      if(!scored.length) return `✅ <strong>Không có tài sản nào cần thanh lý ngay</strong>.<br><small style="color:var(--muted)">Tiêu chí: tuổi ≥5 năm, khấu hao ≤20%, chi phí sửa ≥30% giá trị.</small>`;
+
+      let rows = scored.slice(0,8).map(a=>{
+        const cls = a._score>=6?'red':a._score>=4?'yellow':'blue';
+        const reason = [];
+        if(a._ageY>=5) reason.push(`${a._ageY.toFixed(1)}y tuổi`);
+        if(a._depPct<=20) reason.push(`KH còn ${a._depPct}%`);
+        if(a._rc>0) reason.push(`SC ${_fmtM(a._rc)}đ`);
+        return `<tr><td>${a.tenTaiSan||'?'}<br><small style="color:var(--muted)">${a.model||'—'}</small></td>
+          <td>${a.nguoiDung||'—'}</td>
+          <td>${_pill(a._score>=6?'Ưu tiên cao':a._score>=4?'Nên thanh lý':'Cân nhắc',cls)}</td>
+          <td><small>${reason.join(', ')}</small></td></tr>`;
+      }).join('');
+      return `♻️ <strong>${scored.length} tài sản nên xem xét thanh lý:</strong><br>
+        <table class="bot-table"><thead><tr><th>Thiết bị</th><th>Người dùng</th><th>Đánh giá</th><th>Lý do</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    }
+
+    // ── Sửa chữa tốn nhất / lịch sử sửa chữa ──────────────
+    if(/sua chua|repair|bao tri|ton nhat|chi phi sua|lich su sua/.test(q)){
+      const rep = A.map(a=>({...a,rc:_repCost(a.id),cnt:_repairs(a.id).length}))
+        .filter(a=>a.rc>0).sort((a,b)=>b.rc-a.rc);
+      if(!rep.length) return '📋 Chưa có lịch sử sửa chữa nào trong hệ thống.';
+      const total = rep.reduce((s,a)=>s+a.rc,0);
+      let rows = rep.slice(0,8).map(a=>`
+        <tr><td>${a.tenTaiSan||'?'}<br><small style="color:var(--muted)">${a.model||'—'}</small></td>
+        <td>${a.nguoiDung||'—'}</td>
+        <td style="text-align:right">${_fmt(a.rc)} đ</td>
+        <td style="text-align:center">${a.cnt} lần</td></tr>`).join('');
+      return `🔧 <strong>Chi phí sửa chữa tích lũy</strong> (${rep.length} tài sản đã sửa):<br>
+        <table class="bot-table"><thead><tr><th>Thiết bị</th><th>Người dùng</th><th>Tổng chi phí</th><th>Số lần</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+        <small style="color:var(--muted)">Tổng toàn hệ thống: <strong>${_fmt(total)} VNĐ</strong></small>`;
+    }
+
+    // ── Phòng ban / bộ phận ─────────────────────────────────
+    if(/phong ban|bo phan|department|phong|don vi/.test(q)){
+      const depts = {};
+      A.forEach(a=>{
+        const k = a.boPhan||'(Chưa xác định)';
+        if(!depts[k]) depts[k]={count:0,value:0,broken:0};
+        depts[k].count++;
+        depts[k].value += parseFloat(a.giaTri)||0;
+        if((a.tinhTrang||'').match(/hỏng|hư/i)) depts[k].broken++;
+      });
+      const sorted = Object.entries(depts).sort((a,b)=>b[1].count-a[1].count);
+      let rows = sorted.map(([d,v])=>`
+        <tr><td><strong>${d}</strong></td>
+        <td style="text-align:center">${v.count}</td>
+        <td style="text-align:right">${_fmtM(v.value)}đ</td>
+        <td style="text-align:center">${v.broken>0?_pill(v.broken+' hỏng','red'):'—'}</td></tr>`).join('');
+      const totalVal = A.reduce((s,a)=>s+(parseFloat(a.giaTri)||0),0);
+      return `📊 <strong>Thống kê theo phòng ban</strong> (${sorted.length} phòng):<br>
+        <table class="bot-table"><thead><tr><th>Phòng ban</th><th>Số máy</th><th>Giá trị</th><th>Hỏng</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+        <small style="color:var(--muted)">Tổng: ${A.length} tài sản | ${_fmt(totalVal)} VNĐ</small>`;
+    }
+
+    // ── Giá trị / tổng giá trị ─────────────────────────────
+    if(/gia tri|tong gia|tong tai san|value|tong khau hao/.test(q)){
+      const total = A.reduce((s,a)=>s+(parseFloat(a.giaTri)||0),0);
+      const byType = {};
+      A.forEach(a=>{ const k=a.tenTaiSan||'Khác'; byType[k]=(byType[k]||0)+(parseFloat(a.giaTri)||0); });
+      const sorted = Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+      let rows = sorted.map(([t,v])=>`<tr><td>${t}</td><td style="text-align:right">${_fmt(v)} đ</td><td style="text-align:right">${Math.round(v*100/total)}%</td></tr>`).join('');
+      return `💰 <strong>Tổng giá trị tài sản: ${_fmt(total)} VNĐ</strong> (${A.length} thiết bị)<br>
+        <table class="bot-table"><thead><tr><th>Loại thiết bị</th><th>Giá trị</th><th>%</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    }
+
+    // ── Tình trạng / hỏng / sắp hỏng ──────────────────────
+    if(/tinh trang|trang thai|hong|hu|dang su|status|can sua/.test(q)){
+      const groups = {};
+      A.forEach(a=>{ const k=a.tinhTrang||'Chưa cập nhật'; groups[k]=(groups[k]||[]).concat(a); });
+      let rows = Object.entries(groups).sort((a,b)=>b[1].length-a[1].length).map(([s,list])=>{
+        const cls = /hỏng|hư|bad/i.test(s)?'red':/sửa|repair/i.test(s)?'yellow':/tốt|good|ok/i.test(s)?'green':'blue';
+        return `<tr><td>${_pill(s,cls)}</td><td style="text-align:center"><strong>${list.length}</strong></td>
+          <td><small style="color:var(--muted)">${list.slice(0,3).map(a=>a.model||a.tenTaiSan||'?').join(', ')}${list.length>3?'...':''}</small></td></tr>`;
+      }).join('');
+      return `📋 <strong>Tình trạng tài sản (${A.length} máy):</strong><br>
+        <table class="bot-table"><thead><tr><th>Trạng thái</th><th>Số lượng</th><th>Ví dụ</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    }
+
+    // ── Tổng quan / thống kê chung ──────────────────────────
+    if(/tong quan|thong ke|summary|bao cao|overview|co bao nhieu|bao nhieu may/.test(q)){
+      const total = A.length;
+      const totalVal = A.reduce((s,a)=>s+(parseFloat(a.giaTri)||0),0);
+      const broken = A.filter(a=>(a.tinhTrang||'').match(/hỏng|hư/i)).length;
+      const today = new Date();
+      const warnSoon = A.filter(a=>{
+        if(!a.baoHanhDen) return false;
+        const d = Math.round((new Date(a.baoHanhDen)-today)/86400000);
+        return d>=0 && d<=90;
+      }).length;
+      const oldest = A.filter(a=>a.ngayMua).sort((a,b)=>new Date(a.ngayMua)-new Date(b.ngayMua))[0];
+      const types = [...new Set(A.map(a=>a.tenTaiSan).filter(Boolean))];
+      return `📊 <strong>Tổng quan hệ thống QLTS:</strong><br>
+        🖥️ Tổng tài sản: <strong>${total}</strong> thiết bị (${types.length} loại)<br>
+        💰 Tổng giá trị: <strong>${_fmt(totalVal)} VNĐ</strong><br>
+        🔴 Đang hỏng/sửa: <strong>${broken}</strong> máy<br>
+        🛡️ Sắp hết bảo hành: <strong>${warnSoon}</strong> máy (≤90 ngày)<br>
+        📅 Thiết bị cũ nhất: ${oldest?oldest.tenTaiSan+' '+oldest.model+' ('+oldest.ngayMua+')':'N/A'}`;
+    }
+
+    // ── Tìm theo tên / model / người dùng ──────────────────
+    if(/tim|search|xem|may nao|thiet bi|nguoi|user/.test(q) || raw.length < 30){
+      // Tìm trong assets
+      const kw = raw.toLowerCase();
+      const found = A.filter(a=>{
+        return [a.tenTaiSan,a.model,a.nguoiDung,a.boPhan,a.maTaiSan,a.tinhTrang,a.cpu,a.ram]
+          .some(v=>v&&v.toLowerCase().includes(kw));
+      }).slice(0,8);
+      if(found.length){
+        let rows = found.map(a=>{
+          const cls = /hỏng|hư/i.test(a.tinhTrang||'')?'red':/sửa/i.test(a.tinhTrang||'')?'yellow':'green';
+          return `<tr><td>${a.tenTaiSan||'?'}<br><small style="color:var(--muted)">${a.model||'—'}</small></td>
+            <td>${a.nguoiDung||'—'}<br><small style="color:var(--muted)">${a.boPhan||'—'}</small></td>
+            <td>${_pill(a.tinhTrang||'?',cls)}</td></tr>`;
+        }).join('');
+        return `🔍 Tìm thấy <strong>${found.length}</strong> tài sản khớp với "<em>${raw}</em>":<br>
+          <table class="bot-table"><thead><tr><th>Thiết bị</th><th>Người dùng</th><th>Trạng thái</th></tr></thead>
+          <tbody>${rows}</tbody></table>`;
+      }
+    }
+
+    // ── Không hiểu ──────────────────────────────────────────
+    const suggestions = ['sắp hết bảo hành','tổng giá trị','thanh lý','phòng ban','sửa chữa','tình trạng','tổng quan'];
+    const chips = suggestions.map(s=>`<span class="bot-chip" onclick="qltsBotAsk('${s}')" style="cursor:pointer">${s}</span>`).join(' ');
+    return `🤔 Tôi chưa hiểu câu hỏi này. Bạn có thể thử:<br><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">${chips}</div>`;
+  }
+
+  // ── Chuyển câu hỏi sang Claude AI ─────────────────────────
+  window.qltsBotAskClaude = function(customQ){
+    const inp   = document.getElementById('qlts-bot-input');
+    const userQ = customQ || (inp ? inp.value.trim() : '');
+
+    // Nếu không có câu hỏi, lấy câu hỏi cuối cùng từ history
+    const lastUser = [..._botHistory].reverse().find(m=>m.role==='user');
+    const question = userQ || (lastUser ? lastUser.html : '');
+    if(!question){ toast('Nhập câu hỏi trước nhé!','warn'); return; }
+
+    // Build context đầy đủ
+    const A = _assets();
+    const sysCtx = (typeof _buildSystemContext==='function')
+      ? _buildSystemContext(null)
+      : '[Data hệ thống không khả dụng]';
+
+    // Lịch sử chat gần nhất (3 lượt)
+    const chatCtx = _botHistory.slice(-6).map(m=>
+      (m.role==='user'?'Người dùng: ':'Bot: ') +
+      m.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()
+    ).join('\n');
+
+    const prompt =
+`Bạn là chuyên gia quản lý tài sản IT của công ty TTGVN. Dưới đây là toàn bộ dữ liệu hệ thống QLTS và lịch sử hội thoại. Hãy trả lời câu hỏi cuối cùng một cách chi tiết, chính xác.
+
+${sysCtx}
+
+════════════════════════════════════════════════════
+LỊCH SỬ HỘI THOẠI GẦN NHẤT:
+${chatCtx || '(Chưa có)'}
+
+════════════════════════════════════════════════════
+CÂU HỎI CẦN TRẢ LỜI: ${question}`;
+
+    // Copy clipboard
+    try { navigator.clipboard.writeText(prompt); }
+    catch(e){
+      const ta=document.createElement('textarea');
+      ta.value=prompt; ta.style.cssText='position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+    }
+
+    // Mở/focus claude.ai popup
+    const isNew = (typeof _openOrFocusClaude==='function') ? _openOrFocusClaude() : false;
+    if(typeof _updateClaudeFabState==='function') _updateClaudeFabState();
+
+    // Thêm message hướng dẫn vào chat
+    _addMsg('bot',
+      `📤 <strong>Đã chuyển sang Claude!</strong><br>` +
+      `${isNew?'Claude đang mở — đăng nhập nếu chưa, rồi ':''}Dán <kbd style="background:rgba(0,0,0,.1);padding:1px 5px;border-radius:3px">Ctrl+V</kbd> và nhấn Enter nhé 🤖`
+    );
+
+    if(inp) inp.value='';
+  };
+})();
+// ══════════════════════════════════════════════════════════════
 
 // ══════════════════════ CLAUDE AI POPUP ══════════════════════
 let _claudeWin = null;
@@ -18131,5 +18643,34 @@ tr:nth-child(even) td{background:#f8fafc;}
 })(); // end Fuji IIFE
 
 </script>
+
+<!-- ══════════════════ QLTS BOT PANEL ══════════════════ -->
+<button id="qlts-bot-toggle" onclick="qltsBotToggle()" title="QLTS Assistant">
+  <i class="ph ph-robot"></i>
+</button>
+<div id="qlts-bot-panel">
+  <div id="qlts-bot-header">
+    <div class="bot-avatar"><i class="ph ph-robot"></i></div>
+    <div class="bot-info">
+      <div class="bot-name">QLTS Assistant</div>
+      <div class="bot-status">Hỏi về tài sản, sửa chữa, báo cáo...</div>
+    </div>
+    <button class="bot-close" onclick="qltsBotToggle()">✕</button>
+  </div>
+  <div id="qlts-bot-messages"></div>
+  <div id="qlts-bot-chips">
+    <span class="bot-chip" onclick="qltsBotAsk('Sắp hết bảo hành')">🛡️ Sắp hết BH</span>
+    <span class="bot-chip" onclick="qltsBotAsk('Tổng giá trị tài sản')">💰 Giá trị</span>
+    <span class="bot-chip" onclick="qltsBotAsk('Máy nào nên thanh lý')">♻️ Thanh lý</span>
+    <span class="bot-chip" onclick="qltsBotAsk('Thống kê theo phòng ban')">📊 Phòng ban</span>
+    <span class="bot-chip" onclick="qltsBotAsk('Lịch sử sửa chữa tốn nhất')">🔧 Sửa chữa</span>
+  </div>
+  <div id="qlts-bot-input-row">
+    <input id="qlts-bot-input" placeholder="Hỏi gì đó..." onkeydown="if(event.key==='Enter')qltsBotSend()">
+    <button id="qlts-bot-send" onclick="qltsBotSend()" title="Trả lời nhanh (Enter)"><i class="ph ph-paper-plane-right"></i></button>
+    <button id="qlts-bot-claude-btn" onclick="qltsBotAskClaude()" title="Gửi cho Claude AI phân tích sâu hơn"><i class="ph ph-robot"></i></button>
+  </div>
+</div>
+
 </body>
 </html>
