@@ -144,6 +144,40 @@
 
 /* ── Row tint overrides in dark mode ── */
 
+/* ── Claude AI floating button ── */
+#claude-fab {
+  position:fixed; bottom:20px; left:20px; z-index:9990;
+  display:flex; align-items:center; gap:8px;
+  padding:10px 16px; border-radius:999px;
+  background:linear-gradient(135deg,#6366F1,#8B5CF6);
+  color:#fff; font-size:13px; font-weight:600;
+  cursor:pointer; user-select:none;
+  box-shadow:0 4px 20px rgba(99,102,241,.4);
+  transition:transform .15s, box-shadow .15s;
+}
+#claude-fab:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(99,102,241,.5); }
+#claude-fab:active { transform:translateY(0); }
+#claude-fab i { font-size:18px; }
+#claude-fab-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:#22C55E; display:none;
+  box-shadow:0 0 6px #22C55E;
+}
+#claude-fab-dot.active { display:inline-block; }
+/* Panel hướng dẫn paste */
+#claude-hint-toast {
+  display:none; position:fixed; bottom:72px; left:20px; z-index:9991;
+  background:#1E293B; color:#fff; border-radius:14px;
+  padding:12px 16px; font-size:12px; line-height:1.6;
+  box-shadow:0 8px 32px rgba(0,0,0,.3); max-width:260px;
+  border:1px solid rgba(255,255,255,.1);
+}
+#claude-hint-toast.show { display:block; animation:loginFadeIn .2s ease-out both; }
+#claude-hint-toast kbd {
+  background:rgba(255,255,255,.15); border-radius:4px;
+  padding:1px 6px; font-family:monospace; font-size:11px;
+}
+
 /* ── Bottom navigation ── */
 
 /* ── Advanced filter toggle btn ── */
@@ -3816,7 +3850,12 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
     </div>
     <div class="modal-body" id="detail-body"></div>
-    <div class="modal-foot">
+    <div class="modal-foot" style="justify-content:space-between;">
+      <button class="btn btn-icon-ph" onclick="askClaudeViaWeb()"
+        style="background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;font-weight:600;"
+        title="Soạn prompt từ dữ liệu tài sản, copy rồi mở claude.ai">
+        <i class="ph ph-robot"></i> Hỏi Claude
+      </button>
       <button class="btn" onclick="closeModal('modal-detail')">Đóng</button>
     </div>
   </div>
@@ -8121,6 +8160,107 @@ document.addEventListener('DOMContentLoaded', function(){
   _empAutocomplete(document.getElementById('supp-receiver'), {});
 });
 
+// ══════════════════════ CLAUDE AI POPUP ══════════════════════
+let _claudeWin = null;
+
+function openClaudePopup(){
+  // Nếu popup đang mở → focus lại
+  if(_claudeWin && !_claudeWin.closed){
+    _claudeWin.focus();
+    _showClaudeHint(false); // không có prompt mới
+    return;
+  }
+  // Mở popup mới
+  const w = Math.min(900, screen.width * 0.55);
+  const h = Math.min(860, screen.height * 0.9);
+  const left = screen.width - w - 20;
+  const top = (screen.height - h) / 2;
+  _claudeWin = window.open(
+    'https://claude.ai/new',
+    'qlts_claude',
+    `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
+  );
+  _updateClaudeFabState();
+  toast('🤖 Đăng nhập Claude rồi hỏi bình thường nhé!','ok',4000);
+}
+
+function _updateClaudeFabState(){
+  const dot = document.getElementById('claude-fab-dot');
+  const lbl = document.getElementById('claude-fab-label');
+  const alive = _claudeWin && !_claudeWin.closed;
+  if(dot) dot.classList.toggle('active', !!alive);
+  if(lbl) lbl.textContent = alive ? 'Claude (đang mở)' : 'Claude';
+}
+
+// Kiểm tra định kỳ popup còn mở không
+setInterval(_updateClaudeFabState, 2000);
+
+function askClaudeViaWeb(){
+  const assetId = window._detailAssetId;
+  const a = assetId ? assets.find(x=>x.id===assetId) : null;
+  if(!a){ toast('Không tìm thấy tài sản','bad'); return; }
+
+  const dep = calcDepreciation(a);
+  const repList = repairs[a.id] || [];
+  const totalRepairCost = repList.reduce((s,r)=>s+(parseFloat(r.chiPhi||0)||0),0);
+  const ageYears = a.ngayMua
+    ? ((Date.now()-new Date(a.ngayMua))/(1000*60*60*24*365)).toFixed(1)
+    : 'không rõ';
+
+  const repHistory = repList.length
+    ? repList.slice(-5).map(r=>`  - ${r.ngay||'?'}: ${r.moTa||''} | Chi phí: ${r.chiPhi?Number(r.chiPhi).toLocaleString('vi-VN')+' VNĐ':'không rõ'} | Kết quả: ${r.ketQua||'?'}`).join('\n')
+    : '  Chưa có lịch sử sửa chữa';
+
+  const prompt = `Bạn là chuyên gia quản lý tài sản IT. Phân tích thiết bị sau và cho biết nên SỬA CHỮA, NÂNG CẤP hay THANH LÝ. Giải thích ngắn gọn lý do và ước tính chi phí nếu có.
+
+THÔNG TIN THIẾT BỊ:
+- Loại: ${a.tenTaiSan||'—'} | Model: ${a.model||'—'}
+- CPU: ${a.cpu||'—'} | RAM: ${a.ram||'—'} | SSD: ${a.ssd||'—'}
+- Tuổi: ${ageYears} năm (mua ${a.ngayMua||'không rõ'})
+- Giá trị ban đầu: ${a.giaTri?Number(a.giaTri).toLocaleString('vi-VN')+' VNĐ':'không rõ'}
+- Khấu hao còn lại: ${dep?dep.pct+'% ('+dep.remaining.toLocaleString('vi-VN')+' VNĐ)':'không rõ'}
+- Tình trạng: ${a.tinhTrang||'—'}${a.ghiChu?'\n- Ghi chú: '+a.ghiChu:''}
+
+LỊCH SỬ SỬA CHỮA (${repList.length} lần | Tổng: ${totalRepairCost.toLocaleString('vi-VN')} VNĐ):
+${repHistory}`;
+
+  // Copy clipboard
+  const doCopy = (txt) => {
+    try {
+      navigator.clipboard.writeText(txt);
+    } catch(e) {
+      const ta=document.createElement('textarea');
+      ta.value=txt; ta.style.cssText='position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+    }
+  };
+  doCopy(prompt);
+
+  // Mở / focus popup
+  if(!_claudeWin || _claudeWin.closed){
+    const w=Math.min(900,screen.width*.55), h=Math.min(860,screen.height*.9);
+    const left=screen.width-w-20, top=(screen.height-h)/2;
+    _claudeWin=window.open('https://claude.ai/new','qlts_claude',
+      `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+  } else {
+    _claudeWin.focus();
+  }
+  _updateClaudeFabState();
+  _showClaudeHint(true);
+}
+
+function _showClaudeHint(withPrompt){
+  const el = document.getElementById('claude-hint-toast');
+  if(!el) return;
+  el.innerHTML = withPrompt
+    ? `📋 Đã copy thông tin <strong>${assets.find(x=>x.id===window._detailAssetId)?.tenTaiSan||'tài sản'}</strong><br>Trong Claude: <kbd>Ctrl+V</kbd> rồi <kbd>Enter</kbd>`
+    : `🤖 Claude đang mở — gõ câu hỏi trực tiếp nhé!`;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 5000);
+}
+// ═════════════════════════════════════════════════════════════════════
+
 // ─── Tính khấu hao đường thẳng ───────────────────────────────────────────────
 function calcDepreciation(asset){
   const orig = parseFloat(asset.giaTri);
@@ -9281,6 +9421,7 @@ async function confirmDelete(){
 
 // ═══════════════════════ DETAIL ═══════════════════════
 function viewDetail(id){
+  window._detailAssetId = id;
   const a = assets.find(x=>x.id===id);
   if(!a) return;
   detailId = id;
