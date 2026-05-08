@@ -17540,4 +17540,40 @@ function printQRLabel(){
 body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:24px;}
 .report-wrap{max-width:860px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.1);overflow:hidden;}
 .report-head{background:linear-gradient(135deg,#1e293b,#334155);color:#fff;padding:20px 24px;}
-.report-head h1{font-si
+.report-head h1{font-sih1{font-size:16px;font-weight:700;margin-bottom:4px;}
+h2{font-size:13px;font-weight:600;margin:16px 0 8px;}
+.toolbar{background:#1e293b;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;}
+.btn-print{background:#6366f1;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px;}
+.btn-close{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
+table{border-collapse:collapse;width:100%;margin-bottom:16px;}
+th,td{border:1px solid #e2e8f0;padding:5px 8px;font-size:11.5px;}
+th{background:#f8fafc;font-weight:600;}
+tr:nth-child(even){background:#f8fafc;}
+@media print{.toolbar{display:none;}}
+</style></head>
+<body>
+<div class="toolbar">
+  <strong>Báo Cáo In Ấn Fujixerox &mdash; ${period}</strong>
+  <div style="display:flex;gap:8px;">
+    <button class="btn-print" onclick="window.print()">In (Ctrl+P)</button>
+    <button class="btn-close" onclick="window.close()">Đóng</button>
+  </div>
+</div>
+<div style="padding:20px;max-width:1000px;margin:0 auto;">
+  <p style="margin-bottom:16px;font-size:12px;color:#64748b;">Ngày xuất: ${dateStr} &nbsp;&middot;&nbsp; ${users} người dùng &nbsp;&middot;&nbsp; Tổng: ${totalPages.toLocaleString('vi-VN')} trang (${pctColor}% màu)</p>
+  <h2>Theo Máy In</h2>
+  <table><thead><tr><th>#</th><th>Model</th><th>Users</th><th>BW</th><th>Màu</th><th>Tổng</th><th>% Màu</th><th>Scan</th></tr></thead><tbody>${machineRows}</tbody></table>
+  <h2>Theo Phòng Ban</h2>
+  <table><thead><tr><th>#</th><th>Phòng ban</th><th>Users</th><th>BW</th><th>Màu</th><th>Tổng</th><th>% Màu</th></tr></thead><tbody>${deptRows}</tbody></table>
+  <h2>Top 10 Người Dùng</h2>
+  <table><thead><tr><th>#</th><th>Tên</th><th>BW</th><th>Màu</th><th>Tổng</th><th>% Màu</th></tr></thead><tbody>${top10Rows}</tbody></table>
+</div>
+</body></html>`);
+    pw.document.close();
+  };
+
+})(); // end Fuji IIFE
+
+</script>
+</body>
+</html>
