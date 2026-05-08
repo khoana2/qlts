@@ -51,305 +51,125 @@
   --accent-light:#EFF6FF;
 }
 /* ══════════ DARK MODE ══════════ */
-body.dark {
-  --bg:#0F172A; --panel:#1E293B; --panel2:#162032;
-  --header:#1E293B; --border:#2D3F55; --text:#E2E8F0;
-  --muted:#94A3B8; --accent:#818CF8; --accent2:#A78BFA;
-  --green:#34D399; --yellow:#FCD34D; --red:#F87171;
-  --orange:#FB923C; --shadow:0 2px 12px rgba(0,0,0,.4);
-  --surface:#1E293B; --surface2:#162032;
-  --accent-light:rgba(129,140,248,.12);
-}
 /* ── Base ── */
-body.dark { background:var(--bg)!important; color:var(--text)!important; }
-
 /* ── Layout ── */
-body.dark .topbar { background:var(--panel)!important; border-bottom-color:var(--border)!important; }
-body.dark .sidebar { background:var(--panel)!important; border-right-color:var(--border)!important; }
-body.dark .sidebar-foot { background:var(--panel)!important; border-top-color:var(--border)!important; }
-body.dark .ctx-sel { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
 
 /* ── Nav tabs ── */
-body.dark .nav-tab { color:var(--muted)!important; }
-body.dark .nav-tab:hover { background:var(--surface2)!important; color:var(--text)!important; }
-body.dark .nav-tab.active { background:var(--accent-light)!important; color:var(--accent)!important; }
 
 /* ── KPI cards ── */
-body.dark .kpi { background:var(--surface)!important; border-color:var(--border)!important; }
-body.dark .kpi-label, body.dark .kpi-sub { color:var(--muted)!important; }
 
 /* ── Chart cards ── */
-body.dark .chart-card { background:var(--surface)!important; border-color:var(--border)!important; }
-body.dark .chart-head { background:var(--surface2)!important; border-bottom-color:var(--border)!important; color:var(--muted)!important; }
 
 /* ── Buttons ── */
-body.dark .btn { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
-body.dark .btn:hover { background:#1e2d42!important; }
-body.dark .btn.primary { background:var(--accent)!important; color:#fff!important; border-color:var(--accent)!important; }
-body.dark .btn.danger  { background:#7f1d1d!important; color:#FCA5A5!important; border-color:#991b1b!important; }
-body.dark .btn.success { background:#14532d!important; color:#86EFAC!important; border-color:#166534!important; }
-body.dark .btn.warn    { background:#78350f!important; color:#FDE68A!important; border-color:#92400e!important; }
-body.dark .eye-btn { background:var(--surface2)!important; color:var(--muted)!important; border-color:var(--border)!important; }
 
 /* ── Table ── */
-body.dark table { border-color:var(--border)!important; }
-body.dark thead th { background:var(--surface2)!important; color:var(--muted)!important; border-color:var(--border)!important; }
-body.dark #assets-table thead .cb-col,
-body.dark #assets-table thead .sc-num,
-body.dark #assets-table thead .sc-ma,
-body.dark #assets-table thead .sc-ten { background:var(--surface2)!important; }
-body.dark tbody td { background:var(--surface)!important; border-color:var(--border)!important; color:var(--text)!important; }
-body.dark tbody tr:hover td { background:#1e2d42!important; }
-body.dark tbody tr.selected td { background:rgba(129,140,248,.12)!important; }
 
 /* ── Modals ── */
-body.dark .modal { background:var(--surface)!important; border-color:var(--border)!important; }
-body.dark .modal-head { background:var(--surface2)!important; border-bottom-color:var(--border)!important; }
-body.dark .modal-foot { background:var(--surface2)!important; border-top-color:var(--border)!important; }
-body.dark .modal-head h2 { color:var(--text)!important; }
 
 /* ── Forms ── */
-body.dark input, body.dark select, body.dark textarea { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
-body.dark .fsel, body.dark .finput { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
-body.dark .field label { color:var(--muted)!important; }
-body.dark input::placeholder { color:var(--muted)!important; }
-body.dark .adv-filter-wrap { background:var(--surface2)!important; border-top-color:var(--border)!important; }
 
 /* ── Global search ── */
-body.dark .global-search-input { background:var(--surface2)!important; color:var(--text)!important; }
-body.dark .gs-kbd { background:var(--surface)!important; color:var(--muted)!important; border-color:var(--border)!important; }
-body.dark .global-search-results { background:var(--surface)!important; border-color:var(--border)!important; }
-body.dark .gs-item:hover { background:var(--surface2)!important; }
 
 /* ── Quick filter chips ── */
-body.dark .qf-chip { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
-body.dark .qf-chip.active { background:var(--accent-light)!important; color:var(--accent)!important; }
 
 /* ── Pills & badges ── */
-body.dark .pill.gray { background:rgba(148,163,184,.15)!important; color:var(--muted)!important; border-color:var(--border)!important; }
-body.dark .warn-badge.ok { background:rgba(129,140,248,.15)!important; color:var(--accent)!important; border-color:var(--border)!important; }
-body.dark .warn-badge.soon { background:rgba(251,191,36,.12)!important; }
 
 /* ── Toast ── */
-body.dark .toast { background:var(--surface)!important; border-color:var(--border)!important; color:var(--text)!important; box-shadow:0 4px 20px rgba(0,0,0,.4)!important; }
 
 /* ── Status picker ── */
-body.dark .status-picker-pop { background:var(--surface)!important; border-color:var(--border)!important; box-shadow:0 8px 32px rgba(0,0,0,.5)!important; }
-body.dark .sp-opt:hover { background:var(--surface2)!important; }
 
 /* ── Repair cards ── */
-body.dark .rep-card { background:var(--surface)!important; border-color:var(--border)!important; }
-body.dark .rep-kpi-card { background:var(--surface)!important; border-color:var(--border)!important; }
-body.dark .rep-kpi-num { color:var(--text)!important; }
 
 /* ── License, DNTT, Procurement ── */
-body.dark .lic-table th { background:var(--surface2)!important; }
-body.dark #proc-list .proc-card { background:var(--surface)!important; border-color:var(--border)!important; }
 
 /* ── Sync bars ── */
-body.dark .sync-bar { background:var(--surface2)!important; border-color:var(--border)!important; color:var(--muted)!important; }
-body.dark .sync-bar.s-ok { color:#34D399!important; }
-body.dark .sync-bar.s-warn { color:#FCD34D!important; }
-body.dark .sync-bar.s-err { color:#F87171!important; }
 
 /* ── Pagination ── */
-body.dark .page-btn { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
-body.dark .page-btn.active { background:var(--accent)!important; color:#fff!important; border-color:var(--accent)!important; }
-body.dark .page-btn:hover { background:#1e2d42!important; }
-body.dark .per-page-sel { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
 
 /* ── Spec chips ── */
-body.dark .spec-chip { background:var(--surface2)!important; border-color:var(--border)!important; }
-body.dark .spec-chip .sc-val { color:var(--text)!important; }
 
 /* ── Dashboard ── */
-body.dark .dash-grid .chart-card { background:var(--surface)!important; }
-body.dark .dept-bar { opacity:.8; }
-body.dark .dept-table td { border-color:var(--border)!important; }
 
 /* ── Confirm modal ── */
-body.dark #modal-confirm > div { background:var(--surface)!important; }
 
 /* ── Skeleton ── */
-body.dark .skel { background:linear-gradient(90deg,#1E293B 25%,#2D3F55 50%,#1E293B 75%)!important; background-size:600px 100%!important; }
 
 /* ── Misc ── */
-body.dark .empty-state { color:var(--muted)!important; }
-body.dark .col-toggle-menu { background:var(--surface)!important; border-color:var(--border)!important; }
-body.dark .col-toggle-menu label:hover { background:var(--surface2)!important; }
-body.dark .expiry-list-item { border-bottom-color:var(--border)!important; }
-body.dark #dash-expiry-wrap { border-top-color:var(--border)!important; }
 
 /* ── Timeline / Lịch sử ── */
-body.dark .tl-wrap { background:var(--surface)!important; border-color:var(--border)!important; box-shadow:none!important; }
-body.dark .tl-card { border-bottom-color:var(--border)!important; }
-body.dark .tl-card:hover { background:rgba(129,140,248,.08)!important; }
-body.dark .tl-icon-bangiao { background:rgba(29,78,216,.2)!important; color:#93C5FD!important; }
-body.dark .tl-icon-thuhoi  { background:rgba(180,83,9,.2)!important;  color:#FCD34D!important; }
-body.dark .tl-icon-suachua { background:rgba(220,38,38,.2)!important; color:#FCA5A5!important; }
-body.dark .tl-icon-baotri  { background:rgba(22,163,74,.2)!important; color:#86EFAC!important; }
-body.dark .tl-icon-nangcap { background:rgba(124,58,237,.2)!important;color:#C4B5FD!important; }
-body.dark .tl-icon-thanhtly{ background:rgba(234,88,12,.2)!important; color:#FDBA74!important; }
-body.dark .tl-person-chip  { background:var(--surface2)!important; border-color:var(--border)!important; color:var(--text)!important; }
-body.dark .tl-asset-code   { background:rgba(139,92,246,.15)!important; }
 
 /* ── Table body rows ── */
-body.dark #assets-table { background:var(--surface)!important; }
-body.dark tbody tr { background:var(--surface)!important; }
-body.dark tbody tr:nth-child(even) td { background:#192436!important; }
-body.dark tbody tr:hover td { background:rgba(129,140,248,.1)!important; }
 
 /* ── Scrollbar ── */
-body.dark ::-webkit-scrollbar-track { background:var(--surface2)!important; }
-body.dark ::-webkit-scrollbar-thumb { background:#3D5270!important; border-color:var(--surface2)!important; }
 
 /* ── Chart.js canvas ── */
-body.dark .chart-card canvas { filter:brightness(.9); }
 
 /* ── License table ── */
-body.dark #lic-tbody tr { background:var(--surface)!important; }
-body.dark #lic-tbody td { background:var(--surface)!important; border-color:var(--border)!important; }
-body.dark #lic-tbody tr:hover td { background:rgba(129,140,248,.1)!important; }
 
 /* ── DNTT / Procurement ── */
-body.dark #dntt-list tr, body.dark #proc-list tr { background:var(--surface)!important; }
-body.dark .proc-card { background:var(--surface)!important; border-color:var(--border)!important; }
 
 /* ── Dropdown options ── */
-body.dark select option { background:var(--surface)!important; color:var(--text)!important; }
 
 /* ── View backgrounds ── */
-body.dark .view { background:transparent!important; }
-body.dark #view-events, body.dark #view-assets,
-body.dark #view-license, body.dark #view-dntt,
-body.dark #view-procurement, body.dark #view-repairs { background:transparent!important; }
 
 /* ── Topbar brand text ── */
-body.dark .brand-text h1 { color:var(--text)!important; }
-body.dark .brand-text p  { color:var(--muted)!important; }
+
+/* ── Filter bar + search wrap ── */
+
+/* ── Table footer / pagination bar ── */
 
 /* ── KPI card icons — dark mode ── */
-body.dark .kpi .kpi-icon { color:var(--accent)!important; }
-body.dark .kpi.blue   .kpi-icon { background:rgba(99,102,241,.18)!important;  color:#818CF8!important; }
-body.dark .kpi.green  .kpi-icon { background:rgba(16,185,129,.18)!important;  color:#34D399!important; }
-body.dark .kpi.yellow .kpi-icon { background:rgba(245,158,11,.18)!important;  color:#FCD34D!important; }
-body.dark .kpi.red    .kpi-icon { background:rgba(239,68,68,.18)!important;   color:#F87171!important; }
-body.dark .kpi.purple .kpi-icon { background:rgba(139,92,246,.18)!important;  color:#C4B5FD!important; }
 
 /* ── KPI card — border glow nhẹ theo màu ── */
-body.dark .kpi.blue   { border-color:rgba(99,102,241,.3)!important; }
-body.dark .kpi.green  { border-color:rgba(16,185,129,.3)!important; }
-body.dark .kpi.yellow { border-color:rgba(245,158,11,.3)!important; }
-body.dark .kpi.red    { border-color:rgba(239,68,68,.3)!important; }
-body.dark .kpi.purple { border-color:rgba(139,92,246,.3)!important; }
 
 /* ── Smart action menu (context menu — glassmorphism) ── */
-body.dark #smart-action-menu {
   background:rgba(30,41,59,0.92)!important;
   border-color:rgba(45,63,85,0.8)!important;
   box-shadow:0 12px 48px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)!important;
 }
-body.dark .sa-header-name { color:var(--text)!important; }
-body.dark .sa-header-code { color:var(--muted)!important; }
-body.dark .sa-section { color:var(--muted)!important; }
-body.dark .sa-item { color:var(--text)!important; }
-body.dark .sa-item:hover { background:rgba(129,140,248,.1)!important; }
-body.dark .sa-divider { background:var(--border)!important; }
 
 /* ── Repair KPI icon wraps ── */
-body.dark .rep-kpi-orange .rep-kpi-icon-wrap { background:rgba(249,115,22,.15)!important; }
-body.dark .rep-kpi-green  .rep-kpi-icon-wrap { background:rgba(16,185,129,.12)!important; }
-body.dark .rep-kpi-red    .rep-kpi-icon-wrap { background:rgba(239,68,68,.12)!important; }
 
 /* ── Table card (main white container behind ALL tables) ── */
-body.dark .table-card { background:var(--surface)!important; border-color:var(--border)!important; box-shadow:none!important; }
 
 /* ── Fuji drop zone ── */
-body.dark #view-fuji .fuji-drop { background:var(--surface2)!important; border-color:var(--border)!important; }
-body.dark #view-fuji .fuji-drop.drag { background:var(--accent-light)!important; border-color:var(--accent)!important; }
-body.dark #view-fuji .fuji-k { background:var(--surface)!important; border-color:var(--border)!important; }
 
 /* ── Drop zone (import) ── */
-body.dark .drop-zone { background:var(--surface2)!important; border-color:var(--border)!important; }
-body.dark .drop-zone:hover, body.dark .drop-zone.over { border-color:var(--accent)!important; background:var(--accent-light)!important; }
 
 /* ── table-wrap background (empty row space) ── */
-body.dark .table-wrap { background:var(--surface)!important; }
 
 /* ── Sidebar user card ── */
-body.dark .sidebar-user-card { background:var(--surface2)!important; border-color:var(--border)!important; }
-body.dark .sidebar-role-badge { background:rgba(129,140,248,.12)!important; color:var(--accent)!important; border-color:rgba(129,140,248,.3)!important; }
 
 /* ── Expiry alert items ── */
-body.dark .expiry-alert-item { background:var(--surface2)!important; border-color:var(--border)!important; }
-body.dark .expiry-alert-item.expired  { background:rgba(248,113,113,.08)!important; border-color:rgba(248,113,113,.3)!important; }
-body.dark .expiry-alert-item.critical { background:rgba(251,146,60,.08)!important;  border-color:rgba(251,146,60,.3)!important; }
-body.dark .expiry-alert-item.warning  { background:rgba(252,211,77,.06)!important;  border-color:rgba(252,211,77,.25)!important; }
-body.dark .expiry-alert-item .exp-badge { background:var(--surface)!important; color:var(--text)!important; }
 
 /* ── Row tint overrides in dark mode ── */
-body.dark tbody tr.row-sua td { background:rgba(251,146,60,.10)!important; border-left-color:#F97316!important; }
-body.dark tbody tr.row-hong td { background:rgba(248,113,113,.08)!important; }
-body.dark tbody tr.row-kho td  { background:var(--surface)!important; }
-body.dark tbody tr.row-thanh-ly td { background:var(--surface)!important; opacity:.55; }
 
 /* ── Bottom navigation ── */
-body.dark .bottom-nav { background:var(--panel)!important; border-top-color:var(--border)!important; box-shadow:0 -4px 20px rgba(0,0,0,.3)!important; }
-body.dark .bottom-nav .bn-tab { color:var(--muted)!important; }
-body.dark .bottom-nav .bn-tab.active { color:var(--accent)!important; }
 
 /* ── Advanced filter toggle btn ── */
-body.dark .btn-adv-toggle { background:var(--surface2)!important; border-color:var(--border)!important; color:var(--muted)!important; }
-body.dark .btn-adv-toggle.has-filter { background:var(--accent-light)!important; color:var(--accent)!important; border-color:var(--accent)!important; }
 
 /* ── QR modal ── */
-body.dark #qr-modal { background:var(--surface)!important; }
-body.dark #qr-canvas-wrap { background:var(--surface2)!important; border-color:var(--border)!important; }
 
 /* ── License calendar popover ── */
-body.dark #lc-popover { background:var(--surface)!important; border-color:var(--border)!important; box-shadow:0 8px 30px rgba(0,0,0,.4)!important; }
-body.dark .lcp-item { border-bottom-color:var(--border)!important; }
 
 /* ── Changelog card ── */
-body.dark #changelog-card { background:var(--surface)!important; border-color:var(--border)!important; }
-body.dark #changelog-card h4 { color:var(--text)!important; }
-body.dark #changelog-card li { color:var(--muted)!important; }
 
 /* ── Global search input focus ── */
-body.dark .global-search-input:focus { background:var(--surface)!important; border-color:var(--accent)!important; }
 
 /* ── Brand icon (logo wrap) ── */
-body.dark .brand-icon { background:var(--surface2)!important; box-shadow:none!important; }
 
 /* ── Sidebar nav items ── */
-body.dark .nav-item { color:var(--muted)!important; }
-body.dark .nav-item:hover { background:var(--surface2)!important; color:var(--text)!important; }
-body.dark .nav-item.active { background:var(--accent-light)!important; color:var(--accent)!important; }
-body.dark .sidebar-head { background:var(--panel)!important; border-bottom-color:var(--border)!important; }
 
 /* ── Filter / context bar ── */
-body.dark .filter-bar { background:var(--panel)!important; border-bottom-color:var(--border)!important; }
-body.dark .filter-group label { color:var(--muted)!important; }
 
 /* ── Repair tab list empty state ── */
-body.dark #repair-list-empty { background:var(--surface)!important; border-color:var(--border)!important; }
 
 /* ── DNTT payment form radio labels ── */
-body.dark label[style*="background:#fff"] { background:var(--surface2)!important; }
 
 /* ── Topbar second definition (Fuji section) ── */
-body.dark .topbar { background:var(--panel)!important; }
 
 /* ── Column toggle btn ── */
-body.dark #col-toggle-btn { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
 
-/* Dark mode toggle button */
-#btn-dark-toggle {
-  width:36px;height:36px;border-radius:10px;border:1px solid var(--border);
-  background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;
-  font-size:16px;transition:background .2s,border-color .2s;flex-shrink:0;
-}
-#btn-dark-toggle:hover { background:var(--accent-light); border-color:var(--accent); }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',system-ui,'Segoe UI',Roboto,sans-serif;}
 body{
@@ -2559,9 +2379,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <i class="ph ph-folder-open"></i>
         <span class="fsb-name" id="fsb-name">File JSON</span>
       </div>
-      <button id="btn-dark-toggle" onclick="toggleDarkMode()" title="Chuyển Dark / Light mode">
-        <i class="ph ph-moon" id="dark-toggle-icon"></i>
-      </button>
       <button class="btn success btn-icon-ph" id="btn-import-asset" onclick="openImport()"><i class="ph ph-upload-simple"></i> Import Excel</button>
       <button class="btn warn btn-icon-ph" id="btn-export-asset" onclick="exportExcel()"><i class="ph ph-download-simple"></i> Export</button>
       <button class="btn primary btn-icon-ph" id="btn-add-asset" onclick="openAdd()"><i class="ph ph-plus"></i> Thêm Tài Sản</button>
@@ -15826,28 +15643,6 @@ function gsGoLicense(id){
   }, 300);
 }
 
-// ══════════════════════ DARK MODE ══════════════════════
-(function(){
-  const saved = localStorage.getItem('qlts_dark_mode');
-  if(saved === '1') {
-    document.body.classList.add('dark');
-    const icon = document.getElementById('dark-toggle-icon');
-    if(icon){ icon.className = 'ph ph-sun'; }
-  }
-})();
-
-function toggleDarkMode(){
-  const isDark = document.body.classList.toggle('dark');
-  localStorage.setItem('qlts_dark_mode', isDark ? '1' : '0');
-  const icon = document.getElementById('dark-toggle-icon');
-  if(icon) icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
-}
-
-// Apply dark mode icon on DOMContentLoaded (icon may not exist when IIFE runs)
-document.addEventListener('DOMContentLoaded', ()=>{
-  const icon = document.getElementById('dark-toggle-icon');
-  if(icon && document.body.classList.contains('dark')) icon.className = 'ph ph-sun';
-});
 
 // Keyboard shortcut Ctrl+K to open global search
 document.addEventListener('keydown', e=>{
