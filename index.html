@@ -48,7 +48,62 @@
   --orange:#f97316; --shadow:0 2px 8px rgba(99,102,241,.07),0 1px 3px rgba(0,0,0,.04);
   --radius:14px; --radius-sm:10px;
   --surface:#ffffff; --surface2:#f5f6fc;
+  --accent-light:#EFF6FF;
 }
+/* ══════════ DARK MODE ══════════ */
+body.dark {
+  --bg:#0F172A; --panel:#1E293B; --panel2:#162032;
+  --header:#1E293B; --border:#2D3F55; --text:#E2E8F0;
+  --muted:#94A3B8; --accent:#818CF8; --accent2:#A78BFA;
+  --green:#34D399; --yellow:#FCD34D; --red:#F87171;
+  --orange:#FB923C; --shadow:0 2px 12px rgba(0,0,0,.4);
+  --surface:#1E293B; --surface2:#162032;
+  --accent-light:rgba(129,140,248,.12);
+}
+body.dark { background:var(--bg); color:var(--text); }
+body.dark .topbar { background:var(--panel); border-bottom:1px solid var(--border); }
+body.dark .sidebar { background:var(--panel); border-right:1px solid var(--border); }
+body.dark .nav-tab { color:var(--muted); }
+body.dark .nav-tab:hover { background:var(--surface2); color:var(--text); }
+body.dark .nav-tab.active { background:var(--accent-light); color:var(--accent); }
+body.dark .kpi { background:var(--surface); border-color:var(--border); }
+body.dark .modal { background:var(--surface); border-color:var(--border); }
+body.dark .modal-head,.dark .modal-foot { background:var(--surface2); border-color:var(--border); }
+body.dark .chart-card,.dark .rep-card { background:var(--surface); border-color:var(--border); }
+body.dark input,.dark select,.dark textarea { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
+body.dark .btn { background:var(--surface2); color:var(--text); border-color:var(--border); }
+body.dark .btn:hover { background:var(--panel2); }
+body.dark .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+body.dark .btn.danger { background:#7f1d1d; color:#FCA5A5; border-color:#991b1b; }
+body.dark .btn.success { background:#14532d; color:#86EFAC; border-color:#166534; }
+body.dark .btn.warn { background:#78350f; color:#FDE68A; border-color:#92400e; }
+body.dark table { border-color:var(--border); }
+body.dark th { background:var(--surface2); color:var(--muted); border-color:var(--border); }
+body.dark td { border-color:var(--border); }
+body.dark tbody tr:hover td { background:rgba(129,140,248,.08); }
+body.dark .toast { background:var(--surface); border-color:var(--border); color:var(--text); }
+body.dark .global-search-input { background:var(--surface2); color:var(--text); }
+body.dark .global-search-results { background:var(--surface); border-color:var(--border); }
+body.dark .fsel,.dark .finput { background:var(--surface2)!important; color:var(--text)!important; border-color:var(--border)!important; }
+body.dark .qf-chip { background:var(--surface2); color:var(--text); border-color:var(--border); }
+body.dark .qf-chip.active { background:var(--accent-light); color:var(--accent); }
+body.dark .pill.gray { background:rgba(148,163,184,.15); color:var(--muted); border-color:var(--border); }
+body.dark .empty-state { color:var(--muted); }
+body.dark .status-picker-pop { background:var(--surface); border-color:var(--border); }
+body.dark .sp-opt:hover { background:var(--surface2); }
+body.dark #modal-detail .modal,.dark #modal-form .modal { background:var(--surface); }
+body.dark .rep-card { background:var(--surface); }
+body.dark .rep-kpi-card { background:var(--surface); border-color:var(--border); }
+body.dark .sync-bar { background:var(--surface2); border-color:var(--border); }
+body.dark .adv-filter-wrap { background:var(--surface2); border-color:var(--border); }
+body.dark .skel { background:linear-gradient(90deg,#1E293B 25%,#2D3F55 50%,#1E293B 75%); }
+/* Dark mode toggle button */
+#btn-dark-toggle {
+  width:36px;height:36px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:background .2s,border-color .2s;flex-shrink:0;
+}
+#btn-dark-toggle:hover { background:var(--accent-light); border-color:var(--accent); }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',system-ui,'Segoe UI',Roboto,sans-serif;}
 body{
@@ -2258,6 +2313,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <i class="ph ph-folder-open"></i>
         <span class="fsb-name" id="fsb-name">File JSON</span>
       </div>
+      <button id="btn-dark-toggle" onclick="toggleDarkMode()" title="Chuyển Dark / Light mode">
+        <i class="ph ph-moon" id="dark-toggle-icon"></i>
+      </button>
       <button class="btn success btn-icon-ph" id="btn-import-asset" onclick="openImport()"><i class="ph ph-upload-simple"></i> Import Excel</button>
       <button class="btn warn btn-icon-ph" id="btn-export-asset" onclick="exportExcel()"><i class="ph ph-download-simple"></i> Export</button>
       <button class="btn primary btn-icon-ph" id="btn-add-asset" onclick="openAdd()"><i class="ph ph-plus"></i> Thêm Tài Sản</button>
@@ -15521,6 +15579,29 @@ function gsGoLicense(id){
     }
   }, 300);
 }
+
+// ══════════════════════ DARK MODE ══════════════════════
+(function(){
+  const saved = localStorage.getItem('qlts_dark_mode');
+  if(saved === '1') {
+    document.body.classList.add('dark');
+    const icon = document.getElementById('dark-toggle-icon');
+    if(icon){ icon.className = 'ph ph-sun'; }
+  }
+})();
+
+function toggleDarkMode(){
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('qlts_dark_mode', isDark ? '1' : '0');
+  const icon = document.getElementById('dark-toggle-icon');
+  if(icon) icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
+}
+
+// Apply dark mode icon on DOMContentLoaded (icon may not exist when IIFE runs)
+document.addEventListener('DOMContentLoaded', ()=>{
+  const icon = document.getElementById('dark-toggle-icon');
+  if(icon && document.body.classList.contains('dark')) icon.className = 'ph ph-sun';
+});
 
 // Keyboard shortcut Ctrl+K to open global search
 document.addEventListener('keydown', e=>{
