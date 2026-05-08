@@ -228,6 +228,39 @@ body.dark #view-procurement, body.dark #view-repairs { background:transparent!im
 body.dark .brand-text h1 { color:var(--text)!important; }
 body.dark .brand-text p  { color:var(--muted)!important; }
 
+/* ── Smart action menu (context menu — glassmorphism) ── */
+body.dark #smart-action-menu {
+  background:rgba(30,41,59,0.92)!important;
+  border-color:rgba(45,63,85,0.8)!important;
+  box-shadow:0 12px 48px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)!important;
+}
+body.dark .sa-header-name { color:var(--text)!important; }
+body.dark .sa-header-code { color:var(--muted)!important; }
+body.dark .sa-section { color:var(--muted)!important; }
+body.dark .sa-item { color:var(--text)!important; }
+body.dark .sa-item:hover { background:rgba(129,140,248,.1)!important; }
+body.dark .sa-divider { background:var(--border)!important; }
+
+/* ── Repair KPI icon wraps ── */
+body.dark .rep-kpi-orange .rep-kpi-icon-wrap { background:rgba(249,115,22,.15)!important; }
+body.dark .rep-kpi-green  .rep-kpi-icon-wrap { background:rgba(16,185,129,.12)!important; }
+body.dark .rep-kpi-red    .rep-kpi-icon-wrap { background:rgba(239,68,68,.12)!important; }
+
+/* ── Table card (main white container behind ALL tables) ── */
+body.dark .table-card { background:var(--surface)!important; border-color:var(--border)!important; box-shadow:none!important; }
+
+/* ── Fuji drop zone ── */
+body.dark #view-fuji .fuji-drop { background:var(--surface2)!important; border-color:var(--border)!important; }
+body.dark #view-fuji .fuji-drop.drag { background:var(--accent-light)!important; border-color:var(--accent)!important; }
+body.dark #view-fuji .fuji-k { background:var(--surface)!important; border-color:var(--border)!important; }
+
+/* ── Drop zone (import) ── */
+body.dark .drop-zone { background:var(--surface2)!important; border-color:var(--border)!important; }
+body.dark .drop-zone:hover, body.dark .drop-zone.over { border-color:var(--accent)!important; background:var(--accent-light)!important; }
+
+/* ── table-wrap background (empty row space) ── */
+body.dark .table-wrap { background:var(--surface)!important; }
+
 /* ── Sidebar user card ── */
 body.dark .sidebar-user-card { background:var(--surface2)!important; border-color:var(--border)!important; }
 body.dark .sidebar-role-badge { background:rgba(129,140,248,.12)!important; color:var(--accent)!important; border-color:rgba(129,140,248,.3)!important; }
