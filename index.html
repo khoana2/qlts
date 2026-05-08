@@ -144,6 +144,43 @@
 
 /* ── Row tint overrides in dark mode ── */
 
+/* ── Claude AI panel in detail modal ── */
+#ai-panel {
+  margin:14px 16px 0;border-radius:14px;overflow:hidden;
+  border:1px solid rgba(99,102,241,.25);
+  background:linear-gradient(135deg,rgba(99,102,241,.04),rgba(139,92,246,.04));
+}
+.ai-panel-head {
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(139,92,246,.1));
+  border-bottom:1px solid rgba(99,102,241,.15);
+}
+.ai-panel-head .ai-logo { font-size:18px; }
+.ai-panel-head strong { font-size:13px;color:#4F46E5;flex:1; }
+.ai-panel-head .ai-model { font-size:10px;color:#94A3B8;padding:1px 6px;background:rgba(99,102,241,.1);border-radius:10px; }
+.ai-panel-body { padding:14px 16px;font-size:13px;line-height:1.7;color:var(--text); }
+.ai-verdict {
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:999px;font-weight:700;font-size:13px;
+  margin-bottom:12px;
+}
+.ai-verdict.repair  { background:rgba(245,158,11,.12);color:#D97706;border:1px solid rgba(245,158,11,.3); }
+.ai-verdict.upgrade { background:rgba(99,102,241,.12);color:#4F46E5;border:1px solid rgba(99,102,241,.3); }
+.ai-verdict.liquidate{ background:rgba(239,68,68,.12);color:#DC2626;border:1px solid rgba(239,68,68,.3); }
+.ai-verdict.ok      { background:rgba(16,185,129,.12);color:#059669;border:1px solid rgba(16,185,129,.3); }
+.ai-thinking { display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;padding:10px 0; }
+.ai-thinking .ai-dots span {
+  display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--accent);margin:0 2px;
+  animation:aiDot 1.2s ease-in-out infinite;
+}
+.ai-thinking .ai-dots span:nth-child(2){animation-delay:.2s;}
+.ai-thinking .ai-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes aiDot{0%,80%,100%{transform:scale(.6);opacity:.4;}40%{transform:scale(1);opacity:1;}}
+.ai-apikey-row { display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid rgba(99,102,241,.15); }
+.ai-apikey-row input { flex:1;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2,#f8fafc);color:var(--text); }
+.ai-apikey-row button { font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--accent);color:var(--accent);background:transparent;cursor:pointer;white-space:nowrap; }
+
 /* ── Bottom navigation ── */
 
 /* ── Advanced filter toggle btn ── */
@@ -3816,7 +3853,13 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
     </div>
     <div class="modal-body" id="detail-body"></div>
-    <div class="modal-foot">
+    <div class="modal-foot" style="justify-content:space-between;">
+      <button class="btn btn-icon-ph" id="btn-ask-ai"
+        onclick="askClaudeAsset()"
+        title="Nhờ Claude AI phân tích: nên sửa, nâng cấp hay thanh lý?"
+        style="background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;font-weight:600;">
+        <i class="ph ph-robot"></i> Hỏi AI
+      </button>
       <button class="btn" onclick="closeModal('modal-detail')">Đóng</button>
     </div>
   </div>
@@ -8121,6 +8164,193 @@ document.addEventListener('DOMContentLoaded', function(){
   _empAutocomplete(document.getElementById('supp-receiver'), {});
 });
 
+// ══════════════════════ CLAUDE AI ADVISOR ══════════════════════
+const _AI_LS_KEY = 'qlts_claude_api_key';
+let _currentDetailAssetId = null; // track asset đang xem
+
+function _getAiApiKey(){
+  return localStorage.getItem(_AI_LS_KEY) || '';
+}
+
+function _saveAiApiKey(key){
+  localStorage.setItem(_AI_LS_KEY, key.trim());
+}
+
+async function askClaudeAsset(){
+  // Lấy asset đang xem trong panel
+  const bodyEl = document.getElementById('detail-body');
+  const titleEl = document.getElementById('detail-title');
+  if(!bodyEl) return;
+
+  // Lấy assetId từ biến global được set khi mở panel
+  const assetId = window._detailAssetId;
+  const a = assetId ? assets.find(x=>x.id===assetId) : null;
+  if(!a){ toast('Không tìm thấy tài sản','bad'); return; }
+
+  // Kiểm tra API key
+  let apiKey = _getAiApiKey();
+  if(!apiKey){
+    _showAiKeyPrompt();
+    return;
+  }
+
+  // Render panel + loading state
+  _renderAiPanel(null, true);
+
+  // Build context
+  const dep = calcDepreciation(a);
+  const repList = repairs[a.id] || [];
+  const totalRepairCost = repList.reduce((s,r)=>s+(parseFloat(r.chiPhi||0)||0), 0);
+  const ageYears = a.ngayMua
+    ? ((Date.now() - new Date(a.ngayMua)) / (1000*60*60*24*365)).toFixed(1)
+    : 'không rõ';
+
+  const prompt = `Bạn là chuyên gia quản lý tài sản IT. Hãy phân tích tài sản sau và đưa ra khuyến nghị ngắn gọn.
+
+**Thông tin tài sản:**
+- Loại: ${a.tenTaiSan || '—'}
+- Model: ${a.model || '—'}
+- CPU: ${a.cpu || '—'} | RAM: ${a.ram || '—'} | SSD: ${a.ssd || '—'}
+- Tuổi thiết bị: ${ageYears} năm (mua: ${a.ngayMua || 'không rõ'})
+- Giá trị ban đầu: ${a.giaTri ? Number(a.giaTri).toLocaleString('vi-VN') + ' VNĐ' : 'không rõ'}
+- Còn khấu hao: ${dep ? dep.pct + '% (' + dep.remaining.toLocaleString('vi-VN') + ' VNĐ)' : 'không rõ'}
+- Tình trạng hiện tại: ${a.tinhTrang || '—'}
+- Ghi chú: ${a.ghiChu || 'không có'}
+
+**Lịch sử sửa chữa:**
+- Số lần sửa: ${repList.length}
+- Tổng chi phí sửa chữa: ${totalRepairCost.toLocaleString('vi-VN')} VNĐ
+${repList.slice(-3).map(r=>`- ${r.ngay||''}: ${r.moTa||''} — ${r.chiPhi?Number(r.chiPhi).toLocaleString('vi-VN')+' VNĐ':''} — Kết quả: ${r.ketQua||''}`).join('\n')}
+
+**Yêu cầu:** Trả lời bằng tiếng Việt. Bắt đầu bằng 1 dòng VERDICT dạng:
+VERDICT: [SỬA CHỮA | NÂNG CẤP | THANH LÝ | GIỮ NGUYÊN]
+
+Rồi giải thích ngắn (3-5 câu): lý do, chi phí ước tính nếu có, so sánh chi phí sửa vs mua mới.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if(resp.status === 401){ _getAiApiKey() && _saveAiApiKey(''); _showAiKeyPrompt('API key không hợp lệ. Nhập lại:'); return; }
+    if(!resp.ok){ throw new Error('HTTP ' + resp.status); }
+
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '';
+    _renderAiPanel(text, false);
+
+  } catch(e){
+    _renderAiPanel(null, false, '⚠️ Lỗi kết nối: ' + e.message);
+    console.error('[AI]', e);
+  }
+}
+
+function _verdictInfo(text){
+  const t = text.toUpperCase();
+  if(t.includes('THANH LÝ'))   return { cls:'liquidate', icon:'🗑️', label:'Thanh lý' };
+  if(t.includes('NÂNG CẤP'))   return { cls:'upgrade',   icon:'⬆️', label:'Nâng cấp' };
+  if(t.includes('SỬA CHỮA'))   return { cls:'repair',    icon:'🔧', label:'Sửa chữa' };
+  if(t.includes('GIỮ NGUYÊN')) return { cls:'ok',        icon:'✅', label:'Giữ nguyên' };
+  return { cls:'ok', icon:'🤖', label:'Xem phân tích' };
+}
+
+function _renderAiPanel(text, loading, errMsg){
+  // Xóa panel cũ nếu có
+  const old = document.getElementById('ai-panel');
+  if(old) old.remove();
+
+  const panel = document.createElement('div');
+  panel.id = 'ai-panel';
+
+  if(loading){
+    panel.innerHTML = `
+      <div class="ai-panel-head">
+        <span class="ai-logo">🤖</span>
+        <strong>Claude AI đang phân tích…</strong>
+        <span class="ai-model">claude-haiku</span>
+      </div>
+      <div class="ai-panel-body">
+        <div class="ai-thinking">
+          <div class="ai-dots"><span></span><span></span><span></span></div>
+          Đang đánh giá tình trạng, khấu hao và lịch sử sửa chữa…
+        </div>
+      </div>`;
+  } else if(errMsg){
+    panel.innerHTML = `
+      <div class="ai-panel-head"><span class="ai-logo">🤖</span><strong>Claude AI</strong></div>
+      <div class="ai-panel-body" style="color:#ef4444;">${errMsg}</div>`;
+  } else {
+    // Parse verdict từ dòng đầu tiên
+    const firstLine = text.split('\n')[0] || '';
+    const v = _verdictInfo(firstLine);
+    // Body text: bỏ dòng VERDICT, giữ phần giải thích
+    const body = text.replace(/^VERDICT:.*\n?/i, '').trim()
+      .replace(/\n/g, '<br>');
+
+    panel.innerHTML = `
+      <div class="ai-panel-head">
+        <span class="ai-logo">🤖</span>
+        <strong>Phân tích AI</strong>
+        <span class="ai-model">claude-haiku</span>
+        <button onclick="askClaudeAsset()" title="Hỏi lại" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted);" >↺</button>
+      </div>
+      <div class="ai-panel-body">
+        <div class="ai-verdict ${v.cls}">${v.icon} Khuyến nghị: ${v.label}</div>
+        <div>${body}</div>
+      </div>`;
+  }
+
+  // Append vào modal-body
+  const mb = document.getElementById('detail-body');
+  if(mb){ mb.appendChild(panel); panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+}
+
+function _showAiKeyPrompt(msg){
+  const old = document.getElementById('ai-panel');
+  if(old) old.remove();
+
+  const panel = document.createElement('div');
+  panel.id = 'ai-panel';
+  panel.innerHTML = `
+    <div class="ai-panel-head">
+      <span class="ai-logo">🤖</span>
+      <strong>Claude AI — Cần API Key</strong>
+    </div>
+    <div class="ai-panel-body" style="padding-bottom:4px;">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+        ${msg||'Nhập Anthropic API key để dùng tính năng phân tích AI.'}<br>
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent);">Lấy API key tại console.anthropic.com ↗</a>
+      </p>
+    </div>
+    <div class="ai-apikey-row">
+      <input type="password" id="ai-key-input" placeholder="sk-ant-..." value="${_getAiApiKey()}"/>
+      <button onclick="_saveAiKeyAndRun()">Lưu & Phân tích</button>
+    </div>`;
+
+  const mb = document.getElementById('detail-body');
+  if(mb){ mb.appendChild(panel); panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  setTimeout(()=>{ const el=document.getElementById('ai-key-input'); if(el) el.focus(); }, 100);
+}
+
+function _saveAiKeyAndRun(){
+  const key = (document.getElementById('ai-key-input')?.value||'').trim();
+  if(!key){ toast('Vui lòng nhập API key','bad'); return; }
+  _saveAiApiKey(key);
+  askClaudeAsset();
+}
+// ════════════════════════════════════════════════════════════════
+
 // ─── Tính khấu hao đường thẳng ───────────────────────────────────────────────
 function calcDepreciation(asset){
   const orig = parseFloat(asset.giaTri);
@@ -9281,6 +9511,7 @@ async function confirmDelete(){
 
 // ═══════════════════════ DETAIL ═══════════════════════
 function viewDetail(id){
+  window._detailAssetId = id; // track cho AI advisor
   const a = assets.find(x=>x.id===id);
   if(!a) return;
   detailId = id;
@@ -17830,36 +18061,4 @@ h2{font-size:13px;font-weight:600;margin:16px 0 8px;}
 .toolbar{background:#1e293b;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;}
 .btn-print{background:#6366f1;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px;}
 .btn-close{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
-table{border-collapse:collapse;width:100%;margin-bottom:16px;}
-th,td{border:1px solid #e2e8f0;padding:5px 8px;font-size:11.5px;}
-th{background:#f8fafc;font-weight:600;}
-tr:nth-child(even){background:#f8fafc;}
-@media print{.toolbar{display:none;}}
-</style></head>
-<body>
-<div class="toolbar">
-  <strong>Báo Cáo In Ấn Fujixerox &mdash; ${period}</strong>
-  <div style="display:flex;gap:8px;">
-    <button class="btn-print" onclick="window.print()">In (Ctrl+P)</button>
-    <button class="btn-close" onclick="window.close()">Đóng</button>
-  </div>
-</div>
-<div style="padding:20px;max-width:1000px;margin:0 auto;">
-  <p style="margin-bottom:16px;font-size:12px;color:#64748b;">Ngày xuất: ${dateStr} &nbsp;&middot;&nbsp; ${users} người dùng &nbsp;&middot;&nbsp; Tổng: ${totalPages.toLocaleString('vi-VN')} trang (${pctColor}% màu)</p>
-  <h2>Theo Máy In</h2>
-  <table><thead><tr><th>#</th><th>Model</th><th>Users</th><th>BW</th><th>Màu</th><th>Tổng</th><th>% Màu</th><th>Scan</th></tr></thead><tbody>${machineRows}</tbody></table>
-  <h2>Theo Phòng Ban</h2>
-  <table><thead><tr><th>#</th><th>Phòng ban</th><th>Users</th><th>BW</th><th>Màu</th><th>Tổng</th><th>% Màu</th></tr></thead><tbody>${deptRows}</tbody></table>
-  <h2>Top 10 Người Dùng</h2>
-  <table><thead><tr><th>#</th><th>Tên</th><th>BW</th><th>Màu</th><th>Tổng</th><th>% Màu</th></tr></thead><tbody>${top10Rows}</tbody></table>
-</div>
-</body></html>`);
-    pw.document.close();
-  };
-
-})(); // end Fuji IIFE
-
-</script>
-</body>
-</html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+table{border-collapse:collapse;width:100%;margin
