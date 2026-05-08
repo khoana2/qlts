@@ -8168,14 +8168,14 @@ document.addEventListener('DOMContentLoaded', function(){
 // ══════════════════════ CLAUDE AI POPUP ══════════════════════
 let _claudeWin = null;
 
-// Kích thước popup Claude (nhỏ gọn, đặt bên phải)
-const _CLAUDE_W = () => Math.min(520, Math.round(screen.width * 0.32));
-const _CLAUDE_H = () => Math.min(650, Math.round(screen.height * 0.78));
+// Kích thước popup Claude — panel dọc sát bên phải màn hình
+const _CLAUDE_W = () => Math.min(480, Math.round(screen.availWidth * 0.30));
+const _CLAUDE_H = () => screen.availHeight;
 
 function _openOrFocusClaude(){
   const w = _CLAUDE_W(), h = _CLAUDE_H();
-  const left = screen.width - w - 16;
-  const top  = Math.round((screen.height - h) / 2);
+  const left = screen.availLeft + screen.availWidth - w;  // sát mép phải
+  const top  = screen.availTop;                           // từ đầu màn hình
   if(_claudeWin && !_claudeWin.closed){
     _claudeWin.focus();
     return false; // đã mở sẵn
@@ -18136,6 +18136,5 @@ tr:nth-child(even) td{background:#f8fafc;}
 })(); // end Fuji IIFE
 
 </script>
-
 </body>
 </html>
