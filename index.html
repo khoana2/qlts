@@ -8163,25 +8163,30 @@ document.addEventListener('DOMContentLoaded', function(){
 // ══════════════════════ CLAUDE AI POPUP ══════════════════════
 let _claudeWin = null;
 
-function openClaudePopup(){
-  // Nếu popup đang mở → focus lại
+// Kích thước popup Claude (nhỏ gọn, đặt bên phải)
+const _CLAUDE_W = () => Math.min(680, Math.round(screen.width * 0.42));
+const _CLAUDE_H = () => Math.min(720, Math.round(screen.height * 0.82));
+
+function _openOrFocusClaude(){
+  const w = _CLAUDE_W(), h = _CLAUDE_H();
+  const left = screen.width - w - 16;
+  const top  = Math.round((screen.height - h) / 2);
   if(_claudeWin && !_claudeWin.closed){
     _claudeWin.focus();
-    _showClaudeHint(false); // không có prompt mới
-    return;
+    return false; // đã mở sẵn
   }
-  // Mở popup mới
-  const w = Math.min(900, screen.width * 0.55);
-  const h = Math.min(860, screen.height * 0.9);
-  const left = screen.width - w - 20;
-  const top = (screen.height - h) / 2;
   _claudeWin = window.open(
-    'https://claude.ai/new',
-    'qlts_claude',
+    'https://claude.ai/new', 'qlts_claude',
     `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
   );
   _updateClaudeFabState();
-  toast('🤖 Đăng nhập Claude rồi hỏi bình thường nhé!','ok',4000);
+  return true; // vừa mở mới
+}
+
+function openClaudePopup(){
+  const isNew = _openOrFocusClaude();
+  if(isNew) toast('🤖 Đăng nhập Claude rồi hỏi bình thường nhé!','ok',4000);
+  else _showClaudeHint(false);
 }
 
 function _updateClaudeFabState(){
@@ -8191,73 +8196,137 @@ function _updateClaudeFabState(){
   if(dot) dot.classList.toggle('active', !!alive);
   if(lbl) lbl.textContent = alive ? 'Claude (đang mở)' : 'Claude';
 }
-
-// Kiểm tra định kỳ popup còn mở không
 setInterval(_updateClaudeFabState, 2000);
+
+// ── Tổng hợp toàn bộ data để gửi Claude ────────────────────────────
+function _buildSystemContext(highlightId){
+  const total = assets.length;
+  const byType   = {}, byStatus = {}, byDept = {};
+  let totalValue = 0, needRepair = 0, expiringSoon = 0;
+  const today = new Date();
+
+  assets.forEach(a => {
+    byType[a.tenTaiSan||'Khác']   = (byType[a.tenTaiSan||'Khác']||0)   + 1;
+    byStatus[a.tinhTrang||'?']    = (byStatus[a.tinhTrang||'?']||0)    + 1;
+    byDept[a.boPhan||'Chưa rõ']  = (byDept[a.boPhan||'Chưa rõ']||0)  + 1;
+    totalValue += parseFloat(a.giaTri)||0;
+    if((a.tinhTrang||'').includes('Hỏng') || (a.tinhTrang||'').includes('Sửa')) needRepair++;
+    if(a.baoHanhDen){
+      const bh = new Date(a.baoHanhDen);
+      const days = Math.round((bh - today)/86400000);
+      if(days >= 0 && days <= 90) expiringSoon++;
+    }
+  });
+
+  // Bảng tài sản rút gọn (mỗi máy 1 dòng)
+  const rows = assets.map(a => {
+    const dep     = calcDepreciation(a);
+    const repList = repairs[a.id] || [];
+    const repCost = repList.reduce((s,r)=>s+(parseFloat(r.chiPhi||0)||0),0);
+    const age     = a.ngayMua
+      ? ((Date.now()-new Date(a.ngayMua))/(1000*60*60*24*365)).toFixed(1)+'y'
+      : '?';
+    const depPct  = dep ? dep.pct+'%' : '?';
+    const flag    = a.id===highlightId ? ' ◀◀◀' : '';
+    return `${a.id}|${a.tenTaiSan||'?'}|${a.model||'?'}|${a.cpu||'?'}|${a.ram||'?'}|${a.ssd||'?'}|${a.nguoiDung||'—'}|${a.boPhan||'—'}|${a.tinhTrang||'?'}|${age}|KH:${depPct}|SC:${repList.length}lần/${repCost.toLocaleString('vi-VN')}đ${flag}`;
+  }).join('\n');
+
+  // Tổng hợp sửa chữa
+  const allRepairs = Object.entries(repairs).flatMap(([id,list])=>
+    (list||[]).map(r=>({assetId:id, ...r}))
+  ).sort((a,b)=>(b.ngay||'').localeCompare(a.ngay||'')).slice(0,20);
+  const repRows = allRepairs.map(r=>{
+    const ast = assets.find(x=>x.id===r.assetId);
+    return `  ${r.ngay||'?'} | ${ast?.tenTaiSan||r.assetId} (${ast?.model||'?'}) | ${r.moTa||'?'} | ${r.chiPhi?Number(r.chiPhi).toLocaleString('vi-VN')+'đ':'?'} | ${r.ketQua||'?'}`;
+  }).join('\n') || '  Chưa có';
+
+  return `════════════════════════════════════════════════════
+HỆ THỐNG QUẢN LÝ TÀI SẢN IT - TTGVN  (${new Date().toLocaleDateString('vi-VN')})
+════════════════════════════════════════════════════
+TỔNG QUAN: ${total} tài sản | Tổng giá trị: ${totalValue.toLocaleString('vi-VN')} VNĐ
+Cần sửa/hỏng: ${needRepair} | Sắp hết BH (≤90 ngày): ${expiringSoon}
+
+Theo loại  : ${Object.entries(byType).map(([k,v])=>`${k}(${v})`).join(', ')}
+Theo trạng thái: ${Object.entries(byStatus).map(([k,v])=>`${k}(${v})`).join(', ')}
+Theo phòng ban : ${Object.entries(byDept).map(([k,v])=>`${k}(${v})`).join(', ')}
+
+────────────────────────────────────────────────────
+DANH SÁCH TÀI SẢN (◀◀◀ = thiết bị đang hỏi)
+Cột: ID|Tên|Model|CPU|RAM|SSD|Người dùng|Phòng ban|Trạng thái|Tuổi|Khấu hao|Sửa chữa
+────────────────────────────────────────────────────
+${rows}
+
+────────────────────────────────────────────────────
+20 LƯỢT SỬA CHỮA GẦN NHẤT
+────────────────────────────────────────────────────
+${repRows}
+════════════════════════════════════════════════════`;
+}
 
 function askClaudeViaWeb(){
   const assetId = window._detailAssetId;
   const a = assetId ? assets.find(x=>x.id===assetId) : null;
   if(!a){ toast('Không tìm thấy tài sản','bad'); return; }
 
-  const dep = calcDepreciation(a);
+  const dep     = calcDepreciation(a);
   const repList = repairs[a.id] || [];
   const totalRepairCost = repList.reduce((s,r)=>s+(parseFloat(r.chiPhi||0)||0),0);
   const ageYears = a.ngayMua
     ? ((Date.now()-new Date(a.ngayMua))/(1000*60*60*24*365)).toFixed(1)
     : 'không rõ';
-
   const repHistory = repList.length
-    ? repList.slice(-5).map(r=>`  - ${r.ngay||'?'}: ${r.moTa||''} | Chi phí: ${r.chiPhi?Number(r.chiPhi).toLocaleString('vi-VN')+' VNĐ':'không rõ'} | Kết quả: ${r.ketQua||'?'}`).join('\n')
+    ? repList.map(r=>`  - ${r.ngay||'?'}: ${r.moTa||''} | ${r.chiPhi?Number(r.chiPhi).toLocaleString('vi-VN')+' VNĐ':'?'} | ${r.ketQua||'?'}`).join('\n')
     : '  Chưa có lịch sử sửa chữa';
 
-  const prompt = `Bạn là chuyên gia quản lý tài sản IT. Phân tích thiết bị sau và cho biết nên SỬA CHỮA, NÂNG CẤP hay THANH LÝ. Giải thích ngắn gọn lý do và ước tính chi phí nếu có.
+  const sysCtx = _buildSystemContext(assetId);
 
-THÔNG TIN THIẾT BỊ:
-- Loại: ${a.tenTaiSan||'—'} | Model: ${a.model||'—'}
+  const prompt =
+`Bạn là chuyên gia quản lý tài sản IT. Tôi cung cấp toàn bộ dữ liệu hệ thống để bạn có context đầy đủ. Hãy phân tích THIẾT BỊ ĐANG HỎI (đánh dấu ◀◀◀) và cho biết nên SỬA CHỮA, NÂNG CẤP hay THANH LÝ. So sánh với các thiết bị tương đồng trong hệ thống nếu cần.
+
+${sysCtx}
+
+════════════════════════════════════════════════════
+CHI TIẾT THIẾT BỊ ĐANG HỎI: ${a.tenTaiSan||'?'} — ${a.model||'?'} (ID: ${a.id})
+════════════════════════════════════════════════════
 - CPU: ${a.cpu||'—'} | RAM: ${a.ram||'—'} | SSD: ${a.ssd||'—'}
+- Người dùng: ${a.nguoiDung||'—'} | Phòng ban: ${a.boPhan||'—'}
 - Tuổi: ${ageYears} năm (mua ${a.ngayMua||'không rõ'})
 - Giá trị ban đầu: ${a.giaTri?Number(a.giaTri).toLocaleString('vi-VN')+' VNĐ':'không rõ'}
 - Khấu hao còn lại: ${dep?dep.pct+'% ('+dep.remaining.toLocaleString('vi-VN')+' VNĐ)':'không rõ'}
+- Bảo hành đến: ${a.baoHanhDen||'không rõ'}
 - Tình trạng: ${a.tinhTrang||'—'}${a.ghiChu?'\n- Ghi chú: '+a.ghiChu:''}
 
-LỊCH SỬ SỬA CHỮA (${repList.length} lần | Tổng: ${totalRepairCost.toLocaleString('vi-VN')} VNĐ):
-${repHistory}`;
+TOÀN BỘ LỊCH SỬ SỬA CHỮA (${repList.length} lần | Tổng: ${totalRepairCost.toLocaleString('vi-VN')} VNĐ):
+${repHistory}
+
+YÊU CẦU: Phân tích và đề xuất rõ ràng: SỬA / NÂNG CẤP / THANH LÝ — kèm lý do và ước tính chi phí.`;
 
   // Copy clipboard
-  const doCopy = (txt) => {
-    try {
-      navigator.clipboard.writeText(txt);
-    } catch(e) {
-      const ta=document.createElement('textarea');
-      ta.value=txt; ta.style.cssText='position:fixed;opacity:0;';
-      document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); ta.remove();
-    }
-  };
-  doCopy(prompt);
-
-  // Mở / focus popup
-  if(!_claudeWin || _claudeWin.closed){
-    const w=Math.min(900,screen.width*.55), h=Math.min(860,screen.height*.9);
-    const left=screen.width-w-20, top=(screen.height-h)/2;
-    _claudeWin=window.open('https://claude.ai/new','qlts_claude',
-      `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
-  } else {
-    _claudeWin.focus();
+  try {
+    navigator.clipboard.writeText(prompt);
+  } catch(e) {
+    const ta=document.createElement('textarea');
+    ta.value=prompt; ta.style.cssText='position:fixed;opacity:0;';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
   }
+
+  const isNew = _openOrFocusClaude();
   _updateClaudeFabState();
-  _showClaudeHint(true);
+  _showClaudeHint(true, isNew);
 }
 
-function _showClaudeHint(withPrompt){
+function _showClaudeHint(withPrompt, isNew){
   const el = document.getElementById('claude-hint-toast');
   if(!el) return;
-  el.innerHTML = withPrompt
-    ? `📋 Đã copy thông tin <strong>${assets.find(x=>x.id===window._detailAssetId)?.tenTaiSan||'tài sản'}</strong><br>Trong Claude: <kbd>Ctrl+V</kbd> rồi <kbd>Enter</kbd>`
-    : `🤖 Claude đang mở — gõ câu hỏi trực tiếp nhé!`;
+  if(withPrompt){
+    const name = assets.find(x=>x.id===window._detailAssetId)?.tenTaiSan||'tài sản';
+    el.innerHTML = `📋 Đã copy toàn bộ data + <strong>${name}</strong><br>${isNew?'Đăng nhập Claude rồi ':''}dán <kbd>Ctrl+V</kbd> → <kbd>Enter</kbd>`;
+  } else {
+    el.innerHTML = `🤖 Claude đang mở — gõ câu hỏi trực tiếp nhé!`;
+  }
   el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'), 5000);
+  setTimeout(()=>el.classList.remove('show'), 6000);
 }
 // ═════════════════════════════════════════════════════════════════════
 
@@ -17949,77 +18018,113 @@ function printQRLabel(){
     const top10Rows=top10arr.map((u,i)=>`
       <tr>
         <td style="text-align:center;color:#64748b">${i+1}</td>
-        <td><strong>${u.name||u.user}</strong><br><span style="color:#64748b;font-size:11px">${u.dept||''}</span></td>
+        <td><strong>${u.name||u.user}</strong>${u.name?`<br><span style="color:#64748b;font-size:10px">${u.user}</span>`:''}</td>
+        <td>${u.dept||'—'}</td>
         <td style="text-align:right">${u.bw.toLocaleString('vi-VN')}</td>
         <td style="text-align:right">${u.color.toLocaleString('vi-VN')}</td>
         <td style="text-align:right"><strong>${u.total.toLocaleString('vi-VN')}</strong></td>
         <td style="text-align:right">${u.total?Math.round(u.color*100/u.total):0}%</td>
       </tr>`).join('');
 
-    const pw=window.open('','_blank','width=960,height=720,scrollbars=yes,resizable=yes');
-    if(!pw){ if(typeof toast==='function') toast('⚠️ Trình duyệt chặn popup — hãy cho phép popup và thử lại','warn'); return; }
+    const pw=window.open('','_blank','width=1000,height=860,scrollbars=yes,resizable=yes');
+    if(!pw){ toast('⚠️ Trình duyệt chặn popup — vui lòng cho phép popup.','warn',5000); return; }
     pw.document.write(`<!DOCTYPE html>
-<html lang="vi"><head><meta charset="UTF-8">
-<title>Báo Cáo In Ấn Fuji — ${period}</title>
+<html lang="vi"><head>
+<meta charset="UTF-8">
+<title>Báo cáo In ấn FujiXerox — ${period}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:24px;}
-.toolbar{background:#1e293b;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-radius:8px;}
-.btn-print{background:#6366f1;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px;}
-.btn-close{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
-table{border-collapse:collapse;width:100%;background:#fff;border-radius:8px;overflow:hidden;}
-th{background:#1e293b;color:#fff;padding:8px 10px;font-size:11px;text-align:left;}
-td{padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;}
-tr:hover td{background:#f8fafc;}
-h2{font-size:14px;font-weight:700;margin:16px 0 8px;color:#1e293b;}
-.summary{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-.sum-card{background:#fff;border-radius:8px;padding:12px 16px;flex:1;min-width:120px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
-.sum-card .val{font-size:22px;font-weight:800;color:#6366f1;}
-.sum-card .lbl{font-size:11px;color:#64748b;margin-top:2px;}
-@media print{.toolbar{display:none!important;}}
-</style></head>
+@page{size:A4 portrait;margin:12mm 14mm;}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:9pt;color:#0f172a;background:#f1f5f9;}
+.toolbar{position:sticky;top:0;z-index:100;background:#1e1b4b;color:#fff;
+  display:flex;align-items:center;justify-content:space-between;padding:10px 20px;gap:10px;font-size:13px;}
+.toolbar span{font-weight:700;}
+.toolbar-btns{display:flex;gap:8px;}
+.btn-print{background:#6366f1;color:#fff;border:none;padding:6px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;}
+.btn-close{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;}
+.page{background:#fff;width:210mm;margin:16px auto;padding:14mm 15mm;box-shadow:0 2px 16px rgba(0,0,0,.15);}
+h1{font-size:15pt;font-weight:700;color:#1e1b4b;margin-bottom:2px;}
+.subtitle{color:#64748b;font-size:9pt;margin-bottom:16px;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;text-align:center;}
+.kpi .val{font-size:16pt;font-weight:700;color:#1e1b4b;}
+.kpi .lbl{font-size:8pt;color:#64748b;margin-top:2px;}
+h2{font-size:11pt;font-weight:700;color:#1e1b4b;margin:16px 0 8px;border-bottom:2px solid #6366f1;padding-bottom:4px;}
+table{border-collapse:collapse;width:100%;font-size:8.5pt;margin-bottom:8px;}
+th{background:#1e1b4b;color:#fff;padding:6px 8px;text-align:left;font-weight:600;}
+td{padding:5px 8px;border-bottom:1px solid #e2e8f0;}
+tr:nth-child(even) td{background:#f8fafc;}
+.footer{margin-top:18px;text-align:center;font-size:8pt;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:8px;}
+@media print{
+  .toolbar{display:none!important;}
+  body{background:#fff;}
+  .page{box-shadow:none;padding:0;width:100%;margin:0;}
+}
+</style>
+</head>
 <body>
 <div class="toolbar">
-  <span>📊 Báo Cáo In Ấn Fujixerox — ${period}</span>
-  <div style="display:flex;gap:8px;">
+  <span>🖨️ Báo cáo In ấn FujiXerox — ${period}</span>
+  <div class="toolbar-btns">
     <button class="btn-print" onclick="window.print()">🖨️ In (Ctrl+P)</button>
     <button class="btn-close" onclick="window.close()">✕ Đóng</button>
   </div>
 </div>
-<div class="summary">
-  <div class="sum-card"><div class="val">${totalPages.toLocaleString('vi-VN')}</div><div class="lbl">Tổng trang in</div></div>
-  <div class="sum-card"><div class="val">${totalBW.toLocaleString('vi-VN')}</div><div class="lbl">Trắng đen</div></div>
-  <div class="sum-card"><div class="val">${totalColor.toLocaleString('vi-VN')}</div><div class="lbl">Màu (${pctColor}%)</div></div>
-  <div class="sum-card"><div class="val">${users}</div><div class="lbl">Người dùng</div></div>
+<div class="page">
+  <h1>BÁO CÁO IN ẤN FUJIXEROX</h1>
+  <p class="subtitle">Kỳ báo cáo: ${period} &nbsp;|&nbsp; Xuất ngày: ${dateStr}</p>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">${totalPages.toLocaleString('vi-VN')}</div><div class="lbl">Tổng trang in</div></div>
+    <div class="kpi"><div class="val">${totalColor.toLocaleString('vi-VN')}</div><div class="lbl">Trang màu</div></div>
+    <div class="kpi"><div class="val">${pctColor}%</div><div class="lbl">Tỉ lệ màu</div></div>
+    <div class="kpi"><div class="val">${users}</div><div class="lbl">Người dùng</div></div>
+  </div>
+
+  <h2>Top 10 người in nhiều nhất</h2>
+  <table>
+    <thead><tr>
+      <th style="width:30px;text-align:center">#</th>
+      <th>Họ tên</th><th>Phòng ban</th>
+      <th style="text-align:right">Trắng đen</th>
+      <th style="text-align:right">Màu</th>
+      <th style="text-align:right">Tổng</th>
+      <th style="text-align:right">%Màu</th>
+    </tr></thead>
+    <tbody>${top10Rows}</tbody>
+  </table>
+
+  <h2>Thống kê theo phòng ban</h2>
+  <table>
+    <thead><tr>
+      <th style="width:30px;text-align:center">#</th>
+      <th>Phòng ban</th>
+      <th style="text-align:right">Users</th>
+      <th style="text-align:right">Trắng đen</th>
+      <th style="text-align:right">Màu</th>
+      <th style="text-align:right">Tổng</th>
+      <th style="text-align:right">%Màu</th>
+    </tr></thead>
+    <tbody>${deptRows}</tbody>
+  </table>
+
+  <h2>Thống kê theo máy in</h2>
+  <table>
+    <thead><tr>
+      <th style="width:30px;text-align:center">#</th>
+      <th>Model / Serial</th>
+      <th style="text-align:right">Users</th>
+      <th style="text-align:right">Trắng đen</th>
+      <th style="text-align:right">Màu</th>
+      <th style="text-align:right">Tổng</th>
+      <th style="text-align:right">%Màu</th>
+      <th style="text-align:right">Scan</th>
+    </tr></thead>
+    <tbody>${machineRows}</tbody>
+  </table>
+
+  <div class="footer">Hệ thống Quản lý Tài sản IT — TTGVN &nbsp;|&nbsp; Tạo tự động ${dateStr}</div>
 </div>
-<h2>Top 10 người in nhiều nhất</h2>
-<table>
-  <thead><tr><th>#</th><th>Họ tên</th><th>Phòng ban</th><th>Trắng đen</th><th>Màu</th><th>Tổng</th><th>% Màu</th></tr></thead>
-  <tbody>${top10arr.map((u,i)=>`
-    <tr>
-      <td>${i+1}</td>
-      <td>${u.name||u.user||'—'}</td>
-      <td>${u.dept||'—'}</td>
-      <td style="text-align:right">${u.bw.toLocaleString('vi-VN')}</td>
-      <td style="text-align:right">${u.color.toLocaleString('vi-VN')}</td>
-      <td style="text-align:right"><strong>${u.total.toLocaleString('vi-VN')}</strong></td>
-      <td style="text-align:right">${u.total?Math.round(u.color*100/u.total):0}%</td>
-    </tr>`).join('')}
-  </tbody>
-</table>
-<h2>Theo phòng ban</h2>
-<table>
-  <thead><tr><th>Phòng ban</th><th>Trắng đen</th><th>Màu</th><th>Tổng</th></tr></thead>
-  <tbody>${depts.map(d=>`
-    <tr>
-      <td>${d.dept||'—'}</td>
-      <td style="text-align:right">${d.bw.toLocaleString('vi-VN')}</td>
-      <td style="text-align:right">${d.color.toLocaleString('vi-VN')}</td>
-      <td style="text-align:right"><strong>${d.total.toLocaleString('vi-VN')}</strong></td>
-    </tr>`).join('')}
-  </tbody>
-</table>
-</body></html>`);
+</body></html>\`);
     pw.document.close();
   };
 
