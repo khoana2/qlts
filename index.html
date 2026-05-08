@@ -8021,11 +8021,11 @@ function goKpiFilter(type){
   if(!type) return;
   setTimeout(()=>{
     if(type === 'warranty'){
-      // Dùng advanced filter bảo hành
-      const advWrap = document.getElementById('adv-filter-wrap');
-      if(advWrap && advWrap.style.display === 'none') toggleAdvFilter();
+      // Mở advanced filter row nếu chưa mở (ID đúng là adv-filter-row, dùng class 'open')
+      const advRow = document.getElementById('adv-filter-row');
+      if(advRow && !advRow.classList.contains('open')) toggleAdvFilter();
       const sel = document.getElementById('af-warranty');
-      if(sel){ sel.value = 'soon90'; applyFilters(); }
+      if(sel){ sel.value = 'soon90'; applyFilters(); _syncAdvToggleState(); }
       toast('🔍 Đã lọc: sắp hết bảo hành', 'ok');
     } else {
       activeQuickFilter = type;
