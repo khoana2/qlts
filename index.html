@@ -12380,16 +12380,15 @@ function _spToRec(item){
 
 // Load tất cả phiếu từ SP về repairs map
 async function loadRepairsSP(){
-  if(!SP_MODE && !_msalAccount) return;
+  if(!_msalAccount) return;
   try {
     let url = `${_RLIST()}/items?$top=2000&$orderby=ID asc`;
     const items = [];
     while(url){
-      const data = await spReq(url);
-      items.push(...(data.value||[]));
-      url = data['odata.nextLink'] || null;
+      const data = await msalSpReq(url);
+      items.push(...(data?.value||[]));
+      url = data?.['odata.nextLink'] || null;
     }
-    // rebuild repairs map từ SP
     const newRepairs = {};
     for(const item of items){
       const aid = item.AssetId;
@@ -12398,7 +12397,7 @@ async function loadRepairsSP(){
       newRepairs[aid].push(_spToRec(item));
     }
     repairs = newRepairs;
-    saveRepairs(); // cache sang localStorage
+    saveRepairs();
     _updateRepairBadge();
     console.log(`[SP Repair] Loaded ${items.length} phiếu`);
   } catch(e){
@@ -12410,7 +12409,8 @@ async function loadRepairsSP(){
 async function spRepairCreate(assetId, rec){
   try {
     const body = _repToSpBody(assetId, rec);
-    const res = await spReq(`${_RLIST()}/items`, { method:'POST', body: JSON.stringify(body) });
+    delete body.__metadata;
+    const res = await msalSpReq(`${_RLIST()}/items`, { method:'POST', body: JSON.stringify(body) });
     return res?.ID || null;
   } catch(e){
     console.warn('[SP Repair] create error:', e);
@@ -12423,9 +12423,9 @@ async function spRepairUpdate(spId, assetId, rec){
   try {
     const body = _repToSpBody(assetId, rec);
     delete body.__metadata;
-    await spReq(`${_RLIST()}/items(${spId})`,{
-      method:'POST',
-      headers:{'X-HTTP-Method':'MERGE','IF-MATCH':'*'},
+    await msalSpReq(`${_RLIST()}/items(${spId})`,{
+      method:'PATCH',
+      headers:{'IF-MATCH':'*'},
       body: JSON.stringify(body)
     });
   } catch(e){
@@ -12436,10 +12436,9 @@ async function spRepairUpdate(spId, assetId, rec){
 // Xóa phiếu trên SP
 async function spRepairDelete(spId){
   try {
-    await spReq(`${_RLIST()}/items(${spId})`,{
-      method:'POST',
-      headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'},
-      body:''
+    await msalSpReq(`${_RLIST()}/items(${spId})`,{
+      method:'DELETE',
+      headers:{'IF-MATCH':'*'},
     });
   } catch(e){
     console.warn('[SP Repair] delete error:', e);
