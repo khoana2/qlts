@@ -2851,6 +2851,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <button class="nav-tab" onclick="switchTab('fuji')" id="tab-fuji" style="display:none">
           <span class="tab-icon"><i class="ph ph-printer"></i></span> Báo Cáo In
         </button>
+        <div class="sidebar-section" style="margin-top:6px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px">Hành chính QT</div>
+        <button class="nav-tab" onclick="switchTab('hcqt')" id="tab-hcqt">
+          <span class="tab-icon">🏢</span> HC Quản trị
+        </button>
       </nav>
 
       <!-- User info footer -->
@@ -4003,6 +4007,29 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   <button class="fab-add" onclick="openAdd()" title="Thêm tài sản">
     <i class="ph ph-plus"></i>
   </button>
+
+  <!-- ══════════════ VIEW: HÀNH CHÍNH QUẢN TRỊ ══════════════ -->
+  <div class="view" id="view-hcqt">
+    <div id="hcqt-app">
+      <!-- Sub-nav -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="font-size:15px;font-weight:700;flex:1;">🏢 Quản lý tài sản – Hành chính Quản trị</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-icon-ph hcqt-subnav active" onclick="hcqtSubNav('dashboard')" id="hcqt-tab-dashboard" style="padding:5px 14px;font-size:12px;"><i class="ph ph-chart-bar"></i> Dashboard</button>
+          <button class="btn btn-icon-ph hcqt-subnav" onclick="hcqtSubNav('assets')" id="hcqt-tab-assets" style="padding:5px 14px;font-size:12px;"><i class="ph ph-list-bullets"></i> Danh sách</button>
+          <button class="btn btn-icon-ph hcqt-subnav" onclick="hcqtSubNav('maintenance')" id="hcqt-tab-maintenance" style="padding:5px 14px;font-size:12px;"><i class="ph ph-wrench"></i> Bảo trì</button>
+          <button class="btn btn-icon-ph hcqt-subnav" onclick="hcqtSubNav('vehicles')" id="hcqt-tab-vehicles" style="padding:5px 14px;font-size:12px;"><i class="ph ph-car"></i> Xe</button>
+          <button class="btn success btn-icon-ph" onclick="hcqtSync()" style="padding:5px 14px;font-size:12px;"><i class="ph ph-arrows-clockwise"></i> Sync SP</button>
+          <button class="btn btn-icon-ph" onclick="hcqtOpenAdd()" style="padding:5px 14px;font-size:12px;background:var(--accent,#3B82F6);color:#fff;border:none;"><i class="ph ph-plus"></i> Thêm</button>
+        </div>
+      </div>
+      <!-- Sub-views -->
+      <div id="hcqt-view-dashboard"></div>
+      <div id="hcqt-view-assets" style="display:none"></div>
+      <div id="hcqt-view-maintenance" style="display:none"></div>
+      <div id="hcqt-view-vehicles" style="display:none"></div>
+    </div>
+  </div>
 
 </div><!-- end .app -->
 
@@ -7769,6 +7796,7 @@ function switchTab(t){
   if(t==='auditlog')     renderAuditLog();
   if(t==='fuji')         fujiOnTabOpen();
   if(t==='repairs')      renderRepairs();
+  if(t==='hcqt')         hcqtOnTabOpen();
   // Sync bottom nav
   setBottomNav(t);
   // Đóng sidebar drawer trên mobile sau khi chọn tab
@@ -18541,6 +18569,585 @@ document.addEventListener('DOMContentLoaded',()=>{
     orig && orig(id);
   };
 });
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  HCQT MODULE — Quản lý tài sản Hành chính Quản trị              ║
+// ║  SharePoint: Department_Administration / DanhSachTaiSan_HCQT    ║
+// ╚══════════════════════════════════════════════════════════════════╝
+const HCQT_SITE     = 'https://ttgvncom.sharepoint.com/teams/Department_Administration';
+const HCQT_LIST     = 'DanhSachTaiSan_HCQT';
+const HCQT_STORE_KEY= 'hcqt_assets_v2';
+
+let _hcqtData       = [];
+let _hcqtSubView    = 'dashboard';
+let _hcqtEditId     = null;
+let _hcqtFilter     = { q:'', loai:'', tinh:'', toanha:'' };
+let _hcqtPage       = 1;
+const HCQT_PAGE_SZ  = 30;
+let _hcqtPanelItem  = null;
+let _hcqtChart1     = null;
+let _hcqtChart2     = null;
+
+function hcqtSaveLocal(){ try{ localStorage.setItem(HCQT_STORE_KEY, JSON.stringify(_hcqtData)); }catch(e){} }
+function hcqtLoadLocal(){ try{ const d=localStorage.getItem(HCQT_STORE_KEY); if(d) _hcqtData=JSON.parse(d); }catch(e){} }
+
+// ── Lấy token MSAL (dùng chung với IT app) ────────────────────────
+async function hcqtGetToken(){
+  if(typeof msalGetToken==='function') return msalGetToken();
+  return _msalToken||'';
+}
+
+// ── SP API helper ─────────────────────────────────────────────────
+async function hcqtSpFetch(path,opts={}){
+  const tok = await hcqtGetToken();
+  const res = await fetch(HCQT_SITE+'/_api/'+path,{
+    ...opts,
+    headers:{
+      'Authorization':'Bearer '+tok,
+      'Accept':'application/json;odata=nometadata',
+      'Content-Type':'application/json;odata=nometadata',
+      ...(opts.headers||{})
+    }
+  });
+  if(!res.ok){ const t=await res.text(); throw new Error('SP '+res.status+': '+t.slice(0,200)); }
+  return res.status===204?null:res.json();
+}
+
+const HCQT_SEL = 'Id,Title,MaTaiSan,LoaiTaiSan,NhomTaiSan,HangSanXuat,Model,SoSerial,MauSac,SoLuong,ToaNha,Tang,PhongViTri,KhuVuc,NguoiPhuTrach,EmailPhuTrach,BoPhanSuDung,TinhTrang,MucDoHaoMon,GhiChuTinhTrang,NgayKiemKe,KetQuaKiemKe,NgayMua,NguyenGia,NguonMua,SoHoaDon,ThoiGianKhauHao,NhomKhauHao,ChuKyBaoTri,NgayBaoTriGanNhat,NgayBaoTriTiepTheo,DonViBaoTri,ChiPhiBaoTri,LichSuSuaChua,BienSoXe,NgayDangKiem,NgayHetBaoHiem,NguoiLaiXe,SoKmHienTai,GhiChu,Created,Modified';
+
+async function hcqtSync(){
+  const hasAuth = typeof _msalAccount!=='undefined' && _msalAccount;
+  if(!hasAuth){ showNotif&&showNotif('Vui lòng đăng nhập Microsoft 365 trước','warn'); return; }
+  try{
+    let all=[],skip=0;
+    while(true){
+      const d = await hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items?$select=${HCQT_SEL}&$top=500&$skiptoken=Paged=TRUE%26p_ID=${skip}`);
+      all=all.concat(d.value||[]);
+      if(!d['odata.nextLink']&&(d.value||[]).length<500) break;
+      if(!(d.value||[]).length) break;
+      skip+=500;
+    }
+    _hcqtData=all.map(hcqtSpToLocal);
+    hcqtSaveLocal();
+    showNotif&&showNotif('HCQT: Đã tải '+_hcqtData.length+' tài sản','ok');
+    hcqtRenderSub();
+  }catch(e){ showNotif&&showNotif('HCQT lỗi: '+e.message,'err'); }
+}
+
+function hcqtSpToLocal(it){
+  return {
+    _id:it.Id, Title:it.Title||'', MaTaiSan:it.MaTaiSan||'',
+    LoaiTaiSan:it.LoaiTaiSan||'', NhomTaiSan:it.NhomTaiSan||'',
+    HangSanXuat:it.HangSanXuat||'', Model:it.Model||'',
+    SoSerial:it.SoSerial||'', MauSac:it.MauSac||'', SoLuong:it.SoLuong||1,
+    ToaNha:it.ToaNha||'', Tang:it.Tang||'', PhongViTri:it.PhongViTri||'',
+    KhuVuc:it.KhuVuc||'', NguoiPhuTrach:it.NguoiPhuTrach||'',
+    EmailPhuTrach:it.EmailPhuTrach||'', BoPhanSuDung:it.BoPhanSuDung||'',
+    TinhTrang:it.TinhTrang||'', MucDoHao:it.MucDoHaoMon||'',
+    GhiChuTinhTrang:it.GhiChuTinhTrang||'',
+    NgayKiemKe:it.NgayKiemKe||'', KetQuaKiemKe:it.KetQuaKiemKe||'',
+    NgayMua:it.NgayMua||'', NguyenGia:it.NguyenGia||0,
+    NguonMua:it.NguonMua||'', SoHoaDon:it.SoHoaDon||'',
+    ThoiGianKhauHao:it.ThoiGianKhauHao||0, NhomKhauHao:it.NhomKhauHao||'',
+    ChuKyBaoTri:it.ChuKyBaoTri||'',
+    NgayBaoTriGanNhat:it.NgayBaoTriGanNhat||'',
+    NgayBaoTriTiepTheo:it.NgayBaoTriTiepTheo||'',
+    DonViBaoTri:it.DonViBaoTri||'', ChiPhiBaoTri:it.ChiPhiBaoTri||0,
+    LichSuSuaChua:it.LichSuSuaChua||'', BienSoXe:it.BienSoXe||'',
+    NgayDangKiem:it.NgayDangKiem||'', NgayHetBaoHiem:it.NgayHetBaoHiem||'',
+    NguoiLaiXe:it.NguoiLaiXe||'', SoKmHienTai:it.SoKmHienTai||0,
+    GhiChu:it.GhiChu||'', Created:it.Created||'', Modified:it.Modified||''
+  };
+}
+
+function hcqtLocalToSP(f){
+  return {
+    Title:f.Title, MaTaiSan:f.MaTaiSan,
+    LoaiTaiSan:f.LoaiTaiSan, NhomTaiSan:f.NhomTaiSan,
+    HangSanXuat:f.HangSanXuat, Model:f.Model,
+    SoSerial:f.SoSerial, MauSac:f.MauSac, SoLuong:+f.SoLuong||1,
+    ToaNha:f.ToaNha, Tang:f.Tang, PhongViTri:f.PhongViTri, KhuVuc:f.KhuVuc,
+    NguoiPhuTrach:f.NguoiPhuTrach, EmailPhuTrach:f.EmailPhuTrach, BoPhanSuDung:f.BoPhanSuDung,
+    TinhTrang:f.TinhTrang, MucDoHaoMon:f.MucDoHao,
+    GhiChuTinhTrang:f.GhiChuTinhTrang,
+    NgayKiemKe:f.NgayKiemKe||null, KetQuaKiemKe:f.KetQuaKiemKe,
+    NgayMua:f.NgayMua||null, NguyenGia:+f.NguyenGia||null,
+    NguonMua:f.NguonMua, SoHoaDon:f.SoHoaDon,
+    ThoiGianKhauHao:+f.ThoiGianKhauHao||null, NhomKhauHao:f.NhomKhauHao,
+    ChuKyBaoTri:f.ChuKyBaoTri,
+    NgayBaoTriGanNhat:f.NgayBaoTriGanNhat||null,
+    NgayBaoTriTiepTheo:f.NgayBaoTriTiepTheo||null,
+    DonViBaoTri:f.DonViBaoTri, ChiPhiBaoTri:+f.ChiPhiBaoTri||null,
+    LichSuSuaChua:f.LichSuSuaChua, BienSoXe:f.BienSoXe,
+    NgayDangKiem:f.NgayDangKiem||null, NgayHetBaoHiem:f.NgayHetBaoHiem||null,
+    NguoiLaiXe:f.NguoiLaiXe, SoKmHienTai:+f.SoKmHienTai||null,
+    GhiChu:f.GhiChu
+  };
+}
+
+// ── Navigation ────────────────────────────────────────────────────
+function hcqtOnTabOpen(){
+  hcqtLoadLocal();
+  hcqtRenderSub();
+  // Auto sync nếu chưa có data
+  if(!_hcqtData.length && typeof _msalAccount!=='undefined' && _msalAccount) hcqtSync();
+}
+
+function hcqtSubNav(v){
+  _hcqtSubView=v;
+  document.querySelectorAll('.hcqt-subnav').forEach(b=>b.classList.toggle('active',b.id==='hcqt-tab-'+v));
+  hcqtRenderSub();
+}
+
+function hcqtRenderSub(){
+  ['dashboard','assets','maintenance','vehicles'].forEach(v=>{
+    const el=document.getElementById('hcqt-view-'+v);
+    if(el) el.style.display=v===_hcqtSubView?'':'none';
+  });
+  if(_hcqtSubView==='dashboard')   hcqtRenderDashboard();
+  if(_hcqtSubView==='assets')      hcqtRenderAssets();
+  if(_hcqtSubView==='maintenance') hcqtRenderMaintenance();
+  if(_hcqtSubView==='vehicles')    hcqtRenderVehicles();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────
+function hcqtRenderDashboard(){
+  const el=document.getElementById('hcqt-view-dashboard');
+  const total=_hcqtData.length;
+  const active=_hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length;
+  const maintain=_hcqtData.filter(d=>{
+    if(!d.NgayBaoTriTiepTheo) return false;
+    const diff=(new Date(d.NgayBaoTriTiepTheo)-new Date())/(86400000);
+    return diff>=0&&diff<=30;
+  }).length;
+  const veh=_hcqtData.filter(d=>d.BienSoXe).length;
+
+  const kpiStyle='background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .15s;';
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+    <div style="${kpiStyle}" onclick="hcqtSubNav('assets')">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Tổng tài sản</div>
+      <div style="font-size:28px;font-weight:800;color:var(--accent,#3B82F6)">${total}</div>
+    </div>
+    <div style="${kpiStyle}" onclick="_hcqtFilter.tinh='Đang sử dụng';hcqtSubNav('assets')">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Đang sử dụng</div>
+      <div style="font-size:28px;font-weight:800;color:#22c55e">${active}</div>
+    </div>
+    <div style="${kpiStyle}" onclick="hcqtSubNav('maintenance')">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Bảo trì 30 ngày</div>
+      <div style="font-size:28px;font-weight:800;color:#f59e0b">${maintain}</div>
+    </div>
+    <div style="${kpiStyle}" onclick="hcqtSubNav('vehicles')">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Xe công ty</div>
+      <div style="font-size:28px;font-weight:800;color:#8b5cf6">${veh}</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px">Theo loại tài sản</div>
+      <canvas id="hcqt-chart-loai" height="180"></canvas>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px">Theo tình trạng</div>
+      <canvas id="hcqt-chart-tt" height="180"></canvas>
+    </div>
+  </div>
+  ${!total?`<div style="text-align:center;padding:40px;color:var(--muted)">
+    <div style="font-size:40px">📦</div>
+    <div style="margin-top:8px">Chưa có dữ liệu. Nhấn <strong>Sync SP</strong> để tải từ SharePoint.</div>
+  </div>`:''}
+  `;
+
+  if(!total) return;
+  setTimeout(()=>{
+    const COLS=['#3B82F6','#22c55e','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316','#84cc16','#ec4899','#14b8a6'];
+    const loaiC={};
+    _hcqtData.forEach(d=>{ const k=d.LoaiTaiSan||'Chưa xác định'; loaiC[k]=(loaiC[k]||0)+1; });
+    if(_hcqtChart1){_hcqtChart1.destroy();} 
+    const c1=document.getElementById('hcqt-chart-loai');
+    if(c1&&typeof Chart!=='undefined'){
+      _hcqtChart1=new Chart(c1,{type:'doughnut',data:{labels:Object.keys(loaiC),datasets:[{data:Object.values(loaiC),backgroundColor:COLS}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}}},cutout:'60%'}});
+    }
+    const ttC={};
+    _hcqtData.forEach(d=>{ const k=d.TinhTrang||'Chưa xác định'; ttC[k]=(ttC[k]||0)+1; });
+    if(_hcqtChart2){_hcqtChart2.destroy();}
+    const c2=document.getElementById('hcqt-chart-tt');
+    if(c2&&typeof Chart!=='undefined'){
+      _hcqtChart2=new Chart(c2,{type:'bar',data:{labels:Object.keys(ttC),datasets:[{data:Object.values(ttC),backgroundColor:'#3B82F6',borderRadius:5}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{ticks:{font:{size:10}}}}}});
+    }
+  },80);
+}
+
+// ── Assets List ───────────────────────────────────────────────────
+function hcqtRenderAssets(){
+  const el=document.getElementById('hcqt-view-assets');
+  const loais=[...new Set(_hcqtData.map(d=>d.LoaiTaiSan).filter(Boolean))].sort();
+  const tinhs=[...new Set(_hcqtData.map(d=>d.TinhTrang).filter(Boolean))].sort();
+  const toaNhas=[...new Set(_hcqtData.map(d=>d.ToaNha).filter(Boolean))].sort();
+
+  let rows=_hcqtData.filter(d=>{
+    const q=_hcqtFilter.q.toLowerCase();
+    if(q&&![(d.Title||''),(d.MaTaiSan||''),(d.NguoiPhuTrach||''),(d.PhongViTri||'')].some(s=>s.toLowerCase().includes(q))) return false;
+    if(_hcqtFilter.loai&&d.LoaiTaiSan!==_hcqtFilter.loai) return false;
+    if(_hcqtFilter.tinh&&d.TinhTrang!==_hcqtFilter.tinh) return false;
+    if(_hcqtFilter.toanha&&d.ToaNha!==_hcqtFilter.toanha) return false;
+    return true;
+  });
+
+  const total=rows.length;
+  const pages=Math.ceil(total/HCQT_PAGE_SZ)||1;
+  if(_hcqtPage>pages)_hcqtPage=1;
+  const paged=rows.slice((_hcqtPage-1)*HCQT_PAGE_SZ,_hcqtPage*HCQT_PAGE_SZ);
+
+  const selStyle='height:32px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:0 8px;font-size:12px;background:var(--card-bg,#fff);outline:none;';
+  const inpStyle='height:32px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:0 10px;font-size:12px;flex:1;min-width:160px;outline:none;background:var(--card-bg,#fff);';
+
+  el.innerHTML=`
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <input type="text" placeholder="🔍 Tìm tên, mã, phòng, người phụ trách..." value="${_hcqtFilter.q}" style="${inpStyle}" oninput="_hcqtFilter.q=this.value;_hcqtPage=1;hcqtRenderAssets()"/>
+    <select style="${selStyle}" onchange="_hcqtFilter.loai=this.value;_hcqtPage=1;hcqtRenderAssets()">
+      <option value="">Tất cả loại</option>${loais.map(l=>`<option${_hcqtFilter.loai===l?' selected':''}>${l}</option>`).join('')}
+    </select>
+    <select style="${selStyle}" onchange="_hcqtFilter.tinh=this.value;_hcqtPage=1;hcqtRenderAssets()">
+      <option value="">Tất cả tình trạng</option>${tinhs.map(t=>`<option${_hcqtFilter.tinh===t?' selected':''}>${t}</option>`).join('')}
+    </select>
+    <select style="${selStyle}" onchange="_hcqtFilter.toanha=this.value;_hcqtPage=1;hcqtRenderAssets()">
+      <option value="">Tất cả tòa nhà</option>${toaNhas.map(t=>`<option${_hcqtFilter.toanha===t?' selected':''}>${t}</option>`).join('')}
+    </select>
+    <button class="btn btn-icon-ph" onclick="hcqtExportCSV()" style="padding:5px 12px;font-size:12px"><i class="ph ph-export"></i> Xuất CSV</button>
+  </div>
+  <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;overflow:auto">
+  <table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:#f8fafc">
+      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap">Mã TS</th>
+      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Tên tài sản</th>
+      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Loại</th>
+      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Vị trí</th>
+      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Phụ trách</th>
+      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Tình trạng</th>
+      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Ngày mua</th>
+      <th style="padding:9px 12px"></th>
+    </tr></thead>
+    <tbody>
+    ${!paged.length?`<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--muted)"><div style="font-size:36px">📦</div><div style="margin-top:8px">Chưa có tài sản nào</div></td></tr>`
+    :paged.map(d=>`<tr style="border-top:1px solid var(--border,#e2e8f0);cursor:pointer" onclick="hcqtOpenPanel(${d._id})" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <td style="padding:9px 12px;font-size:12px"><code style="background:#f1f5f9;padding:1px 5px;border-radius:4px">${hcqtEsc(d.MaTaiSan)}</code></td>
+      <td style="padding:9px 12px"><strong style="font-size:13px">${hcqtEsc(d.Title)}</strong>${d.Model?`<br><span style="font-size:11px;color:var(--muted)">${hcqtEsc(d.Model)}</span>`:''}</td>
+      <td style="padding:9px 12px;font-size:12px">${hcqtEsc(d.LoaiTaiSan)}</td>
+      <td style="padding:9px 12px;font-size:12px">${[d.ToaNha,d.Tang,d.PhongViTri].filter(Boolean).map(hcqtEsc).join(' · ')}</td>
+      <td style="padding:9px 12px;font-size:12px">${hcqtEsc(d.NguoiPhuTrach)}</td>
+      <td style="padding:9px 12px"><span style="${hcqtTtStyle(d.TinhTrang)}">${hcqtEsc(d.TinhTrang)||'—'}</span></td>
+      <td style="padding:9px 12px;font-size:11px;color:var(--muted)">${hcqtFmtDate(d.NgayMua)}</td>
+      <td style="padding:9px 12px"><button class="btn btn-icon-ph" onclick="event.stopPropagation();hcqtOpenEdit(${d._id})" style="padding:3px 8px;font-size:11px" title="Sửa"><i class="ph ph-pencil-simple"></i></button></td>
+    </tr>`).join('')}
+    </tbody>
+  </table>
+  </div>
+  ${pages>1?`<div style="display:flex;gap:5px;padding:10px 0;justify-content:center;align-items:center">
+    <button onclick="_hcqtPage=Math.max(1,_hcqtPage-1);hcqtRenderAssets()" ${_hcqtPage===1?'disabled':''} style="min-width:28px;height:28px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:6px;cursor:pointer">‹</button>
+    ${Array.from({length:Math.min(pages,5)},(_,i)=>{let p=Math.max(1,Math.min(_hcqtPage-2,pages-4))+i;return`<button onclick="_hcqtPage=${p};hcqtRenderAssets()" style="min-width:28px;height:28px;border:1px solid var(--border,#e2e8f0);background:${p===_hcqtPage?'var(--accent,#3B82F6)':' var(--card-bg,#fff)'};color:${p===_hcqtPage?'#fff':'inherit'};border-color:${p===_hcqtPage?'var(--accent,#3B82F6)':'var(--border,#e2e8f0)'};border-radius:6px;cursor:pointer">${p}</button>`;}).join('')}
+    <button onclick="_hcqtPage=Math.min(pages,_hcqtPage+1);hcqtRenderAssets()" ${_hcqtPage===pages?'disabled':''} style="min-width:28px;height:28px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:6px;cursor:pointer">›</button>
+    <span style="font-size:11px;color:var(--muted);margin-left:6px">${total} kết quả</span>
+  </div>`:''}
+  `;
+}
+
+// ── Maintenance ───────────────────────────────────────────────────
+function hcqtRenderMaintenance(){
+  const el=document.getElementById('hcqt-view-maintenance');
+  const now=new Date();
+  const rows=_hcqtData.filter(d=>d.NgayBaoTriTiepTheo).map(d=>({...d,_diff:Math.round((new Date(d.NgayBaoTriTiepTheo)-now)/86400000)})).sort((a,b)=>a._diff-b._diff);
+
+  const renderGroup=(title,icon,items,badgeStyle)=>{
+    if(!items.length) return '';
+    return `<div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;margin-bottom:12px">
+      <div style="padding:12px 16px;font-size:13px;font-weight:700;border-bottom:1px solid var(--border,#e2e8f0)">${icon} ${title} (${items.length})</div>
+      ${items.map(d=>`<div style="padding:10px 16px;border-bottom:1px solid var(--border,#e2e8f0);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="hcqtOpenPanel(${d._id})">
+        <span style="${badgeStyle};padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap">${d._diff<0?'Quá hạn '+Math.abs(d._diff)+'N':d._diff===0?'Hôm nay':'Còn '+d._diff+'N'}</span>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">${hcqtEsc(d.Title)}</div><div style="font-size:11px;color:var(--muted)">${hcqtEsc(d.MaTaiSan)} · ${[d.ToaNha,d.PhongViTri].filter(Boolean).map(hcqtEsc).join(' – ')} · ${hcqtEsc(d.DonViBaoTri)||'Chưa có đơn vị'}</div></div>
+        <div style="font-size:12px;color:var(--muted)">${hcqtFmtDate(d.NgayBaoTriTiepTheo)}</div>
+      </div>`).join('')}
+    </div>`;
+  };
+
+  const overdue=rows.filter(d=>d._diff<0);
+  const soon30=rows.filter(d=>d._diff>=0&&d._diff<=30);
+  const soon90=rows.filter(d=>d._diff>30&&d._diff<=90);
+
+  el.innerHTML=(!overdue.length&&!soon30.length&&!soon90.length)
+    ?`<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:40px">🎉</div><div>Không có lịch bảo trì nào cần chú ý</div></div>`
+    :renderGroup('Đã quá hạn','🔴',overdue,'background:#fee2e2;color:#991b1b')
+    +renderGroup('Trong 30 ngày','🟡',soon30,'background:#fef3c7;color:#92400e')
+    +renderGroup('Trong 90 ngày','🔵',soon90,'background:#dbeafe;color:#1e40af');
+}
+
+// ── Vehicles ──────────────────────────────────────────────────────
+function hcqtRenderVehicles(){
+  const el=document.getElementById('hcqt-view-vehicles');
+  const rows=_hcqtData.filter(d=>d.BienSoXe);
+  const now=new Date();
+  if(!rows.length){
+    el.innerHTML=`<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:40px">🚗</div><div style="margin-top:8px">Chưa có xe nào được ghi nhận</div></div>`;
+    return;
+  }
+  el.innerHTML=`<div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;overflow:auto">
+  <table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:#f8fafc">
+      <th style="padding:9px 12px;font-size:11px;font-weight:700;color:var(--muted);text-align:left">Biển số</th>
+      <th style="padding:9px 12px;font-size:11px;font-weight:700;color:var(--muted);text-align:left">Tên xe</th>
+      <th style="padding:9px 12px;font-size:11px;font-weight:700;color:var(--muted);text-align:left">Lái xe</th>
+      <th style="padding:9px 12px;font-size:11px;font-weight:700;color:var(--muted);text-align:left">Đăng kiểm</th>
+      <th style="padding:9px 12px;font-size:11px;font-weight:700;color:var(--muted);text-align:left">Bảo hiểm</th>
+      <th style="padding:9px 12px;font-size:11px;font-weight:700;color:var(--muted);text-align:left">Km</th>
+      <th style="padding:9px 12px;font-size:11px;font-weight:700;color:var(--muted);text-align:left">Tình trạng</th>
+    </tr></thead>
+    <tbody>
+    ${rows.map(d=>{
+      const dk=d.NgayDangKiem?Math.round((new Date(d.NgayDangKiem)-now)/86400000):null;
+      const bh=d.NgayHetBaoHiem?Math.round((new Date(d.NgayHetBaoHiem)-now)/86400000):null;
+      const dateBadge=(diff,raw)=>diff===null?'—':diff<0?`<span style="background:#fee2e2;color:#991b1b;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600">HẾT HẠN</span>`
+        :diff<=30?`<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600">Còn ${diff}N</span>`
+        :`<span style="font-size:12px">${hcqtFmtDate(raw)}</span>`;
+      return `<tr style="border-top:1px solid var(--border,#e2e8f0);cursor:pointer" onclick="hcqtOpenPanel(${d._id})" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+        <td style="padding:9px 12px;font-weight:700">${hcqtEsc(d.BienSoXe)}</td>
+        <td style="padding:9px 12px;font-size:13px">${hcqtEsc(d.Title)}</td>
+        <td style="padding:9px 12px;font-size:12px">${hcqtEsc(d.NguoiLaiXe)||'—'}</td>
+        <td style="padding:9px 12px">${dateBadge(dk,d.NgayDangKiem)}</td>
+        <td style="padding:9px 12px">${dateBadge(bh,d.NgayHetBaoHiem)}</td>
+        <td style="padding:9px 12px;font-size:12px">${d.SoKmHienTai?Number(d.SoKmHienTai).toLocaleString('vi-VN')+' km':'—'}</td>
+        <td style="padding:9px 12px"><span style="${hcqtTtStyle(d.TinhTrang)}">${hcqtEsc(d.TinhTrang)||'—'}</span></td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+// ── Detail Panel (dùng modal-detail của IT app hoặc tự render) ───
+function hcqtOpenPanel(id){
+  const d=_hcqtData.find(x=>x._id===id); if(!d) return;
+  _hcqtPanelItem=d;
+  // Dùng panel slide-in riêng
+  let panel=document.getElementById('hcqt-panel');
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='hcqt-panel';
+    panel.style.cssText='position:fixed;top:0;right:0;width:460px;height:100vh;background:var(--card-bg,#fff);border-left:1px solid var(--border,#e2e8f0);z-index:400;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s;box-shadow:-4px 0 24px rgba(0,0,0,.08)';
+    document.body.appendChild(panel);
+    const ov=document.createElement('div');
+    ov.id='hcqt-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:399;display:none';
+    ov.onclick=hcqtClosePanel;
+    document.body.appendChild(ov);
+  }
+  const r=(lbl,val)=>val?`<div style="display:flex;margin-bottom:7px"><span style="width:145px;flex-shrink:0;font-size:12px;color:var(--muted)">${lbl}</span><span style="font-size:13px;font-weight:500">${val}</span></div>`:'';
+  const sec=(t)=>`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border,#e2e8f0);padding-bottom:4px;margin:14px 0 8px">${t}</div>`;
+  panel.innerHTML=`
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border,#e2e8f0);display:flex;align-items:center;gap:8px">
+      <strong style="flex:1;font-size:15px">${hcqtEsc(d.Title)}</strong>
+      <button class="btn btn-icon-ph" onclick="hcqtOpenEdit(${d._id});hcqtClosePanel()" style="padding:4px 10px;font-size:12px"><i class="ph ph-pencil-simple"></i> Sửa</button>
+      <button onclick="hcqtClosePanel()" style="border:1px solid var(--border,#e2e8f0);background:none;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 18px">
+      ${sec('📋 Định danh')}
+      ${r('Mã tài sản',`<code style="background:#f1f5f9;padding:1px 5px;border-radius:4px">${hcqtEsc(d.MaTaiSan)}</code>`)}
+      ${r('Loại',hcqtEsc(d.LoaiTaiSan))} ${r('Nhóm',hcqtEsc(d.NhomTaiSan))}
+      ${r('Hãng / Model',[d.HangSanXuat,d.Model].filter(Boolean).map(hcqtEsc).join(' – '))}
+      ${r('Serial',hcqtEsc(d.SoSerial))} ${r('Màu',hcqtEsc(d.MauSac))} ${r('Số lượng',d.SoLuong?''+d.SoLuong:'')}
+      ${sec('📍 Vị trí')}
+      ${r('Tòa nhà',hcqtEsc(d.ToaNha))} ${r('Tầng – Phòng',[d.Tang,d.PhongViTri].filter(Boolean).map(hcqtEsc).join(' – '))}
+      ${r('Khu vực',hcqtEsc(d.KhuVuc))} ${r('Phụ trách',hcqtEsc(d.NguoiPhuTrach))}
+      ${r('Email',d.EmailPhuTrach?`<a href="mailto:${hcqtEsc(d.EmailPhuTrach)}" style="color:var(--accent,#3B82F6)">${hcqtEsc(d.EmailPhuTrach)}</a>`:'')}
+      ${r('Bộ phận',hcqtEsc(d.BoPhanSuDung))}
+      ${sec('⚙️ Tình trạng')}
+      ${r('Tình trạng',`<span style="${hcqtTtStyle(d.TinhTrang)}">${hcqtEsc(d.TinhTrang)||'—'}</span>`)}
+      ${r('Hao mòn',hcqtEsc(d.MucDoHao))}
+      ${r('Kiểm kê',hcqtFmtDate(d.NgayKiemKe))} ${r('Kết quả',hcqtEsc(d.KetQuaKiemKe))}
+      ${d.GhiChuTinhTrang?`<div style="background:#f8fafc;padding:8px 10px;border-radius:8px;font-size:12px;margin-top:4px">${hcqtEsc(d.GhiChuTinhTrang)}</div>`:''}
+      ${sec('💰 Tài chính')}
+      ${r('Ngày mua',hcqtFmtDate(d.NgayMua))} ${r('Nguyên giá',d.NguyenGia?Number(d.NguyenGia).toLocaleString('vi-VN')+' VND':'')}
+      ${r('Nguồn',hcqtEsc(d.NguonMua))} ${r('Số HĐ',hcqtEsc(d.SoHoaDon))}
+      ${r('Khấu hao',d.ThoiGianKhauHao?d.ThoiGianKhauHao+' năm':'')} ${r('Nhóm KH',hcqtEsc(d.NhomKhauHao))}
+      ${d.ChuKyBaoTri||d.NgayBaoTriTiepTheo?sec('🔧 Bảo trì')+''+r('Chu kỳ',hcqtEsc(d.ChuKyBaoTri))+r('Lần cuối',hcqtFmtDate(d.NgayBaoTriGanNhat))+r('Lần tới',hcqtFmtDate(d.NgayBaoTriTiepTheo))+r('Đơn vị',hcqtEsc(d.DonViBaoTri))+r('Chi phí',d.ChiPhiBaoTri?Number(d.ChiPhiBaoTri).toLocaleString('vi-VN')+' VND':''):''}
+      ${d.BienSoXe?sec('🚗 Xe')+r('Biển số',hcqtEsc(d.BienSoXe))+r('Lái xe',hcqtEsc(d.NguoiLaiXe))+r('Đăng kiểm',hcqtFmtDate(d.NgayDangKiem))+r('Bảo hiểm',hcqtFmtDate(d.NgayHetBaoHiem))+r('Số km',d.SoKmHienTai?Number(d.SoKmHienTai).toLocaleString('vi-VN')+' km':''):''}
+      ${d.GhiChu?`${sec('📝 Ghi chú')}<div style="background:#fffbf0;padding:8px 10px;border-radius:8px;font-size:12px;white-space:pre-wrap">${hcqtEsc(d.GhiChu)}</div>`:''}
+      <div style="font-size:11px;color:var(--muted);margin-top:14px">Cập nhật: ${hcqtFmtDate(d.Modified)}</div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--border,#e2e8f0);display:flex;gap:8px">
+      <button class="btn" onclick="hcqtDeleteItem(${d._id})" style="background:#fee2e2;color:#991b1b;border:none;padding:5px 14px;font-size:12px;border-radius:8px;cursor:pointer"><i class="ph ph-trash"></i> Xóa</button>
+      <button onclick="hcqtClosePanel()" style="margin-left:auto;border:1px solid var(--border,#e2e8f0);background:none;border-radius:8px;padding:5px 14px;font-size:12px;cursor:pointer">Đóng</button>
+    </div>
+  `;
+  panel.style.transform='translateX(0)';
+  document.getElementById('hcqt-overlay').style.display='block';
+}
+
+function hcqtClosePanel(){
+  const p=document.getElementById('hcqt-panel'); if(p) p.style.transform='translateX(100%)';
+  const o=document.getElementById('hcqt-overlay'); if(o) o.style.display='none';
+  _hcqtPanelItem=null;
+}
+
+async function hcqtDeleteItem(id){
+  const d=_hcqtData.find(x=>x._id===id); if(!d) return;
+  if(!confirm('Xóa tài sản "'+d.Title+'"?')) return;
+  try{
+    if(typeof _msalAccount!=='undefined'&&_msalAccount) await hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items(${id})`,{method:'DELETE',headers:{'IF-MATCH':'*','X-HTTP-Method':'DELETE'}});
+    _hcqtData=_hcqtData.filter(x=>x._id!==id);
+    hcqtSaveLocal(); hcqtClosePanel(); hcqtRenderSub();
+    showNotif&&showNotif('Đã xóa tài sản','ok');
+  }catch(e){ showNotif&&showNotif('Lỗi xóa: '+e.message,'err'); }
+}
+
+// ── Add / Edit Form ───────────────────────────────────────────────
+const HCQT_FIELDS=['Title','MaTaiSan','LoaiTaiSan','NhomTaiSan','HangSanXuat','Model','SoSerial','MauSac','SoLuong',
+  'ToaNha','Tang','PhongViTri','KhuVuc','NguoiPhuTrach','EmailPhuTrach','BoPhanSuDung',
+  'TinhTrang','MucDoHao','GhiChuTinhTrang','NgayKiemKe','KetQuaKiemKe',
+  'NgayMua','NguyenGia','NguonMua','SoHoaDon','ThoiGianKhauHao','NhomKhauHao',
+  'ChuKyBaoTri','NgayBaoTriGanNhat','NgayBaoTriTiepTheo','DonViBaoTri','ChiPhiBaoTri','LichSuSuaChua',
+  'BienSoXe','NgayDangKiem','NgayHetBaoHiem','NguoiLaiXe','SoKmHienTai','GhiChu'];
+
+function hcqtOpenAdd(){
+  _hcqtEditId=null;
+  hcqtShowForm(null);
+}
+function hcqtOpenEdit(id){
+  _hcqtEditId=id;
+  hcqtShowForm(_hcqtData.find(x=>x._id===id));
+}
+
+function hcqtShowForm(d){
+  let fm=document.getElementById('hcqt-form-modal');
+  if(!fm){
+    fm=document.createElement('div');
+    fm.id='hcqt-form-modal';
+    fm.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:flex;align-items:center;justify-content:center';
+    fm.innerHTML=`<div style="background:var(--card-bg,#fff);border-radius:14px;width:700px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border,#e2e8f0);display:flex;align-items:center">
+        <strong id="hcqt-form-title" style="flex:1">Thêm tài sản</strong>
+        <button onclick="hcqtCloseForm()" style="border:1px solid var(--border,#e2e8f0);background:none;border-radius:8px;width:28px;height:28px;cursor:pointer">✕</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:18px" id="hcqt-form-body"></div>
+      <div style="padding:12px 18px;border-top:1px solid var(--border,#e2e8f0);display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="hcqtCloseForm()" style="border:1px solid var(--border,#e2e8f0);background:none;border-radius:8px;padding:6px 16px;font-size:13px;cursor:pointer">Hủy</button>
+        <button onclick="hcqtSaveForm()" style="background:var(--accent,#3B82F6);color:#fff;border:none;border-radius:8px;padding:6px 18px;font-size:13px;font-weight:600;cursor:pointer">💾 Lưu</button>
+      </div>
+    </div>`;
+    document.body.appendChild(fm);
+  }
+  document.getElementById('hcqt-form-title').textContent=d?'Sửa: '+d.Title:'Thêm tài sản mới';
+  const inp=(id,type,placeholder='',val='')=>`<input type="${type}" id="hcqt-f-${id}" placeholder="${placeholder}" value="${hcqtEsc(val)}" style="height:34px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:0 10px;font-size:13px;width:100%;outline:none;background:var(--card-bg,#fff)"/>`;
+  const sel=(id,opts,val='')=>`<select id="hcqt-f-${id}" style="height:34px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:0 8px;font-size:13px;width:100%;outline:none;background:var(--card-bg,#fff)"><option value="">-- Chọn --</option>${opts.map(o=>`<option${val===o?' selected':''}>${o}</option>`).join('')}</select>`;
+  const ta=(id,val='')=>`<textarea id="hcqt-f-${id}" style="height:64px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:7px 10px;font-size:13px;width:100%;outline:none;resize:vertical;font-family:inherit;background:var(--card-bg,#fff)">${hcqtEsc(val)}</textarea>`;
+  const row=(lbl,html,req=false)=>`<div style="display:flex;flex-direction:column;gap:3px"><label style="font-size:12px;font-weight:600;color:var(--muted)">${lbl}${req?'<span style="color:#ef4444"> *</span>':''}</label>${html}</div>`;
+  const sec=(t)=>`<div style="grid-column:1/-1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border,#e2e8f0);padding-bottom:4px;margin-top:8px">${t}</div>`;
+  const g=(html)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${html}</div>`;
+  const v=(f)=>d?d[f]||'':'';
+  const vd=(f)=>v(f)?v(f).split('T')[0]:'';
+
+  document.getElementById('hcqt-form-body').innerHTML=g(`
+    ${sec('📋 Định danh')}
+    ${row('Tên tài sản',inp('Title','text','VD: Bàn làm việc 160cm',v('Title')),true)}
+    ${row('Mã tài sản',inp('MaTaiSan','text','VD: HCQT-TS-001',v('MaTaiSan')),true)}
+    ${row('Loại tài sản',sel('LoaiTaiSan',['Nội thất văn phòng','Thiết bị điện lạnh','Thiết bị văn phòng','Thiết bị nghe nhìn','Phương tiện','Thiết bị bếp Pantry','Thiết bị an ninh','Công cụ Dụng cụ','Khác'],v('LoaiTaiSan')),true)}
+    ${row('Nhóm tài sản',sel('NhomTaiSan',['Bàn làm việc','Ghế văn phòng','Tủ Kệ Giá','Bàn ghế phòng họp','Sofa Ghế tiếp khách','Điều hòa','Máy in Máy photocopy','Điện thoại cố định','Máy chiếu Màn chiếu','Tivi Màn hình','Xe ô tô','Máy pha cà phê Nước','Tủ lạnh Lò vi sóng','Camera an ninh','Khóa tủ Thẻ tủ','Rèm Mành Thảm','Cây cảnh Vật trang trí','Khác'],v('NhomTaiSan')),true)}
+    ${row('Hãng/Nhà cung cấp',inp('HangSanXuat','text','',v('HangSanXuat')))}
+    ${row('Model/Quy cách',inp('Model','text','',v('Model')))}
+    ${row('Số serial',inp('SoSerial','text','',v('SoSerial')))}
+    ${row('Màu sắc',inp('MauSac','text','',v('MauSac')))}
+    ${row('Số lượng',inp('SoLuong','number','1',v('SoLuong')||'1'))}
+    ${sec('📍 Vị trí')}
+    ${row('Tòa nhà',inp('ToaNha','text','',v('ToaNha')),true)}
+    ${row('Tầng',inp('Tang','text','',v('Tang')),true)}
+    ${row('Phòng/Vị trí',inp('PhongViTri','text','',v('PhongViTri')),true)}
+    ${row('Khu vực',sel('KhuVuc',['Văn phòng làm việc','Phòng họp','Pantry Bếp','Hành lang Sảnh','Kho','Tiếp khách','Ngoài trời','Khác'],v('KhuVuc')))}
+    ${row('Người phụ trách',inp('NguoiPhuTrach','text','',v('NguoiPhuTrach')),true)}
+    ${row('Email phụ trách',inp('EmailPhuTrach','email','',v('EmailPhuTrach')))}
+    ${row('Bộ phận',inp('BoPhanSuDung','text','',v('BoPhanSuDung')))}
+    ${sec('⚙️ Tình trạng')}
+    ${row('Tình trạng',sel('TinhTrang',['Đang sử dụng','Chờ cấp phát','Đang sửa chữa','Tạm ngưng sử dụng','Đề xuất thanh lý','Đã thanh lý','Mất / Thất lạc'],v('TinhTrang')),true)}
+    ${row('Mức độ hao mòn',sel('MucDoHao',['Tốt – Như mới','Khá – Còn dùng tốt','Trung bình – Có dấu hiệu cũ','Xuống cấp – Cần bảo trì','Hỏng – Cần sửa hoặc thanh lý'],v('MucDoHao')))}
+    ${row('Ngày kiểm kê',inp('NgayKiemKe','date','',vd('NgayKiemKe')))}
+    ${row('Kết quả kiểm kê',sel('KetQuaKiemKe',['Đủ – Đúng vị trí','Đủ – Sai vị trí','Thiếu phụ kiện','Không tìm thấy','Chưa kiểm kê'],v('KetQuaKiemKe')))}
+    ${sec('💰 Tài chính')}
+    ${row('Ngày mua',inp('NgayMua','date','',vd('NgayMua')))}
+    ${row('Nguyên giá (VND)',inp('NguyenGia','number','',v('NguyenGia')))}
+    ${row('Nguồn mua',sel('NguonMua',['Mua mới','Điều chuyển nội bộ','Tài trợ / Biếu tặng','Thanh lý nội bộ'],v('NguonMua')))}
+    ${row('Số HĐ',inp('SoHoaDon','text','',v('SoHoaDon')))}
+    ${row('Khấu hao (năm)',inp('ThoiGianKhauHao','number','',v('ThoiGianKhauHao')))}
+    ${row('Nhóm khấu hao',sel('NhomKhauHao',['Nhóm 1 – Máy móc thiết bị 5-10 năm','Nhóm 2 – Phương tiện vận tải 6-10 năm','Nhóm 3 – Thiết bị văn phòng 3-5 năm','Nhóm 4 – Thiết bị điện tử 3-5 năm','Nhóm 5 – Nội thất 6-8 năm','Nhóm 6 – Thiết bị điện lạnh 5-8 năm'],v('NhomKhauHao')))}
+    ${sec('🔧 Bảo trì')}
+    ${row('Chu kỳ bảo trì',sel('ChuKyBaoTri',['Hàng tháng','Hàng quý','6 tháng một lần','Hàng năm','Không có lịch cố định','Không cần bảo trì'],v('ChuKyBaoTri')))}
+    ${row('Đơn vị bảo trì',inp('DonViBaoTri','text','',v('DonViBaoTri')))}
+    ${row('BT gần nhất',inp('NgayBaoTriGanNhat','date','',vd('NgayBaoTriGanNhat')))}
+    ${row('BT tiếp theo',inp('NgayBaoTriTiepTheo','date','',vd('NgayBaoTriTiepTheo')))}
+    ${row('Chi phí BT (VND)',inp('ChiPhiBaoTri','number','',v('ChiPhiBaoTri')))}
+    ${sec('🚗 Xe')}
+    ${row('Biển số xe',inp('BienSoXe','text','',v('BienSoXe')))}
+    ${row('Lái xe phụ trách',inp('NguoiLaiXe','text','',v('NguoiLaiXe')))}
+    ${row('Đăng kiểm',inp('NgayDangKiem','date','',vd('NgayDangKiem')))}
+    ${row('Bảo hiểm xe',inp('NgayHetBaoHiem','date','',vd('NgayHetBaoHiem')))}
+    ${row('Số km',inp('SoKmHienTai','number','',v('SoKmHienTai')))}
+    <div style="grid-column:1/-1">${row('Lịch sử sửa chữa',ta('LichSuSuaChua',v('LichSuSuaChua')))}</div>
+    <div style="grid-column:1/-1">${row('Ghi chú',ta('GhiChu',v('GhiChu')))}</div>
+  `);
+  fm.style.display='flex';
+}
+
+function hcqtCloseForm(){
+  const fm=document.getElementById('hcqt-form-modal');
+  if(fm) fm.style.display='none';
+}
+
+async function hcqtSaveForm(){
+  const gv=f=>{const el=document.getElementById('hcqt-f-'+f);return el?el.value.trim():'';};
+  const form={};
+  HCQT_FIELDS.forEach(f=>form[f]=gv(f));
+  if(!form.Title||!form.MaTaiSan||!form.LoaiTaiSan||!form.NhomTaiSan){
+    showNotif&&showNotif('Vui lòng điền đủ các trường bắt buộc (*)','warn'); return;
+  }
+  const payload=hcqtLocalToSP(form);
+  try{
+    const hasAuth=typeof _msalAccount!=='undefined'&&_msalAccount;
+    let newId=_hcqtEditId;
+    if(hasAuth){
+      if(_hcqtEditId){
+        await hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items(${_hcqtEditId})`,{method:'PATCH',body:JSON.stringify(payload),headers:{'IF-MATCH':'*','X-HTTP-Method':'MERGE'}});
+      } else {
+        const res=await hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items`,{method:'POST',body:JSON.stringify(payload)});
+        newId=res.Id||Date.now();
+      }
+    } else { if(!_hcqtEditId) newId=Date.now(); }
+    const local={...form,_id:newId,MucDoHao:form.MucDoHao};
+    if(_hcqtEditId){ const i=_hcqtData.findIndex(x=>x._id===_hcqtEditId); if(i>=0) _hcqtData[i]=local; }
+    else { _hcqtData.unshift(local); }
+    hcqtSaveLocal(); hcqtCloseForm(); hcqtRenderSub();
+    showNotif&&showNotif(_hcqtEditId?'✅ Đã cập nhật tài sản HCQT':'✅ Đã thêm tài sản HCQT','ok');
+  }catch(e){ showNotif&&showNotif('Lỗi lưu: '+e.message,'err'); }
+}
+
+// ── Export CSV ────────────────────────────────────────────────────
+function hcqtExportCSV(){
+  const headers=['Mã TS','Tên','Loại','Nhóm','Hãng','Model','Serial','Màu','SL','Tòa nhà','Tầng','Phòng','Khu vực','Phụ trách','Email','Bộ phận','Tình trạng','Hao mòn','Ngày KK','KQ KK','Ngày mua','Nguyên giá','Nguồn','Số HĐ','KH(năm)','Biển số','Đăng kiểm','Bảo hiểm','Lái xe','Km'];
+  const rows=_hcqtData.map(d=>[d.MaTaiSan,d.Title,d.LoaiTaiSan,d.NhomTaiSan,d.HangSanXuat,d.Model,d.SoSerial,d.MauSac,d.SoLuong,d.ToaNha,d.Tang,d.PhongViTri,d.KhuVuc,d.NguoiPhuTrach,d.EmailPhuTrach,d.BoPhanSuDung,d.TinhTrang,d.MucDoHao,d.NgayKiemKe?d.NgayKiemKe.split('T')[0]:'',d.KetQuaKiemKe,d.NgayMua?d.NgayMua.split('T')[0]:'',d.NguyenGia,d.NguonMua,d.SoHoaDon,d.ThoiGianKhauHao,d.BienSoXe,d.NgayDangKiem?d.NgayDangKiem.split('T')[0]:'',d.NgayHetBaoHiem?d.NgayHetBaoHiem.split('T')[0]:'',d.NguoiLaiXe,d.SoKmHienTai]);
+  let csv='sep=,\n'+headers.join(',')+'\n';
+  rows.forEach(r=>{ csv+=r.map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"').join(',')+'\n'; });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='HCQT_TaiSan_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function hcqtEsc(s){ if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function hcqtFmtDate(s){ if(!s) return ''; try{ return new Date(s).toLocaleDateString('vi-VN'); }catch(e){ return s||''; } }
+function hcqtTtStyle(tt){
+  const m={'Đang sử dụng':'background:#dcfce7;color:#166534','Chờ cấp phát':'background:#fef9c3;color:#854d0e','Đang sửa chữa':'background:#fff7ed;color:#9a3412','Tạm ngưng sử dụng':'background:#fce7f3;color:#9d174d','Đề xuất thanh lý':'background:#fee2e2;color:#991b1b','Đã thanh lý':'background:#f3f4f6;color:#374151','Mất / Thất lạc':'background:#ede9fe;color:#5b21b6'};
+  return (m[tt]||'background:#f3f4f6;color:#374151')+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600';
+}
+
+// Load local data on startup
+(function(){ hcqtLoadLocal(); })();
+
 // ═══════════════════════════════════════════════════════════════
 </script>
 </body>
