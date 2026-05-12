@@ -36,6 +36,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" media="print" onload="this.media='all'"/>
 <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"/></noscript>
 <style>
@@ -5808,13 +5809,18 @@ async function msalSpLoad(){
   }
 
   // ── HCQT role check (app-level, từ Phan_Quyen_HCQT trên HCQT SP site) ──────
-  // Kiểm tra sau Azure AD detection để app-level role có thể ghi đè
-  if(_isHCQTUser && !_hcqtHasITAccess){
+  // SP list là nguồn quyết định cuối — có thể nâng hoặc hạ quyền so với Azure AD group
+  if(_isHCQTUser || _hcqtHasITAccess){
     const hcqtAppRole = await msalHCQTLoadUserRole();
     if(hcqtAppRole === 'hcqt_it_viewer'){
-      _isHCQTUser      = false; // fall through → load IT data
+      _isHCQTUser      = false;
       _hcqtHasITAccess = true;
-      console.log('[QLTS] HCQT app-role hcqt_it_viewer → dual access (HCQT edit + IT view)');
+      console.log('[QLTS] HCQT SP-role hcqt_it_viewer → dual access');
+    } else {
+      // hcqt_member hoặc không có trong list → HCQT-only, thu hồi IT access
+      _isHCQTUser      = true;
+      _hcqtHasITAccess = false;
+      console.log('[QLTS] HCQT SP-role hcqt_member → HCQT-only mode');
     }
   }
 
@@ -5915,7 +5921,7 @@ async function msalSpLoad(){
         _userRole = 'viewer'; // mặc định viewer cho HCQT-IT-viewer
         applyRoleUI();
       }
-      hcqtLoadLocal(); hcqtSync();
+      hcqtLoadLocal(); hcqtSync(true);
     }
     msalSetBar(msalBarLabel(assets.length + ' TS'),'s-ok');
     // HCQT IT-viewer: chỉ cần tài sản CNTT, bỏ qua license/transfer/ĐNTT
@@ -19085,9 +19091,9 @@ async function hcqtSpFetch(path,opts={}){
 
 const HCQT_SEL = 'Id,Title,MaTaiSan,LoaiTaiSan,NhomTaiSan,HangSanXuat,Model,SoSerial,MauSac,SoLuong,ToaNha,Tang,PhongViTri,KhuVuc,NguoiPhuTrach,EmailPhuTrach,BoPhanSuDung,TinhTrang,MucDoHao,GhiChuTinhTrang,NgayKiemKe,KetQuaKiemKe,NgayMua,NguyenGia,NguonMua,SoHoaDon,ThoiGianKhauHao,NhomKhauHao,ChuKyBaoTri,NgayBaoTriGanNhat,NgayBaoTriTiepTheo,DonViBaoTri,ChiPhiBaoTri,LichSuSuaChua,GhiChu,Created,Modified';
 
-async function hcqtSync(){
+async function hcqtSync(silent=false){
   const hasAuth = typeof _msalAccount!=='undefined' && _msalAccount;
-  if(!hasAuth){ toast('Vui lòng đăng nhập Microsoft 365 trước','warn'); return; }
+  if(!hasAuth){ if(!silent) toast('Vui lòng đăng nhập Microsoft 365 trước','warn'); return; }
   try{
     let all=[], nextUrl=null;
     const base = `${HCQT_SITE}/_api/web/lists/getbytitle('${HCQT_LIST}')/items?$select=${HCQT_SEL}&$top=500`;
@@ -19102,7 +19108,7 @@ async function hcqtSync(){
     }
     _hcqtData=all.map(hcqtSpToLocal);
     hcqtSaveLocal();
-    toast('✅ HCQT: Đã tải '+_hcqtData.length+' tài sản','ok');
+    if(!silent) toast('✅ HCQT: Đã tải '+_hcqtData.length+' tài sản','ok');
     hcqtRenderSub();
   }catch(e){ toast('❌ HCQT lỗi: '+e.message,'bad'); }
 }
@@ -19159,7 +19165,7 @@ function hcqtOnTabOpen(){
   hcqtLoadLocal();
   hcqtRenderSub();
   // Auto sync nếu chưa có data
-  if(!_hcqtData.length && typeof _msalAccount!=='undefined' && _msalAccount) hcqtSync();
+  if(!_hcqtData.length && typeof _msalAccount!=='undefined' && _msalAccount) hcqtSync(true);
 }
 
 function hcqtSubNav(v){
@@ -19278,6 +19284,8 @@ function hcqtRenderAssets(){
       <option value="">Tất cả tòa nhà</option>${toaNhas.map(t=>`<option${_hcqtFilter.toanha===t?' selected':''}>${t}</option>`).join('')}
     </select>
     <button class="btn btn-icon-ph" onclick="hcqtExportCSV()" style="padding:5px 12px;font-size:12px"><i class="ph ph-export"></i> Xuất CSV</button>
+          <button class="btn btn-icon-ph" onclick="hcqtExportXLSX()" style="padding:5px 12px;font-size:12px;background:#217346;color:#fff;border:none" title="Xuất dữ liệu ra Excel"><i class="ph ph-microsoft-excel-logo"></i> Excel</button>
+          <button class="btn btn-icon-ph" onclick="hcqtExportTemplate()" style="padding:5px 12px;font-size:12px" title="Xuất file Excel trống để nhập liệu"><i class="ph ph-file-arrow-down"></i> Template</button>
   </div>
   <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;overflow:auto">
   <table style="width:100%;border-collapse:collapse">
@@ -19552,6 +19560,52 @@ async function hcqtSaveItem(){
     toast(_hcqtEditId?'✅ Đã cập nhật tài sản':'✅ Đã thêm tài sản','ok');
   }catch(e){ toast('❌ Lỗi lưu: '+e.message,'bad'); }
   finally{ if(btn){ btn.disabled=false; btn.textContent='Lưu tài sản'; } }
+}
+
+// ── Export XLSX (dữ liệu hiện tại) ───────────────────────────────────────────
+function hcqtExportXLSX(){
+  if(typeof XLSX === 'undefined'){ toast('⚠️ Thư viện Excel chưa sẵn sàng, thử lại sau 2 giây','warn'); return; }
+  const headers = ['Mã TS','Tên tài sản','Loại','Nhóm','Hãng','Model','Serial','Màu','SL',
+    'Tòa nhà','Tầng','Phòng','Khu vực','Người PT','Email PT','Bộ phận',
+    'Tình trạng','Hao mòn','Ngày kiểm kê','KQ kiểm kê',
+    'Ngày mua','Nguyên giá','Nguồn','Số HĐ','KH(năm)','Nhóm KH',
+    'Chu kỳ BT','BT gần nhất','BT tiếp theo','ĐV BT','CP BT','Ghi chú'];
+  const rows = _hcqtData.map(d=>[
+    d.MaTaiSan,d.Title,d.LoaiTaiSan,d.NhomTaiSan,d.HangSanXuat,d.Model,d.SoSerial,d.MauSac,d.SoLuong,
+    d.ToaNha,d.Tang,d.PhongViTri,d.KhuVuc,d.NguoiPhuTrach,d.EmailPhuTrach,d.BoPhanSuDung,
+    d.TinhTrang,d.MucDoHao,d.NgayKiemKe?d.NgayKiemKe.split('T')[0]:'',d.KetQuaKiemKe,
+    d.NgayMua?d.NgayMua.split('T')[0]:'',d.NguyenGia,d.NguonMua,d.SoHoaDon,d.ThoiGianKhauHao,d.NhomKhauHao,
+    d.ChuKyBaoTri,d.NgayBaoTriGanNhat?d.NgayBaoTriGanNhat.split('T')[0]:'',
+    d.NgayBaoTriTiepTheo?d.NgayBaoTriTiepTheo.split('T')[0]:'',d.DonViBaoTri,d.ChiPhiBaoTri,d.GhiChu]);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = headers.map((_,i) => ({wch: i<2?30:i<9?12:18}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Tài sản HCQT');
+  XLSX.writeFile(wb, 'HCQT_TaiSan_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('✅ Đã xuất '+_hcqtData.length+' tài sản ra Excel','ok');
+}
+
+// ── Export Template (file trống để nhập liệu) ─────────────────────────────
+function hcqtExportTemplate(){
+  if(typeof XLSX === 'undefined'){ toast('⚠️ Thư viện Excel chưa sẵn sàng, thử lại sau 2 giây','warn'); return; }
+  const headers = ['Mã TS *','Tên tài sản *','Loại tài sản *','Nhóm tài sản *','Hãng / Nhà cung cấp','Model',
+    'Số serial','Màu sắc','Số lượng','Tòa nhà *','Tầng *','Phòng / Vị trí *','Khu vực',
+    'Người phụ trách *','Email phụ trách','Bộ phận','Tình trạng *','Hao mòn',
+    'Ngày kiểm kê (YYYY-MM-DD)','KQ kiểm kê','Ngày mua (YYYY-MM-DD)','Nguyên giá (VND)',
+    'Nguồn mua','Số HĐ','KH(năm)','Nhóm KH','Chu kỳ BT',
+    'BT gần nhất (YYYY-MM-DD)','BT tiếp theo (YYYY-MM-DD)','ĐV BT','CP BT (VND)','Ghi chú'];
+  const example = ['TS-HCQT-001','Bàn họp phòng 301','Nội thất văn phòng','Bàn ghế phòng họp',
+    'XUÂN HÒA','BH-240','','Nâu','1','Tòa A','3','P.301','Phòng họp',
+    'Nguyễn Văn A','nguyen.van.a@ttgvn.com','P. HCQT','Đang sử dụng','Tốt Như mới',
+    '2024-01-15','Đủ Đúng vị trí','2022-05-10','8500000',
+    'Mua mới','HD-2022-089','8','Nhóm5 Nội thất 6-8năm','Hàng năm',
+    '2024-01-15','2025-01-15','Nội bộ','',''];
+  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+  ws['!cols'] = headers.map(() => ({wch:22}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Template');
+  XLSX.writeFile(wb, 'HCQT_Template_NhapLieu.xlsx');
+  toast('✅ Đã tải template nhập liệu','ok');
 }
 
 // ── Export CSV ────────────────────────────────────────────────────
