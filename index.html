@@ -5916,6 +5916,11 @@ async function msalSpLoad(){
       hcqtLoadLocal(); hcqtSync();
     }
     msalSetBar(msalBarLabel(assets.length + ' TS'),'s-ok');
+    // HCQT IT-viewer: chỉ cần tài sản CNTT, bỏ qua license/transfer/ĐNTT
+    if(_hcqtHasITAccess){
+      _loadEmployees(false);
+      return;
+    }
     // Hiện nút Sync SP ở tab License + load licenses
     const licBtn = document.getElementById('lic-sync-btn');
     if(licBtn) licBtn.style.display = can('sync') ? 'inline-flex' : 'none';
@@ -8047,6 +8052,26 @@ function applyRoleUI(){
     if(badge){ badge.textContent = 'HCQT'; badge.style.color = '#0a5c36'; badge.style.display = ''; }
     const rbSidebar = document.getElementById('sidebar-role-badge');
     if(rbSidebar){ rbSidebar.textContent = 'HC Quản trị'; rbSidebar.className = 'sidebar-role-badge member'; }
+    _updateTopbarUser();
+    return;
+  }
+
+  // ── HCQT IT-viewer: chỉ xem tab Tài sản CNTT + tab HCQT ─────────────────────
+  if(_hcqtHasITAccess && !_isHCQTUser){
+    // Ẩn tất cả tab trừ assets và hcqt
+    ['dashboard','events','license','dntt','procurement','repairs','roles','auditlog','fuji']
+      .forEach(t => show('tab-'+t, false));
+    show('tab-assets', true);
+    show('tab-hcqt',   true);
+    const hcqtSecEl = document.querySelector('.sidebar-section.hcqt-section');
+    if(hcqtSecEl) hcqtSecEl.style.display = '';
+    // Ẩn các nút thêm/sửa/xóa/sync (chỉ xem)
+    ['btn-add-asset','btn-sync-asset','btn-export-asset','btn-set-ttg','ctx-switcher-block'].forEach(id => show(id, false));
+    // Badge
+    const badge = document.getElementById('role-badge');
+    if(badge){ badge.textContent = 'HCQT+IT'; badge.style.color = '#7C3AED'; badge.style.display = ''; }
+    const rbSidebar = document.getElementById('sidebar-role-badge');
+    if(rbSidebar){ rbSidebar.textContent = 'HCQT + Xem IT'; rbSidebar.className = 'sidebar-role-badge member'; }
     _updateTopbarUser();
     return;
   }
