@@ -5614,10 +5614,18 @@ async function detectUserCompany(){
     const myGroups = (data.value || []).map(g => g.displayName);
 
     // ── HCQT: check trước company maps ────────────────────────────────────────
-    _isHCQTUser = false;
+    _isHCQTUser      = false;
+    _hcqtHasITAccess = false;
     if(typeof HCQT_AD_GROUP !== 'undefined' && myGroups.includes(HCQT_AD_GROUP)){
       _isHCQTUser = true;
-      console.log('[QLTS] User thuộc HCQT group → chế độ HC Quản trị only');
+      // Kiểm tra có được grant xem IT không (qua group riêng — không cần SP permission)
+      if(typeof HCQT_IT_VIEWER_GRP !== 'undefined' && myGroups.includes(HCQT_IT_VIEWER_GRP)){
+        _hcqtHasITAccess = true;
+        _isHCQTUser      = false; // fall through → load IT data bình thường
+        console.log('[QLTS] HCQT user có IT viewer access → dual mode');
+      } else {
+        console.log('[QLTS] User thuộc HCQT group → chế độ HC Quản trị only');
+      }
       return; // không cần check company maps
     }
 
@@ -5724,8 +5732,11 @@ async function switchCompanyContext(groupKey){
   applyRoleUI();
 }
 
+let _msalSpLoadLock = false;
 async function msalSpLoad(){
   if(!_msalAccount){ toast('⚠️ Vui lòng đăng nhập M365 trước','bad'); return; }
+  if(_msalSpLoadLock){ console.log('[QLTS] msalSpLoad đang chạy, bỏ qua lần gọi này'); return; }
+  _msalSpLoadLock = true;
   // Set SP_MODE + SP_SITE ngay khi có account
   SP_MODE = true; SP_SITE = MSAL_CONFIG.spSite;
   if(_skipDetectCompany){
@@ -5739,31 +5750,19 @@ async function msalSpLoad(){
     msalSetBar('⟳ Đang tải từ SharePoint…','s-busy');
   }
 
-  // ── HCQT shortcut: kiểm tra IT role grant trước khi quyết định chế độ ────────
+  // ── HCQT shortcut ───────────────────────────────────────────────────────────
+  // _isHCQTUser và _hcqtHasITAccess đã được set trong detectUserCompany() qua Azure AD groups
   if(_isHCQTUser){
-    // Load SP Roles từ IT để kiểm tra xem user có được grant IT access không
-    try{ await msalSpLoadRoles(); }
-    catch(e){ console.warn('[HCQT] Không load được IT roles (dùng HCQT-only):', e.message); }
-
-    const _hcqtEmail = (_msalAccount.username || '').toLowerCase().trim();
-    const _itGrant   = _spRoles[_hcqtEmail]?.role;
-
-    if(_itGrant && _itGrant !== 'hcqt_member'){
-      // ── Dual access: HCQT user được IT admin grant thêm IT role ──────────
-      _hcqtHasITAccess = true;
-      _isHCQTUser      = false; // fall through → load IT data bình thường
-      console.log(`[HCQT] "${_hcqtEmail}" có IT role "${_itGrant}" → dual access (IT + HCQT)`);
-      // Không return — tiếp tục load IT data bên dưới
-    } else {
-      // ── HCQT-only: chỉ show module HC Quản trị ───────────────────────────
-      _userRole = 'hcqt_member';
-      applyRoleUI();
-      msalSetBar('🏢 HC Quản trị — ' + (_msalAccount.name || _msalAccount.username), 's-ok');
-      switchTab('hcqt');
-      hcqtSync();
-      return;
-    }
+    // HCQT-only: không load IT data, switch thẳng sang HCQT module
+    _userRole = 'hcqt_member';
+    applyRoleUI();
+    msalSetBar('🏢 HC Quản trị — ' + (_msalAccount.name || _msalAccount.username), 's-ok');
+    _msalSpLoadLock = false; // release lock trước khi return sớm
+    switchTab('hcqt');
+    hcqtSync();
+    return;
   }
+  // _hcqtHasITAccess=true (dual): fall through → load IT data bình thường bên dưới
 
   const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')`;
   try{
@@ -5816,8 +5815,14 @@ async function msalSpLoad(){
     // Resolve role (ưu tiên SP, fallback ROLE_CONFIG)
     _userRole = resolveRole(_msalAccount.username);
     applyRoleUI();
-    // Nếu user có dual access (HCQT + IT): tự động load HCQT data nền
-    if(_hcqtHasITAccess){ hcqtLoadLocal(); hcqtSync(); }
+    // Dual access: HCQT user xem IT → force viewer role nếu chưa có role cao hơn
+    if(_hcqtHasITAccess){
+      if(!['global_admin','admin','company_admin','member'].includes(_userRole)){
+        _userRole = 'viewer'; // mặc định viewer cho HCQT-IT-viewer
+        applyRoleUI();
+      }
+      hcqtLoadLocal(); hcqtSync();
+    }
     msalSetBar(msalBarLabel(assets.length + ' TS'),'s-ok');
     // Hiện nút Sync SP ở tab License + load licenses
     const licBtn = document.getElementById('lic-sync-btn');
@@ -5839,8 +5844,8 @@ async function msalSpLoad(){
     msalSetBar('⚠️ Lỗi tải SP: ' + e.message,'s-err');
     toast('❌ Lỗi: ' + e.message,'bad');
   }
+  _msalSpLoadLock = false;
 }
-
 // ─── Reload chỉ field types (không reload items) ─────────────────────────────
 async function msalReloadFieldTypes(){
   if(!_msalAccount) return;
@@ -18653,7 +18658,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ── HCQT AD Group — đổi tên group cho khớp Azure AD của bạn ──────────────
 // Tạo group 'HCQT-member' trong Azure AD Portal, add user HCQT vào group đó.
 // App sẽ tự nhận diện và chỉ show module HC Quản trị cho nhóm này.
-const HCQT_AD_GROUP = 'HCQT-member';   // ← đổi nếu tên group khác
+const HCQT_AD_GROUP      = 'HCQT-member';    // ← group HCQT thuần (chỉ thấy HC Quản trị)
+const HCQT_IT_VIEWER_GRP = 'HCQT-IT-viewer'; // ← group HCQT được xem thêm tài sản CNTT (view-only)
 
 const HCQT_SITE     = 'https://ttgvncom.sharepoint.com/teams/Department_Administration';
 const HCQT_LIST     = 'DanhSachTaiSan_HCQT';
@@ -18813,8 +18819,6 @@ function hcqtRenderDashboard(){
     <div style="${kpiStyle}" onclick="hcqtSubNav('maintenance')">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Bảo trì 30 ngày</div>
       <div style="font-size:28px;font-weight:800;color:#f59e0b">${maintain}</div>
-    </div>
-          <div style="font-size:28px;font-weight:800;color:#8b5cf6">${veh}</div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
