@@ -5613,7 +5613,7 @@ async function detectUserCompany(){
     const data  = await res.json();
     const myGroups = (data.value || []).map(g => g.displayName);
 
-    // ── HCQT: check trước company maps ────────────────────────────────────────
+    // ── HCQT: check trước company maps (chỉ update nếu Graph thành công) ───────
     _isHCQTUser      = false;
     _hcqtHasITAccess = false;
     if(typeof HCQT_AD_GROUP !== 'undefined' && myGroups.includes(HCQT_AD_GROUP)){
@@ -5757,9 +5757,9 @@ async function msalSpLoad(){
     _userRole = 'hcqt_member';
     applyRoleUI();
     msalSetBar('🏢 HC Quản trị — ' + (_msalAccount.name || _msalAccount.username), 's-ok');
-    _msalSpLoadLock = false; // release lock trước khi return sớm
     switchTab('hcqt');
     hcqtSync();
+    _msalSpLoadLock = false;
     return;
   }
   // _hcqtHasITAccess=true (dual): fall through → load IT data bình thường bên dưới
@@ -5810,8 +5810,8 @@ async function msalSpLoad(){
     } else {
       console.log('[QLTS] SharePoint List đang trống');
     }
-    // Load SP roles trước để resolveRole() dùng đúng quyền
-    await msalSpLoadRoles();
+    // Load SP roles (bỏ qua nếu là HCQT user — không có quyền đọc IT SP site)
+    if(!_isHCQTUser) await msalSpLoadRoles();
     // Resolve role (ưu tiên SP, fallback ROLE_CONFIG)
     _userRole = resolveRole(_msalAccount.username);
     applyRoleUI();
@@ -5843,8 +5843,9 @@ async function msalSpLoad(){
     console.error('[MSAL] load error:', e);
     msalSetBar('⚠️ Lỗi tải SP: ' + e.message,'s-err');
     toast('❌ Lỗi: ' + e.message,'bad');
+  } finally {
+    _msalSpLoadLock = false;
   }
-  _msalSpLoadLock = false;
 }
 // ─── Reload chỉ field types (không reload items) ─────────────────────────────
 async function msalReloadFieldTypes(){
