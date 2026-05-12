@@ -2851,8 +2851,8 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <button class="nav-tab" onclick="switchTab('fuji')" id="tab-fuji" style="display:none">
           <span class="tab-icon"><i class="ph ph-printer"></i></span> Báo Cáo In
         </button>
-        <div class="sidebar-section" style="margin-top:6px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px">Hành chính QT</div>
-        <button class="nav-tab" onclick="switchTab('hcqt')" id="tab-hcqt">
+        <div class="sidebar-section hcqt-section" style="margin-top:6px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px;display:none">Hành chính QT</div>
+        <button class="nav-tab" onclick="switchTab('hcqt')" id="tab-hcqt" style="display:none">
           <span class="tab-icon">🏢</span> HC Quản trị
         </button>
       </nav>
@@ -5615,6 +5615,14 @@ async function detectUserCompany(){
     const data  = await res.json();
     const myGroups = (data.value || []).map(g => g.displayName);
 
+    // ── HCQT: check trước company maps ────────────────────────────────────────
+    _isHCQTUser = false;
+    if(typeof HCQT_AD_GROUP !== 'undefined' && myGroups.includes(HCQT_AD_GROUP)){
+      _isHCQTUser = true;
+      console.log('[QLTS] User thuộc HCQT group → chế độ HC Quản trị only');
+      return; // không cần check company maps
+    }
+
     // ── Helper gán lists cho 1 group ──────────────────────────────────────────
     function _setGroupLists(grp){
       const ln = COMPANY_GROUP_MAP[grp] || DEFAULT_SP_LIST;
@@ -5732,6 +5740,33 @@ async function msalSpLoad(){
     await detectUserCompany();
     msalSetBar('⟳ Đang tải từ SharePoint…','s-busy');
   }
+
+  // ── HCQT shortcut: kiểm tra IT role grant trước khi quyết định chế độ ────────
+  if(_isHCQTUser){
+    // Load SP Roles từ IT để kiểm tra xem user có được grant IT access không
+    try{ await msalSpLoadRoles(); }
+    catch(e){ console.warn('[HCQT] Không load được IT roles (dùng HCQT-only):', e.message); }
+
+    const _hcqtEmail = (_msalAccount.username || '').toLowerCase().trim();
+    const _itGrant   = _spRoles[_hcqtEmail]?.role;
+
+    if(_itGrant && _itGrant !== 'hcqt_member'){
+      // ── Dual access: HCQT user được IT admin grant thêm IT role ──────────
+      _hcqtHasITAccess = true;
+      _isHCQTUser      = false; // fall through → load IT data bình thường
+      console.log(`[HCQT] "${_hcqtEmail}" có IT role "${_itGrant}" → dual access (IT + HCQT)`);
+      // Không return — tiếp tục load IT data bên dưới
+    } else {
+      // ── HCQT-only: chỉ show module HC Quản trị ───────────────────────────
+      _userRole = 'hcqt_member';
+      applyRoleUI();
+      msalSetBar('🏢 HC Quản trị — ' + (_msalAccount.name || _msalAccount.username), 's-ok');
+      switchTab('hcqt');
+      hcqtSync();
+      return;
+    }
+  }
+
   const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')`;
   try{
     // Build field map — lấy TẤT CẢ fields kèm TypeAsString để detect Number/Calculated
@@ -5783,6 +5818,8 @@ async function msalSpLoad(){
     // Resolve role (ưu tiên SP, fallback ROLE_CONFIG)
     _userRole = resolveRole(_msalAccount.username);
     applyRoleUI();
+    // Nếu user có dual access (HCQT + IT): tự động load HCQT data nền
+    if(_hcqtHasITAccess){ hcqtLoadLocal(); hcqtSync(); }
     msalSetBar(msalBarLabel(assets.length + ' TS'),'s-ok');
     // Hiện nút Sync SP ở tab License + load licenses
     const licBtn = document.getElementById('lic-sync-btn');
@@ -6138,7 +6175,8 @@ function _updateTopbarUser(){
       const role = _userRole || 'viewer';
       const _roleLabelMap = {
         global_admin:'Global Admin', admin:'Admin',
-        company_admin:'Co. Admin', member:'Member', viewer:'Viewer'
+        company_admin:'Co. Admin', member:'Member', viewer:'Viewer',
+        hcqt_member:'HC Quản trị'
       };
       roleBadge.textContent = _roleLabelMap[role] || 'Viewer';
       roleBadge.className = 'sidebar-role-badge ' + role;
@@ -7655,6 +7693,28 @@ function applyRoleUI(){
     document.querySelectorAll('.'+cls).forEach(el => el.style.display = visible ? '' : 'none');
   };
 
+  // ── HCQT user: chỉ show HC Quản trị, ẩn toàn bộ IT ─────────────────────────
+  if(_isHCQTUser){
+    // Ẩn tất cả IT nav tabs — HCQT-only user
+    ['dashboard','assets','events','license','dntt','procurement','repairs','roles','auditlog','fuji']
+      .forEach(t => show('tab-'+t, false));
+    // Show HCQT tab + section header
+    show('tab-hcqt', true);
+    const hcqtSec = document.querySelector('.sidebar-section.hcqt-section');
+    if(hcqtSec) hcqtSec.style.display = '';
+    // Ẩn IT topbar buttons
+    ['btn-add-asset','btn-sync-asset','btn-export-asset','btn-sync-emp','global-search'].forEach(id => show(id, false));
+    // Ẩn context switcher
+    show('ctx-switcher-block', false);
+    // Role badge
+    const badge = document.getElementById('role-badge');
+    if(badge){ badge.textContent = 'HCQT'; badge.style.color = '#0a5c36'; badge.style.display = ''; }
+    const rbSidebar = document.getElementById('sidebar-role-badge');
+    if(rbSidebar){ rbSidebar.textContent = 'HC Quản trị'; rbSidebar.className = 'sidebar-role-badge member'; }
+    _updateTopbarUser();
+    return;
+  }
+
   // global_admin/admin = cross-company full access + role management
   // company_admin      = full CRUD in their company, no role management
   const isGlobalAdmin  = _userRole === 'global_admin' || _userRole === 'admin';
@@ -7713,6 +7773,19 @@ function applyRoleUI(){
   }
   // Cập nhật sidebar role badge
   _updateTopbarUser();
+
+  // ── HCQT tab visibility: chỉ show cho đúng đối tượng ─────────────────────
+  {
+    const showHCQTTab = _isHCQTUser                   // HCQT-only user
+                     || _hcqtHasITAccess              // HCQT user + IT grant
+                     || isGlobalAdmin                 // IT Global Admin / Admin
+                     || isCompanyAdmin;               // Company Admin (optional)
+    const hcqtTabEl  = document.getElementById('tab-hcqt');
+    const hcqtSecEl  = document.querySelector('.sidebar-section.hcqt-section');
+    if(hcqtTabEl)  hcqtTabEl.style.display  = showHCQTTab ? '' : 'none';
+    if(hcqtSecEl)  hcqtSecEl.style.display  = showHCQTTab ? '' : 'none';
+  }
+
   // Lock dashboard về đúng công ty nếu là user công ty con
   _lockDashboardCompany();
 }
@@ -7783,6 +7856,11 @@ function updateTopbarSub(){
 
 // ═══════════════════════ TABS ═══════════════════════
 function switchTab(t){
+  // HCQT-only user chỉ được truy cập tab hcqt (dual access user không bị block)
+  if(_isHCQTUser && !_hcqtHasITAccess && t !== 'hcqt'){
+    console.warn('[QLTS] HCQT user: access to tab "' + t + '" blocked');
+    return;
+  }
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+t).classList.add('active');
@@ -18574,10 +18652,17 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ║  HCQT MODULE — Quản lý tài sản Hành chính Quản trị              ║
 // ║  SharePoint: Department_Administration / DanhSachTaiSan_HCQT    ║
 // ╚══════════════════════════════════════════════════════════════════╝
+// ── HCQT AD Group — đổi tên group cho khớp Azure AD của bạn ──────────────
+// Tạo group 'HCQT-member' trong Azure AD Portal, add user HCQT vào group đó.
+// App sẽ tự nhận diện và chỉ show module HC Quản trị cho nhóm này.
+const HCQT_AD_GROUP = 'HCQT-member';   // ← đổi nếu tên group khác
+
 const HCQT_SITE     = 'https://ttgvncom.sharepoint.com/teams/Department_Administration';
 const HCQT_LIST     = 'DanhSachTaiSan_HCQT';
 const HCQT_STORE_KEY= 'hcqt_assets_v2';
 
+let _isHCQTUser     = false; // true nếu user thuộc HCQT_AD_GROUP
+let _hcqtHasITAccess= false; // true nếu HCQT user được IT admin grant thêm quyền IT
 let _hcqtData       = [];
 let _hcqtSubView    = 'dashboard';
 let _hcqtEditId     = null;
