@@ -8051,7 +8051,7 @@ function applyRoleUI(){
     const badge = document.getElementById('role-badge');
     if(badge){ badge.textContent = 'HCQT'; badge.style.color = '#0a5c36'; badge.style.display = ''; }
     const rbSidebar = document.getElementById('sidebar-role-badge');
-    if(rbSidebar){ rbSidebar.textContent = 'HC Quản trị'; rbSidebar.className = 'sidebar-role-badge member'; }
+    if(rbSidebar){ rbSidebar.textContent = 'HCQT'; rbSidebar.className = 'sidebar-role-badge member'; }
     _updateTopbarUser();
     return;
   }
@@ -8069,9 +8069,9 @@ function applyRoleUI(){
     ['btn-add-asset','btn-sync-asset','btn-export-asset','btn-set-ttg','ctx-switcher-block'].forEach(id => show(id, false));
     // Badge
     const badge = document.getElementById('role-badge');
-    if(badge){ badge.textContent = 'HCQT+IT'; badge.style.color = '#7C3AED'; badge.style.display = ''; }
+    if(badge){ badge.innerHTML = 'HCQT <span style="font-size:9px;opacity:.7">(it)</span>'; badge.style.color = '#7C3AED'; badge.style.display = ''; }
     const rbSidebar = document.getElementById('sidebar-role-badge');
-    if(rbSidebar){ rbSidebar.textContent = 'HCQT + Xem IT'; rbSidebar.className = 'sidebar-role-badge member'; }
+    if(rbSidebar){ rbSidebar.innerHTML = 'HCQT <span style="font-size:10px;opacity:.65;font-weight:400">(it)</span>'; rbSidebar.className = 'sidebar-role-badge member'; }
     _updateTopbarUser();
     return;
   }
