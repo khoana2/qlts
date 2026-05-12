@@ -19581,7 +19581,10 @@ function hcqtExportXLSX(){
   ws['!cols'] = headers.map((_,i) => ({wch: i<2?30:i<9?12:18}));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Tài sản HCQT');
-  XLSX.writeFile(wb, 'HCQT_TaiSan_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  const buf = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'HCQT_TaiSan_'+new Date().toISOString().slice(0,10)+'.xlsx'; a.click();
   toast('✅ Đã xuất '+_hcqtData.length+' tài sản ra Excel','ok');
 }
 
@@ -19604,7 +19607,10 @@ function hcqtExportTemplate(){
   ws['!cols'] = headers.map(() => ({wch:22}));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Template');
-  XLSX.writeFile(wb, 'HCQT_Template_NhapLieu.xlsx');
+  const buf = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'HCQT_Template_NhapLieu.xlsx'; a.click();
   toast('✅ Đã tải template nhập liệu','ok');
 }
 
