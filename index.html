@@ -5831,6 +5831,30 @@ async function msalSpLoad(){
     return;
   }
   // _hcqtHasITAccess=true (dual): fall through → load IT data bình thường bên dưới
+  // Nhưng HCQT user có thể chưa có SP permission trên IT site → thử probe trước
+  if(_hcqtHasITAccess){
+    try{
+      const probe = await msalSpReq(
+        `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items?$top=1&$select=Id`
+      );
+      // Probe OK → tiếp tục dual mode
+    }catch(probeErr){
+      if(String(probeErr.message).includes('403') || String(probeErr.message).toLowerCase().includes('unauthorized')){
+        // Không có quyền IT SP → quay về HCQT mode
+        console.warn('[QLTS] hcqt_it_viewer: IT SP 403 → fallback HCQT mode');
+        _isHCQTUser      = true;
+        _hcqtHasITAccess = false;
+        toast('ℹ️ Chưa có quyền đọc site IT. Đang mở chế độ HCQT.', 'warn');
+        _userRole = 'hcqt_member';
+        applyRoleUI();
+        msalSetBar('🏢 HC Quản trị — ' + (_msalAccount.name || _msalAccount.username), 's-ok');
+        switchTab('hcqt');
+        hcqtSync();
+        _msalSpLoadLock = false;
+        return;
+      }
+    }
+  }
 
   const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')`;
   try{
