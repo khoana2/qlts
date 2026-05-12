@@ -5837,7 +5837,9 @@ async function msalSpLoad(){
       const probe = await msalSpReq(
         `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items?$top=1&$select=Id`
       );
-      // Probe OK → tiếp tục dual mode
+      // Probe OK → ẩn tabs ngay trước khi load để tránh flash
+      _userRole = 'viewer';
+      applyRoleUI();
     }catch(probeErr){
       if(String(probeErr.message).includes('403') || String(probeErr.message).toLowerCase().includes('unauthorized')){
         // Không có quyền IT SP → quay về HCQT mode
@@ -5896,7 +5898,7 @@ async function msalSpLoad(){
       assets = all.map(i=>spItemToAsset(i));
       saveToStorage(); saveTransfers(); saveRepairs();
       populateDeptSelects(); applyFilters(); updateDashboard(); renderEvents(); updateTopbarSub();
-      loadRepairsSP(); // load phiếu sửa chữa từ SP list riêng
+      if(!_hcqtHasITAccess) loadRepairsSP(); // load phiếu sửa chữa từ SP list riêng
       _updateRepairSyncBtn();
       console.log(`[QLTS] Đã tải ${assets.length} tài sản từ SharePoint`);
     } else {
@@ -6273,14 +6275,22 @@ function _updateTopbarUser(){
     if(uname)     uname.textContent  = name;
     // Role badge
     if(roleBadge){
-      const role = _userRole || 'viewer';
-      const _roleLabelMap = {
-        global_admin:'Global Admin', admin:'Admin',
-        company_admin:'Co. Admin', member:'Member', viewer:'Viewer',
-        hcqt_member:'HC Quản trị'
-      };
-      roleBadge.textContent = _roleLabelMap[role] || 'Viewer';
-      roleBadge.className = 'sidebar-role-badge ' + role;
+      // HCQT IT-viewer badge được set bởi applyRoleUI — không override ở đây
+      if(_hcqtHasITAccess && !_isHCQTUser){
+        // badge đã được applyRoleUI set, giữ nguyên
+      } else if(_isHCQTUser) {
+        roleBadge.textContent = 'HCQT';
+        roleBadge.className = 'sidebar-role-badge member';
+      } else {
+        const role = _userRole || 'viewer';
+        const _roleLabelMap = {
+          global_admin:'Global Admin', admin:'Admin',
+          company_admin:'Co. Admin', member:'Member', viewer:'Viewer',
+          hcqt_member:'HC Quản trị'
+        };
+        roleBadge.textContent = _roleLabelMap[role] || 'Viewer';
+        roleBadge.className = 'sidebar-role-badge ' + role;
+      }
     }
     if(footer)  footer.style.display = 'block';
     if(msalBar) msalBar.style.display = 'none';
@@ -19076,21 +19086,24 @@ const HCQT_SEL = 'Id,Title,MaTaiSan,LoaiTaiSan,NhomTaiSan,HangSanXuat,Model,SoSe
 
 async function hcqtSync(){
   const hasAuth = typeof _msalAccount!=='undefined' && _msalAccount;
-  if(!hasAuth){ showNotif&&showNotif('Vui lòng đăng nhập Microsoft 365 trước','warn'); return; }
+  if(!hasAuth){ toast('Vui lòng đăng nhập Microsoft 365 trước','warn'); return; }
   try{
-    let all=[],skip=0;
-    while(true){
-      const d = await hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items?$select=${HCQT_SEL}&$top=500&$skiptoken=Paged=TRUE%26p_ID=${skip}`);
-      all=all.concat(d.value||[]);
-      if(!d['odata.nextLink']&&(d.value||[]).length<500) break;
-      if(!(d.value||[]).length) break;
-      skip+=500;
+    let all=[], nextUrl=null;
+    const base = `${HCQT_SITE}/_api/web/lists/getbytitle('${HCQT_LIST}')/items?$select=${HCQT_SEL}&$top=500`;
+    let url = base;
+    while(url){
+      const tok = await hcqtGetToken();
+      const res = await fetch(url, {headers:{'Authorization':'Bearer '+tok,'Accept':'application/json;odata=nometadata'}});
+      if(!res.ok){ const t=await res.text(); throw new Error('SP '+res.status+': '+t.slice(0,200)); }
+      const d = await res.json();
+      all = all.concat(d.value||[]);
+      url = d['odata.nextLink'] || null;
     }
     _hcqtData=all.map(hcqtSpToLocal);
     hcqtSaveLocal();
-    showNotif&&showNotif('HCQT: Đã tải '+_hcqtData.length+' tài sản','ok');
+    toast('✅ HCQT: Đã tải '+_hcqtData.length+' tài sản','ok');
     hcqtRenderSub();
-  }catch(e){ showNotif&&showNotif('HCQT lỗi: '+e.message,'err'); }
+  }catch(e){ toast('❌ HCQT lỗi: '+e.message,'bad'); }
 }
 
 function hcqtSpToLocal(it){
