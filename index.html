@@ -19082,7 +19082,7 @@ async function hcqtSpFetch(path,opts={}){
   return res.status===204?null:res.json();
 }
 
-const HCQT_SEL = 'Id,Title,MaTaiSan,LoaiTaiSan,NhomTaiSan,HangSanXuat,Model,SoSerial,MauSac,SoLuong,ToaNha,Tang,PhongViTri,KhuVuc,NguoiPhuTrach,EmailPhuTrach,BoPhanSuDung,TinhTrang,MucDoHaoMon,GhiChuTinhTrang,NgayKiemKe,KetQuaKiemKe,NgayMua,NguyenGia,NguonMua,SoHoaDon,ThoiGianKhauHao,NhomKhauHao,ChuKyBaoTri,NgayBaoTriGanNhat,NgayBaoTriTiepTheo,DonViBaoTri,ChiPhiBaoTri,LichSuSuaChua,GhiChu,Created,Modified';
+const HCQT_SEL = 'Id,Title,MaTaiSan,LoaiTaiSan,NhomTaiSan,HangSanXuat,Model,SoSerial,MauSac,SoLuong,ToaNha,Tang,PhongViTri,KhuVuc,NguoiPhuTrach,EmailPhuTrach,BoPhanSuDung,TinhTrang,MucDoHao,GhiChuTinhTrang,NgayKiemKe,KetQuaKiemKe,NgayMua,NguyenGia,NguonMua,SoHoaDon,ThoiGianKhauHao,NhomKhauHao,ChuKyBaoTri,NgayBaoTriGanNhat,NgayBaoTriTiepTheo,DonViBaoTri,ChiPhiBaoTri,LichSuSuaChua,GhiChu,Created,Modified';
 
 async function hcqtSync(){
   const hasAuth = typeof _msalAccount!=='undefined' && _msalAccount;
@@ -19115,7 +19115,7 @@ function hcqtSpToLocal(it){
     ToaNha:it.ToaNha||'', Tang:it.Tang||'', PhongViTri:it.PhongViTri||'',
     KhuVuc:it.KhuVuc||'', NguoiPhuTrach:it.NguoiPhuTrach||'',
     EmailPhuTrach:it.EmailPhuTrach||'', BoPhanSuDung:it.BoPhanSuDung||'',
-    TinhTrang:it.TinhTrang||'', MucDoHao:it.MucDoHaoMon||'',
+    TinhTrang:it.TinhTrang||'', MucDoHao:it.MucDoHao||'',
     GhiChuTinhTrang:it.GhiChuTinhTrang||'',
     NgayKiemKe:it.NgayKiemKe||'', KetQuaKiemKe:it.KetQuaKiemKe||'',
     NgayMua:it.NgayMua||'', NguyenGia:it.NguyenGia||0,
@@ -19138,7 +19138,7 @@ function hcqtLocalToSP(f){
     SoSerial:f.SoSerial, MauSac:f.MauSac, SoLuong:+f.SoLuong||1,
     ToaNha:f.ToaNha, Tang:f.Tang, PhongViTri:f.PhongViTri, KhuVuc:f.KhuVuc,
     NguoiPhuTrach:f.NguoiPhuTrach, EmailPhuTrach:f.EmailPhuTrach, BoPhanSuDung:f.BoPhanSuDung,
-    TinhTrang:f.TinhTrang, MucDoHaoMon:f.MucDoHao,
+    TinhTrang:f.TinhTrang, MucDoHao:f.MucDoHao,
     GhiChuTinhTrang:f.GhiChuTinhTrang,
     NgayKiemKe:f.NgayKiemKe||null, KetQuaKiemKe:f.KetQuaKiemKe,
     NgayMua:f.NgayMua||null, NguyenGia:+f.NguyenGia||null,
