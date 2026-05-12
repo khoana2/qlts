@@ -19628,9 +19628,11 @@ function hcqtExportCSV(){
     d.NgayMua?d.NgayMua.split('T')[0]:'',d.NguyenGia,d.NguonMua,d.SoHoaDon,d.ThoiGianKhauHao,d.NhomKhauHao,
     d.ChuKyBaoTri,d.NgayBaoTriGanNhat?d.NgayBaoTriGanNhat.split('T')[0]:'',
     d.NgayBaoTriTiepTheo?d.NgayBaoTriTiepTheo.split('T')[0]:'',d.DonViBaoTri,d.ChiPhiBaoTri,d.GhiChu]);
-  let csv='sep=,\n'+h.join(',')+'\n';
-  rows.forEach(r=>{ csv+=r.map(v=>'"'+( v||'').toString().replace(/"/g,'\\"')+ '"').join(',')+'\n'; });
-  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  let csv=h.map(v=>'"'+v+'"').join(',')+'\n';
+  rows.forEach(r=>{ csv+=r.map(v=>'"'+( v||'').toString().replace(/"/g,'""')+ '"').join(',')+'\n'; });
+  const enc=new TextEncoder();
+  const bom=new Uint8Array([0xEF,0xBB,0xBF]);
+  const blob=new Blob([bom,enc.encode(csv)],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='HCQT_TaiSan_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
   toast('✅ Đã xuất '+_hcqtData.length+' tài sản','ok');
