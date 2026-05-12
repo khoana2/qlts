@@ -5920,6 +5920,7 @@ async function msalSpLoad(){
     msalSetBar(msalBarLabel(assets.length + ' TS'),'s-ok');
     // HCQT IT-viewer: chỉ cần tài sản CNTT, bỏ qua license/transfer/ĐNTT
     if(_hcqtHasITAccess){
+      switchTab('assets'); // đưa thẳng vào tab tài sản, bỏ qua dashboard
       _loadEmployees(false);
       return;
     }
