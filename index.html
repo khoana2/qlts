@@ -7668,6 +7668,27 @@ async function _hcqtSpToken(){
   return _msalToken || '';
 }
 
+// Cache X-RequestDigest cho HCQT site (cần thiết cho write operations)
+let _hcqtDigestCache = { val: null, exp: 0 };
+async function _hcqtDigest(){
+  const now = Date.now();
+  if(_hcqtDigestCache.val && _hcqtDigestCache.exp > now) return _hcqtDigestCache.val;
+  const token = await _hcqtSpToken();
+  const r = await fetch(`${HCQT_SITE}/_api/contextinfo`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept':        'application/json;odata=nometadata',
+      'Content-Type':  'application/json;odata=nometadata'
+    }
+  });
+  if(!r.ok) throw new Error('Không lấy được HCQT digest: ' + r.status);
+  const d = await r.json();
+  const val = d.FormDigestValue;
+  _hcqtDigestCache = { val, exp: now + 25*60*1000 };
+  return val;
+}
+
 // Generic HCQT SP REST call
 async function _hcqtRolesReq(relUrl, opts={}){
   const token = await _hcqtSpToken();
@@ -7678,6 +7699,10 @@ async function _hcqtRolesReq(relUrl, opts={}){
     'Content-Type':  'application/json;odata=nometadata',
     ...(opts.headers||{})
   };
+  // Write operations cần X-RequestDigest
+  if(opts.method && opts.method !== 'GET'){
+    headers['X-RequestDigest'] = await _hcqtDigest();
+  }
   const res = await fetch(url, { ...opts, headers });
   if(!res.ok){
     const txt = await res.text();
