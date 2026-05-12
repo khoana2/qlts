@@ -7794,15 +7794,43 @@ function renderHCQTRolesTable(){
     </tr>`).join('');
 }
 
+// Populate datalist nhân viên cho HCQT role modal
+function _hcqtRolePopulateDatalist(){
+  const dl = document.getElementById('hcqt-role-email-list');
+  if(!dl) return;
+  const emps = window._qltsEmployees || [];
+  dl.innerHTML = emps.map(e => {
+    const email = e.user ? e.user + '@ttgvn.com' : '';
+    const label = [e.name, e.dept].filter(Boolean).join(' — ');
+    return `<option value="${email}">${label ? label : ''}</option>`;
+  }).join('');
+}
+
+// Auto-fill tên khi user chọn email từ datalist
+function _hcqtRoleEmailInput(val){
+  if(!val || !val.includes('@')) return;
+  const emps = window._qltsEmployees || [];
+  const user = val.split('@')[0].toLowerCase();
+  const found = emps.find(e => (e.user||'').toLowerCase() === user);
+  if(found && found.name){
+    const tenEl = document.getElementById('hcqt-role-ten');
+    if(tenEl && !tenEl.value) tenEl.value = found.name;
+  }
+}
+
 // Mở form thêm / sửa HCQT role
 function openHCQTRoleForm(email='', ten='', role='hcqt_member', spId=null){
   const modal = document.getElementById('hcqt-role-modal');
   if(!modal) return;
+  _hcqtRolePopulateDatalist();
   document.getElementById('hcqt-role-email').value = email;
   document.getElementById('hcqt-role-ten').value   = ten;
   document.getElementById('hcqt-role-select').value = role;
   document.getElementById('hcqt-role-spid').value  = spId||'';
-  document.getElementById('hcqt-role-email').readOnly = !!email; // email không đổi khi edit
+  const emailEl = document.getElementById('hcqt-role-email');
+  emailEl.readOnly = !!email; // email không đổi khi edit
+  emailEl.style.background = email ? 'var(--surface2,#f1f5f9)' : '';
+  if(!email) setTimeout(()=>emailEl.focus(), 80);
   modal.style.display = 'flex';
 }
 
@@ -19485,10 +19513,12 @@ document.addEventListener('keydown',e=>{
       <i class="ph ph-buildings"></i> Phân quyền HC Quản Trị
     </div>
     <input type="hidden" id="hcqt-role-spid">
+    <datalist id="hcqt-role-email-list"></datalist>
     <div style="margin-bottom:12px;">
       <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Email <span style="color:var(--danger)">*</span></label>
-      <input id="hcqt-role-email" type="email" class="finput" style="width:100%;box-sizing:border-box;"
-        placeholder="user@ttgvn.com">
+      <input id="hcqt-role-email" type="text" list="hcqt-role-email-list" class="finput"
+        style="width:100%;box-sizing:border-box;" placeholder="Gõ tên hoặc email…"
+        oninput="_hcqtRoleEmailInput(this.value)" autocomplete="off">
     </div>
     <div style="margin-bottom:12px;">
       <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Họ tên (tùy chọn)</label>
