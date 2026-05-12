@@ -19505,8 +19505,24 @@ function _hcqtGetFormModal(){
       ${fld('LichSuSuaChua','Lịch sử sửa chữa','textarea')}
       ${fld('GhiChu','Ghi chú','textarea')}
       ${sec('📷 Hình ảnh')}
-      ${fld('AnhUrl','URL ảnh tài sản')}
-      <div id="hcqt-img-preview" style="margin-top:6px;display:none;"><img id="hcqt-img-el" src="" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border,#e2e8f0);" onerror="this.parentElement.style.display=\'none\'"></div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:0 0 4px 0">
+        <div id="hcqt-img-drop" onclick="document.getElementById('hcqt-img-file').click()"
+          ondragover="event.preventDefault();this.style.borderColor='#7C3AED'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="_hcqtImgDrop(event)"
+          style="border:2px dashed var(--border,#e2e8f0);border-radius:10px;padding:18px;text-align:center;cursor:pointer;background:var(--bg-muted,#f8fafc);transition:border-color .2s">
+          <i class="ph ph-image-square" style="font-size:28px;color:var(--muted,#94a3b8)"></i>
+          <div style="font-size:12px;color:var(--muted,#94a3b8);margin-top:4px">Nhấp để chọn ảnh hoặc kéo thả vào đây</div>
+          <div style="font-size:11px;color:var(--muted,#94a3b8)">JPG · PNG · WEBP — tối đa 5 MB</div>
+        </div>
+        <input type="file" id="hcqt-img-file" accept="image/*" style="display:none" onchange="_hcqtImgFileChange(this)">
+        <div id="hcqt-img-preview" style="display:none;position:relative;border-radius:10px;overflow:hidden">
+          <img id="hcqt-img-el" src="" style="width:100%;max-height:200px;object-fit:cover;display:block" onerror="this.parentElement.style.display='none'">
+          <button onclick="_hcqtImgClear()" title="Xóa ảnh" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:16px;line-height:1;cursor:pointer">×</button>
+          <div id="hcqt-img-name" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.45);color:#fff;font-size:11px;padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        </div>
+        <input type="text" id="hcqt-f-AnhUrl" placeholder="Hoặc dán URL ảnh…" style="font-size:12px;padding:6px 10px;border:1px solid var(--border,#e2e8f0);border-radius:6px;background:var(--input-bg,#fff);color:var(--text)" oninput="_hcqtAnhPreview(this.value)">
+      </div>
     </div>
     <div style="padding:12px 20px;border-top:1px solid var(--border,#e2e8f0);display:flex;gap:8px;justify-content:flex-end">
       <button class="btn" onclick="hcqtCloseForm()">Hủy</button>
@@ -19528,9 +19544,7 @@ function hcqtOpenAdd(){
   const m=_hcqtGetFormModal();
   document.getElementById('hcqt-form-title').textContent='Thêm tài sản mới';
   _HCQT_FIELDS.forEach(f=>{ const el=document.getElementById('hcqt-f-'+f); if(el) el.value=f==='SoLuong'?'1':''; });
-  _hcqtAnhPreview('');
-  const anhEl=document.getElementById('hcqt-f-AnhUrl');
-  if(anhEl) anhEl.oninput=()=>_hcqtAnhPreview(anhEl.value);
+  _hcqtImgClear(true);
   m.style.display='flex';
 }
 
@@ -19545,9 +19559,8 @@ function hcqtOpenEdit(id){
     if(el.type==='date'&&v) v=v.split('T')[0];
     el.value=v;
   });
-  _hcqtAnhPreview(d.AnhUrl||'');
-  const anhEl=document.getElementById('hcqt-f-AnhUrl');
-  if(anhEl) anhEl.oninput=()=>_hcqtAnhPreview(anhEl.value);
+  _hcqtImgClear(true);
+  if(d.AnhUrl){ _hcqtAnhPreview(d.AnhUrl); }
   m.style.display='flex';
 }
 
@@ -19565,20 +19578,41 @@ async function hcqtSaveItem(){
   const btn=document.getElementById('hcqt-form-save-btn');
   if(btn){ btn.disabled=true; btn.textContent='Đang lưu…'; }
   try{
-    const payload=hcqtLocalToSP(form);
     const hasAuth=typeof _msalAccount!=='undefined'&&_msalAccount;
+    let savedId=_hcqtEditId;
+    const payload=hcqtLocalToSP(form);
     if(hasAuth){
       if(_hcqtEditId){
         await hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items(${_hcqtEditId})`,
           {method:'PATCH',body:JSON.stringify(payload),headers:{'IF-MATCH':'*','X-HTTP-Method':'MERGE'}});
-        const idx=_hcqtData.findIndex(x=>x._id===_hcqtEditId);
-        if(idx>=0) _hcqtData[idx]={..._hcqtData[idx],...form,_id:_hcqtEditId};
+        savedId=_hcqtEditId;
       } else {
         const res=await hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items`,
           {method:'POST',body:JSON.stringify(payload)});
-        _hcqtData.unshift({...form,_id:res.Id||res.id||Date.now()});
+        savedId=res.Id||res.id||Date.now();
+      }
+      // Upload pending image (if any)
+      if(_hcqtPendingImgFile && savedId){
+        if(btn) btn.textContent='Đang tải ảnh…';
+        try{
+          const imgUrl=await _hcqtUploadAttachment(savedId, _hcqtPendingImgFile);
+          form.AnhUrl=imgUrl;
+          // Patch AnhUrl back to item
+          await hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items(${savedId})`,
+            {method:'PATCH',body:JSON.stringify({AnhUrl:imgUrl}),headers:{'IF-MATCH':'*','X-HTTP-Method':'MERGE'}});
+        }catch(imgErr){ toast('⚠️ Lưu xong nhưng không tải được ảnh: '+imgErr.message,'warn'); }
+      }
+      if(_hcqtEditId){
+        const idx=_hcqtData.findIndex(x=>x._id===_hcqtEditId);
+        if(idx>=0) _hcqtData[idx]={..._hcqtData[idx],...form,_id:_hcqtEditId};
+      } else {
+        _hcqtData.unshift({...form,_id:savedId});
       }
     } else {
+      if(_hcqtPendingImgFile){
+        // Offline: store as base64 data URL
+        form.AnhUrl=await _hcqtFileToDataUrl(_hcqtPendingImgFile);
+      }
       if(_hcqtEditId){ const idx=_hcqtData.findIndex(x=>x._id===_hcqtEditId); if(idx>=0) _hcqtData[idx]={..._hcqtData[idx],...form}; }
       else { _hcqtData.unshift({...form,_id:Date.now()}); }
     }
@@ -19730,12 +19764,81 @@ function _hcqtSaveKiemKe(){ try{localStorage.setItem('hcqt_kiemke_v1',JSON.strin
 // ═══════════════════════════════════════════════════════════════════
 // ẢNH TÀI SẢN — preview helper
 // ═══════════════════════════════════════════════════════════════════
+// ── Image upload state ───────────────────────────────────────────
+let _hcqtPendingImgFile = null;
+
+function _hcqtFileToDataUrl(file){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.onerror=rej; r.readAsDataURL(file); });
+}
+
 function _hcqtAnhPreview(url){
   const wrap=document.getElementById('hcqt-img-preview');
   const img=document.getElementById('hcqt-img-el');
+  const drop=document.getElementById('hcqt-img-drop');
   if(!wrap||!img) return;
-  if(url){ img.src=url; wrap.style.display=''; }
-  else   { wrap.style.display='none'; }
+  if(url){
+    img.src=url; wrap.style.display='block';
+    if(drop) drop.style.display='none';
+  } else {
+    wrap.style.display='none'; img.src='';
+    if(drop) drop.style.display='';
+  }
+}
+
+async function _hcqtImgFileChange(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  if(file.size>5*1024*1024){ toast('⚠️ Ảnh vượt quá 5 MB','bad'); return; }
+  _hcqtPendingImgFile=file;
+  const dataUrl=await _hcqtFileToDataUrl(file);
+  const wrap=document.getElementById('hcqt-img-preview');
+  const img=document.getElementById('hcqt-img-el');
+  const drop=document.getElementById('hcqt-img-drop');
+  const nameEl=document.getElementById('hcqt-img-name');
+  const urlEl=document.getElementById('hcqt-f-AnhUrl');
+  if(img) img.src=dataUrl;
+  if(wrap) wrap.style.display='block';
+  if(drop) drop.style.display='none';
+  if(nameEl) nameEl.textContent=file.name;
+  if(urlEl) urlEl.value='';
+  input.value='';
+}
+
+function _hcqtImgDrop(event){
+  event.preventDefault();
+  const drop=document.getElementById('hcqt-img-drop');
+  if(drop) drop.style.borderColor='';
+  const file=event.dataTransfer.files&&event.dataTransfer.files[0];
+  if(!file||!file.type.startsWith('image/')){ toast('⚠️ Vui lòng thả file ảnh','bad'); return; }
+  _hcqtImgFileChange({files:[file],value:''});
+}
+
+function _hcqtImgClear(silent){
+  _hcqtPendingImgFile=null;
+  const wrap=document.getElementById('hcqt-img-preview');
+  const img=document.getElementById('hcqt-img-el');
+  const drop=document.getElementById('hcqt-img-drop');
+  const urlEl=document.getElementById('hcqt-f-AnhUrl');
+  if(wrap) wrap.style.display='none';
+  if(img) img.src='';
+  if(drop) drop.style.display='';
+  if(urlEl) urlEl.value='';
+}
+
+async function _hcqtUploadAttachment(itemId, file){
+  const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+  const fname=`anh_${itemId}_${Date.now()}.${ext}`;
+  const arrayBuf=await file.arrayBuffer();
+  const digest=await _hcqtDigest();
+  const token=(typeof msalGetToken==='function')?await msalGetToken():null;
+  const headers={'Content-Type':'application/octet-stream','X-RequestDigest':digest,'Accept':'application/json;odata=nometadata'};
+  if(token) headers['Authorization']='Bearer '+token;
+  const uploadUrl=`${HCQT_SITE}/_api/web/lists/getbytitle('${HCQT_LIST}')/items(${itemId})/AttachmentFiles/add(FileName='${encodeURIComponent(fname)}')`;
+  const res=await fetch(uploadUrl,{method:'POST',headers,body:arrayBuf});
+  if(!res.ok){ const txt=await res.text(); throw new Error(`Upload ảnh lỗi ${res.status}: ${txt.slice(0,120)}`); }
+  const json=await res.json().catch(()=>({}));
+  const serverRelUrl=json.ServerRelativeUrl||`/teams/Department_Administration/Lists/${HCQT_LIST}/Attachments/${itemId}/${fname}`;
+  const origin=HCQT_SITE.match(/^https?:\/\/[^\/]+/)?.[0]||'';
+  return origin+serverRelUrl;
 }
 
 // ═══════════════════════════════════════════════════════════════════
