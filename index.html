@@ -3396,35 +3396,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
       <div id="dntt-count" style="font-size:11px;color:var(--muted);padding:6px 12px;border-top:1px solid var(--border);"></div>
     </div>
-  <div id="hcqt-role-modal" style="display:none;position:fixed;inset:0;background:#0007;z-index:9999;align-items:center;justify-content:center;">
-    <div style="background:var(--surface);border-radius:12px;padding:24px;width:400px;max-width:94vw;box-shadow:0 8px 40px #0003;">
-      <div style="font-size:15px;font-weight:700;margin-bottom:16px;color:#7C3AED;">
-        <i class="ph ph-buildings"></i> Phân quyền HC Quản Trị
-      </div>
-      <input type="hidden" id="hcqt-role-spid">
-      <div style="margin-bottom:12px;">
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Email <span style="color:var(--danger)">*</span></label>
-        <input id="hcqt-role-email" type="email" class="finput" style="width:100%;box-sizing:border-box;"
-          placeholder="user@ttgvn.com">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Họ tên (tùy chọn)</label>
-        <input id="hcqt-role-ten" type="text" class="finput" style="width:100%;box-sizing:border-box;"
-          placeholder="Nguyễn Văn A">
-      </div>
-      <div style="margin-bottom:20px;">
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Quyền HCQT</label>
-        <select id="hcqt-role-select" class="fsel" style="width:100%;box-sizing:border-box;">
-          <option value="hcqt_member">HCQT Member — chỉ chỉnh sửa HC Quản Trị</option>
-          <option value="hcqt_it_viewer">HCQT + Xem CNTT — edit HCQT &amp; view tài sản CNTT</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn" onclick="closeHCQTRoleForm()">Hủy</button>
-        <button class="btn primary" onclick="saveHCQTRole()">Lưu</button>
-      </div>
-    </div>
-  </div>
 
   </div>
 
@@ -17212,6 +17183,38 @@ function printQRLabel(){
     }
   });
 <\/script>
+
+<!-- HCQT role modal — at body level so position:fixed works -->
+  <div id="hcqt-role-modal" style="display:none;position:fixed;inset:0;background:#0007;z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border-radius:12px;padding:24px;width:400px;max-width:94vw;box-shadow:0 8px 40px #0003;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:16px;color:#7C3AED;">
+        <i class="ph ph-buildings"></i> Phân quyền HC Quản Trị
+      </div>
+      <input type="hidden" id="hcqt-role-spid">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Email <span style="color:var(--danger)">*</span></label>
+        <input id="hcqt-role-email" type="email" class="finput" style="width:100%;box-sizing:border-box;"
+          placeholder="user@ttgvn.com">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Họ tên (tùy chọn)</label>
+        <input id="hcqt-role-ten" type="text" class="finput" style="width:100%;box-sizing:border-box;"
+          placeholder="Nguyễn Văn A">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Quyền HCQT</label>
+        <select id="hcqt-role-select" class="fsel" style="width:100%;box-sizing:border-box;">
+          <option value="hcqt_member">HCQT Member — chỉ chỉnh sửa HC Quản Trị</option>
+          <option value="hcqt_it_viewer">HCQT + Xem CNTT — edit HCQT &amp; view tài sản CNTT</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn" onclick="closeHCQTRoleForm()">Hủy</button>
+        <button class="btn primary" onclick="saveHCQTRole()">Lưu</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>`);
   pw.document.close();
