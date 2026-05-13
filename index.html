@@ -5078,6 +5078,17 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
               </div>
             </div>
             <input type="hidden" id="dntt-f-trangthai" value="draft">
+            <!-- Ngày nộp KT & Ngày TT — hiện khi trạng thái >= cho_tt -->
+            <div id="dntt-f-dates-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">📁 Ngày nộp hồ sơ KT</div>
+                <input type="date" id="dntt-f-ketoan-date" class="finput" style="width:100%;">
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">💳 Ngày thanh toán</div>
+                <input type="date" id="dntt-f-paid-date" class="finput" style="width:100%;">
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -14895,6 +14906,8 @@ function openDNTTForm(prefill){
   document.getElementById('dntt-f-trangthai').value = 'draft';
   const soEl=document.getElementById('dntt-f-signoff'); if(soEl) soEl.value='chua_trinh';
   const ttEl=document.getElementById('dntt-f-trangthaitt'); if(ttEl) ttEl.value='chua_tt';
+  setV('dntt-f-ketoan-date','');
+  setV('dntt-f-paid-date','');
   document.getElementById('dntt-f-tiente').value = 'VND';
   // loaiMau fixed to PR (du an)
   // Reset chứng từ kèm theo
@@ -14979,6 +14992,8 @@ function openDNTTEdit(id){
   document.getElementById('dntt-f-trangthai').value = d.trangThai || 'draft';
   const soElE=document.getElementById('dntt-f-signoff'); if(soElE) soElE.value=d.trangThaiSignOff||'chua_trinh';
   const ttElE=document.getElementById('dntt-f-trangthaitt'); if(ttElE) ttElE.value=d.trangThaiTT||'chua_tt';
+  setV('dntt-f-ketoan-date', d.ketoanSubmittedAt ? d.ketoanSubmittedAt.substring(0,10) : '');
+  setV('dntt-f-paid-date',   d.paidAt            ? d.paidAt.substring(0,10)            : '');
   document.getElementById('dntt-f-tiente').value = d.tienTe || 'VND';
   // loaiMau fixed to PR (du an)
   _fillDNTTCongtyList();
@@ -15085,6 +15100,17 @@ async function saveDNTTForm(draftOnly){
     trangThai:document.getElementById('dntt-f-trangthai').value||'draft',
     trangThaiSignOff:document.getElementById('dntt-f-signoff')?.value||'chua_trinh',
     trangThaiTT:document.getElementById('dntt-f-trangthaitt')?.value||'chua_tt',
+    ketoanSubmittedAt: (()=>{
+      const dateVal = document.getElementById('dntt-f-ketoan-date')?.value;
+      if(dateVal) return dateVal + 'T00:00:00.000Z';
+      // giữ lại timestamp gốc nếu có
+      return existingId ? (dnttList.find(x=>x.id===existingId)?.ketoanSubmittedAt || null) : null;
+    })(),
+    paidAt: (()=>{
+      const dateVal = document.getElementById('dntt-f-paid-date')?.value;
+      if(dateVal) return dateVal + 'T00:00:00.000Z';
+      return existingId ? (dnttList.find(x=>x.id===existingId)?.paidAt || null) : null;
+    })(),
     createdAt: existingId ? (dnttList.find(x=>x.id===existingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
   };
 
