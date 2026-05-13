@@ -8997,6 +8997,17 @@ function quickFilter(type){
 }
 
 function goKpiFilter(type){
+  // KPI "Đang sửa" → chuyển thẳng sang tab Sửa chữa
+  if(type === 'sua'){
+    switchTab('repairs');
+    if(typeof setBottomNav === 'function') setBottomNav('repairs');
+    setTimeout(()=>{
+      const sel = document.getElementById('rep-f-status');
+      if(sel){ sel.value = 'dang_sua'; renderRepairs(); }
+      toast('🔧 Đang xem phiếu sửa chữa đang mở', 'ok');
+    }, 80);
+    return;
+  }
   // Switch sang tab Danh sách
   switchTab('assets');
   if(typeof setBottomNav === 'function') setBottomNav('assets');
