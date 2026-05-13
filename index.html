@@ -3392,6 +3392,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
               <th style="text-align:right;">Số tiền</th>
               <th>Loại mẫu</th>
               <th>Trạng thái</th>
+              <th style="white-space:nowrap;" title="Thời gian từ lúc nộp hồ sơ kế toán đến khi thanh toán">Chờ TT</th>
               <th>HĐ/Contract</th>
               <th style="white-space:nowrap;">Thao tác</th>
             </tr>
@@ -14737,6 +14738,22 @@ function dnttTTBadge(s, signOff){
   };
   return map[s||'chua_tt'] || '';
 }
+// Thời gian chờ thanh toán (từ lúc nộp KT → đến lúc TT xong hoặc đến hôm nay)
+function _dnttWaitDays(d){
+  const start = d.ketoanSubmittedAt;
+  if(!start) return '—';
+  const end = d.paidAt ? new Date(d.paidAt) : new Date();
+  const days = Math.round((end - new Date(start)) / 86400000);
+  if(d.trangThaiTT === 'da_tt'){
+    const color = days <= 3 ? '#16A34A' : days <= 7 ? '#B45309' : '#DC2626';
+    return `<span title="Nộp: ${start.substring(0,10)} → TT: ${(d.paidAt||'').substring(0,10)}" style="font-size:11px;font-weight:700;color:${color};">✅ ${days} ngày</span>`;
+  }
+  if(d.trangThaiTT === 'cho_tt'){
+    const color = days <= 3 ? '#2563EB' : days <= 7 ? '#B45309' : '#DC2626';
+    return `<span title="Nộp KT: ${start.substring(0,10)}" style="font-size:11px;font-weight:700;color:${color};">⏱ ${days} ngày</span>`;
+  }
+  return '—';
+}
 // backward compat
 function dnttStatusBadge(s){
   const map = {
@@ -14809,6 +14826,7 @@ function renderDNTT(){
         ${dnttSignOffBadge(d.trangThaiSignOff)}
         ${dnttTTBadge(d.trangThaiTT, d.trangThaiSignOff)}
       </td>
+      <td style="text-align:center;white-space:nowrap;">${_dnttWaitDays(d)}</td>
       <td>${licBadge}</td>
       <td style="white-space:nowrap;">
         ${(d.trangThaiSignOff||'chua_trinh')==='chua_trinh'
@@ -15536,10 +15554,12 @@ const _DNTT_SP_FIELDS = [
   { name:'HinhThuc',    type:'Text'   },
   { name:'GhiChu',      type:'Note'   },
   { name:'LicenseId',   type:'Text'   },
-  { name:'TrangThaiSignOff', type:'Text' },  // chua_trinh|cho_duyet|da_duyet|tu_choi
-  { name:'TrangThaiTT',      type:'Text' },  // chua_tt|cho_tt|da_tt
-  { name:'TrangThai',        type:'Text' },  // giữ lại cho backward compat
-  { name:'LocalId',          type:'Text' },
+  { name:'TrangThaiSignOff', type:'Text'     },  // chua_trinh|cho_duyet|da_duyet|tu_choi
+  { name:'TrangThaiTT',      type:'Text'     },  // chua_tt|cho_tt|da_tt
+  { name:'NgayNopKeToan',    type:'DateTime' },  // lúc nộp hồ sơ kế toán
+  { name:'NgayThanhToan',    type:'DateTime' },  // lúc kế toán thanh toán xong
+  { name:'TrangThai',        type:'Text'     },  // giữ lại cho backward compat
+  { name:'LocalId',          type:'Text'     },
 ];
 
 // Chuyển record local → SP item body
@@ -15569,6 +15589,8 @@ function dnttToSpItem(rec){
     LicenseId:   rec.licenseId||'',
     TrangThaiSignOff: rec.trangThaiSignOff||'chua_trinh',
     TrangThaiTT:      rec.trangThaiTT||'chua_tt',
+    NgayNopKeToan:    rec.ketoanSubmittedAt || null,
+    NgayThanhToan:    rec.paidAt            || null,
     TrangThai:        rec.trangThai||'draft',  // backward compat
     LocalId:          rec.id      || '',
   };
@@ -15602,10 +15624,12 @@ function spItemToDntt(item){
     hinhThuc:    item.HinhThuc || 'CK',
     ghichu:      item.GhiChu   || '',
     licenseId:   item.LicenseId|| null,
-    trangThaiSignOff: item.TrangThaiSignOff || 'chua_trinh',
-    trangThaiTT:      item.TrangThaiTT      || 'chua_tt',
-    trangThai:        item.TrangThai        || 'draft',  // backward compat
-    createdAt:        item.Created          || new Date().toISOString(),
+    trangThaiSignOff:    item.TrangThaiSignOff || 'chua_trinh',
+    trangThaiTT:         item.TrangThaiTT      || 'chua_tt',
+    ketoanSubmittedAt:   item.NgayNopKeToan    || null,
+    paidAt:              item.NgayThanhToan     || null,
+    trangThai:           item.TrangThai         || 'draft',  // backward compat
+    createdAt:           item.Created           || new Date().toISOString(),
   };
 }
 
