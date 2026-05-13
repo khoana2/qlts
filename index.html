@@ -398,7 +398,7 @@ body{
 .view.active{display:block;}
 
 /* ═══════════════════════════ KPIs ═══════════════════════════ */
-.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:14px;}
 .kpi{
   background:#FFFFFF;border:1px solid var(--border);
   border-radius:var(--radius);padding:14px 16px;
@@ -857,7 +857,7 @@ input[type=checkbox].row-cb{
 .drop-zone small{font-size:11px;color:#94A3B8;}
 
 /* ═══════════════════════════ RESPONSIVE ═══════════════════════════ */
-@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}.dash-grid{grid-template-columns:1fr 1fr;}.dash-grid-wide{grid-template-columns:1fr;}}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(4,1fr);}.dash-grid{grid-template-columns:1fr 1fr;}.dash-grid-wide{grid-template-columns:1fr;}}
 @media(max-width:900px){.grid3{grid-template-columns:1fr 1fr;}.detail-grid{grid-template-columns:1fr 1fr;}}
 @media(max-width:680px){
   .topbar{flex-direction:column;align-items:stretch;}
@@ -2927,11 +2927,17 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div class="kpi-label">Lưu kho</div>
         <div class="kpi-sub">Chưa phân bổ</div>
       </div>
-      <div class="kpi red clickable" onclick="goKpiFilter('broken')" title="Lọc tài sản hỏng / đang sửa">
+      <div class="kpi red clickable" onclick="goKpiFilter('hong')" title="Lọc tài sản hỏng chưa gửi sửa">
         <div class="kpi-icon"><i class="ph ph-warning-circle"></i></div>
-        <div class="kpi-val" id="kpi-broken">0</div>
-        <div class="kpi-label">Hỏng / Sửa chữa</div>
-        <div class="kpi-sub">Cần xử lý</div>
+        <div class="kpi-val" id="kpi-hong">0</div>
+        <div class="kpi-label">Hỏng</div>
+        <div class="kpi-sub">Chưa gửi sửa</div>
+      </div>
+      <div class="kpi yellow clickable" onclick="goKpiFilter('sua')" title="Lọc tài sản đang gửi sửa chữa">
+        <div class="kpi-icon"><i class="ph ph-wrench"></i></div>
+        <div class="kpi-val" id="kpi-sua">0</div>
+        <div class="kpi-label">Đang sửa</div>
+        <div class="kpi-sub" id="kpi-sua-sub">Có phiếu SC</div>
       </div>
       <div class="kpi clickable" onclick="goKpiFilter('')" title="Xem tất cả tài sản">
         <div class="kpi-icon"><i class="ph ph-buildings"></i></div>
@@ -8373,7 +8379,13 @@ function updateDashboard(){
   const total  = _assets.length;
   const active = _assets.filter(a=> normTT(a).includes('đang dùng') || normTT(a).includes('dang dung')).length;
   const stock  = _assets.filter(a=> normTT(a).includes('lưu kho') || normTT(a).includes('luu kho')).length;
-  const broken = _assets.filter(a=> normTT(a).includes('hỏng') || normTT(a).includes('hong') || normTT(a).includes('sửa chữa') || normTT(a).includes('sua chua')).length;
+  const hong   = _assets.filter(a=> normTT(a).includes('hỏng') || normTT(a).includes('hong')).length;
+  // Đang sửa = tinhTrang "Sửa chữa" hoặc có phiếu SC đang mở
+  const suaByStatus = _assets.filter(a=> normTT(a).includes('sửa chữa') || normTT(a).includes('sua chua')).length;
+  const suaByRepair = new Set(
+    Object.entries(repairs).filter(([aid,recs])=>recs.some(r=>r.status==='dang_sua')).map(([aid])=>aid)
+  ).size;
+  const sua = Math.max(suaByStatus, suaByRepair);
   const depts  = new Set(_assets.filter(a=>a.boPhan).map(a=>a.boPhan)).size;
 
   // Warranty KPI
@@ -8394,7 +8406,11 @@ function updateDashboard(){
   document.getElementById('kpi-active-pct').textContent =
     total ? Math.round(active/total*100)+'% tổng số' : '0%';
   document.getElementById('kpi-stock').textContent = stock;
-  document.getElementById('kpi-broken').textContent = broken;
+  const brokenEl = document.getElementById('kpi-broken'); if(brokenEl) brokenEl.textContent = hong+sua;
+  const hongEl = document.getElementById('kpi-hong'); if(hongEl) hongEl.textContent = hong;
+  const suaEl  = document.getElementById('kpi-sua');  if(suaEl)  suaEl.textContent  = sua;
+  const suaSubEl = document.getElementById('kpi-sua-sub');
+  if(suaSubEl) suaSubEl.textContent = suaByRepair > 0 ? `${suaByRepair} có phiếu SC` : 'Có phiếu SC';
   document.getElementById('kpi-dept').textContent = depts;
   document.getElementById('kpi-warranty').textContent = expiringSoon + expired;
   document.getElementById('kpi-warranty-sub').textContent =
