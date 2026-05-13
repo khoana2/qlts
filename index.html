@@ -1433,8 +1433,8 @@ tr:hover .eye-btn{
   /* Ẩn bớt cột phụ */
   #dntt-tbody td:nth-child(4),
   #dntt-tbody td:nth-child(8){ opacity:.7; }
-  #dntt-tbody td:nth-child(10){ display:none; }
-  #view-dntt thead th:nth-child(10){ display:none; }
+  #dntt-tbody td:nth-child(11){ display:none; }
+  #view-dntt thead th:nth-child(11){ display:none; }
 }
 
 @media print{
@@ -3398,7 +3398,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             </tr>
           </thead>
           <tbody id="dntt-tbody">
-            <tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px;">Chưa có phiếu nào. Nhấn "+ Tạo ĐNTT" để bắt đầu.</td></tr>
+            <tr><td colspan="12" style="text-align:center;color:var(--muted);padding:32px;">Chưa có phiếu nào. Nhấn "+ Tạo ĐNTT" để bắt đầu.</td></tr>
           </tbody>
         </table>
       </div>
@@ -14798,7 +14798,7 @@ function renderDNTT(){
   list = [...list].sort((a,b) => (b.ngayLap||'').localeCompare(a.ngayLap||''));
 
   if(!list.length){
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px;">
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:32px;">
       ${dnttList.length ? 'Không tìm thấy phiếu phù hợp.' : 'Chưa có phiếu nào. Nhấn "+ Tạo ĐNTT" để bắt đầu.'}
     </td></tr>`;
     document.getElementById('dntt-count').textContent = '';
