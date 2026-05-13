@@ -13956,10 +13956,20 @@ async function loadRepairsSP(){
       if(!newRepairs[aid]) newRepairs[aid] = [];
       newRepairs[aid].push(_spToRec(item));
     }
+    // Giữ lại các record local chưa kịp sync lên SP (chưa có spId)
+    // tránh mất dữ liệu khi SP trả về rỗng do lỗi mạng hoặc list mới tạo
+    const spIds = new Set(items.map(i=>i.ID));
+    for(const [aid, recs] of Object.entries(repairs)){
+      const localOnly = recs.filter(r => !r.spId || !spIds.has(r.spId));
+      if(localOnly.length){
+        if(!newRepairs[aid]) newRepairs[aid] = [];
+        newRepairs[aid] = [...newRepairs[aid], ...localOnly];
+      }
+    }
     repairs = newRepairs;
     saveRepairs();
     _updateRepairBadge();
-    console.log(`[SP Repair] Loaded ${items.length} phiếu`);
+    console.log(`[SP Repair] Loaded ${items.length} phiếu từ SP`);
   } catch(e){
     console.warn('[SP Repair] loadRepairsSP error:', e);
   }
