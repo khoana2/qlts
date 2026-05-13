@@ -3632,6 +3632,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
     </div>
 
+    <div id="rep-bh-alert" style="display:none"></div>
     <div id="rep-list"></div>
   </div>
 
@@ -3685,7 +3686,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="rep-return-row">
           <div class="field"><label>Ngày nhận lại</label>
-            <input type="date" id="rep-date-out" class="finput"/>
+            <input type="date" id="rep-date-out" class="finput" oninput="_repCalcBhExpiry()"/>
           </div>
           <div class="field"><label>Trạng thái</label>
             <select id="rep-status" class="finput">
@@ -3693,6 +3694,26 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
               <option value="hoan_thanh">✅ Hoàn thành</option>
               <option value="khong_sua_duoc">❌ Không sửa được</option>
             </select>
+          </div>
+        </div>
+        <div class="field"><label>Linh kiện thay thế</label>
+          <input type="text" id="rep-parts" class="finput" placeholder="VD: Pin, Bàn phím, Màn hình, RAM…"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="rep-bh-row">
+          <div class="field">
+            <label>Thời hạn BH linh kiện</label>
+            <select id="rep-bh-period" class="finput" onchange="_repCalcBhExpiry()">
+              <option value="">— Không có BH</option>
+              <option value="1">1 tháng</option>
+              <option value="3">3 tháng</option>
+              <option value="6">6 tháng</option>
+              <option value="12">12 tháng</option>
+              <option value="24">24 tháng</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ngày hết BH linh kiện</label>
+            <input type="date" id="rep-bh-expiry" class="finput" oninput="_repBhExpiryManual()"/>
           </div>
         </div>
         <div class="field"><label>Ghi chú</label>
@@ -13843,6 +13864,39 @@ function saveRepairs(){
 // ═══════════════════════ SHAREPOINT — REPAIR LIST ═══════════════════════
 const _RLIST = ()=> `${SP_SITE}/_api/web/lists/getbytitle('${SP_REPAIR_LIST_NAME}')`;
 
+// Danh sách cột cần có trong Quan_Ly_Sua_Chua
+const _REPAIR_SP_FIELDS = [
+  {name:'AssetId',           type:2}, // Text
+  {name:'MoTaLoi',           type:3}, // Note
+  {name:'DonViSua',          type:2},
+  {name:'GhiChu',            type:3},
+  {name:'TrangThai',         type:2},
+  {name:'ChiPhi',            type:9}, // Number
+  {name:'NgayGuiSua',        type:4}, // DateTime
+  {name:'DuKienNhan',        type:4},
+  {name:'NgayNhanLai',       type:4},
+  {name:'LinhKienThayThe',   type:2}, // ← mới
+  {name:'BaoHanhLinhKien',   type:2}, // ← mới
+  {name:'NgayHetBHLinhKien', type:4}, // ← mới
+];
+
+async function spRepairEnsureFields(){
+  // Tự động thêm cột còn thiếu vào SP list
+  try{
+    const fieldUrl=`${_RLIST()}/fields`;
+    const existing=new Set();
+    const fd=await msalSpReq(`${fieldUrl}?$select=InternalName&$top=300`);
+    (fd?.value||[]).forEach(f=>existing.add(f.InternalName));
+    for(const f of _REPAIR_SP_FIELDS){
+      if(existing.has(f.name)) continue;
+      try{
+        await msalSpReq(fieldUrl,{method:'POST',body:JSON.stringify({Title:f.name,FieldTypeKind:f.type})});
+        console.log('[Repair-SP] ✅ Thêm cột:',f.name);
+      }catch(fe){ console.warn('[Repair-SP] Bỏ qua cột lỗi:',f.name,fe.message); }
+    }
+  }catch(e){ console.warn('[Repair-SP] ensureFields lỗi:',e.message); }
+}
+
 // map rec → SP body
 function _repToSpBody(assetId, rec){
   const a = assets.find(x=>x.id===assetId);
@@ -13855,10 +13909,13 @@ function _repToSpBody(assetId, rec){
     GhiChu:        rec.notes        || '',
     TrangThai:     rec.status       || 'dang_sua',
   };
-  if(rec.chiPhi)            body.ChiPhi      = rec.chiPhi;
-  if(rec.dateIn)            body.NgayGuiSua  = rec.dateIn + 'T00:00:00Z';
-  if(rec.estimatedReturn)   body.DuKienNhan  = rec.estimatedReturn + 'T00:00:00Z';
-  if(rec.dateOut)           body.NgayNhanLai = rec.dateOut + 'T00:00:00Z';
+  if(rec.chiPhi)            body.ChiPhi          = rec.chiPhi;
+  if(rec.dateIn)            body.NgayGuiSua      = rec.dateIn + 'T00:00:00Z';
+  if(rec.estimatedReturn)   body.DuKienNhan      = rec.estimatedReturn + 'T00:00:00Z';
+  if(rec.dateOut)           body.NgayNhanLai     = rec.dateOut + 'T00:00:00Z';
+  if(rec.parts)             body.LinhKienThayThe = rec.parts;
+  if(rec.bhPeriod)          body.BaoHanhLinhKien = rec.bhPeriod;
+  if(rec.bhExpiry)          body.NgayHetBHLinhKien = rec.bhExpiry + 'T00:00:00Z';
   return body;
 }
 
@@ -13874,6 +13931,9 @@ function _spToRec(item){
     dateIn:          item.NgayGuiSua    ? item.NgayGuiSua.substring(0,10)  : '',
     estimatedReturn: item.DuKienNhan    ? item.DuKienNhan.substring(0,10)  : '',
     dateOut:         item.NgayNhanLai   ? item.NgayNhanLai.substring(0,10) : '',
+    parts:           item.LinhKienThayThe || '',
+    bhPeriod:        item.BaoHanhLinhKien  || '',
+    bhExpiry:        item.NgayHetBHLinhKien ? item.NgayHetBHLinhKien.substring(0,10) : '',
     ts:              item.Modified      || '',
   };
 }
@@ -13906,8 +13966,10 @@ async function loadRepairsSP(){
 }
 
 // Tạo mới phiếu trên SP → trả về spId
+let _repairFieldsEnsured = false;
 async function spRepairCreate(assetId, rec){
   try {
+    if(!_repairFieldsEnsured){ await spRepairEnsureFields(); _repairFieldsEnsured=true; }
     const body = _repToSpBody(assetId, rec);
     delete body.__metadata;
     const res = await msalSpReq(`${_RLIST()}/items`, { method:'POST', body: JSON.stringify(body) });
@@ -13983,6 +14045,9 @@ function openRepairNew(assetId){
   document.getElementById('rep-date-out').value   = '';
   document.getElementById('rep-status').value     = 'dang_sua';
   document.getElementById('rep-notes').value      = '';
+  document.getElementById('rep-parts').value      = '';
+  const bhPEl=document.getElementById('rep-bh-period'); if(bhPEl) bhPEl.value='';
+  const bhEEl=document.getElementById('rep-bh-expiry'); if(bhEEl) bhEEl.value='';
   document.getElementById('rep-chi-phi').value    = '';
 
   const nameEl = document.getElementById('rep-asset-name');
@@ -14037,10 +14102,31 @@ function openRepairEdit(assetId, idx){
   document.getElementById('rep-status').value     = rec.status||'dang_sua';
   document.getElementById('rep-notes').value      = rec.notes||'';
   document.getElementById('rep-chi-phi').value    = rec.chiPhi||'';
+  const _partsEl=document.getElementById('rep-parts'); if(_partsEl) _partsEl.value=rec.parts||'';
+  const _bhPEl=document.getElementById('rep-bh-period'); if(_bhPEl) _bhPEl.value=rec.bhPeriod||'';
+  const _bhEEl=document.getElementById('rep-bh-expiry'); if(_bhEEl) _bhEEl.value=rec.bhExpiry||'';
   document.getElementById('modal-repair').style.display='flex';
 }
 
 // ── Lưu phiếu ──
+// ── BH linh kiện helpers ─────────────────────────────────────────────────
+function _repCalcBhExpiry(){
+  const period = document.getElementById('rep-bh-period')?.value;
+  if(!period) return;
+  // Dùng ngày nhận lại nếu có, không thì dùng ngày gửi sửa
+  const base = document.getElementById('rep-date-out')?.value
+             || document.getElementById('rep-date-in')?.value;
+  if(!base) return;
+  const d = new Date(base);
+  d.setMonth(d.getMonth() + parseInt(period));
+  const iso = d.toISOString().substring(0,10);
+  const el = document.getElementById('rep-bh-expiry'); if(el) el.value = iso;
+}
+function _repBhExpiryManual(){
+  // User nhập tay → xóa period để không conflict
+  // (không clear, chỉ để user biết đang manual)
+}
+
 function saveRepairRecord(){
   const assetId = document.getElementById('rep-asset-id').value;
   const idxRaw  = document.getElementById('rep-record-idx').value;
@@ -14059,6 +14145,9 @@ function saveRepairRecord(){
     status:  document.getElementById('rep-status').value,
     notes:   document.getElementById('rep-notes').value.trim(),
     chiPhi:  (!isNaN(_cpRaw) && _cpRaw > 0) ? _cpRaw : null,
+    parts:    document.getElementById('rep-parts')?.value.trim()||'',
+    bhPeriod: document.getElementById('rep-bh-period')?.value||'',
+    bhExpiry: document.getElementById('rep-bh-expiry')?.value||'',
     ts: new Date().toISOString(),
   };
   if(!repairs[assetId]) repairs[assetId] = [];
@@ -14123,10 +14212,18 @@ function deleteRepairRecord(assetId, idx){
 
 // ── Badge sidebar ──
 function _updateRepairBadge(){
-  const n = Object.values(repairs).flat().filter(r=>r.status==='dang_sua').length;
+  const all = Object.values(repairs).flat();
+  const nActive = all.filter(r=>r.status==='dang_sua').length;
+  const today = new Date();
+  const nBhExp = all.filter(r=>r.bhExpiry && r.status==='hoan_thanh' && (() => {
+    const d = Math.ceil((new Date(r.bhExpiry)-today)/86400000);
+    return d>=0 && d<=30;
+  })()).length;
+  const nBhOver = all.filter(r=>r.bhExpiry && new Date(r.bhExpiry)<today).length;
+  const total = nActive + nBhExp + nBhOver;
   const b = document.getElementById('tab-repairs-badge');
   if(!b) return;
-  if(n>0){ b.style.display='inline-flex'; b.textContent=n; b.style.cssText+=';background:#F97316;color:#fff;'; }
+  if(total>0){ b.style.display='inline-flex'; b.textContent=total; b.style.cssText+=';background:#F97316;color:#fff;'; }
   else b.style.display='none';
 }
 
@@ -14167,6 +14264,34 @@ function renderRepairs(){
   document.getElementById('rep-kpi-active').textContent  = all.filter(r=>r.status==='dang_sua').length;
   document.getElementById('rep-kpi-done').textContent    = all.filter(r=>r.status==='hoan_thanh').length;
   document.getElementById('rep-kpi-failed').textContent  = all.filter(r=>r.status==='khong_sua_duoc').length;
+
+  // BH linh kiện alert banner
+  const _today = new Date(); _today.setHours(0,0,0,0);
+  const _bhAlerts = [];
+  for(const [_aid, _recs] of Object.entries(repairs)){
+    const _a = assets.find(x=>x.id===_aid);
+    _recs.forEach((_r,_i)=>{
+      if(!_r.bhExpiry) return;
+      const _days = Math.ceil((new Date(_r.bhExpiry)-_today)/86400000);
+      if(_days<=30) _bhAlerts.push({a:_a,r:_r,aid:_aid,days:_days});
+    });
+  }
+  const _alertEl = document.getElementById('rep-bh-alert');
+  if(_alertEl){
+    if(_bhAlerts.length){
+      _alertEl.innerHTML=`<div style="background:#FFF9C4;border:1px solid #FDE68A;border-radius:12px;padding:12px 16px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">⚠️ ${_bhAlerts.length} linh kiện sắp hết / đã hết bảo hành</div>
+        ${_bhAlerts.sort((a,b)=>a.days-b.days).map(({a,r,days})=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #FEF3C7;font-size:12px">
+            <div style="flex:1"><b>${a?esc(a.maTaiSan):''}</b> ${a?esc(a.tenTaiSan):''} — LK: <b>${esc(r.parts||'?')}</b></div>
+            <span style="font-weight:700;color:${days<0?'#DC2626':'#D97706'}">${days<0?'Hết '+Math.abs(days)+' ngày trước':'Còn '+days+' ngày'}</span>
+          </div>`).join('')}
+      </div>`;
+      _alertEl.style.display='block';
+    } else {
+      _alertEl.style.display='none';
+    }
+  }
 
   const list = document.getElementById('rep-list');
   if(!rows.length){
@@ -14213,6 +14338,13 @@ function renderRepairs(){
             ${dateOutFmt?`<span><i class="ph ph-check"></i> Nhận lại: <b>${dateOutFmt}</b></span>`:''}
             ${rec.vendor?`<span><i class="ph ph-buildings"></i> <b>${esc(rec.vendor)}</b></span>`:''}
             ${rec.chiPhi?`<span style="color:#059669;font-weight:600;"><i class="ph ph-currency-circle-dollar"></i> <b>${rec.chiPhi.toLocaleString('vi-VN')} ₫</b></span>`:''}
+            ${rec.parts?`<span style="color:#7C3AED;"><i class="ph ph-wrench"></i> LK: <b>${esc(rec.parts)}</b></span>`:''}
+            ${rec.bhExpiry?(()=>{
+              const now=new Date(); const exp=new Date(rec.bhExpiry); const days=Math.ceil((exp-now)/86400000);
+              if(days<0) return `<span style="color:#DC2626;font-weight:600;"><i class="ph ph-shield-slash"></i> BH LK hết ${new Date(rec.bhExpiry).toLocaleDateString('vi-VN')}</span>`;
+              if(days<=30) return `<span style="color:#D97706;font-weight:600;"><i class="ph ph-shield-warning"></i> BH LK còn ${days} ngày</span>`;
+              return `<span style="color:#059669;"><i class="ph ph-shield-check"></i> BH LK đến ${new Date(rec.bhExpiry).toLocaleDateString('vi-VN')}</span>`;
+            })():''}
           </div>
         </div>
         <div class="rep-card-actions">
