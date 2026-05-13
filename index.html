@@ -14835,7 +14835,12 @@ function renderDNTT(){
       <td style="font-size:11px;">${dnttLoaiLabel(d.loaiMau)}</td>
       <td style="white-space:nowrap">
         ${dnttSignOffBadge(d.trangThaiSignOff)}
-        ${dnttTTBadge(d.trangThaiTT, d.trangThaiSignOff)}
+        <br>
+        ${(d.trangThaiSignOff)==='da_duyet' && (d.trangThaiTT||'chua_tt')==='chua_tt'
+          ? `<button onclick="dnttSubmitKeToan('${d.id}')" style="margin-top:4px;cursor:pointer;border:1px dashed #B45309;background:#FFF9C4;color:#B45309;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">📁 Nộp KT →</button>`
+          : (d.trangThaiTT)==='cho_tt'
+          ? `<button onclick="dnttMarkPaid('${d.id}')" style="margin-top:4px;cursor:pointer;border:1px dashed #EA580C;background:#FFF7ED;color:#EA580C;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏳ Chờ kế toán →</button>`
+          : dnttTTBadge(d.trangThaiTT, d.trangThaiSignOff)}
       </td>
       <td style="text-align:center;white-space:nowrap;">${_dnttWaitDays(d)}</td>
       <td>${licBadge}</td>
@@ -14847,10 +14852,6 @@ function renderDNTT(){
              <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#DC2626;border-color:#FCA5A5;" title="Sign Off từ chối" onclick="dnttRejectSignOff('${d.id}')"><i class="ph ph-x-circle"></i></button>`
           : (d.trangThaiSignOff)==='tu_choi'
           ? `<button class="btn warn btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Trình lại Sign Off" onclick="dnttResubmitSignOff('${d.id}')"><i class="ph ph-arrow-counter-clockwise"></i> Trình lại</button>`
-          : (d.trangThaiSignOff)==='da_duyet' && (d.trangThaiTT||'chua_tt')==='chua_tt'
-          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF9C4;color:#B45309;border-color:#FDE68A;" title="Nộp hồ sơ kế toán" onclick="dnttSubmitKeToan('${d.id}')"><i class="ph ph-file-arrow-up"></i> Nộp KT</button>`
-          : (d.trangThaiTT)==='cho_tt'
-          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF7ED;color:#EA580C;border-color:#FED7AA;" title="Đánh dấu đã thanh toán" onclick="dnttMarkPaid('${d.id}')"><i class="ph ph-credit-card"></i> Đã TT</button>`
           : ''}
         <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openDNTTEdit('${d.id}')"><i class="ph ph-pencil-simple"></i></button>
         <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#6366f1;" title="In phiếu" onclick="printDNTT('${d.id}')"><i class="ph ph-printer"></i></button>
