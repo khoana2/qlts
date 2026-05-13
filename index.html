@@ -13956,9 +13956,29 @@ async function loadRepairsSP(){
       if(!newRepairs[aid]) newRepairs[aid] = [];
       newRepairs[aid].push(_spToRec(item));
     }
-    // Giữ lại các record local chưa kịp sync lên SP (chưa có spId)
-    // tránh mất dữ liệu khi SP trả về rỗng do lỗi mạng hoặc list mới tạo
+    // Merge với localStorage:
+    // 1. Record local chưa có spId → giữ lại (chưa sync lên SP)
+    // 2. Record đã có spId nhưng SP trả về thiếu warranty fields → bổ sung từ local
     const spIds = new Set(items.map(i=>i.ID));
+    // Build map: spId → local rec để tra cứu nhanh
+    const localBySpId = {};
+    for(const recs of Object.values(repairs)){
+      for(const r of recs){ if(r.spId) localBySpId[r.spId] = r; }
+    }
+    // Bổ sung warranty fields còn thiếu từ local vào SP record
+    for(const [aid, recs] of Object.entries(newRepairs)){
+      newRepairs[aid] = recs.map(r => {
+        const loc = localBySpId[r.spId];
+        if(!loc) return r;
+        return {
+          ...r,
+          parts:    r.parts    || loc.parts    || '',
+          bhPeriod: r.bhPeriod || loc.bhPeriod || '',
+          bhExpiry: r.bhExpiry || loc.bhExpiry || '',
+        };
+      });
+    }
+    // Giữ lại record local chưa kịp sync (chưa có spId)
     for(const [aid, recs] of Object.entries(repairs)){
       const localOnly = recs.filter(r => !r.spId || !spIds.has(r.spId));
       if(localOnly.length){
@@ -13993,6 +14013,7 @@ async function spRepairCreate(assetId, rec){
 // Cập nhật phiếu đã có trên SP
 async function spRepairUpdate(spId, assetId, rec){
   try {
+    if(!_repairFieldsEnsured){ await spRepairEnsureFields(); _repairFieldsEnsured=true; }
     const body = _repToSpBody(assetId, rec);
     delete body.__metadata;
     await msalSpReq(`${_RLIST()}/items(${spId})`,{
