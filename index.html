@@ -14969,7 +14969,7 @@ function openDNTTForm(prefill){
 
 // ── Tạo ĐNTT từ phiếu sửa chữa ──
 function openDNTTFromRepair(assetId, idx){
-  const rec  = (repairs[assetId]||[])[idx];
+  const rec   = (repairs[assetId]||[])[idx];
   const asset = assets.find(x=>x.id===assetId);
   if(!rec) return;
   // Kiểm tra đã có ĐNTT liên kết chưa
@@ -14977,36 +14977,25 @@ function openDNTTFromRepair(assetId, idx){
   if(existing){
     if(!confirm(`Phiếu sửa chữa này đã có ĐNTT liên kết (${existing.soPhieu||existing.id}).\nTạo thêm ĐNTT mới?`)) return;
   }
-  // Switch sang tab ĐNTT rồi mở form
+  const assetDesc = [asset?.maTaiSan, asset?.tenTaiSan, asset?.model].filter(Boolean).join(' — ');
+  // Dùng openDNTTForm với prefill — tránh dùng setV local
+  const prefill = {
+    ncc:      rec.vendor  || '',
+    sotien:   rec.chiPhi  || '',
+    noidung:  `Thanh toán sửa chữa ${assetDesc}${rec.parts?' ('+rec.parts+')':''}${rec.issue?' — '+rec.issue:''}`,
+    ghichu:   `Phiếu SC: ${assetId} | Gửi: ${rec.dateIn||''} | ĐV sửa: ${rec.vendor||''}`,
+    _repairRef: JSON.stringify({assetId, repairTs: rec.ts}),
+  };
+  // Switch tab rồi mở form
   switchTab('dntt');
   setTimeout(()=>{
-    // Trigger reset form
-    document.getElementById('dntt-form-title').innerHTML = '<i class="ph ph-receipt"></i> Tạo ĐNTT từ Phiếu Sửa Chữa';
-    setV('dntt-f-id','');
-    setV('dntt-f-repair-ref', JSON.stringify({assetId, repairTs: rec.ts}));
-    // Pre-fill
-    setV('dntt-f-ngay', new Date().toISOString().substring(0,10));
-    setV('dntt-f-ncc',    rec.vendor||'');
-    setV('dntt-f-sotien', rec.chiPhi||'');
-    const assetDesc = [asset?.maTaiSan, asset?.tenTaiSan, asset?.model].filter(Boolean).join(' — ');
-    setV('dntt-f-noidung', `Thanh toán sửa chữa ${assetDesc}${rec.parts?' ('+rec.parts+')':''}${rec.issue?' — '+rec.issue:''}`);
-    setV('dntt-f-nguoilap', _msalAccount?.name || _msalAccount?.username || '');
-    setV('dntt-f-ghichu', `Phiếu SC: ${assetId} | Gửi: ${rec.dateIn||''} | ĐV sửa: ${rec.vendor||''}`);
-    // Reset trạng thái
-    document.getElementById('dntt-f-trangthai').value='draft';
-    const soEl=document.getElementById('dntt-f-signoff'); if(soEl) soEl.value='chua_trinh';
-    const ttEl=document.getElementById('dntt-f-trangthaitt'); if(ttEl) ttEl.value='chua_tt';
-    setV('dntt-f-ketoan-date',''); setV('dntt-f-paid-date','');
-    // Chứng từ reset
-    [1,2,3].forEach(i=>{
-      setV(`dntt-ct-${i}-loai`,''); setV(`dntt-ct-${i}-ngay`,''); setV(`dntt-ct-${i}-donvi`,'');
-      const g=document.getElementById(`dntt-ct-${i}-goc`); if(g) g.checked=(i===1);
-      const s=document.getElementById(`dntt-ct-${i}-sao`); if(s) s.checked=false;
-    });
-    _fillDNTTCongtyList(); _buildDeptDatalist(); _buildCongtyDatalist();
-    _fillDNTTLicList(''); _refreshVendorQuickList(rec.vendor||'');
-    dnttPreviewBangChu(); dnttUpdateHinhThucUI(); _buildHeadcodeDatalist();
-    openModal('modal-dntt-form');
+    openDNTTForm(prefill);
+    // Patch tiêu đề và repairRef sau khi form đã mở
+    setTimeout(()=>{
+      document.getElementById('dntt-form-title').innerHTML = '<i class="ph ph-receipt"></i> Tạo ĐNTT từ Phiếu Sửa Chữa';
+      const rEl = document.getElementById('dntt-f-repair-ref');
+      if(rEl) rEl.value = prefill._repairRef;
+    }, 50);
   }, 150);
 }
 
