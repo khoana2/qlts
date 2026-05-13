@@ -12182,6 +12182,7 @@ function fmtMoney(val, tienTe){
 const LIC_STORE_KEY        = 'qlts_v14_licenses';
 const LIC_ATTACH_TAGS_KEY  = 'qlts_v14_lic_attach_tags';
 let licenses = [];
+let _licensesLoaded = false;
 let _licSummaryCollapsed = false;
 let _licGoiCollapsed     = {}; // { goiIdx: bool }
 // Tag: { licId: ['file1.pdf', 'file2.pdf', ...] } — file nào thuộc dòng nào
@@ -12198,6 +12199,7 @@ function saveLicenses(){
 }
 function loadLicenses(){
   try{ const d=localStorage.getItem(LIC_STORE_KEY); if(d) licenses=JSON.parse(d); }catch(e){}
+  _licensesLoaded = true;
 }
 
 // ══════════════ EXPIRY ALERTS ══════════════
@@ -12229,8 +12231,16 @@ function renderDashExpiry(){
     .filter(l => l.diff !== null && l.diff <= 90)
     .sort((a,b) => a.diff - b.diff);   // hết hạn sớm nhất lên đầu
 
-  if(wrap) wrap.style.display = items.length ? '' : 'none';
-  if(!items.length){ list.innerHTML=''; if(countEl) countEl.textContent=''; return; }
+  // Chỉ ẩn widget khi licenses đã load xong mà thực sự không có cảnh báo
+  if(!items.length){
+    if(_licensesLoaded){
+      if(wrap) wrap.style.display = 'none';
+      list.innerHTML=''; if(countEl) countEl.textContent='';
+    }
+    // Nếu chưa load xong → giữ "Đang tải..." placeholder, không ẩn
+    return;
+  }
+  if(wrap) wrap.style.display = '';
 
   if(countEl){
     const exp = items.filter(l=>l.diff<0).length;
