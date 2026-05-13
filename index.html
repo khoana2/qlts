@@ -5011,6 +5011,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     </div>
     <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <input type="hidden" id="dntt-f-id">
+      <input type="hidden" id="dntt-f-repair-ref">
 
       <!-- Loại mẫu -->
       <!-- loaiMau hidden: always PR (du an) -->
@@ -14391,6 +14392,18 @@ function renderRepairs(){
           </div>
         </div>
         <div class="rep-card-actions">
+          ${(()=>{
+            const linked = dnttList.find(d=>d.repairRef?.assetId===assetId && d.repairRef?.repairTs===rec.ts);
+            if(linked){
+              const ttColor = linked.trangThaiTT==='da_tt' ? '#059669' : linked.trangThaiTT==='cho_tt' ? '#B45309' : '#64748B';
+              const ttLabel = linked.trangThaiTT==='da_tt' ? '💳 Đã TT' : linked.trangThaiTT==='cho_tt' ? '⏳ Chờ KT' : '📋 Chờ duyệt';
+              return `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;color:${ttColor};border-color:${ttColor};" title="Xem ĐNTT liên kết: ${linked.soPhieu||linked.id}" onclick="switchTab('dntt')">${ttLabel} ĐNTT</button>`;
+            }
+            if(rec.chiPhi>0){
+              return `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;color:#2563EB;border-color:#93C5FD;" title="Tạo ĐNTT từ phiếu sửa chữa này" onclick="openDNTTFromRepair('${assetId}',${idx})"><i class="ph ph-receipt"></i> Tạo ĐNTT</button>`;
+            }
+            return '';
+          })()}
           <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="openRepairEdit('${assetId}',${idx})"><i class="ph ph-pencil-simple"></i> Sửa</button>
           <button class="btn danger btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="deleteRepairRecord('${assetId}',${idx})"><i class="ph ph-trash"></i> Xóa</button>
         </div>
@@ -14885,6 +14898,7 @@ function openDNTTForm(prefill){
   // Reset
   const setV = (id,v) => { const el=document.getElementById(id); if(el) el.value=v||''; };
   setV('dntt-f-id','');
+  setV('dntt-f-repair-ref','');
   setV('dntt-f-sophieu','');
   setV('dntt-f-ngay', new Date().toISOString().slice(0,10));
   setV('dntt-f-nguoilap', _msalAccount?.name || _msalAccount?.username || '');
@@ -14953,6 +14967,49 @@ function openDNTTForm(prefill){
   if(!prefill) checkAndOfferDraftRestore('modal-dntt-form', 'dnttPreviewBangChu');
 }
 
+// ── Tạo ĐNTT từ phiếu sửa chữa ──
+function openDNTTFromRepair(assetId, idx){
+  const rec  = (repairs[assetId]||[])[idx];
+  const asset = assets.find(x=>x.id===assetId);
+  if(!rec) return;
+  // Kiểm tra đã có ĐNTT liên kết chưa
+  const existing = dnttList.find(d=>d.repairRef?.assetId===assetId && d.repairRef?.repairTs===rec.ts);
+  if(existing){
+    if(!confirm(`Phiếu sửa chữa này đã có ĐNTT liên kết (${existing.soPhieu||existing.id}).\nTạo thêm ĐNTT mới?`)) return;
+  }
+  // Switch sang tab ĐNTT rồi mở form
+  switchTab('dntt');
+  setTimeout(()=>{
+    // Trigger reset form
+    document.getElementById('dntt-form-title').innerHTML = '<i class="ph ph-receipt"></i> Tạo ĐNTT từ Phiếu Sửa Chữa';
+    setV('dntt-f-id','');
+    setV('dntt-f-repair-ref', JSON.stringify({assetId, repairTs: rec.ts}));
+    // Pre-fill
+    setV('dntt-f-ngay', new Date().toISOString().substring(0,10));
+    setV('dntt-f-ncc',    rec.vendor||'');
+    setV('dntt-f-sotien', rec.chiPhi||'');
+    const assetDesc = [asset?.maTaiSan, asset?.tenTaiSan, asset?.model].filter(Boolean).join(' — ');
+    setV('dntt-f-noidung', `Thanh toán sửa chữa ${assetDesc}${rec.parts?' ('+rec.parts+')':''}${rec.issue?' — '+rec.issue:''}`);
+    setV('dntt-f-nguoilap', _msalAccount?.name || _msalAccount?.username || '');
+    setV('dntt-f-ghichu', `Phiếu SC: ${assetId} | Gửi: ${rec.dateIn||''} | ĐV sửa: ${rec.vendor||''}`);
+    // Reset trạng thái
+    document.getElementById('dntt-f-trangthai').value='draft';
+    const soEl=document.getElementById('dntt-f-signoff'); if(soEl) soEl.value='chua_trinh';
+    const ttEl=document.getElementById('dntt-f-trangthaitt'); if(ttEl) ttEl.value='chua_tt';
+    setV('dntt-f-ketoan-date',''); setV('dntt-f-paid-date','');
+    // Chứng từ reset
+    [1,2,3].forEach(i=>{
+      setV(`dntt-ct-${i}-loai`,''); setV(`dntt-ct-${i}-ngay`,''); setV(`dntt-ct-${i}-donvi`,'');
+      const g=document.getElementById(`dntt-ct-${i}-goc`); if(g) g.checked=(i===1);
+      const s=document.getElementById(`dntt-ct-${i}-sao`); if(s) s.checked=false;
+    });
+    _fillDNTTCongtyList(); _buildDeptDatalist(); _buildCongtyDatalist();
+    _fillDNTTLicList(''); _refreshVendorQuickList(rec.vendor||'');
+    dnttPreviewBangChu(); dnttUpdateHinhThucUI(); _buildHeadcodeDatalist();
+    openModal('modal-dntt-form');
+  }, 150);
+}
+
 // ── Mở form Sửa ──
 function openDNTTEdit(id){
   const d = dnttList.find(x=>x.id===id);
@@ -14995,6 +15052,7 @@ function openDNTTEdit(id){
   const ttElE=document.getElementById('dntt-f-trangthaitt'); if(ttElE) ttElE.value=d.trangThaiTT||'chua_tt';
   setV('dntt-f-ketoan-date', d.ketoanSubmittedAt ? d.ketoanSubmittedAt.substring(0,10) : '');
   setV('dntt-f-paid-date',   d.paidAt            ? d.paidAt.substring(0,10)            : '');
+  setV('dntt-f-repair-ref',  d.repairRef ? JSON.stringify(d.repairRef) : '');
   document.getElementById('dntt-f-tiente').value = d.tienTe || 'VND';
   // loaiMau fixed to PR (du an)
   _fillDNTTCongtyList();
@@ -15111,6 +15169,11 @@ async function saveDNTTForm(draftOnly){
       const dateVal = document.getElementById('dntt-f-paid-date')?.value;
       if(dateVal) return dateVal + 'T00:00:00.000Z';
       return existingId ? (dnttList.find(x=>x.id===existingId)?.paidAt || null) : null;
+    })(),
+    repairRef: (()=>{
+      const raw = document.getElementById('dntt-f-repair-ref')?.value;
+      if(raw){ try{ return JSON.parse(raw); }catch(e){} }
+      return existingId ? (dnttList.find(x=>x.id===existingId)?.repairRef || null) : null;
     })(),
     createdAt: existingId ? (dnttList.find(x=>x.id===existingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
   };
@@ -15585,6 +15648,7 @@ const _DNTT_SP_FIELDS = [
   { name:'TrangThaiTT',      type:'Text'     },  // chua_tt|cho_tt|da_tt
   { name:'NgayNopKeToan',    type:'DateTime' },  // lúc nộp hồ sơ kế toán
   { name:'NgayThanhToan',    type:'DateTime' },  // lúc kế toán thanh toán xong
+  { name:'RepairRef',        type:'Text'     },  // JSON: {assetId, repairTs} liên kết phiếu SC
   { name:'TrangThai',        type:'Text'     },  // giữ lại cho backward compat
   { name:'LocalId',          type:'Text'     },
 ];
@@ -15618,6 +15682,7 @@ function dnttToSpItem(rec){
     TrangThaiTT:      rec.trangThaiTT||'chua_tt',
     NgayNopKeToan:    rec.ketoanSubmittedAt || null,
     NgayThanhToan:    rec.paidAt            || null,
+    RepairRef:        rec.repairRef ? JSON.stringify(rec.repairRef) : null,
     TrangThai:        rec.trangThai||'draft',  // backward compat
     LocalId:          rec.id      || '',
   };
@@ -15655,6 +15720,7 @@ function spItemToDntt(item){
     trangThaiTT:         item.TrangThaiTT      || 'chua_tt',
     ketoanSubmittedAt:   item.NgayNopKeToan    || null,
     paidAt:              item.NgayThanhToan     || null,
+    repairRef:           item.RepairRef ? (()=>{ try{ return JSON.parse(item.RepairRef); }catch(e){ return null; } })() : null,
     trangThai:           item.TrangThai         || 'draft',  // backward compat
     createdAt:           item.Created           || new Date().toISOString(),
   };
