@@ -5389,6 +5389,7 @@ const MSAL_CONFIG = {
   spTransferList:    'Quan_Ly_TransferHistory',   // list lịch sử bàn giao mặc định (TTG)
   spXacNhanList:     'Quan_Ly_XacNhan_BanGiao',   // list xác nhận bàn giao mặc định (TTG)
   spDNTTList:        'Quan_Ly_DNTT',              // list đề nghị thanh toán mặc định (TTG)
+  spProcList:        'Quan_Ly_Mua_Sam',           // list mua sắm (dùng cho đính kèm file)
   spAuditLogList:    'QLTS_AuditLog',             // list nhật ký thay đổi (global admin only)
   spFujiMachineList:  'Fuji_MachineReport',         // list báo cáo máy Fuji theo tháng
   spFujiReportCache:  'Fuji_ReportCache',           // list lưu toàn bộ dữ liệu báo cáo (JSON)
@@ -5442,6 +5443,7 @@ const DEFAULT_SP_LICENSE_HIST_LIST= MSAL_CONFIG.spLicenseHistList;
 const DEFAULT_SP_TRANSFER_LIST    = MSAL_CONFIG.spTransferList;
 const DEFAULT_SP_XACNHAN_LIST     = MSAL_CONFIG.spXacNhanList;
 const DEFAULT_SP_DNTT_LIST        = MSAL_CONFIG.spDNTTList;
+const DEFAULT_SP_PROC_LIST        = MSAL_CONFIG.spProcList;
 // ════════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════ CONFIRM FORM CONFIG ════════════════════════════════
@@ -5729,6 +5731,7 @@ async function detectUserCompany(){
   MSAL_CONFIG.spTransferList    = DEFAULT_SP_TRANSFER_LIST;
   MSAL_CONFIG.spXacNhanList     = DEFAULT_SP_XACNHAN_LIST;
   MSAL_CONFIG.spDNTTList        = DEFAULT_SP_DNTT_LIST;
+  MSAL_CONFIG.spProcList        = DEFAULT_SP_PROC_LIST;
   const hasMaps = Object.keys(COMPANY_GROUP_MAP).length || Object.keys(COMPANY_ADMIN_GROUP_MAP).length;
   if(!hasMaps) return;
   try {
@@ -5765,6 +5768,7 @@ async function detectUserCompany(){
       MSAL_CONFIG.spTransferList    = COMPANY_TRANSFER_MAP[grp]     || DEFAULT_SP_TRANSFER_LIST;
       MSAL_CONFIG.spXacNhanList     = COMPANY_XACNHAN_MAP[grp]      || DEFAULT_SP_XACNHAN_LIST;
       MSAL_CONFIG.spDNTTList        = COMPANY_DNTT_MAP[grp]         || DEFAULT_SP_DNTT_LIST;
+      MSAL_CONFIG.spProcList        = DEFAULT_SP_PROC_LIST;
     }
 
     // 1. Kiểm tra COMPANY_ADMIN_GROUP_MAP (cấu hình tường minh)
@@ -9876,6 +9880,126 @@ async function openLicenseAttachments(licId){
   await _refreshAttachments(l.spId);
 }
 
+// ── Đính kèm file cho Phiếu Sửa Chữa ────────────────────────────────────────
+async function openRepairAttachments(assetId, repairIdx){
+  _attachFilterMode  = null;
+  _attachFilterLicId = null;
+  _attachListName    = SP_REPAIR_LIST_NAME;
+  const rec   = (repairs[assetId]||[])[repairIdx];
+  const asset = assets.find(x => x.id === assetId);
+  if(!rec) return;
+
+  const titleEl = document.getElementById('attach-modal-title');
+  const body    = document.getElementById('attach-body');
+  const label   = asset ? (asset.maTaiSan||asset.tenTaiSan||assetId) : assetId;
+  const dateStr = rec.dateIn ? ` — ${new Date(rec.dateIn).toLocaleDateString('vi-VN')}` : '';
+  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm Sửa chữa — <span style="color:var(--accent);">${esc(label)}${dateStr}</span>`;
+
+  if(!_msalAccount || !SP_MODE){
+    body.innerHTML = `<div style="text-align:center;padding:32px 0;">
+      <i class="ph ph-cloud-slash" style="font-size:28px;color:var(--muted);"></i>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px;">Cần đăng nhập SharePoint để dùng tính năng đính kèm file.</p>
+    </div>`;
+    openModal('modal-attach');
+    return;
+  }
+  if(!rec.spId){
+    body.innerHTML = `<div style="text-align:center;padding:32px 0;">
+      <i class="ph ph-warning-circle" style="font-size:28px;color:var(--yellow);"></i>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px;">Phiếu sửa chữa chưa được lưu lên SharePoint.<br>Hãy mở và lưu lại phiếu này trước.</p>
+    </div>`;
+    openModal('modal-attach');
+    return;
+  }
+  _attachAssetId = rec.spId; // dùng spId của repair record để định danh
+  body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">
+    <i class="ph ph-spinner-gap" style="font-size:22px;"></i><br>Đang tải danh sách file…
+  </div>`;
+  openModal('modal-attach');
+  await _refreshAttachments(rec.spId);
+}
+
+// ── Đính kèm file cho Mua Sắm ────────────────────────────────────────────────
+// Tự động tạo SP item nếu chưa có, lưu spId vào localStorage proc record
+async function spProcEnsureItem(procId){
+  const idx = procList.findIndex(x => x.id === procId);
+  if(idx < 0) return null;
+  const p = procList[idx];
+  if(p.spId) return p.spId;
+  // Tạo SP item mới
+  try{
+    const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
+    const siteUrl  = MSAL_CONFIG.spSite;
+    // Đảm bảo list tồn tại (nếu chưa có tự tạo)
+    try{
+      await msalSpReq(`${siteUrl}/_api/web/lists/getbytitle('${listName}')`);
+    }catch(e){
+      // List chưa tồn tại → tạo mới
+      await msalSpReq(`${siteUrl}/_api/web/lists`, {
+        method:'POST',
+        body: JSON.stringify({ __metadata:{type:'SP.List'}, Title:listName, BaseTemplate:100, Description:'Danh sách mua sắm QLTS' })
+      });
+    }
+    const itemUrl = `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items`;
+    const body = {
+      __metadata: { type:`SP.Data.${listName.replace(/_/g,'')}ListItem` },
+      Title: p.tieuDe || procId,
+    };
+    const res = await msalSpReq(itemUrl, { method:'POST', body: JSON.stringify(body) });
+    const newSpId = res?.d?.ID || res?.ID;
+    if(newSpId){
+      procList[idx] = { ...procList[idx], spId: newSpId };
+      saveProc();
+      return newSpId;
+    }
+    return null;
+  }catch(e){
+    console.warn('[Proc-SP] Không thể tạo SP item:', e.message);
+    return null;
+  }
+}
+
+async function openProcAttachments(procId){
+  _attachFilterMode  = null;
+  _attachFilterLicId = null;
+  _attachListName    = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
+  const p = procList.find(x => x.id === procId);
+  if(!p) return;
+
+  const titleEl = document.getElementById('attach-modal-title');
+  const body    = document.getElementById('attach-body');
+  if(titleEl) titleEl.innerHTML = `<i class="ph ph-paperclip"></i> Đính kèm Mua sắm — <span style="color:#7C3AED;">${esc(p.tieuDe||procId)}</span>`;
+
+  if(!_msalAccount || !SP_MODE){
+    body.innerHTML = `<div style="text-align:center;padding:32px 0;">
+      <i class="ph ph-cloud-slash" style="font-size:28px;color:var(--muted);"></i>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px;">Cần đăng nhập SharePoint để dùng tính năng đính kèm file.</p>
+    </div>`;
+    openModal('modal-attach');
+    return;
+  }
+
+  body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">
+    <i class="ph ph-spinner-gap" style="font-size:22px;"></i><br>Đang chuẩn bị…
+  </div>`;
+  openModal('modal-attach');
+
+  let spId = p.spId;
+  if(!spId){
+    spId = await spProcEnsureItem(procId);
+    if(!spId){
+      body.innerHTML = `<div style="text-align:center;padding:32px 16px;">
+        <i class="ph ph-warning-circle" style="font-size:28px;color:var(--red);"></i>
+        <p style="font-size:13px;color:var(--muted);margin-top:10px;">Không thể tạo bản ghi SharePoint.<br>Hãy kiểm tra quyền truy cập SP.</p>
+      </div>`;
+      return;
+    }
+    toast('✅ Đã tạo bản ghi SP cho phiếu mua sắm', 'ok');
+  }
+  _attachAssetId = spId;
+  await _refreshAttachments(spId);
+}
+
 async function _refreshAttachments(spId){
   const body = document.getElementById('attach-body');
   try{
@@ -11599,6 +11723,7 @@ function renderProcurement(){
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;">
           <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="printProcurement('${p.id}')"><i class="ph ph-printer"></i> In báo giá</button>
           ${p.trangThai==='da_mua' ? `<span style="font-size:11px;color:#7C3AED;padding:4px 8px;background:rgba(139,92,246,.08);border-radius:8px;"><i class="ph ph-check-square"></i> Đã mua</span>` : `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="procMarkBought('${p.id}')"><i class="ph ph-check-square"></i> Đã mua</button>`}
+          <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;color:#7C3AED;border-color:#DDD6FE;" onclick="openProcAttachments('${p.id}')" title="Đính kèm hóa đơn, hợp đồng"><i class="ph ph-paperclip"></i> Hồ sơ</button>
           <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="openProcurementForm('${p.id}')"><i class="ph ph-pencil-simple"></i> Sửa</button>
           <button class="btn danger btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="deleteProc('${p.id}',this)"><i class="ph ph-trash"></i></button>
         </div>
@@ -14463,6 +14588,7 @@ function renderRepairs(){
             }
             return '';
           })()}
+          <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;color:#EA580C;border-color:#FED7AA;" onclick="openRepairAttachments('${assetId}',${idx})" title="Đính kèm hồ sơ (hóa đơn, biên bản, ảnh)"><i class="ph ph-paperclip"></i> Hồ sơ</button>
           <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="openRepairEdit('${assetId}',${idx})"><i class="ph ph-pencil-simple"></i> Sửa</button>
           <button class="btn danger btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="deleteRepairRecord('${assetId}',${idx})"><i class="ph ph-trash"></i> Xóa</button>
         </div>
