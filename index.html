@@ -4947,7 +4947,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     </div>
     <div class="modal-body" id="expiry-alert-body" style="max-height:400px;overflow-y:auto;"></div>
     <div class="modal-foot">
-      <button class="btn" onclick="closeModal('modal-expiry-alert')">Đóng</button>
+      <button class="btn" onclick="_dismissLicAlert();closeModal('modal-expiry-alert')">Đã xem</button>
       <button class="btn primary" id="expiry-alert-mailbtn" onclick="sendExpiryMail()" style="display:none;">📧 Gửi mail cảnh báo</button>
     </div>
   </div>
@@ -13214,6 +13214,26 @@ async function licSyncSP(){
 //  CẢNH BÁO HẾT HẠN LICENSE
 // ═══════════════════════════════════════════════════════════════════
 
+const _LIC_ALERT_KEY = 'qlts_lic_alert_dismissed';
+function _dismissLicAlert(){
+  const ids = [...(window._expiryAlertLicenses?.expired||[]), ...(window._expiryAlertLicenses?.expiring||[])]
+    .map(l=>l.id||l.ten);
+  localStorage.setItem(_LIC_ALERT_KEY, JSON.stringify({ ts: Date.now(), ids }));
+}
+function _licAlertAlreadySeen(expiring, expired){
+  try{
+    const raw = localStorage.getItem(_LIC_ALERT_KEY);
+    if(!raw) return false;
+    const { ts, ids=[] } = JSON.parse(raw);
+    // Hiện lại nếu đã qua 24h
+    if(Date.now() - ts > 86400000) return false;
+    // Hiện lại nếu có license mới chưa từng thấy
+    const seenSet = new Set(ids);
+    const currentIds = [...expired, ...expiring].map(l=>l.id||l.ten);
+    return currentIds.every(id => seenSet.has(id));
+  }catch(e){ return false; }
+}
+
 function checkLicenseExpiry(){
   const WARN_DAYS = 30;
   const expiring = licenses.filter(l => {
@@ -13227,6 +13247,8 @@ function checkLicenseExpiry(){
   });
 
   if(!expiring.length && !expired.length) return;
+  // Không hiện lại nếu user đã xem và chưa có license mới
+  if(_licAlertAlreadySeen(expiring, expired)) return;
 
   // Build nội dung popup
   let html = '';
