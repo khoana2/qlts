@@ -3360,6 +3360,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <option value="draft">📝 Nháp</option>
         <option value="submitted">📤 Đã gửi</option>
         <option value="approved">✅ Đã duyệt</option>
+        <option value="waiting_payment">⏳ Chờ thanh toán</option>
         <option value="paid">💳 Đã thanh toán</option>
       </select>
       <select class="fsel" id="dntt-filter-company" onchange="renderDNTT()">
@@ -5034,6 +5035,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
               <option value="draft">📝 Nháp</option>
               <option value="submitted">📤 Đã gửi</option>
               <option value="approved">✅ Đã duyệt</option>
+              <option value="waiting_payment">⏳ Chờ thanh toán</option>
               <option value="paid">💳 Đã thanh toán</option>
             </select>
           </div>
@@ -12480,8 +12482,8 @@ function renderDNTTCharts(){
   });
 
   // ── Chart 2: Theo trạng thái ──
-  const statusMap={'draft':'Nháp','submitted':'Chờ duyệt','pending':'Chờ duyệt','approved':'Đã duyệt','paid':'Đã TT'};
-  const statusColors={'draft':'#94a3b8','submitted':'#3b82f6','pending':'#3b82f6','approved':'#10b981','paid':'#f97316'};
+  const statusMap={'draft':'Nháp','submitted':'Chờ duyệt','pending':'Chờ duyệt','approved':'Đã duyệt','waiting_payment':'Chờ TT','paid':'Đã TT'};
+  const statusColors={'draft':'#94a3b8','submitted':'#3b82f6','pending':'#3b82f6','approved':'#10b981','waiting_payment':'#eab308','paid':'#f97316'};
   const statusCount={};
   dnttList.forEach(d=>{
     const k=d.trangThai||'draft';
@@ -14537,6 +14539,7 @@ function dnttStatusBadge(s){
     submitted: '<span style="background:#EFF6FF;color:#2563EB;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">📤 Chờ duyệt</span>',
     pending:   '<span style="background:#EFF6FF;color:#2563EB;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">📤 Chờ duyệt</span>',
     approved:  '<span style="background:#F0FDF4;color:#16A34A;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">✅ Đã duyệt</span>',
+    waiting_payment: '<span style="background:#FFF9C4;color:#B45309;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">⏳ Chờ TT</span>',
     paid:      '<span style="background:#FFF7ED;color:#EA580C;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">💳 Đã TT</span>',
   };
   return map[s] || map['draft'];
@@ -14604,7 +14607,9 @@ function renderDNTT(){
           : d.trangThai==='submitted'
           ? `<button class="btn success btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Duyệt phiếu" onclick="approveDNTT('${d.id}')"><i class="ph ph-check-circle"></i> Duyệt</button>`
           : d.trangThai==='approved'
-          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF7ED;color:#EA580C;border-color:#FED7AA;" title="Đánh dấu đã thanh toán" onclick="markPaidDNTT('${d.id}')"><i class="ph ph-credit-card"></i></button>`
+          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF9C4;color:#B45309;border-color:#FDE68A;" title="Chuyển sang Chờ thanh toán" onclick="markWaitingDNTT('${d.id}')"><i class="ph ph-hourglass"></i> Chờ TT</button>`
+          : d.trangThai==='waiting_payment'
+          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF7ED;color:#EA580C;border-color:#FED7AA;" title="Đánh dấu đã thanh toán" onclick="markPaidDNTT('${d.id}')"><i class="ph ph-credit-card"></i> Đã TT</button>`
           : ''}
         <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openDNTTEdit('${d.id}')"><i class="ph ph-pencil-simple"></i></button>
         <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#6366f1;" title="In phiếu" onclick="printDNTT('${d.id}')"><i class="ph ph-printer"></i></button>
@@ -14939,13 +14944,28 @@ function approveDNTT(id){
 }
 
 // Đánh dấu đã thanh toán (approved → paid)
+async function markWaitingDNTT(id){
+  const d = dnttList.find(x=>x.id===id);
+  if(!d) return;
+  if(d.trangThai !== 'approved'){ toast('⚠️ Phiếu chưa được duyệt','warn'); return; }
+  if(!await showConfirm(`Chuyển phiếu "${d.soPhieu||d.id}" sang Chờ thanh toán?`,{title:'Chờ thanh toán',okText:'Xác nhận',icon:'⏳'})) return;
+  d.trangThai = 'waiting_payment';
+  d.waitingAt = new Date().toISOString();
+  saveDNTT();
+  msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e));
+  renderDNTT();
+  toast('⏳ Đã chuyển sang Chờ thanh toán','ok');
+}
+
 async function markPaidDNTT(id){
   const d = dnttList.find(x=>x.id===id);
   if(!d) return;
+  if(!['approved','waiting_payment'].includes(d.trangThai)){ toast('⚠️ Trạng thái không hợp lệ','warn'); return; }
   if(!await showConfirm(`Đánh dấu phiếu "${d.soPhieu||d.id}" là Đã thanh toán?`,{title:'Xác nhận thanh toán',okText:'Đã thanh toán',icon:'💰'})) return;
   d.trangThai = 'paid';
   d.paidAt = new Date().toISOString();
   saveDNTT();
+  msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e));
   renderDNTT();
   toast('💳 Đã đánh dấu thanh toán','ok');
 }
@@ -15266,7 +15286,7 @@ async function exportDNTTListExcel(){
     d.soPhieu||'', d.ngayLap||'', d.congTy||'', d.phongBan||'',
     d.ncc||'', d.noidung||'',
     d.soTien||'', d.tienTe||'VND',
-    {draft:'Nháp',submitted:'Đã gửi',approved:'Đã duyệt',paid:'Đã TT'}[d.trangThai]||'',
+    {draft:'Nháp',submitted:'Đã gửi',approved:'Đã duyệt',waiting_payment:'Chờ TT',paid:'Đã TT'}[d.trangThai]||'',
     dnttLoaiLabel(d.loaiMau), d.ghichu||''
   ]));
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -19099,7 +19119,7 @@ async function hcqtSpFetch(path,opts={}){
   return res.status===204?null:res.json();
 }
 
-const HCQT_SEL = 'Id,Title,AnhUrl,MaTaiSan,LoaiTaiSan,NhomTaiSan,HangSanXuat,Model,SoSerial,MauSac,SoLuong,ToaNha,Tang,PhongViTri,KhuVuc,NguoiPhuTrach,EmailPhuTrach,BoPhanSuDung,TinhTrang,MucDoHao,GhiChuTinhTrang,NgayKiemKe,KetQuaKiemKe,NgayMua,NguyenGia,NguonMua,SoHoaDon,ThoiGianKhauHao,NhomKhauHao,ChuKyBaoTri,NgayBaoTriGanNhat,NgayBaoTriTiepTheo,DonViBaoTri,ChiPhiBaoTri,LichSuSuaChua,GhiChu,Created,Modified';
+const HCQT_SEL = 'Id,Title,MaTaiSan,AnhUrl,LoaiTaiSan,NhomTaiSan,HangSanXuat,Model,SoSerial,MauSac,SoLuong,ToaNha,Tang,PhongViTri,KhuVuc,NguoiPhuTrach,EmailPhuTrach,BoPhanSuDung,TinhTrang,MucDoHao,GhiChuTinhTrang,NgayKiemKe,KetQuaKiemKe,NgayMua,NguyenGia,NguonMua,SoHoaDon,ThoiGianKhauHao,NhomKhauHao,ChuKyBaoTri,NgayBaoTriGanNhat,NgayBaoTriTiepTheo,DonViBaoTri,ChiPhiBaoTri,LichSuSuaChua,GhiChu,Created,Modified';
 
 async function hcqtSync(silent=false){
   const hasAuth = typeof _msalAccount!=='undefined' && _msalAccount;
@@ -19143,7 +19163,9 @@ function hcqtSpToLocal(it){
     NgayBaoTriTiepTheo:it.NgayBaoTriTiepTheo||'',
     DonViBaoTri:it.DonViBaoTri||'', ChiPhiBaoTri:it.ChiPhiBaoTri||0,
     LichSuSuaChua:it.LichSuSuaChua||'',
-    GhiChu:it.GhiChu||'', AnhUrl:it.AnhUrl||'', Created:it.Created||'', Modified:it.Modified||''
+    GhiChu:it.GhiChu||'',
+    AnhUrl:it.AnhUrl||'',
+    Created:it.Created||'', Modified:it.Modified||''
   };
 }
 
@@ -19591,13 +19613,13 @@ async function hcqtSaveItem(){
           {method:'POST',body:JSON.stringify(payload)});
         savedId=res.Id||res.id||Date.now();
       }
-      // Upload pending image (if any)
+      // Upload pending image (if any) — stored as SP attachment, URL in localStorage map
       if(_hcqtPendingImgFile && savedId){
         if(btn) btn.textContent='Đang tải ảnh…';
         try{
           const imgUrl=await _hcqtUploadAttachment(savedId, _hcqtPendingImgFile);
           form.AnhUrl=imgUrl;
-          // Patch AnhUrl back to item
+          // Patch AnhUrl to SP (now a real column)
           await hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items(${savedId})`,
             {method:'PATCH',body:JSON.stringify({AnhUrl:imgUrl}),headers:{'IF-MATCH':'*','X-HTTP-Method':'MERGE'}});
         }catch(imgErr){ toast('⚠️ Lưu xong nhưng không tải được ảnh: '+imgErr.message,'warn'); }
@@ -19610,8 +19632,11 @@ async function hcqtSaveItem(){
       }
     } else {
       if(_hcqtPendingImgFile){
-        // Offline: store as base64 data URL
+        // Offline: store as base64 data URL in local map
+        const localId=_hcqtEditId||('local_'+Date.now());
         form.AnhUrl=await _hcqtFileToDataUrl(_hcqtPendingImgFile);
+        _hcqtAnhMap[localId]=form.AnhUrl;
+        _hcqtSaveAnhMap();
       }
       if(_hcqtEditId){ const idx=_hcqtData.findIndex(x=>x._id===_hcqtEditId); if(idx>=0) _hcqtData[idx]={..._hcqtData[idx],...form}; }
       else { _hcqtData.unshift({...form,_id:Date.now()}); }
@@ -19757,9 +19782,12 @@ document.addEventListener('keydown',e=>{
 // ═══════════════════════════════════════════════════════════════════
 let _hcqtCapPhat   = JSON.parse(localStorage.getItem('hcqt_capphat_v1')||'[]');
 let _hcqtKiemKeDot = JSON.parse(localStorage.getItem('hcqt_kiemke_v1')||'{"dot":"","ten":"","nam":"","items":{}}');
+// Map itemId → image URL (SP attachment URL or data URL when offline)
+let _hcqtAnhMap    = JSON.parse(localStorage.getItem('hcqt_anh_map_v1')||'{}');
 
 function _hcqtSaveCapPhat(){ try{localStorage.setItem('hcqt_capphat_v1',JSON.stringify(_hcqtCapPhat));}catch(e){} }
 function _hcqtSaveKiemKe(){ try{localStorage.setItem('hcqt_kiemke_v1',JSON.stringify(_hcqtKiemKeDot));}catch(e){} }
+function _hcqtSaveAnhMap(){ try{localStorage.setItem('hcqt_anh_map_v1',JSON.stringify(_hcqtAnhMap));}catch(e){} }
 
 // ═══════════════════════════════════════════════════════════════════
 // ẢNH TÀI SẢN — preview helper
@@ -19825,18 +19853,21 @@ function _hcqtImgClear(silent){
 }
 
 async function _hcqtUploadAttachment(itemId, file){
+  // Upload to HCQT_HinhAnh document library — URL saved to AnhUrl field
   const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
-  const fname=`anh_${itemId}_${Date.now()}.${ext}`;
+  const fname=`ts_${itemId}_${Date.now()}.${ext}`;
   const arrayBuf=await file.arrayBuffer();
   const digest=await _hcqtDigest();
   const token=(typeof msalGetToken==='function')?await msalGetToken():null;
   const headers={'Content-Type':'application/octet-stream','X-RequestDigest':digest,'Accept':'application/json;odata=nometadata'};
   if(token) headers['Authorization']='Bearer '+token;
-  const uploadUrl=`${HCQT_SITE}/_api/web/lists/getbytitle('${HCQT_LIST}')/items(${itemId})/AttachmentFiles/add(FileName='${encodeURIComponent(fname)}')`;
+  // PUT to document library folder
+  const siteRelPath=HCQT_SITE.replace(/^https?:\/\/[^\/]+/,'');
+  const uploadUrl=`${HCQT_SITE}/_api/web/GetFolderByServerRelativeUrl('${siteRelPath}/HCQT_HinhAnh')/Files/Add(url='${encodeURIComponent(fname)}',overwrite=true)`;
   const res=await fetch(uploadUrl,{method:'POST',headers,body:arrayBuf});
-  if(!res.ok){ const txt=await res.text(); throw new Error(`Upload ảnh lỗi ${res.status}: ${txt.slice(0,120)}`); }
+  if(!res.ok){ const txt=await res.text(); throw new Error(`Upload ảnh lỗi ${res.status}: ${txt.slice(0,200)}`); }
   const json=await res.json().catch(()=>({}));
-  const serverRelUrl=json.ServerRelativeUrl||`/teams/Department_Administration/Lists/${HCQT_LIST}/Attachments/${itemId}/${fname}`;
+  const serverRelUrl=json.ServerRelativeUrl||`${siteRelPath}/HCQT_HinhAnh/${fname}`;
   const origin=HCQT_SITE.match(/^https?:\/\/[^\/]+/)?.[0]||'';
   return origin+serverRelUrl;
 }
