@@ -3355,13 +3355,18 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
       <input type="text" id="dntt-search" class="finput" placeholder="🔍 Tìm nhà cung cấp, nội dung, số phiếu…"
         style="min-width:220px;max-width:340px;" oninput="renderDNTT()">
-      <select class="fsel" id="dntt-filter-status" onchange="renderDNTT()">
-        <option value="">Tất cả trạng thái</option>
-        <option value="draft">📝 Nháp</option>
-        <option value="submitted">📤 Đã gửi</option>
-        <option value="approved">✅ Đã duyệt</option>
-        <option value="waiting_payment">⏳ Chờ thanh toán</option>
-        <option value="paid">💳 Đã thanh toán</option>
+      <select class="fsel" id="dntt-filter-signoff" onchange="renderDNTT()" title="Lọc theo Sign Off">
+        <option value="">Tất cả Sign Off</option>
+        <option value="chua_trinh">📋 Chưa trình</option>
+        <option value="cho_duyet">⏳ Chờ duyệt</option>
+        <option value="da_duyet">✅ Đã duyệt</option>
+        <option value="tu_choi">❌ Từ chối</option>
+      </select>
+      <select class="fsel" id="dntt-filter-tt" onchange="renderDNTT()" title="Lọc theo Thanh toán">
+        <option value="">Tất cả TT</option>
+        <option value="chua_tt">— Chưa TT</option>
+        <option value="cho_tt">⏳ Chờ kế toán</option>
+        <option value="da_tt">💳 Đã TT</option>
       </select>
       <select class="fsel" id="dntt-filter-company" onchange="renderDNTT()">
         <option value="">Tất cả công ty</option>
@@ -5031,13 +5036,26 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);">Trạng thái</label>
-            <select id="dntt-f-trangthai" class="fsel" style="width:100%;">
-              <option value="draft">📝 Nháp</option>
-              <option value="submitted">📤 Đã gửi</option>
-              <option value="approved">✅ Đã duyệt</option>
-              <option value="waiting_payment">⏳ Chờ thanh toán</option>
-              <option value="paid">💳 Đã thanh toán</option>
-            </select>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Sign Off</div>
+                <select id="dntt-f-signoff" class="fsel" style="width:100%">
+                  <option value="chua_trinh">📋 Chưa trình</option>
+                  <option value="cho_duyet">⏳ Chờ duyệt</option>
+                  <option value="da_duyet">✅ Đã duyệt</option>
+                  <option value="tu_choi">❌ Từ chối</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Thanh toán</div>
+                <select id="dntt-f-trangthaitt" class="fsel" style="width:100%">
+                  <option value="chua_tt">— Chưa TT</option>
+                  <option value="cho_tt">⏳ Chờ kế toán</option>
+                  <option value="da_tt">💳 Đã TT</option>
+                </select>
+              </div>
+            </div>
+            <input type="hidden" id="dntt-f-trangthai" value="draft">
           </div>
         </div>
       </div>
@@ -12482,13 +12500,17 @@ function renderDNTTCharts(){
   });
 
   // ── Chart 2: Theo trạng thái ──
-  const statusMap={'draft':'Nháp','submitted':'Chờ duyệt','pending':'Chờ duyệt','approved':'Đã duyệt','waiting_payment':'Chờ TT','paid':'Đã TT'};
-  const statusColors={'draft':'#94a3b8','submitted':'#3b82f6','pending':'#3b82f6','approved':'#10b981','waiting_payment':'#eab308','paid':'#f97316'};
-  const statusCount={};
+  // Chart Sign Off
+  const soMap={'chua_trinh':'Chưa trình','cho_duyet':'Chờ duyệt','da_duyet':'Đã duyệt','tu_choi':'Từ chối'};
+  const soColors={'chua_trinh':'#94a3b8','cho_duyet':'#3b82f6','da_duyet':'#10b981','tu_choi':'#ef4444'};
+  const soCount={};
   dnttList.forEach(d=>{
-    const k=d.trangThai||'draft';
-    statusCount[k]=(statusCount[k]||0)+1;
+    const k=d.trangThaiSignOff||'chua_trinh';
+    soCount[k]=(soCount[k]||0)+1;
   });
+  // reuse statusCount/sLabels/sData/sColors for the chart variable below
+  const statusMap=soMap, statusColors=soColors;
+  const statusCount=soCount;
   const sLabels=Object.keys(statusCount).map(k=>statusMap[k]||k);
   const sData=Object.values(statusCount);
   const sColors=Object.keys(statusCount).map(k=>statusColors[k]||'#94a3b8');
@@ -14532,15 +14554,34 @@ function genDNTTSoPhieu(){
   return `ĐNTT-${yy}${mm}-${seq}`;
 }
 
-// ── Status badge ──
+// ── Status badges ──
+function dnttSignOffBadge(s){
+  const map = {
+    chua_trinh: '<span style="background:#F1F5F9;color:#64748B;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">📋 Chưa trình</span>',
+    cho_duyet:  '<span style="background:#EFF6FF;color:#2563EB;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏳ Chờ duyệt</span>',
+    da_duyet:   '<span style="background:#F0FDF4;color:#16A34A;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">✅ Đã duyệt</span>',
+    tu_choi:    '<span style="background:#FEF2F2;color:#DC2626;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">❌ Từ chối</span>',
+  };
+  return map[s||'chua_trinh'] || map['chua_trinh'];
+}
+function dnttTTBadge(s, signOff){
+  if(!signOff || signOff === 'chua_trinh' || signOff === 'cho_duyet') return '';
+  if(signOff === 'tu_choi') return '';
+  const map = {
+    chua_tt: '<span style="background:#F1F5F9;color:#64748B;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">— Chưa TT</span>',
+    cho_tt:  '<span style="background:#FFF9C4;color:#B45309;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏳ Chờ kế toán</span>',
+    da_tt:   '<span style="background:#FFF7ED;color:#EA580C;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">💳 Đã TT</span>',
+  };
+  return map[s||'chua_tt'] || '';
+}
+// backward compat
 function dnttStatusBadge(s){
   const map = {
-    draft:     '<span style="background:#F1F5F9;color:#64748B;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">📝 Nháp</span>',
-    submitted: '<span style="background:#EFF6FF;color:#2563EB;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">📤 Chờ duyệt</span>',
-    pending:   '<span style="background:#EFF6FF;color:#2563EB;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">📤 Chờ duyệt</span>',
-    approved:  '<span style="background:#F0FDF4;color:#16A34A;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">✅ Đã duyệt</span>',
-    waiting_payment: '<span style="background:#FFF9C4;color:#B45309;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">⏳ Chờ TT</span>',
-    paid:      '<span style="background:#FFF7ED;color:#EA580C;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;">💳 Đã TT</span>',
+    draft:'<span style="background:#F1F5F9;color:#64748B;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">📝 Nháp</span>',
+    submitted:'<span style="background:#EFF6FF;color:#2563EB;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏳ Chờ duyệt</span>',
+    approved:'<span style="background:#F0FDF4;color:#16A34A;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">✅ Đã duyệt</span>',
+    waiting_payment:'<span style="background:#FFF9C4;color:#B45309;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏳ Chờ TT</span>',
+    paid:'<span style="background:#FFF7ED;color:#EA580C;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">💳 Đã TT</span>',
   };
   return map[s] || map['draft'];
 }
@@ -14556,12 +14597,14 @@ function renderDNTT(){
   if(!tbody) return;
 
   const q      = (document.getElementById('dntt-search')?.value||'').toLowerCase();
-  const status = document.getElementById('dntt-filter-status')?.value||'';
+  const filterSignOff = document.getElementById('dntt-filter-signoff')?.value||'';
+  const filterTT      = document.getElementById('dntt-filter-tt')?.value||'';
   const co     = document.getElementById('dntt-filter-company')?.value||'';
   const loai   = document.getElementById('dntt-filter-loai')?.value||'';
 
   let list = dnttList.filter(d => {
-    if(status && d.trangThai !== status) return false;
+    if(filterSignOff && (d.trangThaiSignOff||'chua_trinh') !== filterSignOff) return false;
+    if(filterTT && (d.trangThaiTT||'chua_tt') !== filterTT) return false;
     if(co && d.congTy !== co) return false;
     if(loai && d.loaiMau !== loai) return false;
     if(q){
@@ -14599,17 +14642,23 @@ function renderDNTT(){
       <td style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(d.noidung||'')}">${esc(d.noidung||'—')}</td>
       <td style="font-size:12px;text-align:right;font-weight:600;">${d.soTien ? parseFloat(d.soTien).toLocaleString('vi-VN')+' '+(d.tienTe||'VND') : '—'}</td>
       <td style="font-size:11px;">${dnttLoaiLabel(d.loaiMau)}</td>
-      <td>${dnttStatusBadge(d.trangThai)}</td>
+      <td style="white-space:nowrap">
+        ${dnttSignOffBadge(d.trangThaiSignOff)}
+        ${dnttTTBadge(d.trangThaiTT, d.trangThaiSignOff)}
+      </td>
       <td>${licBadge}</td>
       <td style="white-space:nowrap;">
-        ${d.trangThai==='draft'
-          ? `<button class="btn warn btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Gửi duyệt" onclick="submitDNTT('${d.id}')"><i class="ph ph-paper-plane-tilt"></i> Gửi</button>`
-          : d.trangThai==='submitted'
-          ? `<button class="btn success btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Duyệt phiếu" onclick="approveDNTT('${d.id}')"><i class="ph ph-check-circle"></i> Duyệt</button>`
-          : d.trangThai==='approved'
-          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF9C4;color:#B45309;border-color:#FDE68A;" title="Chuyển sang Chờ thanh toán" onclick="markWaitingDNTT('${d.id}')"><i class="ph ph-hourglass"></i> Chờ TT</button>`
-          : d.trangThai==='waiting_payment'
-          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF7ED;color:#EA580C;border-color:#FED7AA;" title="Đánh dấu đã thanh toán" onclick="markPaidDNTT('${d.id}')"><i class="ph ph-credit-card"></i> Đã TT</button>`
+        ${(d.trangThaiSignOff||'chua_trinh')==='chua_trinh'
+          ? `<button class="btn warn btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Trình Sign Off" onclick="dnttSubmitSignOff('${d.id}')"><i class="ph ph-paper-plane-tilt"></i> Trình SO</button>`
+          : (d.trangThaiSignOff)==='cho_duyet'
+          ? `<button class="btn success btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Sign Off đã duyệt" onclick="dnttApproveSignOff('${d.id}')"><i class="ph ph-check-circle"></i> SO Duyệt</button>
+             <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#DC2626;border-color:#FCA5A5;" title="Sign Off từ chối" onclick="dnttRejectSignOff('${d.id}')"><i class="ph ph-x-circle"></i></button>`
+          : (d.trangThaiSignOff)==='tu_choi'
+          ? `<button class="btn warn btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Trình lại Sign Off" onclick="dnttResubmitSignOff('${d.id}')"><i class="ph ph-arrow-counter-clockwise"></i> Trình lại</button>`
+          : (d.trangThaiSignOff)==='da_duyet' && (d.trangThaiTT||'chua_tt')==='chua_tt'
+          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF9C4;color:#B45309;border-color:#FDE68A;" title="Nộp hồ sơ kế toán" onclick="dnttSubmitKeToan('${d.id}')"><i class="ph ph-file-arrow-up"></i> Nộp KT</button>`
+          : (d.trangThaiTT)==='cho_tt'
+          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#FFF7ED;color:#EA580C;border-color:#FED7AA;" title="Đánh dấu đã thanh toán" onclick="dnttMarkPaid('${d.id}')"><i class="ph ph-credit-card"></i> Đã TT</button>`
           : ''}
         <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;" title="Chỉnh sửa" onclick="openDNTTEdit('${d.id}')"><i class="ph ph-pencil-simple"></i></button>
         <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;color:#6366f1;" title="In phiếu" onclick="printDNTT('${d.id}')"><i class="ph ph-printer"></i></button>
@@ -14663,6 +14712,8 @@ function openDNTTForm(prefill){
   dnttUpdateHinhThucUI();
   setV('dntt-f-ghichu','');
   document.getElementById('dntt-f-trangthai').value = 'draft';
+  const soEl=document.getElementById('dntt-f-signoff'); if(soEl) soEl.value='chua_trinh';
+  const ttEl=document.getElementById('dntt-f-trangthaitt'); if(ttEl) ttEl.value='chua_tt';
   document.getElementById('dntt-f-tiente').value = 'VND';
   // loaiMau fixed to PR (du an)
   // Reset chứng từ kèm theo
@@ -14745,6 +14796,8 @@ function openDNTTEdit(id){
     const sEl = document.getElementById(`dntt-ct-${i}-sao`); if(sEl) sEl.checked = !!ct.sao;
   });
   document.getElementById('dntt-f-trangthai').value = d.trangThai || 'draft';
+  const soElE=document.getElementById('dntt-f-signoff'); if(soElE) soElE.value=d.trangThaiSignOff||'chua_trinh';
+  const ttElE=document.getElementById('dntt-f-trangthaitt'); if(ttElE) ttElE.value=d.trangThaiTT||'chua_tt';
   document.getElementById('dntt-f-tiente').value = d.tienTe || 'VND';
   // loaiMau fixed to PR (du an)
   _fillDNTTCongtyList();
@@ -14849,6 +14902,8 @@ async function saveDNTTForm(draftOnly){
     })),
     licenseId:document.getElementById('dntt-f-licid').value||null,
     trangThai:document.getElementById('dntt-f-trangthai').value||'draft',
+    trangThaiSignOff:document.getElementById('dntt-f-signoff')?.value||'chua_trinh',
+    trangThaiTT:document.getElementById('dntt-f-trangthaitt')?.value||'chua_tt',
     createdAt: existingId ? (dnttList.find(x=>x.id===existingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
   };
 
@@ -14907,68 +14962,65 @@ function downloadDNTTById(id){
 // ══════════════ ĐNTT WORKFLOW ══════════════
 
 // Gửi duyệt (draft → submitted)
-async function submitDNTT(id){
-  const d = dnttList.find(x=>x.id===id);
-  if(!d) return;
-  if(d.trangThai !== 'draft'){
-    toast('⚠️ Phiếu này không ở trạng thái Nháp','warn'); return;
-  }
-  if(!await showConfirm(`Gửi phiếu "${d.soPhieu||d.id}" để duyệt?`,{title:'Gửi duyệt',okText:'Gửi',icon:'📤'})) return;
-  d.trangThai = 'submitted';
-  d.submittedAt = new Date().toISOString();
-  d.submittedBy = _msalAccount?.name || _msalAccount?.username || 'Người lập';
-  saveDNTT();
-  renderDNTT();
-  toast('📤 Đã gửi phiếu chờ duyệt','ok');
+// ── Sign Off actions ──────────────────────────────────────────────────────
+async function dnttSubmitSignOff(id){
+  const d=dnttList.find(x=>x.id===id); if(!d) return;
+  if(!await showConfirm(`Trình phiếu "${d.soPhieu||d.id}" lên Sign Off?`,{title:'Trình Sign Off',okText:'Trình',icon:'📤'})) return;
+  d.trangThaiSignOff='cho_duyet';
+  d.signoffSubmittedAt=new Date().toISOString();
+  d.signoffSubmittedBy=_msalAccount?.name||_msalAccount?.username||'';
+  saveDNTT(); msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e)); renderDNTT();
+  toast('📤 Đã trình Sign Off — đang chờ duyệt','ok');
+}
+async function dnttApproveSignOff(id){
+  const d=dnttList.find(x=>x.id===id); if(!d) return;
+  if(!await showConfirm(`Sign Off đã duyệt phiếu "${d.soPhieu||d.id}"?`,{title:'Sign Off duyệt',okText:'Xác nhận',icon:'✅'})) return;
+  d.trangThaiSignOff='da_duyet';
+  d.signoffApprovedAt=new Date().toISOString();
+  saveDNTT(); msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e)); renderDNTT();
+  toast('✅ Sign Off đã duyệt — có thể nộp hồ sơ kế toán','ok');
+}
+async function dnttRejectSignOff(id){
+  const d=dnttList.find(x=>x.id===id); if(!d) return;
+  if(!await showConfirm(`Sign Off từ chối phiếu "${d.soPhieu||d.id}"?`,{title:'Từ chối',okText:'Xác nhận',danger:true,icon:'❌'})) return;
+  d.trangThaiSignOff='tu_choi';
+  d.signoffRejectedAt=new Date().toISOString();
+  saveDNTT(); msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e)); renderDNTT();
+  toast('❌ Phiếu bị từ chối — chỉnh sửa và trình lại','warn');
+}
+async function dnttResubmitSignOff(id){
+  const d=dnttList.find(x=>x.id===id); if(!d) return;
+  if(!await showConfirm(`Trình lại phiếu "${d.soPhieu||d.id}" lên Sign Off?`,{title:'Trình lại',okText:'Trình lại',icon:'🔄'})) return;
+  d.trangThaiSignOff='cho_duyet';
+  d.signoffSubmittedAt=new Date().toISOString();
+  saveDNTT(); msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e)); renderDNTT();
+  toast('📤 Đã trình lại Sign Off','ok');
 }
 
-// Duyệt phiếu (submitted → approved)
-function approveDNTT(id){
-  const d = dnttList.find(x=>x.id===id);
-  if(!d) return;
-  if(d.trangThai !== 'submitted'){
-    toast('⚠️ Phiếu chưa được gửi duyệt','warn'); return;
-  }
-  const approver = _msalAccount?.name || _msalAccount?.username || '';
-  const approverInput = prompt(
-    `Duyệt phiếu "${d.soPhieu||d.id}"?\n\nNhập tên người duyệt:`,
-    approver
-  );
-  if(approverInput === null) return; // cancelled
-  d.trangThai = 'approved';
-  d.approvedAt = new Date().toISOString();
-  d.approvedBy = approverInput || approver || 'Người duyệt';
-  saveDNTT();
-  renderDNTT();
-  toast(`✅ Đã duyệt phiếu — Người duyệt: ${d.approvedBy}`,'ok');
+// ── Thanh toán actions ─────────────────────────────────────────────────────
+async function dnttSubmitKeToan(id){
+  const d=dnttList.find(x=>x.id===id); if(!d) return;
+  if(d.trangThaiSignOff!=='da_duyet'){ toast('⚠️ Sign Off chưa duyệt','warn'); return; }
+  if(!await showConfirm(`Đã nộp hồ sơ kế toán cho phiếu "${d.soPhieu||d.id}"?`,{title:'Nộp kế toán',okText:'Đã nộp',icon:'📁'})) return;
+  d.trangThaiTT='cho_tt';
+  d.ketoanSubmittedAt=new Date().toISOString();
+  saveDNTT(); msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e)); renderDNTT();
+  toast('📁 Đã nộp hồ sơ — đang chờ kế toán thanh toán','ok');
+}
+async function dnttMarkPaid(id){
+  const d=dnttList.find(x=>x.id===id); if(!d) return;
+  if(!await showConfirm(`Xác nhận kế toán đã thanh toán phiếu "${d.soPhieu||d.id}"?`,{title:'Đã thanh toán',okText:'Xác nhận',icon:'💰'})) return;
+  d.trangThaiTT='da_tt';
+  d.paidAt=new Date().toISOString();
+  saveDNTT(); msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e)); renderDNTT();
+  toast('💳 Đã thanh toán','ok');
 }
 
-// Đánh dấu đã thanh toán (approved → paid)
-async function markWaitingDNTT(id){
-  const d = dnttList.find(x=>x.id===id);
-  if(!d) return;
-  if(d.trangThai !== 'approved'){ toast('⚠️ Phiếu chưa được duyệt','warn'); return; }
-  if(!await showConfirm(`Chuyển phiếu "${d.soPhieu||d.id}" sang Chờ thanh toán?`,{title:'Chờ thanh toán',okText:'Xác nhận',icon:'⏳'})) return;
-  d.trangThai = 'waiting_payment';
-  d.waitingAt = new Date().toISOString();
-  saveDNTT();
-  msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e));
-  renderDNTT();
-  toast('⏳ Đã chuyển sang Chờ thanh toán','ok');
-}
-
-async function markPaidDNTT(id){
-  const d = dnttList.find(x=>x.id===id);
-  if(!d) return;
-  if(!['approved','waiting_payment'].includes(d.trangThai)){ toast('⚠️ Trạng thái không hợp lệ','warn'); return; }
-  if(!await showConfirm(`Đánh dấu phiếu "${d.soPhieu||d.id}" là Đã thanh toán?`,{title:'Xác nhận thanh toán',okText:'Đã thanh toán',icon:'💰'})) return;
-  d.trangThai = 'paid';
-  d.paidAt = new Date().toISOString();
-  saveDNTT();
-  msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e));
-  renderDNTT();
-  toast('💳 Đã đánh dấu thanh toán','ok');
-}
+// backward compat
+async function submitDNTT(id){ return dnttSubmitSignOff(id); }
+function approveDNTT(id){ return dnttApproveSignOff(id); }
+async function markWaitingDNTT(id){ return dnttSubmitKeToan(id); }
+async function markPaidDNTT(id){ return dnttMarkPaid(id); }
 
 // ══════════════ ĐNTT PRINT ══════════════
 
@@ -15286,7 +15338,8 @@ async function exportDNTTListExcel(){
     d.soPhieu||'', d.ngayLap||'', d.congTy||'', d.phongBan||'',
     d.ncc||'', d.noidung||'',
     d.soTien||'', d.tienTe||'VND',
-    {draft:'Nháp',submitted:'Đã gửi',approved:'Đã duyệt',waiting_payment:'Chờ TT',paid:'Đã TT'}[d.trangThai]||'',
+    ({chua_trinh:'Chưa trình',cho_duyet:'Chờ duyệt',da_duyet:'Đã duyệt',tu_choi:'Từ chối'}[d.trangThaiSignOff]||'')
+      + ' / ' + ({chua_tt:'',cho_tt:'Chờ KT',da_tt:'Đã TT'}[d.trangThaiTT]||''),
     dnttLoaiLabel(d.loaiMau), d.ghichu||''
   ]));
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -15320,8 +15373,10 @@ const _DNTT_SP_FIELDS = [
   { name:'HinhThuc',    type:'Text'   },
   { name:'GhiChu',      type:'Note'   },
   { name:'LicenseId',   type:'Text'   },
-  { name:'TrangThai',   type:'Text'   },
-  { name:'LocalId',     type:'Text'   },  // lưu id local để map ngược
+  { name:'TrangThaiSignOff', type:'Text' },  // chua_trinh|cho_duyet|da_duyet|tu_choi
+  { name:'TrangThaiTT',      type:'Text' },  // chua_tt|cho_tt|da_tt
+  { name:'TrangThai',        type:'Text' },  // giữ lại cho backward compat
+  { name:'LocalId',          type:'Text' },
 ];
 
 // Chuyển record local → SP item body
@@ -15349,8 +15404,10 @@ function dnttToSpItem(rec){
     HinhThuc:    rec.hinhThuc|| 'CK',
     GhiChu:      rec.ghichu  || '',
     LicenseId:   rec.licenseId||'',
-    TrangThai:   rec.trangThai||'draft',
-    LocalId:     rec.id      || '',
+    TrangThaiSignOff: rec.trangThaiSignOff||'chua_trinh',
+    TrangThaiTT:      rec.trangThaiTT||'chua_tt',
+    TrangThai:        rec.trangThai||'draft',  // backward compat
+    LocalId:          rec.id      || '',
   };
 }
 
@@ -15382,8 +15439,10 @@ function spItemToDntt(item){
     hinhThuc:    item.HinhThuc || 'CK',
     ghichu:      item.GhiChu   || '',
     licenseId:   item.LicenseId|| null,
-    trangThai:   item.TrangThai|| 'draft',
-    createdAt:   item.Created  || new Date().toISOString(),
+    trangThaiSignOff: item.TrangThaiSignOff || 'chua_trinh',
+    trangThaiTT:      item.TrangThaiTT      || 'chua_tt',
+    trangThai:        item.TrangThai        || 'draft',  // backward compat
+    createdAt:        item.Created          || new Date().toISOString(),
   };
 }
 
