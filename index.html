@@ -9930,34 +9930,21 @@ async function spProcEnsureItem(procId){
   const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
   const siteUrl  = MSAL_CONFIG.spSite;
 
-  // Bước 1: Kiểm tra list tồn tại, lấy EntityTypeName
-  let entityTypeName = null;
+  // Bước 1: Kiểm tra list tồn tại
   try{
-    const listInfo = await msalSpReq(
-      `${siteUrl}/_api/web/lists/getbytitle('${listName}')?$select=ListItemEntityTypeFullName`
-    );
-    entityTypeName = listInfo?.d?.ListItemEntityTypeFullName
-                  || listInfo?.ListItemEntityTypeFullName
-                  || null;
+    await msalSpReq(`${siteUrl}/_api/web/lists/getbytitle('${listName}')?$select=Id`);
   }catch(e){
     // List chưa tồn tại → thử tạo mới
     try{
       await msalSpReq(`${siteUrl}/_api/web/lists`, {
         method: 'POST',
         body: JSON.stringify({
-          __metadata: { type:'SP.List' },
           Title: listName,
           BaseTemplate: 100,
-          Description: 'Danh sách mua sắm QLTS'
+          Description: 'Danh sach mua sam QLTS'
         })
       });
-      // Lấy lại EntityTypeName sau khi tạo
-      const listInfo2 = await msalSpReq(
-        `${siteUrl}/_api/web/lists/getbytitle('${listName}')?$select=ListItemEntityTypeFullName`
-      );
-      entityTypeName = listInfo2?.d?.ListItemEntityTypeFullName
-                    || listInfo2?.ListItemEntityTypeFullName
-                    || null;
+      // List tạo xong, tiếp tục tạo item bên dưới
     }catch(createErr){
       const msg = createErr.message || '';
       const isPermErr = msg.includes('403') || msg.includes('Access') || msg.includes('permission') || msg.includes('Forbidden');
@@ -9972,11 +9959,10 @@ async function spProcEnsureItem(procId){
 
   // Bước 2: Tạo item trong list
   try{
-    const itemType = entityTypeName || `SP.Data.${listName.replace(/_/g,'')}ListItem`;
     const itemUrl  = `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items`;
     const res = await msalSpReq(itemUrl, {
       method: 'POST',
-      body: JSON.stringify({ __metadata:{ type: itemType }, Title: p.tieuDe || procId })
+      body: JSON.stringify({ Title: p.tieuDe || procId })
     });
     const newSpId = res?.d?.ID || res?.ID;
     if(newSpId){
