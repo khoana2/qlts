@@ -14600,7 +14600,7 @@ function renderRepairs(){
           ${(()=>{
             const linked = dnttList.find(d=>d.repairRef?.assetId===assetId && d.repairRef?.repairTs===rec.ts);
             if(linked){
-              const ttColor = linked.trangThaiTT==='da_tt' ? '#059669' : linked.trangThaiTT==='cho_tt' ? '#B45309' : '#64748B';
+              const ttColor = linked.trangThaiTT==='da_tt' ? '#15803D' : linked.trangThaiTT==='cho_tt' ? '#92400E' : '#64748B';
               const ttLabel = linked.trangThaiTT==='da_tt' ? '💳 Đã TT' : linked.trangThaiTT==='cho_tt' ? '⏳ Chờ KT' : '📋 Chờ duyệt';
               return `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;color:${ttColor};border-color:${ttColor};" title="Xem ĐNTT liên kết: ${linked.soPhieu||linked.id}" onclick="switchTab('dntt')">${ttLabel} ĐNTT</button>`;
             }
@@ -14963,8 +14963,8 @@ function dnttTTBadge(s, signOff){
   if(signOff === 'tu_choi') return '';
   const map = {
     chua_tt: '<span style="background:#F1F5F9;color:#64748B;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">— Chưa TT</span>',
-    cho_tt:  '<span style="background:#FFF9C4;color:#B45309;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏳ Chờ kế toán</span>',
-    da_tt:   '<span style="background:#FFF7ED;color:#EA580C;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">💳 Đã TT</span>',
+    cho_tt:  '<span style="background:#FEF3C7;color:#92400E;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏳ Chờ kế toán</span>',
+    da_tt:   '<span style="background:#DCFCE7;color:#15803D;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">💳 Đã TT</span>',
   };
   return map[s||'chua_tt'] || '';
 }
