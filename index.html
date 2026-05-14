@@ -19401,6 +19401,42 @@ tr:nth-child(even) td{background:#f8fafc;}
   };
 
 
+  // ── Tab open: wire file input + dropzone (chỉ setup 1 lần) ──────────────
+  let _eventsWired = false;
+  window.fujiOnTabOpen = function(){
+    if(_eventsWired) return;
+    _eventsWired = true;
+
+    // File input change
+    const inp = document.getElementById('fuji-file-raw');
+    if(inp){
+      inp.addEventListener('change', function(){
+        if(this.files && this.files.length) _importCSV(this.files);
+        this.value = '';
+      });
+    }
+
+    // Dropzone drag & drop
+    const dz = document.getElementById('fuji-dropzone');
+    if(dz){
+      dz.addEventListener('dragover', e => {
+        e.preventDefault();
+        dz.classList.add('drag');
+      });
+      dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+      dz.addEventListener('drop', e => {
+        e.preventDefault();
+        dz.classList.remove('drag');
+        const files = e.dataTransfer?.files;
+        if(files && files.length) _importCSV(files);
+      });
+      dz.addEventListener('click', () => {
+        const fi = document.getElementById('fuji-file-raw');
+        if(fi) fi.click();
+      });
+    }
+  };
+
 })(); // end Fuji IIFE
 
 </script>
