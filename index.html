@@ -9923,39 +9923,71 @@ async function openRepairAttachments(assetId, repairIdx){
 // Tự động tạo SP item nếu chưa có, lưu spId vào localStorage proc record
 async function spProcEnsureItem(procId){
   const idx = procList.findIndex(x => x.id === procId);
-  if(idx < 0) return null;
+  if(idx < 0) return { spId: null, err: 'Không tìm thấy phiếu' };
   const p = procList[idx];
-  if(p.spId) return p.spId;
-  // Tạo SP item mới
+  if(p.spId) return { spId: p.spId, err: null };
+
+  const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
+  const siteUrl  = MSAL_CONFIG.spSite;
+
+  // Bước 1: Kiểm tra list tồn tại, lấy EntityTypeName
+  let entityTypeName = null;
   try{
-    const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
-    const siteUrl  = MSAL_CONFIG.spSite;
-    // Đảm bảo list tồn tại (nếu chưa có tự tạo)
+    const listInfo = await msalSpReq(
+      `${siteUrl}/_api/web/lists/getbytitle('${listName}')?$select=ListItemEntityTypeFullName`
+    );
+    entityTypeName = listInfo?.d?.ListItemEntityTypeFullName
+                  || listInfo?.ListItemEntityTypeFullName
+                  || null;
+  }catch(e){
+    // List chưa tồn tại → thử tạo mới
     try{
-      await msalSpReq(`${siteUrl}/_api/web/lists/getbytitle('${listName}')`);
-    }catch(e){
-      // List chưa tồn tại → tạo mới
       await msalSpReq(`${siteUrl}/_api/web/lists`, {
-        method:'POST',
-        body: JSON.stringify({ __metadata:{type:'SP.List'}, Title:listName, BaseTemplate:100, Description:'Danh sách mua sắm QLTS' })
+        method: 'POST',
+        body: JSON.stringify({
+          __metadata: { type:'SP.List' },
+          Title: listName,
+          BaseTemplate: 100,
+          Description: 'Danh sách mua sắm QLTS'
+        })
       });
+      // Lấy lại EntityTypeName sau khi tạo
+      const listInfo2 = await msalSpReq(
+        `${siteUrl}/_api/web/lists/getbytitle('${listName}')?$select=ListItemEntityTypeFullName`
+      );
+      entityTypeName = listInfo2?.d?.ListItemEntityTypeFullName
+                    || listInfo2?.ListItemEntityTypeFullName
+                    || null;
+    }catch(createErr){
+      const msg = createErr.message || '';
+      const isPermErr = msg.includes('403') || msg.includes('Access') || msg.includes('permission') || msg.includes('Forbidden');
+      return {
+        spId: null,
+        err: isPermErr
+          ? `List "${listName}" chưa tồn tại trên SharePoint và bạn không có quyền tạo list mới.\nLiên hệ admin SharePoint để tạo list này.`
+          : `Không thể tạo list SharePoint: ${msg}`
+      };
     }
-    const itemUrl = `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items`;
-    const body = {
-      __metadata: { type:`SP.Data.${listName.replace(/_/g,'')}ListItem` },
-      Title: p.tieuDe || procId,
-    };
-    const res = await msalSpReq(itemUrl, { method:'POST', body: JSON.stringify(body) });
+  }
+
+  // Bước 2: Tạo item trong list
+  try{
+    const itemType = entityTypeName || `SP.Data.${listName.replace(/_/g,'')}ListItem`;
+    const itemUrl  = `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items`;
+    const res = await msalSpReq(itemUrl, {
+      method: 'POST',
+      body: JSON.stringify({ __metadata:{ type: itemType }, Title: p.tieuDe || procId })
+    });
     const newSpId = res?.d?.ID || res?.ID;
     if(newSpId){
       procList[idx] = { ...procList[idx], spId: newSpId };
       saveProc();
-      return newSpId;
+      return { spId: newSpId, err: null };
     }
-    return null;
+    return { spId: null, err: 'SP không trả về ID cho item mới.' };
   }catch(e){
     console.warn('[Proc-SP] Không thể tạo SP item:', e.message);
-    return null;
+    return { spId: null, err: e.message };
   }
 }
 
@@ -9986,11 +10018,14 @@ async function openProcAttachments(procId){
 
   let spId = p.spId;
   if(!spId){
-    spId = await spProcEnsureItem(procId);
+    const result = await spProcEnsureItem(procId);
+    spId = result.spId;
     if(!spId){
+      const errMsg = result.err || 'Lỗi không xác định';
       body.innerHTML = `<div style="text-align:center;padding:32px 16px;">
         <i class="ph ph-warning-circle" style="font-size:28px;color:var(--red);"></i>
-        <p style="font-size:13px;color:var(--muted);margin-top:10px;">Không thể tạo bản ghi SharePoint.<br>Hãy kiểm tra quyền truy cập SP.</p>
+        <p style="font-size:13px;font-weight:600;color:var(--text);margin-top:10px;">Không thể tạo bản ghi SharePoint</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-line;">${esc(errMsg)}</p>
       </div>`;
       return;
     }
