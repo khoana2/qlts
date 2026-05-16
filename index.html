@@ -5395,7 +5395,7 @@ const MSAL_CONFIG = {
   spFujiReportCache:  'Fuji_ReportCache',           // list lưu toàn bộ dữ liệu báo cáo (JSON)
   // spFujiUserMap đã bỏ — mapping lấy trực tiếp từ HubIT/Employees và cache localStorage
   redirectUri: window.location.origin + window.location.pathname,  // tự động
-  scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Manage', 'Mail.Send', 'User.Read', 'User.ReadBasic.All'],
+  scopes:   ['https://ttgvncom.sharepoint.com/AllSites.Manage', 'Mail.Send', 'User.Read', 'User.ReadBasic.All', 'GroupMember.Read.All'],
 };
 // ─── Phân quyền theo Azure AD Group ─────────────────────────────────────────
 // Muốn thêm công ty con mới: thêm 1 dòng vào COMPANY_GROUP_MAP và COMPANY_LICENSE_MAP
@@ -5863,6 +5863,32 @@ async function switchCompanyContext(groupKey){
   applyRoleUI();
 }
 
+// Pre-warm tất cả Graph tokens trong 1 lần duy nhất → tránh nhiều popup liên tiếp
+// Gọi 1 lần ngay sau login, trước detectUserCompany và các Graph calls khác
+let _graphPreWarmed = false;
+async function _preWarmGraphTokens(){
+  if(_graphPreWarmed || !_msalApp || !_msalAccount) return;
+  _graphPreWarmed = true;
+  const graphScopes = [
+    'GroupMember.Read.All',
+    'User.Read',
+    'User.ReadBasic.All',
+  ];
+  try{
+    await _msalApp.acquireTokenSilent({ scopes: graphScopes, account: _msalAccount });
+    console.log('[MSAL] Graph tokens pre-warmed silently ✅');
+  }catch(e){
+    // Lần đầu chưa có token → 1 popup duy nhất cho tất cả Graph scopes
+    try{
+      await _msalApp.acquireTokenPopup({ scopes: graphScopes, account: _msalAccount });
+      console.log('[MSAL] Graph tokens pre-warmed via popup ✅');
+    }catch(e2){
+      console.warn('[MSAL] Pre-warm graph tokens failed (bỏ qua):', e2.message);
+      _graphPreWarmed = false; // cho phép thử lại lần sau
+    }
+  }
+}
+
 let _msalSpLoadLock       = false;
 let _msalRedirectHandled  = false; // true khi msalInit đã gọi msalSpLoad() qua redirect
 async function msalSpLoad(){
@@ -5877,6 +5903,8 @@ async function msalSpLoad(){
     msalSetBar('⟳ Đang tải từ SharePoint…','s-busy');
   } else {
     msalSetBar('⟳ Đang kiểm tra quyền truy cập…','s-busy');
+    // Pre-warm tất cả Graph tokens TRƯỚC — chỉ 1 popup nếu cần
+    await _preWarmGraphTokens();
     // Detect group → set đúng SP list trước khi load
     await detectUserCompany();
     msalSetBar('⟳ Đang tải từ SharePoint…','s-busy');
