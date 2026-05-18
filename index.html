@@ -90,6 +90,20 @@
 /* ── Spec chips ── */
 
 /* ── Dashboard ── */
+/* Dashboard header row */
+.dash-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.dash-hdr-left{display:flex;flex-direction:column;}
+.dash-hdr-title{font-size:18px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px;}
+.dash-hdr-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.dash-filters-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+/* KPI icon wrap with colored background */
+.kpi-icon-wrap{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:10px;flex-shrink:0;}
+/* Chart card accent border */
+.chart-card.accent-blue{border-top:3px solid #6366F1;}
+.chart-card.accent-green{border-top:3px solid #10B981;}
+.chart-card.accent-sky{border-top:3px solid #0EA5E9;}
+.chart-card.accent-orange{border-top:3px solid #F97316;}
+.chart-card.accent-red{border-top:3px solid #EF4444;}
 
 /* ── Confirm modal ── */
 
@@ -2887,91 +2901,102 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   <!-- ══════════════ DASHBOARD VIEW ══════════════ -->
   <div class="view active" id="view-dashboard">
 
-    <!-- Dashboard filters -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-      <span style="font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;"><i class="ph ph-funnel"></i> Đang xem:</span>
-      <select class="fsel" id="dash-company" onchange="updateDashboard()" style="min-width:180px;">
-        <option value="">🏬 Tất cả công ty</option>
-      </select>
-      <span id="dash-company-locked" style="display:none;
-        font-size:13px;font-weight:700;color:var(--accent);
-        background:#EFF6FF;border:1.5px solid #BFDBFE;
-        padding:5px 14px;border-radius:999px;">
-      </span>
-      <select class="fsel" id="dash-status" onchange="updateDashboard()" style="min-width:170px;">
-        <option value="">📋 Tất cả trạng thái</option>
-        <option value="active">✅ Đang sử dụng</option>
-        <option value="stock">📦 Lưu kho</option>
-        <option value="broken">🔧 Hỏng / Sửa chữa</option>
-        <option value="retired">🗑️ Thanh lý</option>
-      </select>
-      <span id="dash-company-label" style="font-size:11px;color:var(--accent2);"></span>
+    <!-- Dashboard header -->
+    <div class="dash-hdr">
+      <div class="dash-hdr-left">
+        <div class="dash-hdr-title"><i class="ph ph-chart-bar" style="color:var(--accent);"></i> Tổng quan tài sản</div>
+        <div class="dash-hdr-sub" id="dash-date-label"></div>
+      </div>
+      <div class="dash-filters-row">
+        <span style="font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;"><i class="ph ph-funnel"></i> Lọc:</span>
+        <select class="fsel" id="dash-company" onchange="updateDashboard()" style="min-width:180px;">
+          <option value="">🏬 Tất cả công ty</option>
+        </select>
+        <span id="dash-company-locked" style="display:none;font-size:13px;font-weight:700;color:var(--accent);background:#EFF6FF;border:1.5px solid #BFDBFE;padding:5px 14px;border-radius:999px;"></span>
+        <select class="fsel" id="dash-status" onchange="updateDashboard()" style="min-width:170px;">
+          <option value="">📋 Tất cả trạng thái</option>
+          <option value="active">✅ Đang sử dụng</option>
+          <option value="stock">📦 Lưu kho</option>
+          <option value="broken">🔧 Hỏng / Sửa chữa</option>
+          <option value="retired">🗑️ Thanh lý</option>
+        </select>
+        <span id="dash-company-label" style="font-size:11px;color:var(--accent2);"></span>
+      </div>
     </div>
 
+    <!-- KPI cards -->
     <div class="kpi-grid">
       <div class="kpi blue clickable" onclick="goKpiFilter('')" title="Xem tất cả tài sản">
-        <div class="kpi-icon"><i class="ph ph-package"></i></div>
+        <div class="kpi-icon-wrap" style="background:rgba(14,165,233,.13);color:#0EA5E9;"><i class="ph ph-package"></i></div>
         <div class="kpi-val" id="kpi-total">0</div>
         <div class="kpi-label">Tổng tài sản</div>
         <div class="kpi-sub">Tất cả thiết bị</div>
       </div>
       <div class="kpi green clickable" onclick="goKpiFilter('dung')" title="Lọc tài sản đang sử dụng">
-        <div class="kpi-icon"><i class="ph ph-check-circle"></i></div>
+        <div class="kpi-icon-wrap" style="background:rgba(16,185,129,.13);color:#10B981;"><i class="ph ph-check-circle"></i></div>
         <div class="kpi-val" id="kpi-active">0</div>
         <div class="kpi-label">Đang sử dụng</div>
         <div class="kpi-sub" id="kpi-active-pct">—</div>
       </div>
       <div class="kpi yellow clickable" onclick="goKpiFilter('kho')" title="Lọc tài sản lưu kho">
-        <div class="kpi-icon"><i class="ph ph-warehouse"></i></div>
+        <div class="kpi-icon-wrap" style="background:rgba(59,130,246,.13);color:#3B82F6;"><i class="ph ph-warehouse"></i></div>
         <div class="kpi-val" id="kpi-stock">0</div>
         <div class="kpi-label">Lưu kho</div>
         <div class="kpi-sub">Chưa phân bổ</div>
       </div>
       <div class="kpi red clickable" onclick="goKpiFilter('hong')" title="Lọc tài sản hỏng chưa gửi sửa">
-        <div class="kpi-icon"><i class="ph ph-warning-circle"></i></div>
+        <div class="kpi-icon-wrap" style="background:rgba(239,68,68,.13);color:#EF4444;"><i class="ph ph-warning-circle"></i></div>
         <div class="kpi-val" id="kpi-hong">0</div>
         <div class="kpi-label">Hỏng</div>
         <div class="kpi-sub">Chưa gửi sửa</div>
       </div>
       <div class="kpi yellow clickable" onclick="goKpiFilter('sua')" title="Lọc tài sản đang gửi sửa chữa">
-        <div class="kpi-icon"><i class="ph ph-wrench"></i></div>
+        <div class="kpi-icon-wrap" style="background:rgba(249,115,22,.13);color:#F97316;"><i class="ph ph-wrench"></i></div>
         <div class="kpi-val" id="kpi-sua">0</div>
         <div class="kpi-label">Đang sửa</div>
         <div class="kpi-sub" id="kpi-sua-sub">Có phiếu SC</div>
       </div>
-      <div class="kpi clickable" onclick="goKpiFilter('')" title="Xem tất cả tài sản">
-        <div class="kpi-icon"><i class="ph ph-buildings"></i></div>
+      <div class="kpi clickable" onclick="goKpiFilter('')" title="Số phòng ban đang có tài sản">
+        <div class="kpi-icon-wrap" style="background:rgba(99,102,241,.13);color:#6366F1;"><i class="ph ph-buildings"></i></div>
         <div class="kpi-val" id="kpi-dept">0</div>
         <div class="kpi-label">Phòng ban</div>
         <div class="kpi-sub">Đang sử dụng</div>
       </div>
       <div class="kpi yellow clickable" onclick="goKpiFilter('warranty')" title="Lọc tài sản sắp/đã hết bảo hành">
-        <div class="kpi-icon"><i class="ph ph-shield-warning"></i></div>
+        <div class="kpi-icon-wrap" style="background:rgba(245,158,11,.13);color:#D97706;"><i class="ph ph-shield-warning"></i></div>
         <div class="kpi-val" id="kpi-warranty">0</div>
-        <div class="kpi-label">Sắp hết BH</div>
+        <div class="kpi-label">Cảnh báo BH</div>
         <div class="kpi-sub" id="kpi-warranty-sub">Trong 90 ngày</div>
       </div>
     </div>
 
+    <!-- Charts 3-col -->
     <div class="dash-grid">
-      <div class="chart-card">
-        <div class="chart-head"><i class="ph ph-chart-bar"></i> Theo loại tài sản</div>
+      <div class="chart-card accent-blue">
+        <div class="chart-head">
+          <span style="display:flex;align-items:center;gap:7px;"><i class="ph ph-chart-donut" style="color:#6366F1;font-size:15px;"></i><span id="chart-type-head-title">Theo loại tài sản</span></span>
+        </div>
         <div class="chart-body"><canvas id="chart-type"></canvas></div>
       </div>
-      <div class="chart-card">
-        <div class="chart-head"><i class="ph ph-chart-donut"></i> Trạng thái</div>
+      <div class="chart-card accent-green">
+        <div class="chart-head">
+          <span style="display:flex;align-items:center;gap:7px;"><i class="ph ph-chart-bar" style="color:#10B981;font-size:15px;"></i> Trạng thái</span>
+        </div>
         <div class="chart-body"><canvas id="chart-status"></canvas></div>
       </div>
-      <div class="chart-card">
-        <div class="chart-head"><i class="ph ph-buildings"></i> Top phòng ban (số lượng)</div>
+      <div class="chart-card accent-sky">
+        <div class="chart-head">
+          <span style="display:flex;align-items:center;gap:7px;"><i class="ph ph-buildings" style="color:#0EA5E9;font-size:15px;"></i> Top phòng ban</span>
+        </div>
         <div class="chart-body"><canvas id="chart-dept"></canvas></div>
       </div>
     </div>
 
+    <!-- Bảo hành -->
     <div style="margin-top:12px;">
-      <div class="chart-card">
+      <div class="chart-card accent-orange">
         <div class="chart-head" style="justify-content:space-between;">
-          <span><i class="ph ph-timer"></i> Thiết bị sắp hết bảo hành</span>
+          <span style="display:flex;align-items:center;gap:7px;"><i class="ph ph-timer" style="color:#F97316;font-size:15px;"></i> Thiết bị sắp hết bảo hành</span>
           <span id="warranty-count-badge" style="font-size:11px;color:var(--orange);font-weight:600;"></span>
         </div>
         <div class="chart-body" style="padding:8px 10px;height:220px;overflow-y:auto;">
@@ -2982,9 +3007,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 
     <!-- Widget cảnh báo hết hạn Contract/License -->
     <div style="margin-top:12px;" id="dash-expiry-wrap">
-      <div class="chart-card">
+      <div class="chart-card accent-red">
         <div class="chart-head" style="justify-content:space-between;">
-          <span><i class="ph ph-warning-circle" style="color:#ef4444;"></i> Cảnh báo hết hạn Contract / License</span>
+          <span style="display:flex;align-items:center;gap:7px;"><i class="ph ph-warning-circle" style="color:#ef4444;font-size:15px;"></i> Cảnh báo hết hạn Contract / License</span>
           <div style="display:flex;align-items:center;gap:8px;">
             <span id="dash-expiry-count" style="font-size:11px;color:#ef4444;font-weight:700;"></span>
             <button class="btn btn-icon-ph" style="padding:2px 8px;font-size:11px;" onclick="switchTab('license')">
@@ -8468,9 +8493,20 @@ function updateDashboard(){
     chartTitle = '📊 Loại tài sản — Thanh lý';
   }
 
-  // Cập nhật title chart
-  const chartHead = document.querySelector('#view-dashboard .chart-head');
-  if(chartHead) chartHead.textContent = chartTitle + (chartSrc.length !== _assets.length ? ` (${chartSrc.length})` : '');
+  // Cập nhật date label
+  const dateEl = document.getElementById('dash-date-label');
+  if(dateEl && !dateEl.dataset.set){
+    const d=new Date();
+    dateEl.textContent = d.toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    dateEl.dataset.set='1';
+  }
+
+  // Cập nhật title chart type
+  const chartTypeTitle = document.getElementById('chart-type-head-title');
+  if(chartTypeTitle){
+    const label = chartTitle.replace(/^📊\s*/,'');
+    chartTypeTitle.textContent = label + (chartSrc.length !== _assets.length ? ` (${chartSrc.length})` : '');
+  }
 
   buildCharts(_assets, chartSrc);
   buildDeptChart(_assets);
@@ -20088,7 +20124,7 @@ function _hcqtGetFormModal(){
   const g2=(a,b)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">${a}${b}</div>`;
   const sec=(t)=>`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted,#64748b);border-bottom:1px solid var(--border,#e2e8f0);padding-bottom:4px;margin:14px 0 10px">${t}</div>`;
   const loai=['Nội thất văn phòng','Thiết bị điện lạnh','Thiết bị văn phòng','Thiết bị nghe nhìn','Phương tiện','Thiết bị bếp Pantry','Thiết bị an ninh','Công cụ Dụng cụ','Khác'].map(o=>`<option>${o}</option>`).join('');
-  const nhom=['Bàn làm việc','Ghế văn phòng','Tủ Kệ Giá','Bàn ghế phòng họp','Sofa Ghế tiếp khách','Điều hòa','Máy in Máy photocopy','Điện thoại cố định','Máy chiếu Màn chiếu','Tivi Màn hình','Xe ô tô','Máy pha cà phê Nước','Tủ lạnh Lò vi sóng','Camera an ninh','Khóa tủ Thẻ từ','Rèm Mành Thảm','Cây cảnh Vật trang trí','Khác'].map(o=>`<option>${o}</option>`).join('');
+  const nhom=['Bàn làm việc','Ghế văn phòng','Tủ Kệ Giá','Bàn ghế phòng họp','Sofa Ghế tiếp khách','Điều hòa','Máy in Máy photocopy','Điện thoại cố định','Máy chiếu Màn chiếu','Tivi Màn hình','Xe ô tô','Máy pha cà phê Nước','Tủ lạnh Lò vi sóng','Camera an ninh','Khóa tủ Thẻ từ','Rèm Mành Thảm','Cây cảnh Vật trang trí','Dụng cụ vệ sinh','Khác'].map(o=>`<option>${o}</option>`).join('');
   const tinh=['Đang sử dụng','Chờ cấp phát','Đang sửa chữa','Tạm ngừng sử dụng','Đề xuất thanh lý','Đã thanh lý','Mất Thất lạc'].map(o=>`<option>${o}</option>`).join('');
   const hao=['Tốt Như mới','Khá Còn dùng tốt','Trung bình Có dấu hiệu cũ','Xuống cấp Cần bảo trì','Hỏng Cần sửa hoặc thanh lý'].map(o=>`<option>${o}</option>`).join('');
   const nguon=['Mua mới','Điều chuyển nội bộ','Tài trợ Biếu tặng','Thanh lý nội bộ'].map(o=>`<option>${o}</option>`).join('');
