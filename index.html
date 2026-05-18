@@ -544,7 +544,7 @@ tbody tr.row-thanh-ly td{opacity:.5;}
 #assets-table.hide-serial th[data-col="serial"],#assets-table.hide-serial td[data-col="serial"]{display:none;}
 #assets-table.hide-boPhan th[data-col="boPhan"],#assets-table.hide-boPhan td[data-col="boPhan"]{display:none;}
 #assets-table.hide-spec th[data-col="spec"],#assets-table.hide-spec td[data-col="spec"]{display:none;}
-#assets-table.hide-depreciation th[data-col="depreciation"],#assets-table.hide-depreciation td[data-col="depreciation"]{display:none;}
+/* depreciation column removed */
 
 /* ── Sticky first columns ──
    background: var(--row-bg) đọc từ CSS variable định nghĩa trên <tr>
@@ -1322,8 +1322,7 @@ tr:hover .eye-btn{
   /* Ẩn bớt cột ít quan trọng trên mobile */
   [data-col="cpu"],
   [data-col="ram"],
-  [data-col="ssd"],
-  [data-col="depreciation"]{ display:none; }
+  [data-col="ssd"]{ display:none; }
   .cb-col{ width:32px;min-width:32px; }
 
   /* ── Filters ── */
@@ -2400,7 +2399,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 @media (max-width:768px){
   #assets-table [data-col="serial"] { display:none; }
   #assets-table [data-col="spec"] { max-width:120px; }
-  #assets-table [data-col="depreciation"] { display:none; }
 }
 
 /* ── Asset table → card view trên mobile ── */
@@ -3112,7 +3110,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <label><input type="checkbox" checked onchange="toggleCol('serial',this.checked)"> Serial</label>
             <label><input type="checkbox" checked onchange="toggleCol('boPhan',this.checked)"> Bộ phận</label>
             <label><input type="checkbox" checked onchange="toggleCol('spec',this.checked)"> Cấu hình (CPU/RAM/SSD)</label>
-            <label><input type="checkbox" onchange="toggleCol('depreciation',this.checked)"> <i class="ph ph-chart-line-down" style="font-size:12px;color:var(--muted);"></i> Khấu hao</label>
           </div>
         </div>
       </div>
@@ -3129,7 +3126,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
               <th class="sortable" onclick="sortBy('nguoiDung')">Người dùng <span class="sort-icon">↕</span></th>
               <th data-col="boPhan" class="sortable" onclick="sortBy('boPhan')">Bộ phận <span class="sort-icon">↕</span></th>
               <th data-col="spec" style="min-width:160px;">Cấu hình</th>
-              <th data-col="depreciation" class="sortable" onclick="sortBy('_deprRemaining')" style="min-width:108px;">Còn lại <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortBy('tinhTrang')">Trạng thái <span class="sort-icon">↕</span></th>
               <th style="width:120px;"></th>
             </tr>
@@ -4245,7 +4241,11 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 
         <div class="field">
           <label>Ngày mua</label>
-          <input type="date" id="f-ngayMua"/>
+          <input type="date" id="f-ngayMua" oninput="autoCalcNgayHetBH()"/>
+        </div>
+        <div class="field">
+          <label>Thời hạn BH (tháng)</label>
+          <input type="number" id="f-thoiHanBH" min="0" placeholder="VD: 12" oninput="autoCalcNgayHetBH()"/>
         </div>
         <div class="field">
           <label>Ngày hết bảo hành</label>
@@ -6827,6 +6827,9 @@ const SP_DISPLAY_MAP = {
   'Kết quả':          'ketQua',
   'Sửa chữa':         'suaChua',
   'Ngày mua':         'ngayMua',
+  'Thời hạn BH':      'thoiHanBH',
+  'Thoi han BH':      'thoiHanBH',
+  'ThoiHanBH':        'thoiHanBH',
   'Ngày hết bảo hành':'ngayHetBH',
   'Ngày hết BH':      'ngayHetBH',
   'Lịch sử bàn giao': '__transferJSON',
@@ -6847,12 +6850,6 @@ const COMPANIES = [
   'TTG','MAB','R02','LCB','MKLT','MKTG','LM','LHB','195DBP','Senspa'
 ];
 
-// ─── Khấu hao tài sản: số năm sử dụng theo loại ──────────────────────────────
-const DEPRECIATION_YEARS = {
-  'Laptop':3, 'PC Desktop':5, 'Smartphone':2, 'Tablet':3, 'IPAD':3,
-  'Màn hình':5, 'Bàn phím':3, 'Chuột':3, 'Tai nghe':2,
-  'Dock Station':3, 'Phụ kiện khác':3, '_default':3,
-};
 
 const DEPTS = [
   'Công Nghệ Thông Tin','Ngân Quỹ','Kế Toán','Marketing',
@@ -7087,6 +7084,7 @@ function spItemToAsset(item){
     tinhTrang: get('Tình trạng') || '',
     ngaySuKien,
     ngayMua,
+    thoiHanBH: get('Thời hạn BH') || get('ThoiHanBH') ? Number(get('Thời hạn BH') || get('ThoiHanBH')) : '',
     ngayHetBH,
     trangThaiHienTai: get('Sự kiện') || '',
     noiDung:   get('Nội dung') || '',
@@ -7174,6 +7172,8 @@ function assetToSpItem(a){
     }
   };
   if(a.ngayMua)  setDate(['Ngày mua'], a.ngayMua + 'T00:00:00Z');
+  if(a.thoiHanBH !== '' && a.thoiHanBH !== undefined && a.thoiHanBH !== null)
+    set('ThoiHanBH', Number(a.thoiHanBH));
   if(a.ngayHetBH) setDate(['Ngày hết BH','Ngày hết bảo hành'], a.ngayHetBH + 'T00:00:00Z');
   // Lịch sử bàn giao — lưu dạng text dễ đọc lên SP (không phải JSON)
   // VD: "09/03/2026: Nguyễn A → Trần B\n10/03/2026: Trần B → Lê C"
@@ -8748,13 +8748,6 @@ function applyFilters(keepPage = false){
 
   if(sortCol){
     filtered.sort((a,b)=>{
-      // Special numeric sort for depreciation column
-      if(sortCol === '_deprRemaining'){
-        const da = calcDepreciation(a); const db = calcDepreciation(b);
-        const av = da ? da.remaining : -1;
-        const bv = db ? db.remaining : -1;
-        return (av - bv) * sortDir;
-      }
       const av = (a[sortCol]||'').toLowerCase();
       const bv = (b[sortCol]||'').toLowerCase();
       return av < bv ? -sortDir : av > bv ? sortDir : 0;
@@ -8870,13 +8863,6 @@ function renderTable(){
           ${a.gpu?`<div style="color:var(--muted);font-size:11px;margin-top:1px;"><b style="color:var(--text)">GPU</b> ${esc(a.gpu)}</div>`:''}
           ${(!a.cpu&&!a.ram&&!a.ssd&&!a.gpu)?'<span style="color:var(--muted);">—</span>':''}
         </td>
-        <td data-col="depreciation" style="text-align:right;">${(()=>{
-          const d = calcDepreciation(a);
-          if(!d) return '<span style="color:var(--muted);font-size:11px;">—</span>';
-          if(d.fullyDepreciated) return '<span style="font-size:11px;color:var(--muted);">Đã KH</span>';
-          return `<span style="font-weight:600;color:#059669;font-size:11.5px;">${d.remaining.toLocaleString('vi-VN')}₫</span>`
-            + `<br><span style="font-size:10px;color:var(--muted);">${d.pct}% · ${d.years}năm</span>`;
-        })()}</td>
         <td ondblclick="event.stopPropagation()">
           <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
             <div style="display:flex;align-items:center;gap:4px;">
@@ -9015,6 +9001,7 @@ async function bulkExportSelected(){
     'SSD':           a.ssd||'',
     'Trạng thái':    a.tinhTrang||'',
     'Ngày mua':      a.ngayMua||'',
+    'Thời hạn BH':   a.thoiHanBH!=null&&a.thoiHanBH!==''?a.thoiHanBH:'',
     'Ngày hết BH':   a.ngayHetBH||'',
     'Nguồn TB':      a.nguonThietBi||'',
     'Giá trị':       a.giaTri!=null?a.giaTri:'',
@@ -9123,7 +9110,7 @@ applyFilters = function(keepPage=false){
 
 // ─── COLUMN TOGGLE ────────────────────────────────────────────────────────────
 const COL_STORAGE_KEY = 'qlts_hidden_cols';
-let hiddenCols = JSON.parse(localStorage.getItem(COL_STORAGE_KEY)||'["depreciation"]');
+let hiddenCols = JSON.parse(localStorage.getItem(COL_STORAGE_KEY)||'[]');
 
 function toggleColMenu(){
   document.getElementById('col-toggle-menu').classList.toggle('open');
@@ -9188,23 +9175,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
 
 
-// ─── Tính khấu hao đường thẳng ───────────────────────────────────────────────
-function calcDepreciation(asset){
-  const orig = parseFloat(asset.giaTri);
-  if(!orig || !asset.ngayMua) return null;
-  const years    = DEPRECIATION_YEARS[asset.tenTaiSan] ?? DEPRECIATION_YEARS._default;
-  const lifeDays = years * 365;
-  const elapsed  = Math.round((Date.now() - new Date(asset.ngayMua)) / 86400000);
-  const ratio    = Math.max(0, 1 - elapsed / lifeDays);
-  return {
-    orig,
-    remaining:         Math.round(orig * ratio),
-    ratio,
-    pct:               Math.round(ratio * 100),
-    years,
-    fullyDepreciated:  ratio === 0,
-  };
-}
 
 // ─── Sticky columns: tính left theo chiều rộng thực tế sau render ────────────
 function _setStickyOffsets(){
@@ -9646,7 +9616,7 @@ async function resyncDetail(){
 function clearForm(){
   ['f-id','f-maTaiSan','f-model','f-serial','f-nguoiDung','f-email',
    'f-cpu','f-ram','f-ssd','f-gpu','f-manHinh','f-noiDung','f-ketQua','f-suaChua','f-ghiChu',
-   'f-ngaySuKien','f-ngayMua','f-ngayHetBH','f-congTy','f-ncc','f-congTyNguon','f-soHoaDon','f-giaTri']
+   'f-ngaySuKien','f-ngayMua','f-thoiHanBH','f-ngayHetBH','f-congTy','f-ncc','f-congTyNguon','f-soHoaDon','f-giaTri']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const ws = document.getElementById('f-warranty-status');
   if(ws){ ws.textContent='—'; ws.style.color='var(--muted)'; }
@@ -9677,6 +9647,8 @@ function fillForm(a){
   document.getElementById('f-ghiChu').value = a.ghiChu||'';
   document.getElementById('f-ngaySuKien').value = a.ngaySuKien||'';
   document.getElementById('f-ngayMua').value = a.ngayMua||'';
+  const thEl = document.getElementById('f-thoiHanBH');
+  if(thEl) thEl.value = a.thoiHanBH||'';
   document.getElementById('f-ngayHetBH').value = a.ngayHetBH||'';
   // Hiện trạng thái bảo hành
   const ws = document.getElementById('f-warranty-status');
@@ -9759,6 +9731,7 @@ async function saveAsset(){
     tinhTrang:document.getElementById('f-tinhTrang').value,
     ngaySuKien:document.getElementById('f-ngaySuKien').value,
     ngayMua:document.getElementById('f-ngayMua').value,
+    thoiHanBH: document.getElementById('f-thoiHanBH')?.value ? Number(document.getElementById('f-thoiHanBH').value) : '',
     ngayHetBH:document.getElementById('f-ngayHetBH').value,
     trangThaiHienTai:document.getElementById('f-trangThaiHienTai').value,
     noiDung:document.getElementById('f-noiDung').value,
@@ -10606,28 +10579,17 @@ function viewDetail(id){
       ${dc('Trạng thái', statusPill(a.tinhTrang))}
       ${dc('Model', esc(a.model||'—'))}
       ${dc('Serial', `<code>${esc(a.serial||'—')}</code>`)}
-      ${dc('Hết bảo hành', bhDetailHtml)}
       ${dc('Người sử dụng', esc(a.nguoiDung||'—'))}
       ${dc('Email', a.email?`<a class="mail-link" href="mailto:${esc(a.email)}">${esc(a.email)}</a>`:'—')}
       ${dc('Bộ phận', esc(a.boPhan||'—'))}
       ${dc('Ngày sự kiện', a.ngaySuKien?new Date(a.ngaySuKien).toLocaleDateString('vi-VN'):'—')}
       ${dc('Ngày mua', a.ngayMua?new Date(a.ngayMua).toLocaleDateString('vi-VN'):'—')}
+      ${a.thoiHanBH ? dc('Thời hạn BH', `<span style="font-weight:600;color:#0369a1;">${a.thoiHanBH} tháng</span>`) : ''}
+      ${dc('Hết bảo hành', bhDetailHtml)}
       ${a.nguonThietBi ? dc('Nguồn thiết bị', `<span style="background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:600;">${esc(a.nguonThietBi)}</span>`) : ''}
       ${a.congTyNguon  ? dc('Công ty nguồn', esc(a.congTyNguon)) : ''}
       ${a.soHoaDon     ? dc('Số hóa đơn / PO', `<code style="color:var(--accent2)">${esc(a.soHoaDon)}</code>`) : ''}
       ${(a.giaTri !== '' && a.giaTri !== undefined && a.giaTri !== null) ? dc('Giá trị gốc', `<span style="font-weight:700;color:#059669;">${Number(a.giaTri).toLocaleString('vi-VN')} ₫</span>`) : ''}
-      ${(()=>{
-        const d = calcDepreciation(a);
-        if(!d) return '';
-        const bar = `<div style="height:5px;border-radius:3px;background:#E2E8F0;margin-top:5px;overflow:hidden;">
-          <div style="height:100%;width:${d.pct}%;background:${d.pct>50?'#10B981':d.pct>20?'#F59E0B':'#EF4444'};border-radius:3px;transition:width .4s;"></div>
-        </div>`;
-        const label = d.fullyDepreciated
-          ? `<span style="color:var(--muted);">Đã khấu hao hết (${d.years} năm)</span>`
-          : `<span style="font-weight:700;color:#059669;">${d.remaining.toLocaleString('vi-VN')} ₫</span>
-             <span style="font-size:11px;color:var(--muted);margin-left:6px;">(còn ${d.pct}% — ${d.years} năm KH)</span>`;
-        return dc('Giá trị còn lại', label + bar);
-      })()}
     </div>
     ${specs?`<div class="detail-specs">${specs}</div>`:''}
     <div class="detail-grid" style="margin-top:10px;">
@@ -11019,10 +10981,10 @@ async function exportExcel(){
   await _ensureXLSX();
   const rows = [
     ['Mã tài sản','Tên tài sản','Model','Serial','Người đang sử dụng','Email',
-     'Bộ Phận','CPU','RAM','SSD','GPU','Màn hình','Tình trạng','Ngày mua','Ngày hết bảo hành',
+     'Bộ Phận','CPU','RAM','SSD','GPU','Màn hình','Tình trạng','Ngày mua','Thời hạn BH (tháng)','Ngày hết bảo hành',
      'Ngày Sự kiện','Trạng thái hiện tại','Nội dung chi tiết','Kết quả/Tình trạng sau sự kiện','Sửa chữa','Ghi chú'],
     ...assets.map(a=>[a.maTaiSan,a.tenTaiSan,a.model,a.serial,a.nguoiDung,a.email,
-      a.boPhan,a.cpu,a.ram,a.ssd,a.gpu,a.manHinh,a.tinhTrang,a.ngayMua,a.ngayHetBH,
+      a.boPhan,a.cpu,a.ram,a.ssd,a.gpu,a.manHinh,a.tinhTrang,a.ngayMua,a.thoiHanBH||'',a.ngayHetBH,
       a.ngaySuKien,a.trangThaiHienTai,a.noiDung,a.ketQua,a.suaChua,a.ghiChu])
   ];
   const wb = XLSX.utils.book_new();
@@ -12265,6 +12227,21 @@ function updateWarrantyStatus(val){
   else if(diffD<=30){ ws.textContent='🔴 Còn '+diffD+' ngày!'; ws.style.color='var(--orange)'; }
   else if(diffD<=90){ ws.textContent='⚠️ Còn '+diffD+' ngày'; ws.style.color='var(--yellow)'; }
   else { ws.textContent='✅ Còn '+diffD+' ngày'; ws.style.color='var(--green)'; }
+}
+
+// Auto tính Ngày hết BH từ Ngày mua + Thời hạn BH
+function autoCalcNgayHetBH(){
+  const ngayMua  = document.getElementById('f-ngayMua')?.value;
+  const soThang  = parseInt(document.getElementById('f-thoiHanBH')?.value||'');
+  if(!ngayMua || !soThang || soThang<=0) return;
+  const d = new Date(ngayMua);
+  d.setMonth(d.getMonth() + soThang);
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth()+1).padStart(2,'0');
+  const dd   = String(d.getDate()).padStart(2,'0');
+  const result = `${yyyy}-${mm}-${dd}`;
+  const el = document.getElementById('f-ngayHetBH');
+  if(el){ el.value = result; updateWarrantyStatus(result); }
 }
 
 // ═══════════════════════ GỬI EMAIL XÁC NHẬN BÀN GIAO (confirm.html) ═══════
@@ -19546,7 +19523,6 @@ function openAiChat(){
 let _aiLastAssetId = null;
 
 function _buildAssetContext(a){
-  const dep = calcDepreciation(a);
   const repList = repairs[a.id]||[];
   const totalRepCost = repList.reduce((s,r)=>s+(parseFloat(r.chiPhi||0)||0),0);
   const ageYears = a.ngayMua
@@ -19564,8 +19540,7 @@ THÔNG TIN THIẾT BỊ:
 - Người dùng: ${a.nguoiDung||'?'} | Phòng ban: ${a.boPhan||'?'}
 - Tuổi: ${ageYears} năm (mua ${a.ngayMua||'?'})
 - Giá trị ban đầu: ${a.giaTri?Number(a.giaTri).toLocaleString('vi-VN')+' VNĐ':'?'}
-- Khấu hao còn lại: ${dep?dep.pct+'% ('+dep.remaining.toLocaleString('vi-VN')+' VNĐ)':'?'}
-- Bảo hành: ${a.baoHanhDen||'Đã hết/không rõ'}
+- Thời hạn BH: ${a.thoiHanBH?a.thoiHanBH+' tháng':'?'} | Hết BH: ${a.ngayHetBH||'Đã hết/không rõ'}
 - Tình trạng: ${a.tinhTrang||'?'}
 - Ghi chú: ${a.ghiChu||'Không có'}
 
