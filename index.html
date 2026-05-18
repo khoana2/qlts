@@ -20406,8 +20406,7 @@ document.addEventListener('keydown',e=>{
   </div>
 </div>
 
-</body>
-</html><!-- HCQT Extended Features — Features 1-8 -->
+<!-- HCQT Extended Features — Features 1-8 -->
 <script>
 // ═══════════════════════════════════════════════════════════════════
 // STATE
@@ -20961,45 +20960,21 @@ hcqtRenderMaintenance = function(){
       ${btAlerts.slice(0,5).map(d=>`
         <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #fef3c7">
           <div style="flex:1;font-size:13px">${hcqtEsc(d.Title)} <span style="font-size:11px;color:var(--muted)">${hcqtEsc(d.MaTaiSan)}</span></div>
-          <span style="font-size:12px;font-weight:700;color:${d._btDays<0?'#ef4444':'#f59e0b'}">${d._btDays<0?'Quá hạn '+Math.abs(d._btDays)+'ngày':'Còn '+d._btDays+' ngày'}</span>
-          <button class="btn btn-icon-ph" style="padding:2px 8px;font-size:11px" onclick="hcqtOpenPanel(${d._id})">Xem</button>
+          <span style="font-size:12px;font-weight:700;color:${d._btDays<0?'#ef4444':'#92400e'}">${d._btDays<0?'Quá hạn '+Math.abs(d._btDays)+' ngày':d._btDays+' ngày'}</span>
         </div>`).join('')}
-      ${btAlerts.length>5?`<div style="font-size:12px;color:var(--muted);margin-top:6px">+${btAlerts.length-5} tài sản khác...</div>`:''}
     </div>`:''}
     ${bhAlerts.length?`
-    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:14px">
-      <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:8px">ℹ️ ${bhAlerts.length} tài sản sắp hết bảo hành (90 ngày)</div>
+    <div style="background:#fff0f0;border:1px solid #fca5a5;border-radius:12px;padding:14px">
+      <div style="font-size:13px;font-weight:700;color:#991b1b;margin-bottom:8px">🛡️ ${bhAlerts.length} tài sản sắp hết bảo hành</div>
       ${bhAlerts.slice(0,5).map(d=>`
-        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #e0f2fe">
-          <div style="flex:1;font-size:13px">${hcqtEsc(d.Title)}</div>
-          <span style="font-size:12px;color:#0369a1">Còn ${d._expDays} ngày</span>
-          <button class="btn btn-icon-ph" style="padding:2px 8px;font-size:11px" onclick="hcqtOpenPanel(${d._id})">Xem</button>
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #fecaca">
+          <div style="flex:1;font-size:13px">${hcqtEsc(d.Title)} <span style="font-size:11px;color:var(--muted)">${hcqtEsc(d.MaTaiSan)}</span></div>
+          <span style="font-size:12px;font-weight:700;color:#991b1b">${d._expDays} ngày</span>
         </div>`).join('')}
     </div>`:''}
   </div>`;
   el.insertAdjacentHTML('afterbegin', alertHtml);
 };
-
-// ═══════════════════════════════════════════════════════════════════
-// DASHBOARD PATCH — thêm KPI cards mới
-// ═══════════════════════════════════════════════════════════════════
-const _origHcqtRenderDashboard = hcqtRenderDashboard;
-hcqtRenderDashboard = function(){
-  _origHcqtRenderDashboard();
-  const el=document.getElementById('hcqt-view-dashboard'); if(!el) return;
-  const btAlerts=_hcqtMaintenanceAlerts(30);
-  const bhAlerts=_hcqtBaoHanhAlerts(90);
-  const capPhatActive=_hcqtCapPhat.filter(c=>c.trangThai==='Đang cấp phát').length;
-  const dot=_hcqtKiemKeDot;
-  const daDone=dot.items?Object.keys(dot.items).length:0;
-  if(!btAlerts.length&&!bhAlerts.length&&!capPhatActive) return;
-  const alertRow=`
-  <div style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
-    ${btAlerts.length?`<div style="background:#fffbf0;border:1px solid #fcd34d;border-radius:10px;padding:12px;cursor:pointer" onclick="hcqtSubNav('maintenance')">
-      <div style="font-size:11px;color:#92400e;font-weight:600">🔧 Cần bảo trì</div>
-      <div style="font-size:22px;font-weight:800;color:#d97706">${btAlerts.length}</div>
-      <div style="font-size:11px;color:var(--muted)">trong 30 ngày tới</div>
-    </div>`:''}
-    ${bhAlerts.length?`<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px;cursor:pointer" onclick="hcqtSubNav('maintenance')">
-      <div style="font-size:11px;color:#0369a1;font-weight:600">📅 Sắp hết BH</div>
-      <div style="fo              
+</script>
+</body>
+</html>
