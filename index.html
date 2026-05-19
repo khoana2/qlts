@@ -3694,6 +3694,16 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <datalist id="rep-asset-datalist"></datalist>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field">
+            <label>👤 Người dùng khi hỏng</label>
+            <input type="text" id="rep-nguoi-hong" class="finput" placeholder="Tự điền từ tài sản…"/>
+          </div>
+          <div class="field">
+            <label>✅ Bàn giao sau sửa chữa</label>
+            <input type="text" id="rep-nguoi-nhan" class="finput" placeholder="Người nhận lại sau SC…"/>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="field"><label>Ngày gửi sửa <span style="color:red">*</span></label>
             <input type="date" id="rep-date-in" class="finput"/>
           </div>
@@ -14134,9 +14144,11 @@ const _REPAIR_SP_FIELDS = [
   {name:'NgayGuiSua',        type:4}, // DateTime
   {name:'DuKienNhan',        type:4},
   {name:'NgayNhanLai',       type:4},
-  {name:'LinhKienThayThe',   type:2}, // ← mới
-  {name:'BaoHanhLinhKien',   type:2}, // ← mới
-  {name:'NgayHetBHLinhKien', type:4}, // ← mới
+  {name:'LinhKienThayThe',      type:2}, // ← mới
+  {name:'BaoHanhLinhKien',      type:2}, // ← mới
+  {name:'NgayHetBHLinhKien',    type:4}, // ← mới
+  {name:'NguoiSuDungKhiHong',   type:2}, // Người dùng máy lúc hỏng
+  {name:'NguoiBanGiaoSau',      type:2}, // Người nhận lại sau SC
 ];
 
 async function spRepairEnsureFields(){
@@ -14172,9 +14184,11 @@ function _repToSpBody(assetId, rec){
   if(rec.dateIn)            body.NgayGuiSua      = rec.dateIn + 'T00:00:00Z';
   if(rec.estimatedReturn)   body.DuKienNhan      = rec.estimatedReturn + 'T00:00:00Z';
   if(rec.dateOut)           body.NgayNhanLai     = rec.dateOut + 'T00:00:00Z';
-  if(rec.parts)             body.LinhKienThayThe = rec.parts;
-  if(rec.bhPeriod)          body.BaoHanhLinhKien = rec.bhPeriod;
-  if(rec.bhExpiry)          body.NgayHetBHLinhKien = rec.bhExpiry + 'T00:00:00Z';
+  if(rec.parts)                    body.LinhKienThayThe      = rec.parts;
+  if(rec.bhPeriod)                 body.BaoHanhLinhKien      = rec.bhPeriod;
+  if(rec.bhExpiry)                 body.NgayHetBHLinhKien    = rec.bhExpiry + 'T00:00:00Z';
+  if(rec.nguoiSuDungKhiHong)       body.NguoiSuDungKhiHong   = rec.nguoiSuDungKhiHong;
+  if(rec.nguoiBanGiaoSau)          body.NguoiBanGiaoSau      = rec.nguoiBanGiaoSau;
   return body;
 }
 
@@ -14190,10 +14204,12 @@ function _spToRec(item){
     dateIn:          item.NgayGuiSua    ? item.NgayGuiSua.substring(0,10)  : '',
     estimatedReturn: item.DuKienNhan    ? item.DuKienNhan.substring(0,10)  : '',
     dateOut:         item.NgayNhanLai   ? item.NgayNhanLai.substring(0,10) : '',
-    parts:           item.LinhKienThayThe || '',
-    bhPeriod:        item.BaoHanhLinhKien  || '',
-    bhExpiry:        item.NgayHetBHLinhKien ? item.NgayHetBHLinhKien.substring(0,10) : '',
-    ts:              item.Modified      || '',
+    parts:                item.LinhKienThayThe    || '',
+    bhPeriod:             item.BaoHanhLinhKien    || '',
+    bhExpiry:             item.NgayHetBHLinhKien  ? item.NgayHetBHLinhKien.substring(0,10) : '',
+    nguoiSuDungKhiHong:   item.NguoiSuDungKhiHong || '',
+    nguoiBanGiaoSau:      item.NguoiBanGiaoSau    || '',
+    ts:                   item.Modified            || '',
   };
 }
 
@@ -14342,6 +14358,10 @@ function openRepairNew(assetId){
 
   const nameEl = document.getElementById('rep-asset-name');
   const idEl   = document.getElementById('rep-asset-id');
+  const _nguoiHongEl = document.getElementById('rep-nguoi-hong');
+  const _nguoiNhanEl = document.getElementById('rep-nguoi-nhan');
+  if(_nguoiHongEl) _nguoiHongEl.value = '';
+  if(_nguoiNhanEl) _nguoiNhanEl.value = '';
   if(assetId){
     const a = assets.find(x=>x.id===assetId);
     if(!a){ toast('Không tìm thấy tài sản','warn'); return; }
@@ -14351,6 +14371,8 @@ function openRepairNew(assetId){
     nameEl.style.background = '#F8FAFC';
     nameEl.removeAttribute('list');
     nameEl.oninput   = null;
+    // Tự điền người đang dùng máy lúc gửi sửa
+    if(_nguoiHongEl && a.nguoiDung) _nguoiHongEl.value = a.nguoiDung;
   } else {
     // No pre-selected asset — populate datalist and allow typing/searching
     const dl = document.getElementById('rep-asset-datalist');
@@ -14395,6 +14417,8 @@ function openRepairEdit(assetId, idx){
   const _partsEl=document.getElementById('rep-parts'); if(_partsEl) _partsEl.value=rec.parts||'';
   const _bhPEl=document.getElementById('rep-bh-period'); if(_bhPEl) _bhPEl.value=rec.bhPeriod||'';
   const _bhEEl=document.getElementById('rep-bh-expiry'); if(_bhEEl) _bhEEl.value=rec.bhExpiry||'';
+  const _nhEl=document.getElementById('rep-nguoi-hong'); if(_nhEl) _nhEl.value=rec.nguoiSuDungKhiHong||'';
+  const _nnEl=document.getElementById('rep-nguoi-nhan'); if(_nnEl) _nnEl.value=rec.nguoiBanGiaoSau||'';
   document.getElementById('modal-repair').style.display='flex';
 }
 
@@ -14438,6 +14462,8 @@ function saveRepairRecord(){
     parts:    document.getElementById('rep-parts')?.value.trim()||'',
     bhPeriod: document.getElementById('rep-bh-period')?.value||'',
     bhExpiry: document.getElementById('rep-bh-expiry')?.value||'',
+    nguoiSuDungKhiHong: document.getElementById('rep-nguoi-hong')?.value.trim()||'',
+    nguoiBanGiaoSau:    document.getElementById('rep-nguoi-nhan')?.value.trim()||'',
     ts: new Date().toISOString(),
   };
   if(!repairs[assetId]) repairs[assetId] = [];
@@ -14619,7 +14645,10 @@ function renderRepairs(){
             </a>
             ${assetName?`<span style="color:var(--muted);font-size:12px;">— ${esc(assetName)}</span>`:''}
           </div>
-          ${asset?.nguoiDung?`<div class="rep-card-user"><i class="ph ph-user" style="font-size:11px;"></i> ${esc(asset.nguoiDung)}${asset.boPhan?` · ${esc(asset.boPhan)}`:''}</div>`:''}
+          ${rec.nguoiSuDungKhiHong
+            ?`<div class="rep-card-user"><i class="ph ph-user" style="font-size:11px;color:#EA580C;"></i> <span style="color:#EA580C;font-weight:600;">Khi hỏng:</span> ${esc(rec.nguoiSuDungKhiHong)}${asset?.boPhan?` · <span style="color:var(--muted)">${esc(asset.boPhan)}</span>`:''}</div>`
+            :(asset?.nguoiDung?`<div class="rep-card-user" title="Người dùng hiện tại (có thể đã thay đổi)"><i class="ph ph-user" style="font-size:11px;"></i> ${esc(asset.nguoiDung)}${asset.boPhan?` · ${esc(asset.boPhan)}`:''}</div>`:'')}
+          ${rec.nguoiBanGiaoSau?`<div class="rep-card-user"><i class="ph ph-check-circle" style="font-size:11px;color:#059669;"></i> <span style="color:#059669;font-weight:600;">Bàn giao:</span> ${esc(rec.nguoiBanGiaoSau)}</div>`:''}
           ${rec.issue?`<div class="rep-card-issue">${esc(rec.issue)}</div>`:''}
           ${rec.notes?`<div class="rep-card-notes">"${esc(rec.notes)}"</div>`:''}
           <div class="rep-card-footer">
