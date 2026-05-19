@@ -19541,6 +19541,13 @@ tr:nth-child(even) td{background:#f8fafc;}
     if(_eventsWired) return;
     _eventsWired = true;
 
+    // Nút Reset — xoá toàn bộ dữ liệu đang xem, quay về màn hình trống
+    const resetBtn = document.getElementById('fuji-btn-reset');
+    if(resetBtn) resetBtn.addEventListener('click', function(){
+      if(!_raw.length && !_agg.length){ toast('Chưa có dữ liệu để reset','warn'); return; }
+      window._fujiCacheClear();
+    });
+
     // File input change
     const inp = document.getElementById('fuji-file-raw');
     if(inp){
