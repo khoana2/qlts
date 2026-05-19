@@ -14604,9 +14604,14 @@ function renderRepairs(){
   const costPending = all.filter(r=>r.status==='dang_sua').reduce((s,r)=>s+(r.chiPhi||0),0);
   const costEl = document.getElementById('rep-kpi-cost');
   if(costEl) costEl.innerHTML =
-    `<span style="color:#7C3AED;font-weight:800;font-size:15px;">${fmtCost(costDone)}</span>`+
-    `<span style="display:block;font-size:10px;color:var(--muted);margin-top:1px;">Đã chi · `+
-    `<span style="color:#EA580C;">${costPending?fmtCost(costPending)+' chờ':'không có phiếu chờ'}</span></span>`;
+    `<div style="display:flex;align-items:baseline;gap:5px;margin-bottom:3px;">
+       <span style="font-size:10px;color:var(--muted);white-space:nowrap;">✅ Đã chi:</span>
+       <span style="color:#7C3AED;font-weight:800;font-size:15px;white-space:nowrap;">${fmtCost(costDone)}</span>
+     </div>`+
+    `<div style="display:flex;align-items:baseline;gap:5px;">
+       <span style="font-size:10px;color:var(--muted);white-space:nowrap;">🔧 Đang chờ:</span>
+       <span style="font-size:13px;font-weight:700;color:${costPending?'#EA580C':'var(--muted)'};white-space:nowrap;">${costPending?fmtCost(costPending):'—'}</span>
+     </div>`;
 
   // BH linh kiện alert banner
   const _today = new Date(); _today.setHours(0,0,0,0);
