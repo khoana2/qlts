@@ -3651,8 +3651,8 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div class="rep-kpi-card rep-kpi-purple">
         <div class="rep-kpi-icon-wrap"><i class="ph ph-currency-circle-dollar"></i></div>
         <div style="min-width:0;">
-          <div class="rep-kpi-num-sm" id="rep-kpi-cost">0 ₫</div>
-          <div class="rep-kpi-lbl">Tổng chi phí SC</div>
+          <div id="rep-kpi-cost" style="line-height:1.3;">—</div>
+          <div class="rep-kpi-lbl">Chi phí sửa chữa</div>
         </div>
       </div>
     </div>
@@ -14594,14 +14594,19 @@ function renderRepairs(){
   document.getElementById('rep-kpi-active').textContent  = all.filter(r=>r.status==='dang_sua').length;
   document.getElementById('rep-kpi-done').textContent    = all.filter(r=>r.status==='hoan_thanh').length;
   document.getElementById('rep-kpi-failed').textContent  = all.filter(r=>r.status==='khong_sua_duoc').length;
-  const totalCost = all.reduce((s,r)=>s+(r.chiPhi||0),0);
+  const fmtCost = n => {
+    if(!n) return '—';
+    if(n >= 1e9) return (n/1e9).toFixed(1).replace(/\.0$/,'') + ' tỷ ₫';
+    if(n >= 1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'') + ' triệu ₫';
+    return n.toLocaleString('vi-VN') + ' ₫';
+  };
+  const costDone    = all.filter(r=>r.status==='hoan_thanh').reduce((s,r)=>s+(r.chiPhi||0),0);
+  const costPending = all.filter(r=>r.status==='dang_sua').reduce((s,r)=>s+(r.chiPhi||0),0);
   const costEl = document.getElementById('rep-kpi-cost');
-  if(costEl){
-    if(totalCost >= 1e9)       costEl.textContent = (totalCost/1e9).toFixed(1).replace(/\.0$/,'') + ' tỷ ₫';
-    else if(totalCost >= 1e6)  costEl.textContent = (totalCost/1e6).toFixed(1).replace(/\.0$/,'') + ' triệu ₫';
-    else if(totalCost > 0)     costEl.textContent = totalCost.toLocaleString('vi-VN') + ' ₫';
-    else                       costEl.textContent = '—';
-  }
+  if(costEl) costEl.innerHTML =
+    `<span style="color:#7C3AED;font-weight:800;font-size:15px;">${fmtCost(costDone)}</span>`+
+    `<span style="display:block;font-size:10px;color:var(--muted);margin-top:1px;">Đã chi · `+
+    `<span style="color:#EA580C;">${costPending?fmtCost(costPending)+' chờ':'không có phiếu chờ'}</span></span>`;
 
   // BH linh kiện alert banner
   const _today = new Date(); _today.setHours(0,0,0,0);
