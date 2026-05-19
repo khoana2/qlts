@@ -14513,6 +14513,33 @@ function saveRepairRecord(){
   }
 }
 
+// ── Hoàn thành nhanh ──
+function quickCompleteRepair(assetId, idx){
+  const rec = repairs[assetId]?.[idx];
+  if(!rec) return;
+  const today = new Date().toISOString().slice(0,10);
+  rec.status  = 'hoan_thanh';
+  if(!rec.dateOut) rec.dateOut = today;
+  rec.ts = new Date().toISOString();
+  // Cập nhật tình trạng asset
+  const a = assets.find(x=>x.id===assetId);
+  if(a && a.tinhTrang==='Sửa chữa') a.tinhTrang = 'Đang dùng';
+  saveRepairs();
+  saveToStorage();
+  applyFilters();
+  renderRepairs();
+  toast('✅ Đã cập nhật hoàn thành · Ngày nhận: '+today.split('-').reverse().join('/'),'ok');
+  _updateRepairBadge();
+  // Sync SP nếu có
+  if((SP_MODE||_msalAccount) && rec.spId){
+    spRepairUpdate(rec.spId, assetId, rec);
+  } else if((SP_MODE||_msalAccount) && !rec.spId){
+    spRepairCreate(assetId, rec).then(spId=>{
+      if(spId){ repairs[assetId][idx].spId=spId; saveRepairs(); }
+    });
+  }
+}
+
 // ── Xóa phiếu ──
 function deleteRepairRecord(assetId, idx){
   const saved = repairs[assetId]?.[idx];
@@ -14699,6 +14726,7 @@ function renderRepairs(){
           </div>
         </div>
         <div class="rep-card-actions">
+          ${rec.status==='dang_sua'?`<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;background:#ECFDF5;color:#059669;border-color:#A7F3D0;font-weight:600;" onclick="quickCompleteRepair('${assetId}',${idx})" title="Đánh dấu hoàn thành, ngày nhận lại = hôm nay"><i class="ph ph-check-circle"></i> Hoàn thành</button>`:''}
           ${(()=>{
             const linked = dnttList.find(d=>d.repairRef?.assetId===assetId && d.repairRef?.repairTs===rec.ts);
             if(linked){
