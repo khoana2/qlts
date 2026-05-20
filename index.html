@@ -14570,17 +14570,11 @@ function deleteRepairRecord(assetId, idx){
 // ── Badge sidebar ──
 function _updateRepairBadge(){
   const all = Object.values(repairs).flat();
+  // Chỉ đếm phiếu đang sửa chưa xong — BH linh kiện đã có banner riêng bên trong trang
   const nActive = all.filter(r=>r.status==='dang_sua').length;
-  const today = new Date();
-  const nBhExp = all.filter(r=>r.bhExpiry && r.status==='hoan_thanh' && (() => {
-    const d = Math.ceil((new Date(r.bhExpiry)-today)/86400000);
-    return d>=0 && d<=30;
-  })()).length;
-  const nBhOver = all.filter(r=>r.bhExpiry && new Date(r.bhExpiry)<today).length;
-  const total = nActive + nBhExp + nBhOver;
   const b = document.getElementById('tab-repairs-badge');
   if(!b) return;
-  if(total>0){ b.style.display='inline-flex'; b.textContent=total; b.style.cssText+=';background:#F97316;color:#fff;'; }
+  if(nActive>0){ b.style.display='inline-flex'; b.textContent=nActive; b.style.cssText+=';background:#F97316;color:#fff;'; }
   else b.style.display='none';
 }
 
