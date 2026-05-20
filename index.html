@@ -6938,7 +6938,61 @@ function loadFromStorage(){
     if(raw) assets = JSON.parse(raw);
     const raw2 = localStorage.getItem(TRANSFER_KEY);
     if(raw2) transfers = JSON.parse(raw2);
+    // Dedup local transfers — xóa bản trùng lặp do SP merge cũ để lại
+    _dedupeLocalTransfers();
   } catch(e){ assets = []; transfers = {}; }
+}
+
+// Gọi ngay sau load localStorage, không cần đăng nhập SP
+// Giữ bản "giàu" nhất (có accessories / ghi chú / dept) khi trùng from+to+date
+function _dedupeLocalTransfers(){
+  const _tKey = r => {
+    const normTs = r.ts ? String(Math.floor(new Date(r.ts).getTime()/1000)) : '';
+    // ưu tiên so theo giây; fallback theo from|to|date
+    return normTs || `${(r.from||'').trim().toLowerCase()}|${(r.to||'').trim().toLowerCase()}|${r.date||''}`;
+  };
+  const _richness = r =>
+    (r.accessories?.length||0)*10 +
+    (r.fromDept?2:0) + (r.toDept?2:0) + (r.toEmail?2:0) +
+    (r.notes?1:0) + (r._spId?1:0);
+
+  let changed = false;
+  for(const [aid, recs] of Object.entries(transfers)){
+    if(!Array.isArray(recs) || recs.length < 2) continue;
+    const seen = new Map(); // key → best record index
+    for(let i = 0; i < recs.length; i++){
+      const k = _tKey(recs[i]);
+      if(!seen.has(k)){
+        seen.set(k, i);
+      } else {
+        // Gộp: giữ bản giàu hơn, copy trường còn thiếu sang
+        const bestIdx = seen.get(k);
+        const best    = recs[bestIdx];
+        const curr    = recs[i];
+        if(_richness(curr) > _richness(best)){
+          // curr giàu hơn → copy sang best rồi loại curr
+          if(!best.accessories?.length && curr.accessories?.length) best.accessories = curr.accessories;
+          if(!best.fromDept  && curr.fromDept)  best.fromDept  = curr.fromDept;
+          if(!best.toDept    && curr.toDept)    best.toDept    = curr.toDept;
+          if(!best.toEmail   && curr.toEmail)   best.toEmail   = curr.toEmail;
+          if(!best.notes     && curr.notes)     best.notes     = curr.notes;
+          if(!best._spId     && curr._spId)     best._spId     = curr._spId;
+        } else {
+          // best giàu hơn hoặc bằng → chỉ bổ sung _spId nếu thiếu
+          if(!best._spId && curr._spId) best._spId = curr._spId;
+          if(!best.accessories?.length && curr.accessories?.length) best.accessories = curr.accessories;
+        }
+        recs.splice(i, 1); // xóa bản trùng
+        i--;
+        changed = true;
+      }
+    }
+    transfers[aid] = recs;
+  }
+  if(changed){
+    try{ localStorage.setItem(TRANSFER_KEY, JSON.stringify(transfers)); }catch(e){}
+    console.log('[TRANSFER] _dedupeLocalTransfers: đã dọn bản ghi trùng');
+  }
 }
 function saveToStorage(){
   localStorage.setItem(STORE_KEY, JSON.stringify(assets));
@@ -14108,13 +14162,42 @@ async function msalSpLoadTransfers(){
       });
     }
     // Merge: SP là nguồn chính, nhưng giữ lại local record chưa có trên SP
+    const _normTs = ts => { try{ return Math.floor(new Date(ts).getTime()/1000); }catch(e){ return null; } };
+    // Khóa phụ: from|to|date — fallback khi ts lệch hoặc ThoiGian rỗng
+    const _tKey  = r => `${(r.from||'').trim().toLowerCase()}|${(r.to||'').trim().toLowerCase()}|${r.date||''}`;
+
     for(const [aid, spRecs] of Object.entries(loaded)){
       const localRecs = transfers[aid] || [];
-      // Normalize ts theo giây (SP cắt milliseconds: "T07:00:00.123Z" → "T07:00:00Z")
-      const _normTs = ts => { try{ return Math.floor(new Date(ts).getTime()/1000); }catch(e){ return null; } };
-      const spTs = new Set(spRecs.map(r => _normTs(r.ts)).filter(Boolean));
-      // Chỉ giữ local record nào chưa có _spId VÀ ts chưa có trong SP
-      const localOnly = localRecs.filter(r => !r._spId && r.ts && !spTs.has(_normTs(r.ts)));
+
+      // Build lookup sets từ SP
+      const spTsSet  = new Set(spRecs.map(r => _normTs(r.ts)).filter(Boolean));
+      const spKeySet = new Set(spRecs.map(_tKey));
+
+      // Enrich SP records: copy accessories + pendingConfirm từ local record khớp
+      // (accessories không được đẩy lên SP nên phải giữ từ local)
+      for(const spRec of spRecs){
+        const spTs = _normTs(spRec.ts);
+        const spK  = _tKey(spRec);
+        const matched = localRecs.find(lr =>
+          (spTs && _normTs(lr.ts) === spTs) || _tKey(lr) === spK
+        );
+        if(matched){
+          if(matched.accessories?.length) spRec.accessories  = matched.accessories;
+          if(matched.pendingConfirm)      spRec.pendingConfirm = matched.pendingConfirm;
+          // Ghi ngược _spId vào local record để lần sau merge bỏ qua đúng
+          if(!matched._spId){ matched._spId = spRec._spId; }
+        }
+      }
+
+      // Chỉ giữ local record nếu KHÔNG khớp với bất kỳ SP record nào
+      // (cả theo ts lẫn theo from+to+date)
+      const localOnly = localRecs.filter(r =>
+        !r._spId &&
+        r.ts &&
+        !spTsSet.has(_normTs(r.ts)) &&
+        !spKeySet.has(_tKey(r))
+      );
+
       const merged = [...spRecs, ...localOnly];
       merged.sort((a,b) => (a.ts||a.date||'') < (b.ts||b.date||'') ? -1 : 1);
       transfers[aid] = merged;
