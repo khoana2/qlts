@@ -6944,13 +6944,9 @@ function loadFromStorage(){
 }
 
 // Gọi ngay sau load localStorage, không cần đăng nhập SP
-// Giữ bản "giàu" nhất (có accessories / ghi chú / dept) khi trùng from+to+date
+// Chỉ dedup record có cùng ts chính xác (= trùng do SP merge bug)
+// KHÔNG dùng fallback from|to|date vì dễ xóa nhầm thu hồi, bàn giao hợp lệ
 function _dedupeLocalTransfers(){
-  const _tKey = r => {
-    const normTs = r.ts ? String(Math.floor(new Date(r.ts).getTime()/1000)) : '';
-    // ưu tiên so theo giây; fallback theo from|to|date
-    return normTs || `${(r.from||'').trim().toLowerCase()}|${(r.to||'').trim().toLowerCase()}|${r.date||''}`;
-  };
   const _richness = r =>
     (r.accessories?.length||0)*10 +
     (r.fromDept?2:0) + (r.toDept?2:0) + (r.toEmail?2:0) +
@@ -6959,30 +6955,33 @@ function _dedupeLocalTransfers(){
   let changed = false;
   for(const [aid, recs] of Object.entries(transfers)){
     if(!Array.isArray(recs) || recs.length < 2) continue;
-    const seen = new Map(); // key → best record index
+    const seen = new Map(); // ts → index of best record kept
     for(let i = 0; i < recs.length; i++){
-      const k = _tKey(recs[i]);
-      if(!seen.has(k)){
-        seen.set(k, i);
+      const r = recs[i];
+      // Chỉ xét record có ts — thu hồi/nhập thủ công không có ts → bỏ qua, giữ nguyên
+      if(!r.ts) continue;
+      // Chuẩn hoá về giây để bắt lệch ms giữa local (có ms) và SP-loaded (không ms)
+      const tsKey = String(Math.floor(new Date(r.ts).getTime()/1000));
+      if(isNaN(+tsKey)) continue; // ts không hợp lệ → bỏ qua
+      if(!seen.has(tsKey)){
+        seen.set(tsKey, i);
       } else {
-        // Gộp: giữ bản giàu hơn, copy trường còn thiếu sang
-        const bestIdx = seen.get(k);
+        const bestIdx = seen.get(tsKey);
         const best    = recs[bestIdx];
         const curr    = recs[i];
+        // Gộp: copy trường còn thiếu từ bản giàu hơn vào best, rồi xóa curr
         if(_richness(curr) > _richness(best)){
-          // curr giàu hơn → copy sang best rồi loại curr
           if(!best.accessories?.length && curr.accessories?.length) best.accessories = curr.accessories;
-          if(!best.fromDept  && curr.fromDept)  best.fromDept  = curr.fromDept;
-          if(!best.toDept    && curr.toDept)    best.toDept    = curr.toDept;
-          if(!best.toEmail   && curr.toEmail)   best.toEmail   = curr.toEmail;
-          if(!best.notes     && curr.notes)     best.notes     = curr.notes;
-          if(!best._spId     && curr._spId)     best._spId     = curr._spId;
+          if(!best.fromDept && curr.fromDept) best.fromDept = curr.fromDept;
+          if(!best.toDept   && curr.toDept)   best.toDept   = curr.toDept;
+          if(!best.toEmail  && curr.toEmail)  best.toEmail  = curr.toEmail;
+          if(!best.notes    && curr.notes)    best.notes    = curr.notes;
+          if(!best._spId    && curr._spId)    best._spId    = curr._spId;
         } else {
-          // best giàu hơn hoặc bằng → chỉ bổ sung _spId nếu thiếu
           if(!best._spId && curr._spId) best._spId = curr._spId;
           if(!best.accessories?.length && curr.accessories?.length) best.accessories = curr.accessories;
         }
-        recs.splice(i, 1); // xóa bản trùng
+        recs.splice(i, 1);
         i--;
         changed = true;
       }
