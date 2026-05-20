@@ -14189,13 +14189,14 @@ async function msalSpLoadTransfers(){
       }
 
       // Chỉ giữ local record nếu KHÔNG khớp với bất kỳ SP record nào
-      // (cả theo ts lẫn theo from+to+date)
-      const localOnly = localRecs.filter(r =>
-        !r._spId &&
-        r.ts &&
-        !spTsSet.has(_normTs(r.ts)) &&
-        !spKeySet.has(_tKey(r))
-      );
+      // Quan trọng: record KHÔNG có ts (thu hồi về kho, nhập thủ công) LUÔN được giữ lại
+      // vì chúng không bao giờ được đẩy lên SP → không thể là bản sao của SP record
+      const localOnly = localRecs.filter(r => {
+        if(r._spId) return false;          // đã sync SP → SP record sẽ cover
+        if(!r.ts)   return true;           // không có ts (thu hồi, thủ công) → luôn giữ
+        // có ts: chỉ giữ nếu chưa có trong SP (theo ts hoặc from+to+date)
+        return !spTsSet.has(_normTs(r.ts)) && !spKeySet.has(_tKey(r));
+      });
 
       const merged = [...spRecs, ...localOnly];
       merged.sort((a,b) => (a.ts||a.date||'') < (b.ts||b.date||'') ? -1 : 1);
