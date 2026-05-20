@@ -3074,6 +3074,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <select class="fsel" id="af-warranty" onchange="applyFilters()" style="min-width:200px;">
           <option value="">Tất cả</option>
           <option value="ok">✅ Còn bảo hành (&gt; 90 ngày)</option>
+          <option value="warn">⚠️ Cần chú ý BH (đã hết + sắp hết ≤ 90 ngày)</option>
           <option value="soon90">🟡 Sắp hết BH (≤ 90 ngày)</option>
           <option value="soon30">🔴 Sắp hết BH (≤ 30 ngày)</option>
           <option value="exp">❌ Đã hết bảo hành</option>
@@ -8543,7 +8544,7 @@ function updateDashboard(){
   const suaSubEl = document.getElementById('kpi-sua-sub');
   if(suaSubEl) suaSubEl.textContent = suaByRepair > 0 ? `${suaByRepair} có phiếu SC` : 'Có phiếu SC';
   document.getElementById('kpi-dept').textContent = depts;
-  document.getElementById('kpi-warranty').textContent = expiringSoon + expired;
+  document.getElementById('kpi-warranty').textContent = expiringSoon;
   document.getElementById('kpi-warranty-sub').textContent =
     expired ? `${expired} đã hết · ${expiringSoon} sắp hết` : `${expiringSoon} sắp hết trong 90 ngày`;
 
@@ -8804,10 +8805,11 @@ function applyFilters(keepPage = false){
       } else {
         if(!a.ngayHetBH) return false;
         const diffD = Math.round((new Date(a.ngayHetBH) - today) / 86400000);
-        if(afWarr === 'ok'    && !(diffD > 90))  return false;
+        if(afWarr === 'ok'    && !(diffD > 90))          return false;
+        if(afWarr === 'warn'  && !(diffD <= 90))          return false; // đã hết + sắp hết ≤90 ngày
         if(afWarr === 'soon90'&& !(diffD >= 0 && diffD <= 90)) return false;
         if(afWarr === 'soon30'&& !(diffD >= 0 && diffD <= 30)) return false;
-        if(afWarr === 'exp'   && !(diffD < 0))   return false;
+        if(afWarr === 'exp'   && !(diffD < 0))            return false;
       }
     }
 
@@ -9149,7 +9151,7 @@ function goKpiFilter(type){
       if(advRow && !advRow.classList.contains('open')) toggleAdvFilter();
       const sel = document.getElementById('af-warranty');
       if(sel){ sel.value = 'soon90'; applyFilters(); _syncAdvToggleState(); }
-      toast('🔍 Đã lọc: sắp hết bảo hành', 'ok');
+      toast('🔍 Đã lọc: sắp hết bảo hành trong 90 ngày', 'ok');
     } else {
       activeQuickFilter = type;
       ['kho','sua','hong','dung'].forEach(t=>{
