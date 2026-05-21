@@ -14726,15 +14726,22 @@ function renderRepairs(){
     const _a = assets.find(x=>x.id===_aid);
     _recs.forEach((_r,_i)=>{
       if(!_r.bhExpiry) return;
-      const _days = Math.ceil((new Date(_r.bhExpiry)-_today)/86400000);
+      // Dùng _today (midnight) để nhất quán với card render bên dưới
+      const _expDate = new Date(_r.bhExpiry); _expDate.setHours(0,0,0,0);
+      const _days = Math.round((_expDate - _today)/86400000);
       if(_days<=30) _bhAlerts.push({a:_a,r:_r,aid:_aid,days:_days});
     });
   }
+  const _nExpired = _bhAlerts.filter(x=>x.days<0).length;
+  const _nSoon    = _bhAlerts.filter(x=>x.days>=0).length;
+  const _bhTitle  = _nExpired && _nSoon ? `${_nExpired} đã hết · ${_nSoon} sắp hết bảo hành LK`
+                  : _nExpired           ? `${_nExpired} linh kiện đã hết bảo hành`
+                  :                       `${_nSoon} linh kiện sắp hết bảo hành (≤ 30 ngày)`;
   const _alertEl = document.getElementById('rep-bh-alert');
   if(_alertEl){
     if(_bhAlerts.length){
       _alertEl.innerHTML=`<div style="background:#FFF9C4;border:1px solid #FDE68A;border-radius:12px;padding:12px 16px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">⚠️ ${_bhAlerts.length} linh kiện sắp hết / đã hết bảo hành</div>
+        <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">⚠️ ${_bhTitle}</div>
         ${_bhAlerts.sort((a,b)=>a.days-b.days).map(({a,r,days})=>`
           <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #FEF3C7;font-size:12px">
             <div style="flex:1"><b>${a?esc(a.maTaiSan):''}</b> ${a?esc(a.tenTaiSan):''} — LK: <b>${esc(r.parts||'?')}</b></div>
@@ -14797,7 +14804,7 @@ function renderRepairs(){
             ${rec.chiPhi?`<span style="color:#7C3AED;font-weight:700;background:#F5F3FF;padding:2px 8px;border-radius:6px;border:1px solid #DDD6FE;"><i class="ph ph-currency-circle-dollar"></i> ${rec.chiPhi.toLocaleString('vi-VN')} ₫</span>`:''}
             ${rec.parts?`<span style="color:#7C3AED;"><i class="ph ph-wrench"></i> LK: <b>${esc(rec.parts)}</b></span>`:''}
             ${rec.bhExpiry?(()=>{
-              const now=new Date(); const exp=new Date(rec.bhExpiry); const days=Math.ceil((exp-now)/86400000);
+              const now=new Date(); now.setHours(0,0,0,0); const exp=new Date(rec.bhExpiry); exp.setHours(0,0,0,0); const days=Math.round((exp-now)/86400000);
               if(days<0) return `<span style="color:#DC2626;font-weight:600;"><i class="ph ph-shield-slash"></i> BH LK hết ${new Date(rec.bhExpiry).toLocaleDateString('vi-VN')}</span>`;
               if(days<=30) return `<span style="color:#D97706;font-weight:600;"><i class="ph ph-shield-warning"></i> BH LK còn ${days} ngày</span>`;
               return `<span style="color:#059669;"><i class="ph ph-shield-check"></i> BH LK đến ${new Date(rec.bhExpiry).toLocaleDateString('vi-VN')}</span>`;
@@ -20302,7 +20309,12 @@ function _hcqtGetFormModal(){
       ${sec('📋 Định danh')}
       ${g2(fld('Title','Tên tài sản *'),fld('MaTaiSan','Mã tài sản *'))}
       ${g2(fld('LoaiTaiSan','Loại tài sản *','select','<option value="">-- Chọn --</option>'+loai),fld('NhomTaiSan','Nhóm tài sản *','select','<option value="">-- Chọn --</option>'+nhom))}
-      ${g2(fld('HangSanXuat','Hãng / Nhà cung cấp'),fld('Model','Model / Quy cách'))}
+      ${g2(`<div style="margin-bottom:10px">
+        <label style="font-size:11px;color:var(--muted,#64748b);display:block;margin-bottom:3px">Hãng / Nhà cung cấp</label>
+        <input id="hcqt-f-HangSanXuat" type="text" list="hcqt-ncc-datalist" autocomplete="off"
+          style="width:100%;box-sizing:border-box;height:32px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:0 10px;font-size:12px;background:var(--surface,#fff)">
+        <datalist id="hcqt-ncc-datalist"></datalist>
+      </div>`,fld('Model','Model / Quy cách'))}
       ${g2(fld('SoSerial','Số serial'),g2(fld('MauSac','Màu sắc'),fld('SoLuong','Số lượng','number')))}
       ${sec('📍 Vị trí')}
       ${g2(fld('ToaNha','Tòa nhà *'),g2(fld('Tang','Tầng *'),fld('PhongViTri','Phòng / Vị trí *')))}
@@ -20363,6 +20375,7 @@ function hcqtOpenAdd(){
   document.getElementById('hcqt-form-title').textContent='Thêm tài sản mới';
   _HCQT_FIELDS.forEach(f=>{ const el=document.getElementById('hcqt-f-'+f); if(el) el.value=f==='SoLuong'?'1':''; });
   _hcqtImgClear(true);
+  _hcqtNccPopulate();
   m.style.display='flex';
 }
 
@@ -20379,11 +20392,20 @@ function hcqtOpenEdit(id){
   });
   _hcqtImgClear(true);
   if(d.AnhUrl){ _hcqtAnhPreview(d.AnhUrl); }
+  _hcqtNccPopulate();
   m.style.display='flex';
 }
 
 function hcqtCloseForm(){
   const m=document.getElementById('hcqt-form-modal'); if(m) m.style.display='none';
+}
+
+// ── Danh sách Hãng / NCC — lấy thẳng từ _hcqtData (đã load từ SP) ───────────
+function _hcqtNccPopulate(){
+  // Scan toàn bộ tài sản HCQT đã load từ SP → tự động chia sẻ giữa mọi người dùng
+  const list = [...new Set((_hcqtData||[]).map(d=>d.HangSanXuat).filter(Boolean))].sort();
+  const dl = document.getElementById('hcqt-ncc-datalist');
+  if(dl) dl.innerHTML = list.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">`).join('');
 }
 
 async function hcqtSaveItem(){
