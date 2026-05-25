@@ -9098,20 +9098,26 @@ async function bulkDeleteSelected(){
   const confirmed = await showConfirm(`Xóa vĩnh viễn ${ids.length} tài sản đã chọn? Hành động này không thể hoàn tác!`,{title:"Xóa hàng loạt",danger:true,okText:"Xóa tất cả"});
   if(!confirmed) return;
 
-  let done = 0;
+  let done = 0, spFail = 0;
   for(const id of ids){
     const idx = assets.findIndex(a=>a.id===id);
     if(idx<0) continue;
-    const spId = assets[idx]._spId;
+    const a = assets[idx];
+    const label = [a.maTaiSan, a.tenTaiSan, a.model].filter(Boolean).join(' — ');
     assets.splice(idx,1);
     done++;
-    if(_msalAccount && spId){
-      try{ await spDeleteAsset(spId); }catch(e){ console.warn('[BULK DEL] SP fail:', id); }
+    writeAudit('asset','delete',id,label,'');
+    if(_msalAccount && a._spId){
+      try{ await msalSpDeleteAsset(id); }catch(e){ spFail++; console.warn('[BULK DEL] SP fail:', id, e); }
+    } else if(SP_MODE && a._spId){
+      try{ await spDeleteAsset(a._spId); }catch(e){ spFail++; console.warn('[BULK DEL] SP fail:', id, e); }
     }
   }
   saveToStorage();
   clearBulkSelect();
-  toast(`🗑️ Đã xóa ${done} tài sản`, 'ok');
+  applyFilters(true); updateDashboard(); updateTopbarSub();
+  if(spFail) toast(`🗑️ Đã xóa ${done} tài sản (${spFail} lỗi đồng bộ SP)`, 'warn');
+  else toast(`🗑️ Đã xóa ${done} tài sản`, 'ok');
 }
 
 // ─── QUICK FILTER ────────────────────────────────────────────────────────────
