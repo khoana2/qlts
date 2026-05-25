@@ -10508,35 +10508,44 @@ document.addEventListener('keydown', e => {
 });
 // ════════════════════════════════════════════════════════
 
-function openDelete(id){
+async function openDelete(id){
   if(!can('delete')){ toast('🔒 Bạn không có quyền xóa','bad'); return; }
   const a = assets.find(x=>x.id===id);
-  if(!a) return;
-  deleteId = id;
-  document.getElementById('delete-name').textContent =
-    [a.maTaiSan, a.tenTaiSan, a.model].filter(Boolean).join(' — ');
-  openModal('modal-delete');
+  if(!a){ toast('⚠️ Không tìm thấy tài sản','bad'); return; }
+
+  const label = [a.maTaiSan, a.tenTaiSan, a.model].filter(Boolean).join(' — ');
+  const ok = await showConfirm(
+    `Xóa vĩnh viễn <strong>${esc(label)}</strong>?<br><span style="font-size:12px;color:var(--muted)">Hành động này không thể khôi phục.</span>`,
+    { title:'Xác nhận xóa', danger:true, okText:'Xóa tài sản', icon:'🗑️' }
+  );
+  if(!ok) return;
+
+  try{
+    if(_msalAccount && a._spId){
+      await msalSpDeleteAsset(id);
+    } else if(SP_MODE && a._spId){
+      spStatusBar('⟳ Đang xóa trên SharePoint…','busy');
+      await spDeleteAsset(id);
+    }
+    writeAudit('asset','delete', `${a.tenTaiSan||''} (${a.maTaiSan||''})`, `Serial: ${a.serial||'—'}`);
+    assets = assets.filter(x=>x.id!==id);
+    saveToStorage();
+    applyFilters(true);
+    updateDashboard();
+    updateTopbarSub();
+    toast('🗑️ Đã xóa tài sản!','warn');
+    if(SP_MODE) spStatusBar(`🔗 SharePoint — ${assets.length} tài sản`,'ok');
+  }catch(e){
+    toast('❌ Xóa thất bại: '+e.message,'bad');
+    console.error('[DELETE]', e);
+  }
 }
 
+// Giữ lại confirmDelete để backward compat (gọi từ modal cũ nếu còn)
 async function confirmDelete(){
-  const toDelete = assets.find(a=>a.id===deleteId);
-  // Xóa khỏi SP trước
-  if(_msalAccount && toDelete){
-    await msalSpDeleteAsset(deleteId);
-  } else if(SP_MODE && toDelete){
-    spStatusBar('⟳ Đang xóa trên SharePoint…','busy');
-    await spDeleteAsset(deleteId);
-  }
-  if(toDelete) writeAudit('asset','delete', `${toDelete.tenTaiSan||''} (${toDelete.maTaiSan||''})`, `Serial: ${toDelete.serial||'—'}`);
-  assets = assets.filter(a=>a.id!==deleteId);
-  saveToStorage();
-  closeModal('modal-delete');
-  applyFilters(true);
-  updateDashboard();
-  updateTopbarSub();
-  toast('🗑️ Đã xóa tài sản!','warn');
-  if(SP_MODE) spStatusBar(`🔗 SharePoint — ${assets.length} tài sản`,'ok');
-  deleteId=null;
+  if(!deleteId) return;
+  await openDelete(deleteId);
+  deleteId = null;
 }
 
 // ═══════════════════════ DETAIL ═══════════════════════
