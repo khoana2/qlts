@@ -20228,7 +20228,7 @@ const HCQT_STORE_KEY= 'hcqt_assets_v2';
 
 let _isHCQTUser     = false; // true nếu user thuộc HCQT_AD_GROUP
 let _hcqtRoles      = {}; // cache roles từ Phan_Quyen_HCQT: { email → {role,spId,ten} }
-let _hcqtHasITAccess= false; // true nếu HCQT user được IT admin grant thêm quyền IT
+var _hcqtHasITAccess= false; // true nếu HCQT user được IT admin grant thêm quyền IT — var để hoist sang các script block khác
 let _hcqtData       = [];
 let _hcqtSubView    = 'dashboard';
 let _hcqtEditId     = null;
@@ -22787,7 +22787,7 @@ function hcqtPrintHandover(id){
     </table>
     <div class="sig">
       <div class="sig-box"><div>Người bàn giao</div><div class="name">&nbsp;</div></div>
-      <div class="sig-box"><div>Người nhận</div><div class="name">${d.NguoiPhuTrach||}}</div></div>
+      <div class="sig-box"><div>Người nhận</div><div class="name">${d.NguoiPhuTrach||'&nbsp;'}</div></div>
     </div>
     <script>window.onload=function(){window.print()}<\/script>
   </body></html>`;
