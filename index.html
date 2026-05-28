@@ -2897,6 +2897,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <button class="hcqt-sub-item" id="hcqt-sub-assets" onclick="hcqtSubNav('assets')"><i class="ph ph-list-bullets"></i> Tài sản</button>
           <button class="hcqt-sub-item" id="hcqt-sub-muahang" onclick="hcqtSubNav('muahang')"><i class="ph ph-shopping-cart"></i> Mua hàng</button>
           <button class="hcqt-sub-item" id="hcqt-sub-lichsu" onclick="hcqtSubNav('lichsu')"><i class="ph ph-clock-counter-clockwise"></i> Lịch sử</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-vattu" onclick="hcqtSubNav('vattu')"><i class="ph ph-package"></i> Vật tư</button>
         </div>
       </nav>
 
@@ -4194,6 +4195,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div id="hcqt-view-baocao" style="display:none"></div>
       <div id="hcqt-view-muahang" style="display:none"></div>
       <div id="hcqt-view-lichsu" style="display:none"></div>
+      <div id="hcqt-view-vattu" style="display:none"></div>
     </div>
   </div>
 
@@ -20400,6 +20402,7 @@ const _HCQT_VIEW_TITLES = {
   dashboard:'Dashboard', assets:'Danh sách thiết bị',
   maintenance:'Lịch bảo trì', capphat:'Cấp phát & Thu hồi',
   baocao:'Báo cáo tổng hợp',
+  vattu:'Báo cáo vật tư tiêu hao',
   muahang:'Yêu cầu mua hàng', lichsu:'Lịch sử hoạt động'
 };
 
@@ -20425,7 +20428,7 @@ function hcqtSubNav(v){
 }
 
 function hcqtRenderSub(){
-  ['dashboard','assets','maintenance','capphat','baocao','muahang','lichsu'].forEach(v=>{
+  ['dashboard','assets','maintenance','capphat','baocao','muahang','lichsu','vattu'].forEach(v=>{
     const el=document.getElementById('hcqt-view-'+v);
     if(el) el.style.display=v===_hcqtSubView?'':'none';
   });
@@ -20433,6 +20436,7 @@ function hcqtRenderSub(){
   if(_hcqtSubView==='assets')      hcqtRenderAssets();
   if(_hcqtSubView==='muahang')     hcqtRenderMuaHang();
   if(_hcqtSubView==='lichsu')      hcqtRenderLichSu();
+  if(_hcqtSubView==='vattu')       hcqtRenderVatTu();
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────
@@ -21083,6 +21087,252 @@ function hcqtRenderBaoCao(){
   </div>
   ${!data.length?`<div style="text-align:center;padding:40px;color:var(--muted);margin-top:16px">Chưa có dữ liệu để báo cáo</div>`:''}
   `;
+}
+
+// ── Báo cáo vật tư tiêu hao ─────────────────────────────────────
+function hcqtRenderVatTu(){
+  const el=document.getElementById('hcqt-view-vattu'); if(!el) return;
+  const now=new Date();
+  const storedM=el.dataset.filterM||(now.getMonth()+1+'').padStart(2,'0');
+  const storedY=el.dataset.filterY||(now.getFullYear()+'');
+  el.dataset.filterM=storedM; el.dataset.filterY=storedY;
+
+  const curM=el.dataset.filterM, curY=el.dataset.filterY;
+  const vtAssets=_hcqtData.filter(d=>d.LoaiTaiSan==='Vật tư tiêu hao');
+
+  // Build month options
+  const months=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const years=[];
+  const thisY=now.getFullYear();
+  for(let y=thisY-2;y<=thisY+1;y++) years.push(y+'');
+
+  // Tính tồn đầu kỳ: TonBanDau + giao dịch TRƯỚC tháng này
+  function tonDauKy(asset){
+    const yM=curY+'-'+curM;
+    const base=+(asset.TonBanDau||0);
+    const before=_vatTuData.filter(r=>(r.assetId===asset._id||r.assetId===+asset._id)&&r.ngayGD<yM+'-01');
+    return before.reduce((s,r)=>s+(r.loaiGD==='nhap'?+r.soLuong:-r.soLuong),base);
+  }
+  // Tổng nhập trong kỳ
+  function nhapTrongKy(assetId){
+    return _vatTuData.filter(r=>(r.assetId===assetId||r.assetId===+assetId)&&r.loaiGD==='nhap'&&r.ngayGD&&r.ngayGD.slice(0,7)===curY+'-'+curM)
+      .reduce((s,r)=>s+ +r.soLuong,0);
+  }
+  // Tổng xuất trong kỳ
+  function xuatTrongKy(assetId){
+    return _vatTuData.filter(r=>(r.assetId===assetId||r.assetId===+assetId)&&r.loaiGD==='xuat'&&r.ngayGD&&r.ngayGD.slice(0,7)===curY+'-'+curM)
+      .reduce((s,r)=>s+ +r.soLuong,0);
+  }
+
+  // Giao dịch trong kỳ (tất cả vật tư)
+  const kyStr=curY+'-'+curM;
+  const gdTrongKy=_vatTuData.filter(r=>r.ngayGD&&r.ngayGD.slice(0,7)===kyStr)
+    .sort((a,b)=>b.ngayGD.localeCompare(a.ngayGD));
+
+  // Tổng summary
+  let tongNhap=0,tongXuat=0,soloAlert=0;
+  const rows=vtAssets.map(asset=>{
+    const dau=tonDauKy(asset);
+    const nhap=nhapTrongKy(asset._id);
+    const xuat=xuatTrongKy(asset._id);
+    const cuoi=dau+nhap-xuat;
+    const low=cuoi<+(asset.TonToiThieu||0);
+    if(low) soloAlert++;
+    tongNhap+=nhap; tongXuat+=xuat;
+    return {asset,dau,nhap,xuat,cuoi,low};
+  });
+
+  const fmtN=n=>new Intl.NumberFormat('vi-VN').format(n);
+
+  el.innerHTML=`
+  <!-- Filter bar -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <span style="font-size:12px;font-weight:700;color:var(--muted)">Kỳ báo cáo:</span>
+    <select id="vt-bc-month" onchange="hcqtVatTuFilter()" style="padding:5px 8px;border:1px solid var(--border,#e2e8f0);border-radius:6px;font-size:13px">
+      ${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m}</option>`).join('')}
+    </select>
+    <select id="vt-bc-year" onchange="hcqtVatTuFilter()" style="padding:5px 8px;border:1px solid var(--border,#e2e8f0);border-radius:6px;font-size:13px">
+      ${years.map(y=>`<option value="${y}" ${y===curY?'selected':''}>${y}</option>`).join('')}
+    </select>
+    <div style="flex:1"></div>
+    <button onclick="vatTuBaoCaoXuat()" style="padding:5px 14px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px"><i class="ph ph-file-xls" style="color:#16a34a"></i> Xuất báo cáo</button>
+    <button onclick="vatTuBaoCaoIn()" style="padding:5px 14px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px"><i class="ph ph-printer"></i> In báo cáo</button>
+  </div>
+
+  <!-- KPI cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px">
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px;border-top:3px solid #6366F1">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Loại vật tư</div>
+      <div style="font-size:24px;font-weight:800;color:#6366F1">${vtAssets.length}</div>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px;border-top:3px solid #16a34a">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Nhập trong kỳ</div>
+      <div style="font-size:24px;font-weight:800;color:#16a34a">${fmtN(tongNhap)}</div>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px;border-top:3px solid #dc2626">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Xuất trong kỳ</div>
+      <div style="font-size:24px;font-weight:800;color:#dc2626">${fmtN(tongXuat)}</div>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px;border-top:3px solid ${soloAlert>0?'#f59e0b':'#10B981'}">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Cảnh báo tồn thấp</div>
+      <div style="font-size:24px;font-weight:800;color:${soloAlert>0?'#f59e0b':'#10B981'}">${soloAlert}</div>
+    </div>
+  </div>
+
+  <!-- Summary table -->
+  <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;overflow:hidden;margin-bottom:14px">
+    <div style="padding:10px 14px;border-bottom:1px solid var(--border,#e2e8f0);font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">
+      📊 Tổng hợp tồn kho — tháng ${curM}/${curY}
+    </div>
+    ${vtAssets.length===0?`<div style="padding:32px;text-align:center;color:var(--muted)">Chưa có vật tư tiêu hao nào. Hãy thêm tài sản với loại "Vật tư tiêu hao".</div>`:`
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--bg,#f8fafc)">
+            <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Tên vật tư</th>
+            <th style="padding:8px 12px;text-align:center;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">ĐVT</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Tồn đầu kỳ</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;font-size:11px;color:#16a34a;text-transform:uppercase">Nhập</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;font-size:11px;color:#dc2626;text-transform:uppercase">Xuất</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Tồn cuối kỳ</th>
+            <th style="padding:8px 12px;text-align:center;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Tối thiểu</th>
+            <th style="padding:8px 12px;text-align:center;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(({asset,dau,nhap,xuat,cuoi,low})=>`
+          <tr style="border-top:1px solid var(--border,#e2e8f0);cursor:pointer" onclick="hcqtOpenPanel(${asset._id})">
+            <td style="padding:9px 12px;font-weight:600">${hcqtEsc(asset.Title)}</td>
+            <td style="padding:9px 12px;text-align:center;color:var(--muted);font-size:12px">${hcqtEsc(asset.DonViTinh||'—')}</td>
+            <td style="padding:9px 12px;text-align:right">${fmtN(dau)}</td>
+            <td style="padding:9px 12px;text-align:right;color:#16a34a;font-weight:${nhap>0?700:400}">${nhap>0?'+'+fmtN(nhap):'—'}</td>
+            <td style="padding:9px 12px;text-align:right;color:#dc2626;font-weight:${xuat>0?700:400}">${xuat>0?'-'+fmtN(xuat):'—'}</td>
+            <td style="padding:9px 12px;text-align:right;font-weight:700;color:${low?'#dc2626':'inherit'}">${fmtN(cuoi)}</td>
+            <td style="padding:9px 12px;text-align:center;color:var(--muted);font-size:12px">${asset.TonToiThieu?fmtN(+(asset.TonToiThieu||0)):'—'}</td>
+            <td style="padding:9px 12px;text-align:center">
+              ${low
+                ?`<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">⚠ Tồn thấp</span>`
+                :`<span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">✓ Bình thường</span>`}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  </div>
+
+  <!-- Transaction detail -->
+  <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;overflow:hidden">
+    <div style="padding:10px 14px;border-bottom:1px solid var(--border,#e2e8f0);font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">
+      📋 Chi tiết giao dịch — tháng ${curM}/${curY} (${gdTrongKy.length} giao dịch)
+    </div>
+    ${gdTrongKy.length===0?`<div style="padding:24px;text-align:center;color:var(--muted)">Không có giao dịch nào trong tháng này</div>`:`
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--bg,#f8fafc)">
+            <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Ngày</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Vật tư</th>
+            <th style="padding:8px 12px;text-align:center;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Loại</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Số lượng</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Bộ phận / NCC</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Người TH</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase">Ghi chú</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${gdTrongKy.map(r=>{
+            const asset=_hcqtData.find(x=>x._id===r.assetId||x._id===+r.assetId);
+            const isNhap=r.loaiGD==='nhap';
+            const bpOrNcc=isNhap?(r.nhaCungCap||'—'):(r.boPhanNhan||'—');
+            return `<tr style="border-top:1px solid var(--border,#e2e8f0)">
+              <td style="padding:8px 12px;color:var(--muted);font-size:12px;white-space:nowrap">${hcqtFmtDate(r.ngayGD)}</td>
+              <td style="padding:8px 12px;font-weight:500">${hcqtEsc(asset?asset.Title:'#'+r.assetId)}</td>
+              <td style="padding:8px 12px;text-align:center">
+                ${isNhap
+                  ?`<span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">📥 Nhập</span>`
+                  :`<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">📤 Xuất</span>`}
+              </td>
+              <td style="padding:8px 12px;text-align:right;font-weight:700;color:${isNhap?'#16a34a':'#dc2626'}">
+                ${isNhap?'+':'−'}${fmtN(+r.soLuong)} ${hcqtEsc(asset?asset.DonViTinh||'':'')}</td>
+              <td style="padding:8px 12px;color:var(--muted);font-size:12px">${hcqtEsc(bpOrNcc)}</td>
+              <td style="padding:8px 12px;color:var(--muted);font-size:12px">${hcqtEsc(r.nguoiTH||'—')}</td>
+              <td style="padding:8px 12px;color:var(--muted);font-size:12px">${hcqtEsc(r.ghiChu||'')}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  </div>
+  `;
+}
+
+function hcqtVatTuFilter(){
+  const el=document.getElementById('hcqt-view-vattu'); if(!el) return;
+  el.dataset.filterM=document.getElementById('vt-bc-month')?.value||'01';
+  el.dataset.filterY=document.getElementById('vt-bc-year')?.value||(new Date().getFullYear()+'');
+  hcqtRenderVatTu();
+}
+
+function vatTuBaoCaoXuat(){
+  const el=document.getElementById('hcqt-view-vattu');
+  const curM=el?.dataset.filterM||(new Date().getMonth()+1+'').padStart(2,'0');
+  const curY=el?.dataset.filterY||(new Date().getFullYear()+'');
+  const kyStr=curY+'-'+curM;
+  const vtAssets=_hcqtData.filter(d=>d.LoaiTaiSan==='Vật tư tiêu hao');
+  function tonDauKy(asset){ const base=+(asset.TonBanDau||0); const before=_vatTuData.filter(r=>(r.assetId===asset._id||r.assetId===+asset._id)&&r.ngayGD<kyStr+'-01'); return before.reduce((s,r)=>s+(r.loaiGD==='nhap'?+r.soLuong:-r.soLuong),base); }
+  function nhapKy(id){ return _vatTuData.filter(r=>(r.assetId===id||r.assetId===+id)&&r.loaiGD==='nhap'&&r.ngayGD&&r.ngayGD.slice(0,7)===kyStr).reduce((s,r)=>s+ +r.soLuong,0); }
+  function xuatKy(id){ return _vatTuData.filter(r=>(r.assetId===id||r.assetId===+id)&&r.loaiGD==='xuat'&&r.ngayGD&&r.ngayGD.slice(0,7)===kyStr).reduce((s,r)=>s+ +r.soLuong,0); }
+  // Build CSV
+  let csv='Tên vật tư,Đơn vị tính,Tồn đầu kỳ,Nhập trong kỳ,Xuất trong kỳ,Tồn cuối kỳ,Tối thiểu,Trạng thái\n';
+  vtAssets.forEach(a=>{
+    const dau=tonDauKy(a),nhap=nhapKy(a._id),xuat=xuatKy(a._id),cuoi=dau+nhap-xuat;
+    const low=cuoi<+(a.TonToiThieu||0);
+    csv+=`"${a.Title||''}","${a.DonViTinh||''}",${dau},${nhap},${xuat},${cuoi},${a.TonToiThieu||0},"${low?'Tồn thấp':'Bình thường'}"\n`;
+  });
+  // Detail sheet rows
+  csv+='\nChi tiết giao dịch\n';
+  csv+='Ngày,Tên vật tư,Loại,Số lượng,Bộ phận/NCC,Người TH,Ghi chú\n';
+  _vatTuData.filter(r=>r.ngayGD&&r.ngayGD.slice(0,7)===kyStr).sort((a,b)=>b.ngayGD.localeCompare(a.ngayGD)).forEach(r=>{
+    const asset=_hcqtData.find(x=>x._id===r.assetId||x._id===+r.assetId);
+    const bpNcc=r.loaiGD==='nhap'?(r.nhaCungCap||''):(r.boPhanNhan||'');
+    csv+=`"${r.ngayGD}","${asset?asset.Title:'#'+r.assetId}","${r.loaiGD==='nhap'?'Nhập':'Xuất'}",${r.soLuong},"${bpNcc}","${r.nguoiTH||''}","${r.ghiChu||''}"\n`;
+  });
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`BaoCao_VatTu_${curM}_${curY}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ Đã xuất báo cáo CSV','ok');
+}
+
+function vatTuBaoCaoIn(){
+  const el=document.getElementById('hcqt-view-vattu');
+  const curM=el?.dataset.filterM||(new Date().getMonth()+1+'').padStart(2,'0');
+  const curY=el?.dataset.filterY||(new Date().getFullYear()+'');
+  const kyStr=curY+'-'+curM;
+  const vtAssets=_hcqtData.filter(d=>d.LoaiTaiSan==='Vật tư tiêu hao');
+  function tonDauKy(asset){ const base=+(asset.TonBanDau||0); const before=_vatTuData.filter(r=>(r.assetId===asset._id||r.assetId===+asset._id)&&r.ngayGD<kyStr+'-01'); return before.reduce((s,r)=>s+(r.loaiGD==='nhap'?+r.soLuong:-r.soLuong),base); }
+  function nhapKy(id){ return _vatTuData.filter(r=>(r.assetId===id||r.assetId===+id)&&r.loaiGD==='nhap'&&r.ngayGD&&r.ngayGD.slice(0,7)===kyStr).reduce((s,r)=>s+ +r.soLuong,0); }
+  function xuatKy(id){ return _vatTuData.filter(r=>(r.assetId===id||r.assetId===+id)&&r.loaiGD==='xuat'&&r.ngayGD&&r.ngayGD.slice(0,7)===kyStr).reduce((s,r)=>s+ +r.soLuong,0); }
+  const fmtN=n=>new Intl.NumberFormat('vi-VN').format(n);
+  const rows=vtAssets.map(a=>{ const dau=tonDauKy(a),nhap=nhapKy(a._id),xuat=xuatKy(a._id),cuoi=dau+nhap-xuat; return {a,dau,nhap,xuat,cuoi,low:cuoi<+(a.TonToiThieu||0)}; });
+  const gds=_vatTuData.filter(r=>r.ngayGD&&r.ngayGD.slice(0,7)===kyStr).sort((a,b)=>b.ngayGD.localeCompare(a.ngayGD));
+  const html=`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Báo cáo Vật tư tiêu hao — ${curM}/${curY}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:13px;color:#1e293b;padding:20px}h2{font-size:16px;margin-bottom:4px}p.sub{color:#64748b;font-size:12px;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px}th,td{border:1px solid #e2e8f0;padding:6px 10px}th{background:#f8fafc;font-size:11px;text-transform:uppercase;font-weight:700;color:#64748b}
+  .nhap{color:#16a34a;font-weight:700}.xuat{color:#dc2626;font-weight:700}.low{color:#dc2626;font-weight:700}.ok{color:#16a34a}
+  @media print{@page{size:A4 landscape}}</style></head><body>
+  <h2>📋 Báo cáo Vật tư tiêu hao — Tháng ${curM}/${curY}</h2>
+  <p class="sub">Xuất ngày ${new Date().toLocaleDateString('vi-VN')} · TTG</p>
+  <table><thead><tr><th>Tên vật tư</th><th>ĐVT</th><th style="text-align:right">Tồn đầu kỳ</th><th style="text-align:right;color:#16a34a">Nhập</th><th style="text-align:right;color:#dc2626">Xuất</th><th style="text-align:right">Tồn cuối kỳ</th><th style="text-align:right">Tối thiểu</th><th>Trạng thái</th></tr></thead><tbody>
+  ${rows.map(({a,dau,nhap,xuat,cuoi,low})=>`<tr><td>${a.Title||''}</td><td style="text-align:center">${a.DonViTinh||'—'}</td><td style="text-align:right">${fmtN(dau)}</td><td style="text-align:right" class="nhap">${nhap>0?'+'+fmtN(nhap):'—'}</td><td style="text-align:right" class="xuat">${xuat>0?'−'+fmtN(xuat):'—'}</td><td style="text-align:right" class="${low?'low':''}">${fmtN(cuoi)}</td><td style="text-align:right">${a.TonToiThieu||'—'}</td><td class="${low?'low':'ok'}">${low?'⚠ Tồn thấp':'✓ Bình thường'}</td></tr>`).join('')}
+  </tbody></table>
+  <h2 style="margin-top:20px">Chi tiết giao dịch</h2>
+  <table><thead><tr><th>Ngày</th><th>Tên vật tư</th><th>Loại</th><th style="text-align:right">Số lượng</th><th>Bộ phận / NCC</th><th>Người TH</th><th>Ghi chú</th></tr></thead><tbody>
+  ${gds.map(r=>{ const asset=_hcqtData.find(x=>x._id===r.assetId||x._id===+r.assetId); const isN=r.loaiGD==='nhap'; return `<tr><td>${r.ngayGD}</td><td>${asset?asset.Title:'#'+r.assetId}</td><td class="${isN?'nhap':'xuat'}">${isN?'📥 Nhập':'📤 Xuất'}</td><td style="text-align:right" class="${isN?'nhap':'xuat'}">${isN?'+':'−'}${fmtN(+r.soLuong)} ${asset?asset.DonViTinh||'':''}</td><td>${isN?(r.nhaCungCap||'—'):(r.boPhanNhan||'—')}</td><td>${r.nguoiTH||'—'}</td><td>${r.ghiChu||''}</td></tr>`; }).join('')}
+  </tbody></table>
+  <script>window.onload=function(){window.print()}<\/script></body></html>`;
+  const w=window.open('','_blank'); w.document.open(); w.document.write(html); w.document.close();
 }
 
 // ── Import file Excel/CSV ──────────────────────────────────────
