@@ -301,6 +301,24 @@ body{
 }
 .nav-tab .tab-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
 .nav-tab .tab-icon i.ph{font-size:16px;line-height:1;}
+/* HCQT sub-nav items in sidebar */
+.hcqt-sub-item{
+  width:100%;padding:6px 12px 6px 34px;border-radius:8px;
+  font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .15s;color:var(--muted);
+  display:flex;align-items:center;gap:8px;
+  user-select:none;border:none;background:transparent;text-align:left;
+}
+.hcqt-sub-item:hover{color:var(--text);background:#F1F5F9;}
+.hcqt-sub-item.active{color:#7C3AED;background:#F5F3FF;font-weight:700;}
+#hcqt-subnav-sidebar{
+  display:none;
+  padding:2px 0 4px 0;
+}
+#tab-hcqt .hcqt-caret{
+  margin-left:auto;font-size:12px;transition:transform .25s;
+}
+
 /* Badge hết hạn trên tab */
 .tab-expiry-badge{
   margin-left:auto;min-width:18px;height:18px;border-radius:9px;
@@ -2869,9 +2887,19 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <span class="tab-icon"><i class="ph ph-printer"></i></span> Báo Cáo In
         </button>
         <div class="sidebar-section hcqt-section" style="margin-top:6px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px;display:none">Hành chính QT</div>
-        <button class="nav-tab" onclick="switchTab('hcqt')" id="tab-hcqt" style="display:none">
+        <button class="nav-tab" onclick="hcqtToggleSidebar()" id="tab-hcqt" style="display:none">
           <span class="tab-icon">🏢</span> HC Quản trị
+          <i class="ph ph-caret-down hcqt-caret" id="hcqt-caret"></i>
         </button>
+        <div id="hcqt-subnav-sidebar">
+          <button class="hcqt-sub-item active" id="hcqt-sub-dashboard" onclick="hcqtSubNav('dashboard')"><i class="ph ph-chart-bar"></i> Dashboard</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-assets" onclick="hcqtSubNav('assets')"><i class="ph ph-list-bullets"></i> Danh sách TB</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-maintenance" onclick="hcqtSubNav('maintenance')"><i class="ph ph-wrench"></i> Bảo trì</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-capphat" onclick="hcqtSubNav('capphat')"><i class="ph ph-swap"></i> Cấp phát</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-kiemke" onclick="hcqtSubNav('kiemke')"><i class="ph ph-clipboard-text"></i> Kiểm kê</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-baocao" onclick="hcqtSubNav('baocao')"><i class="ph ph-chart-pie"></i> Báo cáo</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-muahang" onclick="hcqtSubNav('muahang')"><i class="ph ph-shopping-cart"></i> Mua hàng</button>
+        </div>
       </nav>
 
       <!-- User info footer -->
@@ -4144,17 +4172,12 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   <!-- ══════════════ VIEW: HÀNH CHÍNH QUẢN TRỊ ══════════════ -->
   <div class="view" id="view-hcqt">
     <div id="hcqt-app">
-      <!-- Sub-nav -->
+      <!-- Page header — chỉ title + action buttons, sub-nav đã chuyển sang sidebar -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-        <div style="font-size:15px;font-weight:700;flex:1;">🏢 Quản lý tài sản – Hành chính Quản trị</div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-icon-ph hcqt-subnav active" onclick="hcqtSubNav('dashboard')" id="hcqt-tab-dashboard" style="padding:5px 14px;font-size:12px;"><i class="ph ph-chart-bar"></i> Dashboard</button>
-          <button class="btn btn-icon-ph hcqt-subnav" onclick="hcqtSubNav('assets')" id="hcqt-tab-assets" style="padding:5px 14px;font-size:12px;"><i class="ph ph-list-bullets"></i> Danh sách</button>
-          <button class="btn btn-icon-ph hcqt-subnav" onclick="hcqtSubNav('maintenance')" id="hcqt-tab-maintenance" style="padding:5px 14px;font-size:12px;"><i class="ph ph-wrench"></i> Bảo trì</button>
-          <button class="btn btn-icon-ph hcqt-subnav" onclick="hcqtSubNav('capphat')" id="hcqt-tab-capphat" style="padding:5px 14px;font-size:12px;"><i class="ph ph-swap"></i> Cấp phát</button>
-          <button class="btn btn-icon-ph hcqt-subnav" onclick="hcqtSubNav('kiemke')" id="hcqt-tab-kiemke" style="padding:5px 14px;font-size:12px;"><i class="ph ph-clipboard-text"></i> Kiểm kê</button>
-          <button class="btn btn-icon-ph hcqt-subnav" onclick="hcqtSubNav('baocao')" id="hcqt-tab-baocao" style="padding:5px 14px;font-size:12px;"><i class="ph ph-chart-pie"></i> Báo cáo</button>
-          <button class="btn btn-icon-ph hcqt-subnav" onclick="hcqtSubNav('muahang')" id="hcqt-tab-muahang" style="padding:5px 14px;font-size:12px;"><i class="ph ph-shopping-cart"></i> Mua hàng</button>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;" id="hcqt-view-title">🏢 HC Quản trị — Dashboard</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn success btn-icon-ph" onclick="hcqtSync()" style="padding:5px 14px;font-size:12px;"><i class="ph ph-arrows-clockwise"></i> Sync SP</button>
           <label class="btn btn-icon-ph" style="padding:5px 12px;font-size:12px;cursor:pointer;" title="Import từ Excel/CSV">
             <i class="ph ph-upload-simple"></i> Import
@@ -20296,17 +20319,48 @@ function hcqtLocalToSP(f){
 }
 
 // ── Navigation ────────────────────────────────────────────────────
+function hcqtToggleSidebar(){
+  switchTab('hcqt');
+  const nav = document.getElementById('hcqt-subnav-sidebar');
+  const caret = document.getElementById('hcqt-caret');
+  if(!nav) return;
+  const isOpen = nav.style.display !== 'none';
+  nav.style.display = isOpen ? 'none' : '';
+  if(caret) caret.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
 function hcqtOnTabOpen(){
   hcqtLoadLocal();
   hcqtLoadCapPhat();
+  // Mở sidebar sub-nav
+  const nav = document.getElementById('hcqt-subnav-sidebar');
+  const caret = document.getElementById('hcqt-caret');
+  if(nav) nav.style.display = '';
+  if(caret) caret.style.transform = 'rotate(180deg)';
   hcqtRenderSub();
   // Auto sync nếu chưa có data
   if(!_hcqtData.length && typeof _msalAccount!=='undefined' && _msalAccount) hcqtSync(true);
 }
 
+const _HCQT_VIEW_TITLES = {
+  dashboard:'Dashboard', assets:'Danh sách thiết bị',
+  maintenance:'Lịch bảo trì', capphat:'Cấp phát & Thu hồi',
+  kiemke:'Kiểm kê tài sản', baocao:'Báo cáo tổng hợp',
+  muahang:'Yêu cầu mua hàng'
+};
+
 function hcqtSubNav(v){
   _hcqtSubView=v;
-  document.querySelectorAll('.hcqt-subnav').forEach(b=>b.classList.toggle('active',b.id==='hcqt-tab-'+v));
+  // Cập nhật active state ở sidebar
+  document.querySelectorAll('.hcqt-sub-item').forEach(b=>{
+    b.classList.toggle('active', b.id==='hcqt-sub-'+v);
+  });
+  // Cập nhật title
+  const titleEl = document.getElementById('hcqt-view-title');
+  if(titleEl) titleEl.textContent = '🏢 HC Quản trị — '+(_HCQT_VIEW_TITLES[v]||v);
+  // Ẩn action buttons khi không cần thiết
+  const addBtn = document.querySelector('#hcqt-app .btn[onclick="hcqtOpenAdd()"]');
+  if(addBtn) addBtn.style.display = (v==='assets'||v==='dashboard') ? '' : 'none';
   hcqtRenderSub();
 }
 
