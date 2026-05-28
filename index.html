@@ -20826,6 +20826,7 @@ function hcqtRenderCapPhat(){
       <th style="padding:8px 10px;text-align:left;white-space:nowrap">Bộ phận</th>
       <th style="padding:8px 10px;text-align:left;white-space:nowrap">Ngày cấp</th>
       <th style="padding:8px 10px;text-align:left;white-space:nowrap">Ngày thu hồi</th>
+      <th style="padding:8px 10px;text-align:left;white-space:nowrap">Tình trạng tài sản</th>
       <th style="padding:8px 10px;text-align:left;white-space:nowrap">Trạng thái</th>
       <th style="padding:8px 10px;text-align:left;white-space:nowrap">Ghi chú</th>
       <th style="padding:8px 10px;text-align:center;white-space:nowrap">Thao tác</th>
@@ -20839,6 +20840,7 @@ function hcqtRenderCapPhat(){
         <td style="padding:8px 10px">${hcqtEsc(r.boPhan||'—')}</td>
         <td style="padding:8px 10px;white-space:nowrap">${fmt(r.ngayCap)}</td>
         <td style="padding:8px 10px;white-space:nowrap">${fmt(r.ngayThuHoi)}</td>
+        <td style="padding:8px 10px">${(()=>{ const a=_hcqtData.find(d=>d._id===r.assetId||d._id===+r.assetId); const tt=a?a.TinhTrang:''; return tt?`<span style="${hcqtTtStyle(tt)}">${hcqtEsc(tt)}</span>`:'—'; })()}</td>
         <td style="padding:8px 10px">${badge(r.trangThai)}</td>
         <td style="padding:8px 10px;max-width:160px;color:var(--muted);font-size:11px">${hcqtEsc(r.ghiChu||'')}</td>
         <td style="padding:8px 10px;text-align:center;white-space:nowrap">
@@ -20891,6 +20893,17 @@ function hcqtAddCapPhat(assetId){
           </div>
         </div>
         <div>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">Cập nhật tình trạng tài sản</label>
+          <select id="hcqt-cp-tinhtrang" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px">
+            <option value="">-- Không thay đổi --</option>
+            <option value="Đang sử dụng" selected>Đang sử dụng</option>
+            <option value="Chờ cấp phát">Chờ cấp phát</option>
+            <option value="Đang sửa chữa">Đang sửa chữa</option>
+            <option value="Tạm ngừng sử dụng">Tạm ngừng sử dụng</option>
+            <option value="Đề xuất thanh lý">Đề xuất thanh lý</option>
+          </select>
+        </div>
+        <div>
           <label style="font-size:12px;font-weight:600;color:var(--muted)">Ghi chú</label>
           <textarea id="hcqt-cp-ghichu" rows="2" placeholder="Mục đích sử dụng, ghi chú..." style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;resize:vertical;box-sizing:border-box"></textarea>
         </div>
@@ -20915,6 +20928,7 @@ function hcqtSaveCapPhatForm(){
   const boPhan=document.getElementById('hcqt-cp-bophan')?.value.trim();
   const ngayCap=document.getElementById('hcqt-cp-ngaycap')?.value;
   const ngayThuHoi=document.getElementById('hcqt-cp-thuhoi')?.value||null;
+  const tinhTrangCap=document.getElementById('hcqt-cp-tinhtrang')?.value||'';
   const ghiChu=document.getElementById('hcqt-cp-ghichu')?.value.trim();
   if(!assetId||!nguoiNhan||!ngayCap){ toast('⚠️ Vui lòng điền đủ thông tin bắt buộc','warn'); return; }
   const asset=_hcqtData.find(d=>d._id===+assetId||d._id===assetId);
@@ -20922,11 +20936,21 @@ function hcqtSaveCapPhatForm(){
     id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
     assetId: assetId, maTaiSan: asset?asset.MaTaiSan:'',
     nguoiNhan, boPhan, ngayCap, ngayThuHoi,
+    tinhTrangCap, tinhTrangThuHoi:'',
     trangThai: ngayThuHoi&&new Date(ngayThuHoi)<new Date()?'Đã thu hồi':'Đang cấp phát',
     ghiChu, createdAt: new Date().toISOString()
   };
   _hcqtCapPhat.push(rec);
   hcqtSaveCapPhat();
+  // Cập nhật TinhTrang của tài sản nếu user chọn
+  if(tinhTrangCap && asset){
+    asset.TinhTrang = tinhTrangCap;
+    hcqtSaveLocal();
+    if(typeof _msalAccount!=='undefined' && _msalAccount && asset._id){
+      hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items(${asset._id})`,
+        {method:'PATCH',body:JSON.stringify({TinhTrang:tinhTrangCap}),headers:{'IF-MATCH':'*','X-HTTP-Method':'MERGE'}}).catch(()=>{});
+    }
+  }
   document.getElementById('hcqt-capphat-modal')?.remove();
   hcqtRenderSub();
   toast('✅ Đã lưu bản ghi cấp phát','ok');
@@ -20934,12 +20958,76 @@ function hcqtSaveCapPhatForm(){
 
 function hcqtThuHoi(id){
   const r=_hcqtCapPhat.find(x=>x.id===id); if(!r) return;
-  if(!confirm('Xác nhận thu hồi tài sản này?')) return;
-  r.ngayThuHoi=new Date().toISOString().slice(0,10);
+  // Modal hỏi tình trạng khi trả về
+  let m=document.getElementById('hcqt-thuhoi-modal');
+  if(m) m.remove();
+  m=document.createElement('div');
+  m.id='hcqt-thuhoi-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:700;display:flex;align-items:center;justify-content:center';
+  const asset=_hcqtData.find(d=>d._id===r.assetId||d._id===+r.assetId);
+  m.innerHTML=`<div style="background:var(--card-bg,#fff);border-radius:14px;padding:24px 28px;width:380px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">Thu hồi tài sản</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">${hcqtEsc(asset?asset.Title:r.maTaiSan||'')}</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted)">Ngày thu hồi *</label>
+        <input type="date" id="hcqt-th-ngay" value="${new Date().toISOString().slice(0,10)}"
+          style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted)">Cập nhật tình trạng tài sản *</label>
+        <select id="hcqt-th-tinhtrang" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px">
+          <option value="">-- Không thay đổi --</option>
+          <option value="Chờ cấp phát" selected>Chờ cấp phát</option>
+          <option value="Đang sử dụng">Đang sử dụng</option>
+          <option value="Đang sửa chữa">Đang sửa chữa</option>
+          <option value="Tạm ngừng sử dụng">Tạm ngừng sử dụng</option>
+          <option value="Đề xuất thanh lý">Đề xuất thanh lý</option>
+          <option value="Mất Thất lạc">Mất / Thất lạc</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted)">Ghi chú</label>
+        <input type="text" id="hcqt-th-ghichu" placeholder="Ghi chú thêm về tình trạng..."
+          style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+      <button onclick="document.getElementById('hcqt-thuhoi-modal').remove()" style="padding:7px 18px;border-radius:7px;border:1px solid var(--border,#e2e8f0);background:#fff;cursor:pointer;font-size:13px">Huỷ</button>
+      <button onclick="hcqtThuHoiConfirm('${id}')" style="padding:7px 18px;border-radius:7px;border:none;background:#dc2626;color:#fff;cursor:pointer;font-size:13px;font-weight:600"><i class="ph ph-arrow-u-up-left"></i> Xác nhận thu hồi</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
+  setTimeout(()=>document.getElementById('hcqt-th-tinhtrang')?.focus(),100);
+}
+
+function hcqtThuHoiConfirm(id){
+  const r=_hcqtCapPhat.find(x=>x.id===id); if(!r) return;
+  const ngay=document.getElementById('hcqt-th-ngay')?.value;
+  const tt=document.getElementById('hcqt-th-tinhtrang')?.value;
+  const ghichu=document.getElementById('hcqt-th-ghichu')?.value.trim()||'';
+  if(!tt){ toast('⚠️ Vui lòng chọn tình trạng khi trả về','warn'); return; }
+  r.ngayThuHoi=ngay||new Date().toISOString().slice(0,10);
   r.trangThai='Đã thu hồi';
+  r.tinhTrangThuHoi=tt;
+  if(ghichu) r.ghiChu=(r.ghiChu?r.ghiChu+' | ':'')+'Thu hồi: '+ghichu;
+  // Cập nhật TinhTrang asset
+  if(tt){
+    const asset=_hcqtData.find(d=>d._id===r.assetId||d._id===+r.assetId);
+    if(asset){
+      asset.TinhTrang=tt;
+      hcqtSaveLocal();
+      if(typeof _msalAccount!=='undefined' && _msalAccount){
+        hcqtSpFetch(`web/lists/getbytitle('${HCQT_LIST}')/items(${asset._id})`,
+          {method:'PATCH',body:JSON.stringify({TinhTrang:tt}),headers:{'IF-MATCH':'*','X-HTTP-Method':'MERGE'}}).catch(()=>{});
+      }
+    }
+  }
   hcqtSaveCapPhat();
+  document.getElementById('hcqt-thuhoi-modal')?.remove();
   hcqtRenderSub();
-  toast('✅ Đã cập nhật trạng thái thu hồi','ok');
+  toast('✅ Đã thu hồi tài sản','ok');
 }
 
 function hcqtDeleteCapPhat(id){
@@ -22718,7 +22806,6 @@ function hcqtPrintReport(){
     +'<h1>BÁO CÁO QUẢN LÝ TÀI SẢN</h1>'
     +'<div class="sub">Hành chính Quản trị — Ngày xuất: '+now.toLocaleDateString('vi-VN')+'</div>'
     +'<div class="kpi-grid">'
-    +'<div class="kpi-box"><div class="kpi-val">'+total+'</div><div class="kpi-lbl">Tổng tài sản</div></div>'
     +'<div class="kpi-box"><div class="kpi-val">'+total+'</div><div class="kpi-lbl">Tổng tài sản</div></div>'
     +'<div class="kpi-box"><div class="kpi-val">'+active+'</div><div class="kpi-lbl">Đang sử dụng</div></div>'
     +'<div class="kpi-box"><div class="kpi-val">'+capphat+'</div><div class="kpi-lbl">Đang cấp phát</div></div>'
