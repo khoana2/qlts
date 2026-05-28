@@ -15764,21 +15764,21 @@ function _buildDNTTPrintHTML(d){
       ${tdL(e(c.donvi||(i===0?d.ncc:'')),'font-size:8.5pt;')}
       ${tdC(c.goc!==false&&(c.goc||i===0)?'x':'','font-size:9pt;')}
       ${tdC(c.sao?'x':'','font-size:9pt;')}
-      ${tdC('','font-size:8.5pt;')}
+      ${tdC(i===0 ? `<b>${fmtMoney(d.soTien,d.tienTe)}</b>` : '','font-size:8.5pt;')}
     </tr>`;
   }).join('');
 
   return `
 <!-- ═══ HEADER ═══ -->
-<table style="width:100%;border-collapse:collapse;margin-bottom:4px;">
+<table style="width:100%;border-collapse:collapse;margin-bottom:4px;border:1.5px solid #222;">
   <tr>
-    <td style="width:28%;vertical-align:middle;font-size:9.5pt;line-height:1.7;font-weight:700;text-transform:uppercase;">
+    <td style="width:28%;vertical-align:middle;font-size:9.5pt;line-height:1.7;font-weight:700;text-transform:uppercase;border-right:1.5px solid #222;padding:6px 8px;">
       Công ty TNHH Đầu Tư<br>BĐS T.N.T Trung Thủy
     </td>
-    <td style="width:44%;text-align:center;vertical-align:middle;border:1.5px solid #222;padding:7px 4px;">
+    <td style="width:44%;text-align:center;vertical-align:middle;border-right:1.5px solid #222;padding:7px 4px;">
       <div style="font-weight:700;font-size:13.5pt;text-transform:uppercase;letter-spacing:.5px;">Phiếu Đề Nghị Thanh Toán</div>
     </td>
-    <td style="width:28%;text-align:left;vertical-align:middle;font-size:8pt;line-height:1.75;padding-left:12px;color:#555;font-weight:400;">
+    <td style="width:28%;text-align:left;vertical-align:middle;font-size:8pt;line-height:1.75;padding:6px 8px 6px 12px;color:#555;font-weight:400;">
       F12 Miss Ao Dai Building,<br>
       21 Nguyen Trung Ngan St, Dist 1, HCMC<br>
       (+84) 28 7309 9966 &nbsp;|&nbsp; www.trungthuy.com
@@ -15928,23 +15928,20 @@ function _buildDNTTPrintHTML(d){
 </div>
 <table style="width:100%;border-collapse:collapse;font-size:9pt;text-align:center;margin-top:2px;">
   <tr>
-    <td style="width:25%;padding:4px;font-weight:600;">Người đề nghị</td>
-    <td style="width:25%;padding:4px;font-weight:600;">Trưởng đơn vị</td>
-    <td style="width:25%;padding:4px;font-weight:600;">Kế toán trưởng</td>
-    <td style="width:25%;padding:4px;font-weight:600;">Phê duyệt</td>
+    <td style="width:33.33%;padding:4px;font-weight:600;">Người đề nghị</td>
+    <td style="width:33.33%;padding:4px;font-weight:600;">Phê duyệt</td>
+    <td style="width:33.33%;padding:4px;font-weight:600;">Kế toán trưởng</td>
   </tr>
   <tr>
     <td style="padding:1px 4px;font-size:8pt;color:#777;font-weight:400;">(ký, ghi rõ họ tên)</td>
     <td style="padding:1px 4px;font-size:8pt;color:#777;font-weight:400;">(ký, ghi rõ họ tên)</td>
     <td style="padding:1px 4px;font-size:8pt;color:#777;font-weight:400;">(ký, ghi rõ họ tên)</td>
-    <td style="padding:1px 4px;font-size:8pt;color:#777;font-weight:400;">(ký, ghi rõ họ tên)</td>
   </tr>
-  <tr style="height:52px;"><td></td><td></td><td></td><td></td></tr>
+  <tr style="height:52px;"><td></td><td></td><td></td></tr>
   <tr>
     <td style="border-top:1px solid #555;padding:3px 4px;font-weight:600;">${e(d.nguoiLap||'')}</td>
-    <td style="border-top:1px solid #555;padding:3px 4px;"></td>
-    <td style="border-top:1px solid #555;padding:3px 4px;"></td>
     <td style="border-top:1px solid #555;padding:3px 4px;font-weight:600;">${e(d.approvedBy||'')}</td>
+    <td style="border-top:1px solid #555;padding:3px 4px;"></td>
   </tr>
 </table>`;
 }
@@ -15967,17 +15964,23 @@ function printDNTT(id){
 <title>Phiếu ĐNTT – ${safeTitle}</title>
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  @page{ size:A4 portrait; margin:12mm 14mm; }
-  body{
+  @page{
+    size: A4 portrait;
+    margin: 15mm 15mm 15mm 20mm;
+  }
+  html, body{
     font-family:'Times New Roman',Times,serif;
     font-size:10pt; color:#000;
     background:#f0f0f0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .page{
     background:#fff;
-    width:210mm; min-height:297mm;
+    width:210mm;
+    min-height:297mm;
     margin:0 auto;
-    padding:14mm 16mm;
+    padding:15mm 15mm 15mm 20mm;
     box-shadow:0 2px 16px rgba(0,0,0,.18);
   }
   .toolbar{
@@ -16003,8 +16006,14 @@ function printDNTT(id){
   table{ border-collapse:collapse; width:100%; }
   @media print{
     .toolbar{ display:none!important; }
-    body{ background:#fff; }
-    .page{ box-shadow:none; padding:0; width:100%; min-height:unset; }
+    html, body{ background:#fff; }
+    .page{
+      box-shadow:none;
+      padding:0;
+      margin:0;
+      width:100%;
+      min-height:unset;
+    }
   }
 </style>
 </head>
