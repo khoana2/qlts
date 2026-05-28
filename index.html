@@ -7752,11 +7752,16 @@ async function _loadEmployees(force=false){
       })||null;
     }
     if(!colUser&&!colName) return;
+    // Các domain nội bộ được chấp nhận
+    const ALLOWED_DOMAINS=['@ttgvn.com','@lancaster.com.vn','@ttg.com.vn'];
     const seen=new Set();
     window._qltsEmployees=items.map(item=>{
       const rawEmail=colUser?String(item[colUser]||'').trim():'';
-      // Chỉ lấy nhân viên TTG (email @ttgvn.com)
-      if(colUser && rawEmail && !rawEmail.toLowerCase().includes('@ttgvn.com') && rawEmail.includes('@')) return null;
+      // Chỉ lấy nhân viên nội bộ — bỏ qua email ngoài (nếu có @)
+      if(colUser && rawEmail && rawEmail.includes('@')){
+        const lc=rawEmail.toLowerCase();
+        if(!ALLOWED_DOMAINS.some(d=>lc.includes(d))) return null;
+      }
       let rawUser=rawEmail;
       if(rawUser.includes('\\')) rawUser=rawUser.split('\\').pop();
       if(rawUser.includes('@')) rawUser=rawUser.split('@')[0];
@@ -7766,13 +7771,14 @@ async function _loadEmployees(force=false){
       seen.add(key);
       return{
         user: rawUser,
+        email: rawEmail.includes('@')?rawEmail:'', // lưu full email kèm domain
         name: colName?String(item[colName]||''):'',
         dept: colDept?String(item[colDept]||''):''
       };
     }).filter(Boolean);
     try{ localStorage.setItem(LS_EMP, JSON.stringify(window._qltsEmployees)); }catch(e){}
     _onEmployeesLoaded();
-    console.log(`[EMP] Loaded ${window._qltsEmployees.length} TTG employees from HubIT`);
+    console.log(`[EMP] Loaded ${window._qltsEmployees.length} employees (TTG + Lancaster) from HubIT`);
   }catch(e){ console.warn('[EMP] Load error:', e.message); }
 }
 
@@ -8013,9 +8019,9 @@ function _empAutocomplete(inputEl, opts={}){
 
     // Local results ngay lập tức
     const localRes=(window._qltsEmployees||[])
-      .filter(e=>(e.name||'').toLowerCase().includes(lq)||((e.user||'').includes(lq)))
+      .filter(e=>(e.name||'').toLowerCase().includes(lq)||((e.user||'').includes(lq))||((e.email||'').toLowerCase().includes(lq)))
       .slice(0,6)
-      .map(e=>({...e, email:e.email||(e.user?e.user+'@ttgvn.com':'')}));
+      .map(e=>({...e, email:e.email||(e.user?e.user+'@ttgvn.com':'')})); // email đã lưu full domain kể từ bản này
 
     if(localRes.length){
       _renderMatches(localRes, []);
