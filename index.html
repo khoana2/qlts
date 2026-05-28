@@ -15189,13 +15189,20 @@ function dnttSignOffBadge(s){
   };
   return map[s||'chua_trinh'] || map['chua_trinh'];
 }
-function dnttTTBadge(s, signOff){
+function dnttTTBadge(s, signOff, paidAt){
   if(!signOff || signOff === 'chua_trinh' || signOff === 'cho_duyet') return '';
   if(signOff === 'tu_choi') return '';
+  if((s||'chua_tt') === 'da_tt'){
+    const dateStr = paidAt ? (() => {
+      const d = new Date(paidAt); if(isNaN(d)) return '';
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    })() : '';
+    return `<span style="background:#DCFCE7;color:#15803D;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">💳 Đã TT</span>`
+      + (dateStr ? `<div style="font-size:10px;color:#15803D;margin-top:2px;padding-left:2px;">📅 ${dateStr}</div>` : '');
+  }
   const map = {
     chua_tt: '<span style="background:#F1F5F9;color:#64748B;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">— Chưa TT</span>',
     cho_tt:  '<span style="background:#FEF3C7;color:#92400E;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏳ Chờ kế toán</span>',
-    da_tt:   '<span style="background:#DCFCE7;color:#15803D;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">💳 Đã TT</span>',
   };
   return map[s||'chua_tt'] || '';
 }
@@ -15290,7 +15297,7 @@ function renderDNTT(){
           ? `<button onclick="dnttSubmitKeToan('${d.id}')" style="margin-top:4px;cursor:pointer;border:1px dashed #B45309;background:#FFF9C4;color:#B45309;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">📁 Nộp KT →</button>`
           : (d.trangThaiTT)==='cho_tt'
           ? `<button onclick="dnttMarkPaid('${d.id}')" style="margin-top:4px;cursor:pointer;border:1px dashed #EA580C;background:#FFF7ED;color:#EA580C;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏳ Chờ kế toán →</button>`
-          : dnttTTBadge(d.trangThaiTT, d.trangThaiSignOff)}
+          : dnttTTBadge(d.trangThaiTT, d.trangThaiSignOff, d.paidAt)}
       </td>
       <td style="text-align:center;white-space:nowrap;">${_dnttWaitDays(d)}</td>
       <td>${licBadge}</td>
@@ -15710,7 +15717,9 @@ async function dnttMarkPaid(id){
   d.trangThaiTT='da_tt';
   d.paidAt=new Date().toISOString();
   saveDNTT(); msalSpPushDNTT(d.id).catch(e=>console.warn('[DNTT-SP]',e)); renderDNTT();
-  toast('💳 Đã thanh toán','ok');
+  const _pd = new Date(d.paidAt);
+  const _pdStr = `${String(_pd.getDate()).padStart(2,'0')}/${String(_pd.getMonth()+1).padStart(2,'0')}/${_pd.getFullYear()}`;
+  toast(`💳 Đã thanh toán — ngày ${_pdStr}`,'ok');
 }
 
 // backward compat
