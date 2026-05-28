@@ -20320,9 +20320,15 @@ function hcqtLocalToSP(f){
 
 // ── Navigation ────────────────────────────────────────────────────
 function hcqtToggleSidebar(){
-  switchTab('hcqt');
   const nav = document.getElementById('hcqt-subnav-sidebar');
   const caret = document.getElementById('hcqt-caret');
+  const alreadyOnHcqt = document.getElementById('view-hcqt')?.classList.contains('active');
+  if(!alreadyOnHcqt){
+    // Chưa ở tab HCQT → switch vào (hcqtOnTabOpen sẽ tự mở subnav)
+    switchTab('hcqt');
+    return;
+  }
+  // Đã ở tab HCQT → chỉ toggle show/hide subnav
   if(!nav) return;
   const isOpen = nav.style.display !== 'none';
   nav.style.display = isOpen ? 'none' : '';
