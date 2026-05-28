@@ -2897,7 +2897,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <button class="hcqt-sub-item" id="hcqt-sub-assets" onclick="hcqtSubNav('assets')"><i class="ph ph-list-bullets"></i> Tài sản</button>
           <button class="hcqt-sub-item" id="hcqt-sub-muahang" onclick="hcqtSubNav('muahang')"><i class="ph ph-shopping-cart"></i> Mua hàng</button>
           <button class="hcqt-sub-item" id="hcqt-sub-lichsu" onclick="hcqtSubNav('lichsu')"><i class="ph ph-clock-counter-clockwise"></i> Lịch sử</button>
-          <button class="hcqt-sub-item" id="hcqt-sub-kiemke" onclick="hcqtSubNav('kiemke')"><i class="ph ph-clipboard-text"></i> Kiểm kê</button>
         </div>
       </nav>
 
@@ -4192,7 +4191,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div id="hcqt-view-assets" style="display:none"></div>
       <div id="hcqt-view-maintenance" style="display:none"></div>
       <div id="hcqt-view-capphat" style="display:none"></div>
-      <div id="hcqt-view-kiemke" style="display:none"></div>
       <div id="hcqt-view-baocao" style="display:none"></div>
       <div id="hcqt-view-muahang" style="display:none"></div>
       <div id="hcqt-view-lichsu" style="display:none"></div>
@@ -20355,7 +20353,7 @@ function hcqtOnTabOpen(){
 const _HCQT_VIEW_TITLES = {
   dashboard:'Dashboard', assets:'Danh sách thiết bị',
   maintenance:'Lịch bảo trì', capphat:'Cấp phát & Thu hồi',
-  kiemke:'Kiểm kê tài sản', baocao:'Báo cáo tổng hợp',
+  baocao:'Báo cáo tổng hợp',
   muahang:'Yêu cầu mua hàng', lichsu:'Lịch sử hoạt động'
 };
 
@@ -20379,13 +20377,12 @@ function hcqtSubNav(v){
 }
 
 function hcqtRenderSub(){
-  ['dashboard','assets','maintenance','capphat','kiemke','baocao','muahang','lichsu'].forEach(v=>{
+  ['dashboard','assets','maintenance','capphat','baocao','muahang','lichsu'].forEach(v=>{
     const el=document.getElementById('hcqt-view-'+v);
     if(el) el.style.display=v===_hcqtSubView?'':'none';
   });
   if(_hcqtSubView==='dashboard')   hcqtRenderDashboard();
   if(_hcqtSubView==='assets')      hcqtRenderAssets();
-  if(_hcqtSubView==='kiemke')      hcqtRenderKiemKe();
   if(_hcqtSubView==='muahang')     hcqtRenderMuaHang();
   if(_hcqtSubView==='lichsu')      hcqtRenderLichSu();
 }
