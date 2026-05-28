@@ -2893,10 +2893,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div id="hcqt-subnav-sidebar" style="display:none">
           <button class="hcqt-sub-item active" id="hcqt-sub-dashboard" onclick="hcqtSubNav('dashboard')"><i class="ph ph-chart-bar"></i> Dashboard</button>
           <button class="hcqt-sub-item" id="hcqt-sub-assets" onclick="hcqtSubNav('assets')"><i class="ph ph-list-bullets"></i> Danh sách TB</button>
-          <button class="hcqt-sub-item" id="hcqt-sub-kiemke" onclick="hcqtSubNav('kiemke')"><i class="ph ph-clipboard-text"></i> Kiểm kê</button>
           <button class="hcqt-sub-item" id="hcqt-sub-baocao" onclick="hcqtSubNav('baocao')"><i class="ph ph-chart-pie"></i> Báo cáo</button>
           <button class="hcqt-sub-item" id="hcqt-sub-muahang" onclick="hcqtSubNav('muahang')"><i class="ph ph-shopping-cart"></i> Mua hàng</button>
           <button class="hcqt-sub-item" id="hcqt-sub-lichsu" onclick="hcqtSubNav('lichsu')"><i class="ph ph-clock-counter-clockwise"></i> Lịch sử</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-kiemke" onclick="hcqtSubNav('kiemke')"><i class="ph ph-clipboard-text"></i> Kiểm kê</button>
         </div>
       </nav>
 
@@ -20623,19 +20623,7 @@ function hcqtRenderLichSu(){
     });
   });
 
-  // 2. Kiểm kê
-  _hcqtData.filter(d=>d.NgayKiemKe).forEach(d=>{
-    events.push({
-      date:d.NgayKiemKe, type:'kiemke',
-      icon:'ph-clipboard-text', color:'#0284c7', bg:'#e0f2fe',
-      title:'Kiểm kê: '+hcqtEsc(d.Title),
-      sub:'Kết quả: '+(d.KetQuaKiemKe||'—')+(d.GhiChuTinhTrang?' — '+hcqtEsc(d.GhiChuTinhTrang):''),
-      badge:d.KetQuaKiemKe||'KK',
-      badgeStyle:d.KetQuaKiemKe==='Đạt'?'background:#dcfce7;color:#15803d':d.KetQuaKiemKe==='Không đạt'?'background:#fee2e2;color:#991b1b':'background:#f1f5f9;color:#475569'
-    });
-  });
-
-  // 3. Bảo trì gần nhất
+  // 2. Bảo trì gần nhất
   _hcqtData.filter(d=>d.NgayBaoTriGanNhat).forEach(d=>{
     events.push({
       date:d.NgayBaoTriGanNhat, type:'baotri',
