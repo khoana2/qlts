@@ -312,7 +312,6 @@ body{
 .hcqt-sub-item:hover{color:var(--text);background:#F1F5F9;}
 .hcqt-sub-item.active{color:#7C3AED;background:#F5F3FF;font-weight:700;}
 #hcqt-subnav-sidebar{
-  display:none;
   padding:2px 0 4px 0;
 }
 #tab-hcqt .hcqt-caret{
@@ -2891,7 +2890,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <span class="tab-icon">🏢</span> HC Quản trị
           <i class="ph ph-caret-down hcqt-caret" id="hcqt-caret"></i>
         </button>
-        <div id="hcqt-subnav-sidebar">
+        <div id="hcqt-subnav-sidebar" style="display:none">
           <button class="hcqt-sub-item active" id="hcqt-sub-dashboard" onclick="hcqtSubNav('dashboard')"><i class="ph ph-chart-bar"></i> Dashboard</button>
           <button class="hcqt-sub-item" id="hcqt-sub-assets" onclick="hcqtSubNav('assets')"><i class="ph ph-list-bullets"></i> Danh sách TB</button>
           <button class="hcqt-sub-item" id="hcqt-sub-maintenance" onclick="hcqtSubNav('maintenance')"><i class="ph ph-wrench"></i> Bảo trì</button>
@@ -20330,8 +20329,8 @@ function hcqtToggleSidebar(){
   }
   // Đã ở tab HCQT → chỉ toggle show/hide subnav
   if(!nav) return;
-  const isOpen = nav.style.display !== 'none';
-  nav.style.display = isOpen ? 'none' : '';
+  const isOpen = nav.style.display === 'block';
+  nav.style.display = isOpen ? 'none' : 'block';
   if(caret) caret.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 
@@ -20341,7 +20340,7 @@ function hcqtOnTabOpen(){
   // Mở sidebar sub-nav
   const nav = document.getElementById('hcqt-subnav-sidebar');
   const caret = document.getElementById('hcqt-caret');
-  if(nav) nav.style.display = '';
+  if(nav) nav.style.display = 'block';
   if(caret) caret.style.transform = 'rotate(180deg)';
   hcqtRenderSub();
   // Auto sync nếu chưa có data
