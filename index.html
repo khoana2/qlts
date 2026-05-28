@@ -4174,6 +4174,88 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     </div>
   </div>
 
+<!-- ══════════════ MODAL: MUA HÀNG ══════════════ -->
+<div class="modal-backdrop" id="modal-mh-form" style="display:none;">
+  <div class="modal" style="max-width:580px;width:95vw;">
+    <div class="modal-head">
+      <span id="mh-form-title"><i class="ph ph-shopping-cart"></i> Thêm yêu cầu mua hàng</span>
+      <button class="btn icon-only" onclick="closeModal('modal-mh-form')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px;">
+      <div style="grid-column:1/-1;display:flex;gap:10px;align-items:flex-end;">
+        <div style="flex:1">
+          <label style="font-size:11px;color:var(--muted);">Mã yêu cầu</label>
+          <input type="text" id="mh-f-soYC" class="finput" style="width:100%;" placeholder="Tự động sinh nếu để trống">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:11px;color:var(--muted);">Ngày yêu cầu <span style="color:red">*</span></label>
+          <input type="date" id="mh-f-ngayYC" class="finput" style="width:100%;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Người yêu cầu <span style="color:red">*</span></label>
+        <input type="text" id="mh-f-nguoiYC" class="finput" style="width:100%;" placeholder="Họ tên người yêu cầu">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Phòng ban</label>
+        <input type="text" id="mh-f-phongBan" class="finput" style="width:100%;" placeholder="Phòng ban / Bộ phận">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-size:11px;color:var(--muted);">Tên hàng / Thiết bị <span style="color:red">*</span></label>
+        <input type="text" id="mh-f-tenHang" class="finput" style="width:100%;" placeholder="Tên hàng hóa, thiết bị cần mua">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Số lượng</label>
+        <input type="number" id="mh-f-soLuong" class="finput" style="width:100%;" min="1" placeholder="1">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Đơn vị tính</label>
+        <input type="text" id="mh-f-donViTinh" class="finput" style="width:100%;" placeholder="Cái, bộ, hộp…" list="mh-dvt-list">
+        <datalist id="mh-dvt-list">
+          <option value="Cái"><option value="Bộ"><option value="Hộp">
+          <option value="Thùng"><option value="Chiếc"><option value="Gói"><option value="Cuộn">
+        </datalist>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-size:11px;color:var(--muted);">Mô tả / Lý do mua</label>
+        <textarea id="mh-f-moTa" class="finput" rows="2" style="width:100%;resize:vertical;" placeholder="Mô tả chi tiết yêu cầu, lý do mua…"></textarea>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Nhà cung cấp dự kiến</label>
+        <input type="text" id="mh-f-ncc" class="finput" style="width:100%;" placeholder="Tên NCC hoặc nguồn mua">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Giá ước tính (VND)</label>
+        <input type="number" id="mh-f-giaUocTinh" class="finput" style="width:100%;" placeholder="0" min="0">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Trạng thái</label>
+        <select id="mh-f-trangThai" class="fsel" style="width:100%;">
+          <option value="cho_duyet">⏳ Chờ duyệt</option>
+          <option value="da_duyet">✅ Đã duyệt</option>
+          <option value="da_dat_hang">📦 Đã đặt hàng</option>
+          <option value="da_nhan_hang">📬 Đã nhận hàng</option>
+          <option value="da_ban_giao">🎯 Đã bàn giao</option>
+          <option value="tu_choi">❌ Từ chối</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Người duyệt</label>
+        <input type="text" id="mh-f-nguoiDuyet" class="finput" style="width:100%;" placeholder="Tên người phê duyệt">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-size:11px;color:var(--muted);">Ghi chú</label>
+        <textarea id="mh-f-ghichu" class="finput" rows="2" style="width:100%;resize:vertical;" placeholder="Ghi chú thêm…"></textarea>
+      </div>
+      <input type="hidden" id="mh-f-id">
+    </div>
+    <div class="modal-foot" style="gap:10px;justify-content:flex-end;">
+      <button class="btn" onclick="closeModal('modal-mh-form')">Hủy</button>
+      <button class="btn success btn-icon-ph" onclick="mhSaveForm()"><i class="ph ph-floppy-disk"></i> Lưu</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- end .app -->
 
 <!-- ══════════════ MODAL: ADD/EDIT ══════════════ -->
@@ -20846,86 +20928,6 @@ function mhOpenForm(id){
   mhLoad();
   const d = id ? _muaHangData.find(x=>x.id===id) : null;
   const isEdit = !!d;
-
-  // Build modal
-  let modal = document.getElementById('modal-mh-form');
-  if(!modal){
-    modal = document.createElement('div');
-    modal.className = 'modal-backdrop';
-    modal.id = 'modal-mh-form';
-    modal.style.display = 'none';
-    modal.innerHTML = `<div class="modal-box" style="max-width:580px;width:95vw;">
-      <div class="modal-head">
-        <span id="mh-form-title"></span>
-        <button class="btn icon-only" onclick="closeModal('modal-mh-form')" style="border:none;font-size:18px;">✕</button>
-      </div>
-      <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px;">
-        <div style="grid-column:1/-1;display:flex;gap:10px;align-items:flex-end;">
-          <div style="flex:1">
-            <label style="font-size:11px;color:var(--muted);">Mã yêu cầu</label>
-            <input type="text" id="mh-f-soYC" class="finput" style="width:100%;" placeholder="Tự động sinh nếu để trống">
-          </div>
-          <div style="flex:1">
-            <label style="font-size:11px;color:var(--muted);">Ngày yêu cầu <span style="color:red">*</span></label>
-            <input type="date" id="mh-f-ngayYC" class="finput" style="width:100%;">
-          </div>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--muted);">Người yêu cầu <span style="color:red">*</span></label>
-          <input type="text" id="mh-f-nguoiYC" class="finput" style="width:100%;" placeholder="Họ tên người yêu cầu">
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--muted);">Phòng ban</label>
-          <input type="text" id="mh-f-phongBan" class="finput" style="width:100%;" placeholder="Phòng ban / Bộ phận">
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="font-size:11px;color:var(--muted);">Tên hàng / Thiết bị <span style="color:red">*</span></label>
-          <input type="text" id="mh-f-tenHang" class="finput" style="width:100%;" placeholder="Tên hàng hóa, thiết bị cần mua">
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--muted);">Số lượng</label>
-          <input type="number" id="mh-f-soLuong" class="finput" style="width:100%;" min="1" placeholder="1">
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--muted);">Đơn vị tính</label>
-          <input type="text" id="mh-f-donViTinh" class="finput" style="width:100%;" placeholder="Cái, bộ, hộp…" list="mh-dvt-list">
-          <datalist id="mh-dvt-list"><option value="Cái"><option value="Bộ"><option value="Hộp"><option value="Thùng"><option value="Chiếc"><option value="Gói"><option value="Cuộn"></datalist>
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="font-size:11px;color:var(--muted);">Mô tả / Lý do mua</label>
-          <textarea id="mh-f-moTa" class="finput" rows="2" style="width:100%;resize:vertical;" placeholder="Mô tả chi tiết yêu cầu, lý do mua…"></textarea>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--muted);">Nhà cung cấp dự kiến</label>
-          <input type="text" id="mh-f-ncc" class="finput" style="width:100%;" placeholder="Tên NCC hoặc nguồn mua">
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--muted);">Giá ước tính (VND)</label>
-          <input type="number" id="mh-f-giaUocTinh" class="finput" style="width:100%;" placeholder="0" min="0">
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--muted);">Trạng thái</label>
-          <select id="mh-f-trangThai" class="fsel" style="width:100%;">
-            ${Object.entries(MH_STATUS).map(([k,s])=>`<option value="${k}">${s.icon} ${s.label}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--muted);">Người duyệt</label>
-          <input type="text" id="mh-f-nguoiDuyet" class="finput" style="width:100%;" placeholder="Tên người phê duyệt">
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="font-size:11px;color:var(--muted);">Ghi chú</label>
-          <textarea id="mh-f-ghichu" class="finput" rows="2" style="width:100%;resize:vertical;" placeholder="Ghi chú thêm…"></textarea>
-        </div>
-        <input type="hidden" id="mh-f-id">
-      </div>
-      <div class="modal-foot" style="gap:10px;justify-content:flex-end;">
-        <button class="btn" onclick="closeModal('modal-mh-form')">Hủy</button>
-        <button class="btn success btn-icon-ph" onclick="mhSaveForm()"><i class="ph ph-floppy-disk"></i> Lưu</button>
-      </div>
-    </div>`;
-    document.body.appendChild(modal);
-  }
 
   // Fill fields
   const sv = (id,v) => { const el=document.getElementById(id); if(el) el.value=v||''; };
