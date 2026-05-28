@@ -2594,6 +2594,24 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   }
 }
 /* ══════════════════════════════════════════════════════════ */
+
+@media print {
+  body > *:not(#hcqt-print-area) { display:none !important; }
+  #hcqt-print-area { display:block !important; }
+  #hcqt-print-area { font-family:sans-serif; font-size:12px; color:#000; padding:16px; }
+  #hcqt-print-area .print-kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:16px; }
+  #hcqt-print-area .print-kpi { border:1px solid #ddd; border-radius:8px; padding:10px 12px; text-align:center; }
+  #hcqt-print-area .print-kpi .v { font-size:22px; font-weight:800; }
+  #hcqt-print-area .print-kpi .l { font-size:10px; color:#666; text-transform:uppercase; }
+  #hcqt-print-area .print-section { margin-bottom:16px; }
+  #hcqt-print-area .print-section h3 { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#555; border-bottom:1px solid #ddd; padding-bottom:4px; margin-bottom:8px; }
+  #hcqt-print-area table { width:100%; border-collapse:collapse; font-size:11px; }
+  #hcqt-print-area th { background:#f1f5f9; padding:5px 8px; text-align:left; border:1px solid #ddd; }
+  #hcqt-print-area td { padding:4px 8px; border:1px solid #ddd; }
+  #hcqt-print-area .print-2col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  #hcqt-print-area .print-footer { margin-top:20px; font-size:10px; color:#999; text-align:right; border-top:1px solid #eee; padding-top:6px; }
+  @page { margin:15mm; size:A4 portrait; }
+}
 </style>
 </head>
 <body>
@@ -4175,6 +4193,8 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <div style="font-size:15px;font-weight:700;" id="hcqt-view-title">🏢 HC Quản trị — Dashboard</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-icon-ph" id="hcqt-btn-excel" onclick="hcqtExportReport()" style="padding:5px 14px;font-size:12px;background:#217346;color:#fff;border:none;display:none"><i class="ph ph-microsoft-excel-logo"></i> Xuất Excel</button>
+          <button class="btn btn-icon-ph" id="hcqt-btn-print" onclick="hcqtPrintReport()" style="padding:5px 14px;font-size:12px;display:none"><i class="ph ph-printer"></i> In PDF</button>
           <button class="btn success btn-icon-ph" onclick="hcqtSync()" style="padding:5px 14px;font-size:12px;"><i class="ph ph-arrows-clockwise"></i> Sync SP</button>
           <label class="btn btn-icon-ph" style="padding:5px 12px;font-size:12px;cursor:pointer;" title="Import từ Excel/CSV">
             <i class="ph ph-upload-simple"></i> Import
@@ -20364,9 +20384,13 @@ function hcqtSubNav(v){
   // Cập nhật title
   const titleEl = document.getElementById('hcqt-view-title');
   if(titleEl) titleEl.textContent = '🏢 HC Quản trị — '+(_HCQT_VIEW_TITLES[v]||v);
-  // Ẩn action buttons khi không cần thiết
+  // Show/hide action buttons theo tab
   const addBtn = document.querySelector('#hcqt-app .btn[onclick="hcqtOpenAdd()"]');
   if(addBtn) addBtn.style.display = (v==='assets'||v==='dashboard') ? '' : 'none';
+  const excelBtn = document.getElementById('hcqt-btn-excel');
+  const printBtn = document.getElementById('hcqt-btn-print');
+  if(excelBtn) excelBtn.style.display = v==='dashboard' ? '' : 'none';
+  if(printBtn) printBtn.style.display = v==='dashboard' ? '' : 'none';
   hcqtRenderSub();
 }
 
@@ -22043,6 +22067,230 @@ async function mhSyncSP(){
         <label style="font-size:12px;font-weight:600;color:var(--muted);">Email *</label>
         <input id="hcqt-role-email" list="hcqt-role-email-list" autocomplete="off"
           placeholder="email@ttgvn.com"
+          style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box;">
+        <datalist id="hcqt-role-email-list"></datalist>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);">Họ tên</label>
+        <input id="hcqt-role-ten" placeholder="Họ và tên"
+          style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);">Vai trò *</label>
+        <select id="hcqt-role-select"
+          style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;">
+          <option value="viewer">Viewer — Chỉ xem</option>
+          <option value="editor">Editor — Xem + Sửa</option>
+          <option value="admin">Admin — Toàn quyền</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" id="hcqt-role-spid">
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
+      <button onclick="closeHCQTRoleForm()" style="padding:7px 18px;border-radius:7px;border:1px solid var(--border,#e2e8f0);background:#fff;cursor:pointer;font-size:13px;">Huỷ</button>
+      <button class="btn primary" onclick="saveHCQTRole()" style="padding:7px 18px;border-radius:7px;border:none;background:#7C3AED;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Lưu</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
+// ── SharePoint Sync — Mua Hàng ─────────────────────────────────
+const _MH_SP_FIELDS = [
+  {name:'SoYC',type:'Text'},{name:'NgayYC',type:'Text'},{name:'NguoiYC',type:'Text'},
+  {name:'PhongBan',type:'Text'},{name:'TenHang',type:'Note'},{name:'SoLuong',type:'Text'},
+  {name:'DonViTinh',type:'Text'},{name:'MoTa',type:'Note'},{name:'NCC',type:'Text'},
+  {name:'GiaUocTinh',type:'Number'},{name:'TrangThai',type:'Text'},{name:'NguoiDuyet',type:'Text'},
+  {name:'NgayDuyet',type:'DateTime'},{name:'NgayDatHang',type:'DateTime'},
+  {name:'NgayNhanHang',type:'DateTime'},{name:'NgayBanGiao',type:'DateTime'},
+  {name:'GhiChu',type:'Note'},{name:'BaoGia',type:'Note'},
+  {name:'LocalId',type:'Text'},{name:'CreatedAt',type:'Text'},
+];
+function mhToSpItem(rec){
+  return { SoYC:rec.soYC||'', NgayYC:rec.ngayYC||null, NguoiYC:rec.nguoiYC||'',
+    PhongBan:rec.phongBan||'', TenHang:rec.tenHang||'', SoLuong:String(rec.soLuong||''),
+    DonViTinh:rec.donViTinh||'', MoTa:rec.moTa||'', NCC:rec.ncc||'',
+    GiaUocTinh:parseFloat(rec.giaUocTinh)||0, TrangThai:rec.trangThai||'cho_duyet',
+    NguoiDuyet:rec.nguoiDuyet||'', NgayDuyet:rec.ngayDuyet||null,
+    NgayDatHang:rec.ngayDatHang||null, NgayNhanHang:rec.ngayNhanHang||null,
+    NgayBanGiao:rec.ngayBanGiao||null, GhiChu:rec.ghiChu||'',
+    BaoGia:rec.baoGia&&rec.baoGia.length?JSON.stringify(rec.baoGia):null,
+    LocalId:rec.id||'', CreatedAt:rec.createdAt||new Date().toISOString() };
+}
+function spItemToMh(item){
+  return { id:item.LocalId||String(item.Id), _spId:item.Id,
+    soYC:item.SoYC||'', ngayYC:item.NgayYC||'', nguoiYC:item.NguoiYC||'',
+    phongBan:item.PhongBan||'', tenHang:item.TenHang||'', soLuong:item.SoLuong||'1',
+    donViTinh:item.DonViTinh||'', moTa:item.MoTa||'', ncc:item.NCC||'',
+    giaUocTinh:item.GiaUocTinh||0, trangThai:item.TrangThai||'cho_duyet',
+    nguoiDuyet:item.NguoiDuyet||'', ngayDuyet:item.NgayDuyet||null,
+    ngayDatHang:item.NgayDatHang||null, ngayNhanHang:item.NgayNhanHang||null,
+    ngayBanGiao:item.NgayBanGiao||null, ghiChu:item.GhiChu||'',
+    baoGia:item.BaoGia?(()=>{try{return JSON.parse(item.BaoGia);}catch(e){return [];}})():[],
+    createdAt:item.CreatedAt||item.Created||'' };
+}
+async function msalSpProvisionMuaHangList(){
+  const site=HCQT_SITE, listTitle='DanhSachMuaHang_HCQT';
+  try{ await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')`); return true; }catch(e){}
+  await msalSpReq(`${site}/_api/web/lists`,{method:'POST',body:JSON.stringify({__metadata:{type:'SP.List'},BaseTemplate:100,Title:listTitle})});
+  for(const f of _MH_SP_FIELDS){
+    try{
+      const fk=f.type==='Note'?3:f.type==='Number'?9:f.type==='DateTime'?4:2;
+      await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/fields`,{method:'POST',body:JSON.stringify({__metadata:{type:'SP.Field'},FieldTypeKind:fk,Title:f.name,MaxLength:255})});
+    }catch(e){}
+  }
+  return true;
+}
+async function msalSpLoadMuaHang(){
+  const site=HCQT_SITE, listTitle='DanhSachMuaHang_HCQT';
+  try{
+    const sel='Id,'+_MH_SP_FIELDS.map(f=>f.name).join(',');
+    const res=await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items?$select=${sel}&$top=2000&$orderby=Id desc`);
+    const items=(res.value||[]).map(spItemToMh);
+    const spIds=new Set(items.map(x=>x.id));
+    _muaHangData=[...items,..._muaHangData.filter(x=>!spIds.has(x.id))];
+    mhSave(); return items.length;
+  }catch(e){ console.warn('msalSpLoadMuaHang',e); return 0; }
+}
+async function msalSpPushMuaHang(id,_retried){
+  const d=_muaHangData.find(x=>x.id===id); if(!d) return;
+  const site=HCQT_SITE, listTitle='DanhSachMuaHang_HCQT';
+  const body={...mhToSpItem(d),__metadata:{type:'SP.Data.DanhSachMuaHang_HCQTListItem'}};
+  try{
+    if(d._spId){ await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items(${d._spId})`,{method:'PATCH',body:JSON.stringify(body)}); }
+    else{ const res=await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items`,{method:'POST',body:JSON.stringify(body)}); if(res&&res.Id){d._spId=res.Id;mhSave();} }
+  }catch(e){ if(!_retried){try{await msalSpProvisionMuaHangList();}catch(e2){} return msalSpPushMuaHang(id,true);} console.warn('msalSpPushMuaHang',e); }
+}
+async function msalSpDeleteMuaHang(id){
+  const d=_muaHangData.find(x=>x.id===id)||{}; if(!d._spId) return;
+  try{ await msalSpReq(`${HCQT_SITE}/_api/web/lists/getbytitle('DanhSachMuaHang_HCQT')/items(${d._spId})`,{method:'DELETE'}); }catch(e){ console.warn(e); }
+}
+async function mhSyncSP(){
+  const btn=document.getElementById('mh-sp-sync-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang sync...';}
+  try{
+    await msalSpProvisionMuaHangList();
+    const count=await msalSpLoadMuaHang();
+    hcqtRenderMuaHang();
+    toast('✅ Sync xong: '+count+' yêu cầu mua hàng','ok');
+  }catch(e){ toast('❌ Sync lỗi: '+e.message,'error'); }
+  finally{ if(btn){btn.disabled=false;btn.innerHTML='<i class="ph ph-arrows-clockwise"></i> Sync SP';} }
+}
+
+// ── Xuất Excel báo cáo Dashboard ──────────────────────────────
+function hcqtExportReport(){
+  if(typeof XLSX==='undefined'){ toast('⚠️ Thư viện XLSX chưa tải xong, thử lại sau','warn'); return; }
+  const wb=XLSX.utils.book_new();
+  const fmtN=n=>n?Number(n).toLocaleString('vi-VN'):0;
+  const now=new Date();
+
+  // Sheet 1: Tóm tắt KPI
+  const totalValue=_hcqtData.reduce((s,d)=>s+(parseFloat(d.NguyenGia)||0),0);
+  const kpi=[
+    ['Chỉ số','Giá trị'],
+    ['Tổng tài sản',_hcqtData.length],
+    ['Đang sử dụng',_hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length],
+    ['Chờ cấp phát',_hcqtData.filter(d=>d.TinhTrang==='Chờ cấp phát').length],
+    ['Đang sửa chữa',_hcqtData.filter(d=>d.TinhTrang==='Đang sửa chữa').length],
+    ['Đang cấp phát',_hcqtCapPhat.filter(c=>c.trangThai==='Đang cấp phát').length],
+    ['Bảo trì trong 30 ngày',_hcqtData.filter(d=>{if(!d.NgayBaoTriTiepTheo)return false;const df=(new Date(d.NgayBaoTriTiepTheo)-now)/86400000;return df>=0&&df<=30;}).length],
+    ['Bảo trì quá hạn',_hcqtData.filter(d=>d.NgayBaoTriTiepTheo&&new Date(d.NgayBaoTriTiepTheo)<now).length],
+    ['Tổng nguyên giá (VNĐ)',totalValue],
+    ['Ngày xuất báo cáo',now.toLocaleDateString('vi-VN')],
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(kpi),'Tóm tắt');
+
+  // Sheet 2: Theo loại
+  const grp=(key)=>{const m={};_hcqtData.forEach(d=>{const k=d[key]||'Chưa xác định';m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
+  const sheetLoai=[['Loại tài sản','Số lượng','% Tổng'],...grp('LoaiTaiSan').map(([k,v])=>[k,v,(v/_hcqtData.length*100).toFixed(1)+'%'])];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sheetLoai),'Theo loại');
+
+  // Sheet 3: Theo tình trạng
+  const sheetTT=[['Tình trạng','Số lượng','% Tổng'],...grp('TinhTrang').map(([k,v])=>[k,v,(v/_hcqtData.length*100).toFixed(1)+'%'])];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sheetTT),'Theo tình trạng');
+
+  // Sheet 4: Theo bộ phận
+  const sheetBP=[['Bộ phận','Số lượng'],...grp('BoPhanSuDung').map(([k,v])=>[k,v])];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sheetBP),'Theo bộ phận');
+
+  // Sheet 5: Theo tòa nhà
+  const sheetTN=[['Tòa nhà','Số lượng'],...grp('ToaNha').map(([k,v])=>[k,v])];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sheetTN),'Theo tòa nhà');
+
+  // Sheet 6: Danh sách đầy đủ
+  const headers=['Mã TS','Tên tài sản','Loại','Nhóm','Hãng','Model','Tình trạng','Tòa nhà','Tầng','Phòng','Bộ phận','Người phụ trách','Ngày mua','Nguyên giá','Ghi chú'];
+  const rows=_hcqtData.map(d=>[d.MaTaiSan,d.Title,d.LoaiTaiSan,d.NhomTaiSan,d.HangSanXuat,d.Model,d.TinhTrang,d.ToaNha,d.Tang,d.PhongViTri,d.BoPhanSuDung,d.NguoiPhuTrach,d.NgayMua,d.NguyenGia,d.GhiChu]);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([headers,...rows]),'Danh sách TS');
+
+  const fname='BaoCao_HCQT_'+now.toISOString().slice(0,10)+'.xlsx';
+  XLSX.writeFile(wb,fname);
+  toast('✅ Đã xuất '+fname,'ok');
+}
+
+// ── In PDF báo cáo Dashboard ───────────────────────────────────
+function hcqtPrintReport(){
+  const now=new Date();
+  const total=_hcqtData.length;
+  const totalValue=_hcqtData.reduce((s,d)=>s+(parseFloat(d.NguyenGia)||0),0);
+  const fmtV=n=>new Intl.NumberFormat('vi-VN').format(n);
+
+  const grp=(key)=>{const m={};_hcqtData.forEach(d=>{const k=d[key]||'Chưa xác định';m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
+  const tblRows=(arr)=>arr.map(([k,v])=>`<tr><td>${k}</td><td style="text-align:center;font-weight:700">${v}</td><td style="text-align:center;color:#666">${total?(v/total*100).toFixed(1)+'%':''}</td></tr>`).join('');
+
+  const old=document.getElementById('hcqt-print-area');
+  if(old) old.remove();
+  const div=document.createElement('div');
+  div.id='hcqt-print-area';
+  div.style.display='none';
+  div.innerHTML=`
+    <div style="text-align:center;margin-bottom:16px;border-bottom:2px solid #333;padding-bottom:12px">
+      <div style="font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.05em">BÁO CÁO QUẢN LÝ TÀI SẢN</div>
+      <div style="font-size:12px;color:#666;margin-top:4px">Hành chính Quản trị — Ngày xuất: ${now.toLocaleDateString('vi-VN')}</div>
+    </div>
+    <div class="print-kpi-grid">
+      <div class="print-kpi"><div class="v" style="color:#3B82F6">${total}</div><div class="l">Tổng tài sản</div></div>
+      <div class="print-kpi"><div class="v" style="color:#22c55e">${_hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length}</div><div class="l">Đang sử dụng</div></div>
+      <div class="print-kpi"><div class="v" style="color:#f59e0b">${_hcqtData.filter(d=>{if(!d.NgayBaoTriTiepTheo)return false;const df=(new Date(d.NgayBaoTriTiepTheo)-now)/86400000;return df>=0&&df<=30;}).length}</div><div class="l">Bảo trì 30N</div></div>
+      <div class="print-kpi"><div class="v" style="color:#8b5cf6">${_hcqtCapPhat.filter(c=>c.trangThai==='Đang cấp phát').length}</div><div class="l">Đang cấp phát</div></div>
+      <div class="print-kpi"><div class="v" style="color:#10B981;font-size:16px">${fmtV(totalValue)}</div><div class="l">Nguyên giá (₫)</div></div>
+    </div>
+    <div class="print-2col">
+      <div class="print-section">
+        <h3>Theo loại tài sản</h3>
+        <table><thead><tr><th>Loại</th><th>SL</th><th>%</th></tr></thead><tbody>${tblRows(grp('LoaiTaiSan'))}</tbody></table>
+      </div>
+      <div class="print-section">
+        <h3>Theo tình trạng</h3>
+        <table><thead><tr><th>Tình trạng</th><th>SL</th><th>%</th></tr></thead><tbody>${tblRows(grp('TinhTrang'))}</tbody></table>
+      </div>
+      <div class="print-section">
+        <h3>Theo bộ phận sử dụng</h3>
+        <table><thead><tr><th>Bộ phận</th><th>SL</th><th>%</th></tr></thead><tbody>${tblRows(grp('BoPhanSuDung'))}</tbody></table>
+      </div>
+      <div class="print-section">
+        <h3>Theo tòa nhà</h3>
+        <table><thead><tr><th>Tòa nhà</th><th>SL</th><th>%</th></tr></thead><tbody>${tblRows(grp('ToaNha'))}</tbody></table>
+      </div>
+    </div>
+    <div class="print-footer">Xuất từ hệ thống QLTS TTG — ${now.toLocaleString('vi-VN')}</div>`;
+  document.body.appendChild(div);
+  window.print();
+}
+
+
+</script>
+
+<!-- ── HCQT Role Modal ── -->
+<div id="hcqt-role-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:700;align-items:center;justify-content:center;">
+  <div style="background:var(--card-bg,#fff);border-radius:14px;padding:24px 28px;width:420px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:700;"><i class="ph ph-shield-check"></i> Phân quyền HCQT</div>
+      <button onclick="closeHCQTRoleForm()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);">Email *</label>
+        <input id="hcqt-role-email" list="hcqt-role-email-list" autocomplete="off" placeholder="email@ttgvn.com"
           style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box;">
         <datalist id="hcqt-role-email-list"></datalist>
       </div>
