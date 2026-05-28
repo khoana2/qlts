@@ -4258,65 +4258,180 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 
 </div><!-- end .app -->
 
-<!-- ══════════════ MODAL: MUA HÀNG — CHI TIẾT & SO SÁNH BÁO GIÁ ══════════════ -->
+<!-- ══════════════ MODAL: MUA HÀNG — SO SÁNH BÁO GIÁ 3 NCC ══════════════ -->
 <div class="modal-backdrop" id="modal-mh-detail" style="display:none;">
-  <div class="modal" style="max-width:900px;width:97vw;max-height:92vh;display:flex;flex-direction:column;">
+  <div class="modal" style="max-width:940px;width:97vw;max-height:94vh;display:flex;flex-direction:column;">
     <div class="modal-head">
-      <span id="mh-detail-title"><i class="ph ph-chart-bar"></i> So sánh báo giá</span>
+      <div>
+        <span id="mh-detail-title" style="font-size:14px;font-weight:700;"></span>
+        <div id="mh-detail-sub" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
+      </div>
       <button class="btn icon-only" onclick="closeModal('modal-mh-detail')" style="border:none;font-size:18px;">✕</button>
     </div>
-    <div style="overflow-y:auto;flex:1;">
-      <div id="mh-detail-body"></div>
-    </div>
-  </div>
-</div>
+    <div class="modal-body" style="overflow-y:auto;flex:1;padding:16px 18px;">
 
-<!-- ══════════════ MODAL: MUA HÀNG — FORM BÁO GIÁ ══════════════ -->
-<div class="modal-backdrop" id="modal-mh-baogia" style="display:none;">
-  <div class="modal" style="max-width:540px;width:95vw;">
-    <div class="modal-head">
-      <span id="bg-form-title"><i class="ph ph-plus"></i> Thêm báo giá</span>
-      <button class="btn icon-only" onclick="closeModal('modal-mh-baogia')" style="border:none;font-size:18px;">✕</button>
+      <!-- YC summary bar -->
+      <div id="mh-detail-yc-bar" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--surface2,#f8fafc);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;font-size:12px;"></div>
+
+      <!-- 3-column comparison grid -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;">
+        <i class="ph ph-scales"></i> So sánh báo giá — 3 nhà cung cấp
+      </div>
+      <div class="proc-compare-grid" id="mh-ncc-grid">
+
+        <!-- NCC 1 -->
+        <div class="proc-ncc-col" id="mh-col-0">
+          <div class="col-header">
+            <i class="ph ph-storefront" style="color:var(--accent2);"></i> Nhà cung cấp 1
+            <span class="best-tag" id="mh-best-tag-0" style="display:none;">Rẻ nhất</span>
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc0-ten" class="finput" placeholder="Tên nhà cung cấp" style="font-size:12px;font-weight:600;" oninput="mhLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc0-model" class="finput" placeholder="Tên hàng / Model" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <textarea id="mh-ncc0-mota" class="finput" placeholder="Mô tả / Thông số kỹ thuật" style="font-size:12px;min-height:52px;resize:vertical;"></textarea>
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <label style="font-size:10px;color:var(--muted);">Đơn giá (VNĐ)</label>
+            <input type="number" id="mh-ncc0-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="mhLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc0-baohiem" class="finput" placeholder="Bảo hành (VD: 12 tháng tại nhà)" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc0-khuyenmai" class="finput" placeholder="Khuyến mãi / Quà tặng kèm" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc0-thanhtoan" class="finput" placeholder="Điều khoản thanh toán" style="font-size:12px;" list="mh-thanhtoan-list">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc0-giao" class="finput" placeholder="Thời gian giao hàng" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="url" id="mh-ncc0-fileurl" class="finput" placeholder="Link file báo giá (https://...)" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:6px;">
+            <input type="text" id="mh-ncc0-ghichu" class="finput" placeholder="Ghi chú thêm…" style="font-size:12px;">
+          </div>
+          <div class="proc-live-total" id="mh-total-0">—</div>
+          <div class="proc-live-diff" id="mh-diff-0"></div>
+          <button class="btn btn-icon-ph" id="mh-chon-btn-0" style="margin-top:8px;width:100%;padding:5px;font-size:12px;background:#F0FDF4;color:#166534;border-color:#86EFAC;display:none;" onclick="mhChonNCC(0)">
+            <i class="ph ph-check-circle"></i> Chọn NCC này
+          </button>
+          <div id="mh-chon-badge-0" style="display:none;margin-top:8px;text-align:center;font-size:12px;font-weight:700;color:#166534;">✅ Đã chọn NCC này</div>
+        </div>
+
+        <!-- NCC 2 -->
+        <div class="proc-ncc-col" id="mh-col-1">
+          <div class="col-header">
+            <i class="ph ph-storefront" style="color:var(--accent2);"></i> Nhà cung cấp 2
+            <span class="best-tag" id="mh-best-tag-1" style="display:none;">Rẻ nhất</span>
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc1-ten" class="finput" placeholder="Tên nhà cung cấp" style="font-size:12px;font-weight:600;" oninput="mhLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc1-model" class="finput" placeholder="Tên hàng / Model" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <textarea id="mh-ncc1-mota" class="finput" placeholder="Mô tả / Thông số kỹ thuật" style="font-size:12px;min-height:52px;resize:vertical;"></textarea>
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <label style="font-size:10px;color:var(--muted);">Đơn giá (VNĐ)</label>
+            <input type="number" id="mh-ncc1-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="mhLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc1-baohiem" class="finput" placeholder="Bảo hành" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc1-khuyenmai" class="finput" placeholder="Khuyến mãi / Quà tặng kèm" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc1-thanhtoan" class="finput" placeholder="Điều khoản thanh toán" style="font-size:12px;" list="mh-thanhtoan-list">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc1-giao" class="finput" placeholder="Thời gian giao hàng" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="url" id="mh-ncc1-fileurl" class="finput" placeholder="Link file báo giá (https://...)" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:6px;">
+            <input type="text" id="mh-ncc1-ghichu" class="finput" placeholder="Ghi chú thêm…" style="font-size:12px;">
+          </div>
+          <div class="proc-live-total" id="mh-total-1">—</div>
+          <div class="proc-live-diff" id="mh-diff-1"></div>
+          <button class="btn btn-icon-ph" id="mh-chon-btn-1" style="margin-top:8px;width:100%;padding:5px;font-size:12px;background:#F0FDF4;color:#166534;border-color:#86EFAC;display:none;" onclick="mhChonNCC(1)">
+            <i class="ph ph-check-circle"></i> Chọn NCC này
+          </button>
+          <div id="mh-chon-badge-1" style="display:none;margin-top:8px;text-align:center;font-size:12px;font-weight:700;color:#166534;">✅ Đã chọn NCC này</div>
+        </div>
+
+        <!-- NCC 3 -->
+        <div class="proc-ncc-col" id="mh-col-2">
+          <div class="col-header">
+            <i class="ph ph-storefront" style="color:var(--accent2);"></i> Nhà cung cấp 3
+            <span class="best-tag" id="mh-best-tag-2" style="display:none;">Rẻ nhất</span>
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc2-ten" class="finput" placeholder="Tên nhà cung cấp" style="font-size:12px;font-weight:600;" oninput="mhLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc2-model" class="finput" placeholder="Tên hàng / Model" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <textarea id="mh-ncc2-mota" class="finput" placeholder="Mô tả / Thông số kỹ thuật" style="font-size:12px;min-height:52px;resize:vertical;"></textarea>
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <label style="font-size:10px;color:var(--muted);">Đơn giá (VNĐ)</label>
+            <input type="number" id="mh-ncc2-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="mhLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc2-baohiem" class="finput" placeholder="Bảo hành" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc2-khuyenmai" class="finput" placeholder="Khuyến mãi / Quà tặng kèm" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc2-thanhtoan" class="finput" placeholder="Điều khoản thanh toán" style="font-size:12px;" list="mh-thanhtoan-list">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="text" id="mh-ncc2-giao" class="finput" placeholder="Thời gian giao hàng" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <input type="url" id="mh-ncc2-fileurl" class="finput" placeholder="Link file báo giá (https://...)" style="font-size:12px;">
+          </div>
+          <div class="field" style="margin-bottom:6px;">
+            <input type="text" id="mh-ncc2-ghichu" class="finput" placeholder="Ghi chú thêm…" style="font-size:12px;">
+          </div>
+          <div class="proc-live-total" id="mh-total-2">—</div>
+          <div class="proc-live-diff" id="mh-diff-2"></div>
+          <button class="btn btn-icon-ph" id="mh-chon-btn-2" style="margin-top:8px;width:100%;padding:5px;font-size:12px;background:#F0FDF4;color:#166534;border-color:#86EFAC;display:none;" onclick="mhChonNCC(2)">
+            <i class="ph ph-check-circle"></i> Chọn NCC này
+          </button>
+          <div id="mh-chon-badge-2" style="display:none;margin-top:8px;text-align:center;font-size:12px;font-weight:700;color:#166534;">✅ Đã chọn NCC này</div>
+        </div>
+      </div>
+
+      <!-- datalist thanh toán -->
+      <datalist id="mh-thanhtoan-list">
+        <option value="Thanh toán 100% trước khi nhận hàng">
+        <option value="Thanh toán 50% đặt cọc, 50% khi nhận">
+        <option value="Công nợ 30 ngày">
+        <option value="Công nợ 45 ngày">
+        <option value="Công nợ 60 ngày">
+        <option value="Thanh toán sau khi nghiệm thu">
+      </datalist>
+
+      <input type="hidden" id="mh-detail-id">
     </div>
-    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px;">
-      <div style="grid-column:1/-1;">
-        <label style="font-size:11px;color:var(--muted);">Nhà cung cấp <span style="color:red">*</span></label>
-        <input type="text" id="bg-f-ncc" class="finput" style="width:100%;" placeholder="Tên nhà cung cấp">
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--muted);">Giá báo (VND)</label>
-        <input type="number" id="bg-f-gia" class="finput" style="width:100%;" min="0" placeholder="0">
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--muted);">Đơn vị tính</label>
-        <input type="text" id="bg-f-dvt" class="finput" style="width:100%;" placeholder="Cái, bộ…">
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--muted);">Thời gian giao hàng</label>
-        <input type="text" id="bg-f-tggh" class="finput" style="width:100%;" placeholder="VD: 3-5 ngày">
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--muted);">Bảo hành</label>
-        <input type="text" id="bg-f-baohang" class="finput" style="width:100%;" placeholder="VD: 12 tháng">
-      </div>
-      <div style="grid-column:1/-1;">
-        <label style="font-size:11px;color:var(--muted);">Điều khoản thanh toán</label>
-        <input type="text" id="bg-f-dieukoan" class="finput" style="width:100%;" placeholder="VD: 30% đặt cọc, 70% khi nhận hàng">
-      </div>
-      <div style="grid-column:1/-1;">
-        <label style="font-size:11px;color:var(--muted);">Link file báo giá (SharePoint / OneDrive…)</label>
-        <input type="url" id="bg-f-fileurl" class="finput" style="width:100%;" placeholder="https://...">
-      </div>
-      <div style="grid-column:1/-1;">
-        <label style="font-size:11px;color:var(--muted);">Ghi chú</label>
-        <textarea id="bg-f-ghichu" class="finput" rows="2" style="width:100%;resize:vertical;" placeholder="Ghi chú thêm về báo giá này…"></textarea>
-      </div>
-      <input type="hidden" id="bg-f-id">
-      <input type="hidden" id="bg-f-mhid">
-    </div>
-    <div class="modal-foot" style="gap:10px;justify-content:flex-end;">
-      <button class="btn" onclick="closeModal('modal-mh-baogia')">Hủy</button>
-      <button class="btn success btn-icon-ph" onclick="bgSaveForm()"><i class="ph ph-floppy-disk"></i> Lưu báo giá</button>
+    <div class="modal-foot" style="justify-content:space-between;">
+      <button class="btn" onclick="closeModal('modal-mh-detail')">Đóng</button>
+      <button class="btn success btn-icon-ph" onclick="mhSaveBaoGia()">
+        <i class="ph ph-floppy-disk"></i> Lưu báo giá
+      </button>
     </div>
   </div>
 </div>
@@ -11267,7 +11382,7 @@ function closeModal(id){
 const _FORM_MODALS = new Set([
   'modal-form', 'modal-transfer', 'modal-license', 'modal-dntt-form',
   'modal-import', 'modal-xfer-company', 'modal-supplement',
-  'modal-procurement', 'modal-mh-form', 'modal-mh-baogia',
+  'modal-procurement', 'modal-mh-form', 'modal-mh-detail',
 ]);
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')){
@@ -20982,251 +21097,168 @@ async function mhDelete(id){
   toast('🗑️ Đã xóa yêu cầu','warn');
 }
 
-// ─── MUA HÀNG: BÁO GIÁ & SO SÁNH ──────────────────────────────────────────
+// ─── MUA HÀNG: SO SÁNH BÁO GIÁ 3 NCC ──────────────────────────────────────
 
 function mhOpenDetail(id){
   mhLoad();
   const d = _muaHangData.find(x=>x.id===id); if(!d) return;
-  document.getElementById('mh-detail-title').innerHTML =
-    `<i class="ph ph-chart-bar" style="color:#6366f1;"></i> <b>${hcqtEsc(d.soYC||d.tenHang)}</b> — Báo giá & So sánh`;
-  _mhRenderDetailBody(id);
-  openModal('modal-mh-detail');
-}
-
-function _mhRenderDetailBody(mhId){
-  const wrap = document.getElementById('mh-detail-body'); if(!wrap) return;
-  mhLoad();
-  const d = _muaHangData.find(x=>x.id===mhId); if(!d) return;
-  const baoGia = d.baoGia || [];
   const e = hcqtEsc;
   const fmtM = n => n ? Number(n).toLocaleString('vi-VN') + ' ₫' : '—';
 
-  // Find min price for highlight
-  const prices = baoGia.filter(x=>x.gia>0).map(x=>x.gia);
-  const minGia  = prices.length ? Math.min(...prices) : null;
+  // Header
+  document.getElementById('mh-detail-title').innerHTML =
+    `<i class="ph ph-scales" style="color:#6366f1;"></i> So sánh báo giá — ${e(d.tenHang||d.soYC||'Yêu cầu')}`;
+  document.getElementById('mh-detail-sub').innerHTML =
+    `${e(d.soYC||'')}${d.nguoiYC?' · '+e(d.nguoiYC):''}${d.phongBan?' · '+e(d.phongBan):''}`;
 
-  // Sort: selected first, then by price asc
-  const sorted = [...baoGia].sort((a,b)=>{
-    if(a.isChon && !b.isChon) return -1;
-    if(!a.isChon && b.isChon) return 1;
-    return (a.gia||Infinity)-(b.gia||Infinity);
+  // YC summary bar
+  const bar = document.getElementById('mh-detail-yc-bar');
+  const chon = (d.baoGia||[]).find(x=>x.isChon);
+  bar.innerHTML = `
+    <span><b>SL:</b> ${e(d.soLuong||'—')} ${e(d.donViTinh||'')}</span>
+    <span style="color:var(--muted);">|</span>
+    <span><b>Giá ước tính:</b> <span style="color:#0369a1;font-weight:700;">${fmtM(d.giaUocTinh)}</span></span>
+    <span style="color:var(--muted);">|</span>
+    <span><b>NCC đã chọn:</b> ${chon?`<span style="color:#166534;font-weight:700;">✅ ${e(chon.ncc)}</span>`:'<span style="color:var(--muted);">Chưa chọn</span>'}</span>
+    ${d.moTa?`<span style="color:var(--muted);">|</span><span style="color:var(--muted);font-style:italic;">${e(d.moTa)}</span>`:''}`;
+
+  // Store ID
+  const idEl = document.getElementById('mh-detail-id');
+  if(idEl) idEl.value = id;
+
+  // Fill 3 NCC columns from baoGia array (index 0,1,2)
+  const sv = (fid, v) => { const el=document.getElementById(fid); if(el) el.value=v||''; };
+  const svta = (fid, v) => { const el=document.getElementById(fid); if(el) el.value=v||''; };
+  const baoGia = d.baoGia || [];
+
+  for(let i=0;i<3;i++){
+    const bg = baoGia[i] || {};
+    sv(`mh-ncc${i}-ten`,       bg.ncc||'');
+    sv(`mh-ncc${i}-model`,     bg.model||'');
+    svta(`mh-ncc${i}-mota`,    bg.mota||'');
+    sv(`mh-ncc${i}-gia`,       bg.gia||'');
+    sv(`mh-ncc${i}-baohiem`,   bg.baoHanh||'');
+    sv(`mh-ncc${i}-khuyenmai`, bg.khuyenMai||'');
+    sv(`mh-ncc${i}-thanhtoan`, bg.dieuKhoan||'');
+    sv(`mh-ncc${i}-giao`,      bg.tggh||'');
+    sv(`mh-ncc${i}-fileurl`,   bg.fileUrl||'');
+    sv(`mh-ncc${i}-ghichu`,    bg.ghichu||'');
+
+    // Chọn badges
+    const btnEl   = document.getElementById(`mh-chon-btn-${i}`);
+    const badgeEl = document.getElementById(`mh-chon-badge-${i}`);
+    if(btnEl)   btnEl.style.display   = bg.isChon ? 'none' : (bg.ncc ? 'block' : 'none');
+    if(badgeEl) badgeEl.style.display = bg.isChon ? 'block' : 'none';
+    document.getElementById(`mh-col-${i}`)?.classList.toggle('col-best', !!bg.isChon);
+  }
+
+  mhLiveUpdate();
+  openModal('modal-mh-detail');
+}
+
+function mhLiveUpdate(){
+  const prices = [0,1,2].map(i => parseFloat(document.getElementById(`mh-ncc${i}-gia`)?.value)||0);
+  const valid = prices.filter(p=>p>0);
+  const minP  = valid.length ? Math.min(...valid) : 0;
+  const maxP  = valid.length ? Math.max(...valid) : 0;
+
+  prices.forEach((p, i) => {
+    const col    = document.getElementById(`mh-col-${i}`);
+    const totEl  = document.getElementById(`mh-total-${i}`);
+    const diffEl = document.getElementById(`mh-diff-${i}`);
+    const tagEl  = document.getElementById(`mh-best-tag-${i}`);
+    const btnEl  = document.getElementById(`mh-chon-btn-${i}`);
+    const ten    = document.getElementById(`mh-ncc${i}-ten`)?.value.trim();
+
+    // "Rẻ nhất" badge
+    const isChonCol = document.getElementById(`mh-chon-badge-${i}`)?.style.display !== 'none';
+    col?.classList.toggle('col-best', isChonCol);
+    if(tagEl) tagEl.style.display = 'none';
+
+    if(!p){ if(totEl) totEl.textContent='—'; if(diffEl) diffEl.textContent=''; return; }
+    if(totEl) totEl.textContent = p.toLocaleString('vi-VN') + 'đ';
+
+    if(p === minP && valid.length > 1){
+      if(tagEl) tagEl.style.display = 'inline-flex';
+    }
+    if(diffEl && valid.length > 1 && maxP > 0){
+      const diff = p - minP;
+      if(diff > 0){
+        const pct = ((diff/minP)*100).toFixed(1);
+        diffEl.innerHTML = `<span style="color:var(--red);">+${diff.toLocaleString('vi-VN')}đ (+${pct}% so với rẻ nhất)</span>`;
+      } else {
+        diffEl.innerHTML = `<span style="color:#059669;">✓ Rẻ nhất · tiết kiệm ${(maxP-minP).toLocaleString('vi-VN')}đ</span>`;
+      }
+    }
+
+    // Show "Chọn" button if has name and not already chosen
+    const isChosen = document.getElementById(`mh-chon-badge-${i}`)?.style.display !== 'none';
+    if(btnEl) btnEl.style.display = (ten && !isChosen) ? 'block' : 'none';
   });
-
-  // Price analysis
-  let analysisHtml = '';
-  if(baoGia.length > 1 && prices.length > 1){
-    const maxGia = Math.max(...prices);
-    const diff   = maxGia - minGia;
-    const pct    = ((diff/maxGia)*100).toFixed(0);
-    const minNCC = baoGia.find(x=>x.gia===minGia)?.ncc || '';
-    const maxNCC = baoGia.find(x=>x.gia===maxGia)?.ncc || '';
-    analysisHtml = `<div style="margin-top:10px;padding:10px 14px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE;font-size:12px;color:#1D4ED8;">
-      <b>📊 Phân tích:</b> Chênh lệch <b>${Number(diff).toLocaleString('vi-VN')} ₫</b> (${pct}%) —
-      Thấp nhất: <b style="color:#166534;">${e(minNCC)} ${fmtM(minGia)}</b> ·
-      Cao nhất: <b style="color:#991B1B;">${e(maxNCC)} ${fmtM(maxGia)}</b>
-    </div>`;
-  }
-
-  // Table rows
-  const rows = sorted.map(bg=>{
-    const isCheap = minGia && bg.gia === minGia && !bg.isChon;
-    return `<tr style="border-top:1px solid var(--border);${bg.isChon?'background:#F0FDF4;':''}" onmouseenter="if(!this.dataset.chon)this.style.background='#f8fafc'" onmouseleave="this.style.background='${bg.isChon?'#F0FDF4':''}'" data-chon="${bg.isChon?'1':''}">
-      <td style="padding:8px 10px;text-align:center;width:28px;">${bg.isChon?'<span title="Đã chọn" style="font-size:15px;">✅</span>':''}</td>
-      <td style="padding:8px 10px;font-weight:${bg.isChon?700:500};">${e(bg.ncc||'—')}</td>
-      <td style="padding:8px 10px;text-align:right;font-weight:700;color:${bg.isChon?'#166534':'#0369a1'};white-space:nowrap;">
-        ${fmtM(bg.gia)}${isCheap?'<span style="font-size:10px;color:#166534;margin-left:3px;" title="Giá thấp nhất">▼</span>':''}
-      </td>
-      <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted);">${e(bg.tggh||'—')}</td>
-      <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted);">${e(bg.baoHanh||'—')}</td>
-      <td style="padding:8px 10px;font-size:11px;color:var(--muted);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${e(bg.dieuKhoan||'')}">${e(bg.dieuKhoan||'—')}</td>
-      <td style="padding:8px 10px;text-align:center;">
-        ${bg.fileUrl ? `<a href="${e(bg.fileUrl)}" target="_blank" style="color:var(--accent);text-decoration:none;" title="Xem file báo giá"><i class="ph ph-file-arrow-down" style="font-size:17px;"></i></a>` : '<span style="color:var(--muted);font-size:12px;">—</span>'}
-      </td>
-      <td style="padding:8px 10px;text-align:center;white-space:nowrap;">
-        ${!bg.isChon
-          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#F0FDF4;color:#166534;border-color:#86EFAC;" onclick="bgSelect('${mhId}','${bg.id}')" title="Chọn NCC này"><i class="ph ph-check-circle"></i> Chọn</button>`
-          : `<span style="font-size:11px;color:#166534;font-weight:700;white-space:nowrap;">✅ Đã chọn</span>`}
-        <button class="btn btn-icon-ph" style="padding:3px 7px;font-size:11px;margin-left:3px;" onclick="bgOpenForm('${mhId}','${bg.id}')" title="Chỉnh sửa"><i class="ph ph-pencil-simple"></i></button>
-        <button class="btn danger btn-icon-ph" style="padding:3px 7px;font-size:11px;margin-left:2px;" onclick="bgDelete('${mhId}','${bg.id}')" title="Xóa"><i class="ph ph-trash"></i></button>
-      </td>
-    </tr>`;
-  }).join('');
-
-  wrap.innerHTML = `
-  <!-- YC info header -->
-  <div style="background:var(--surface2,#f8fafc);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;">
-    <div style="flex:2;min-width:200px;">
-      <div style="font-size:14px;font-weight:700;color:var(--text);">${e(d.tenHang||'—')}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px;">${e(d.soYC||'')}${d.nguoiYC?' · '+e(d.nguoiYC):''}${d.phongBan?' · '+e(d.phongBan):''}</div>
-      ${d.moTa?`<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic;">${e(d.moTa)}</div>`:''}
-    </div>
-    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;">
-      <div style="text-align:center;">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Số lượng</div>
-        <div style="font-size:16px;font-weight:700;">${e(d.soLuong||'—')} <span style="font-size:11px;font-weight:400;color:var(--muted);">${e(d.donViTinh||'')}</span></div>
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Giá ước tính</div>
-        <div style="font-size:16px;font-weight:700;color:#0369a1;">${fmtM(d.giaUocTinh)}</div>
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">NCC đã chọn</div>
-        <div style="font-size:13px;font-weight:700;color:#166534;">${baoGia.find(x=>x.isChon)?e(baoGia.find(x=>x.isChon).ncc):'<span style="color:var(--muted);font-weight:400;font-size:12px;">Chưa chọn</span>'}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quote comparison -->
-  <div style="padding:14px 18px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:13px;font-weight:700;color:var(--text);">
-        <i class="ph ph-chart-bar" style="color:#6366f1;"></i> Bảng so sánh báo giá
-        <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px;">${baoGia.length} nhà cung cấp</span>
-      </div>
-      <button class="btn primary btn-icon-ph" style="padding:5px 12px;font-size:12px;" onclick="bgOpenForm('${mhId}')">
-        <i class="ph ph-plus"></i> Thêm báo giá
-      </button>
-    </div>
-
-    ${baoGia.length === 0 ? `
-    <div style="text-align:center;padding:36px 16px;background:#f8fafc;border-radius:10px;border:1.5px dashed var(--border);">
-      <div style="font-size:30px;margin-bottom:8px;">📋</div>
-      <div style="font-size:13px;font-weight:600;color:var(--text);">Chưa có báo giá nào</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Nhấn "+ Thêm báo giá" để nhập báo giá từ nhà cung cấp</div>
-    </div>` : `
-    <div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:10px;overflow:hidden;">
-      <thead><tr style="background:var(--surface2,#f8fafc);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);">
-        <th style="padding:8px 10px;width:28px;"></th>
-        <th style="padding:8px 10px;text-align:left;font-weight:600;">Nhà cung cấp</th>
-        <th style="padding:8px 10px;text-align:right;font-weight:600;">Giá báo</th>
-        <th style="padding:8px 10px;text-align:center;font-weight:600;white-space:nowrap;">TG giao</th>
-        <th style="padding:8px 10px;text-align:center;font-weight:600;">Bảo hành</th>
-        <th style="padding:8px 10px;text-align:left;font-weight:600;">Điều khoản TT</th>
-        <th style="padding:8px 10px;text-align:center;font-weight:600;">File BG</th>
-        <th style="padding:8px 10px;text-align:center;font-weight:600;">Thao tác</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    </div>
-    ${analysisHtml}
-    `}
-
-    <!-- YC notes -->
-    ${d.ghichu?`<div style="margin-top:12px;padding:10px 12px;background:#f8fafc;border-radius:8px;border-left:3px solid var(--border);font-size:12px;color:var(--muted);"><b>Ghi chú YC:</b> ${e(d.ghichu)}</div>`:''}
-  </div>`;
 }
 
-function bgOpenForm(mhId, bgId){
+function mhSaveBaoGia(){
   mhLoad();
-  const d  = _muaHangData.find(x=>x.id===mhId); if(!d) return;
-  const bg = bgId ? (d.baoGia||[]).find(x=>x.id===bgId) : null;
-  const isEdit = !!bg;
-
-  document.getElementById('bg-form-title').innerHTML = isEdit
-    ? '<i class="ph ph-pencil-simple"></i> Chỉnh sửa báo giá'
-    : '<i class="ph ph-plus"></i> Thêm báo giá';
-
-  const sv = (id,v) => { const el=document.getElementById(id); if(el) el.value=v||''; };
-  sv('bg-f-id',       isEdit ? bg.id : '');
-  sv('bg-f-mhid',     mhId);
-  sv('bg-f-ncc',      isEdit ? (bg.ncc||'') : '');
-  sv('bg-f-gia',      isEdit ? (bg.gia||'') : '');
-  sv('bg-f-dvt',      isEdit ? (bg.dvt||'') : (d.donViTinh||''));
-  sv('bg-f-tggh',     isEdit ? (bg.tggh||'') : '');
-  sv('bg-f-baohang',  isEdit ? (bg.baoHanh||'') : '');
-  sv('bg-f-dieukoan', isEdit ? (bg.dieuKhoan||'') : '');
-  sv('bg-f-fileurl',  isEdit ? (bg.fileUrl||'') : '');
-  sv('bg-f-ghichu',   isEdit ? (bg.ghichu||'') : '');
-
-  openModal('modal-mh-baogia');
-}
-
-function bgSaveForm(){
-  mhLoad();
-  const gv  = id => (document.getElementById(id)?.value||'').trim();
-  const mhId = gv('bg-f-mhid');
-  const ncc  = gv('bg-f-ncc');
-  if(!ncc){ toast('⚠️ Vui lòng nhập tên nhà cung cấp','bad'); return; }
-
+  const mhId = document.getElementById('mh-detail-id')?.value; if(!mhId) return;
   const d = _muaHangData.find(x=>x.id===mhId); if(!d) return;
-  if(!d.baoGia) d.baoGia = [];
+  const gv = id => (document.getElementById(id)?.value||'').trim();
 
-  const existingId = gv('bg-f-id');
-  const existing   = existingId ? d.baoGia.find(x=>x.id===existingId) : null;
+  // Preserve existing IDs and isChon flags
+  const existing = d.baoGia || [];
 
-  const rec = {
-    id:         existingId || genId(),
-    ncc,
-    gia:        parseFloat(gv('bg-f-gia')) || null,
-    dvt:        gv('bg-f-dvt'),
-    tggh:       gv('bg-f-tggh'),
-    baoHanh:    gv('bg-f-baohang'),
-    dieuKhoan:  gv('bg-f-dieukoan'),
-    fileUrl:    gv('bg-f-fileurl'),
-    ghichu:     gv('bg-f-ghichu'),
-    isChon:     existing?.isChon || false,
-    createdAt:  existing?.createdAt || new Date().toISOString(),
-  };
-
-  if(existing){
-    Object.assign(existing, rec);
-    toast('✅ Đã cập nhật báo giá','ok');
-  } else {
-    d.baoGia.push(rec);
-    toast('✅ Đã thêm báo giá','ok');
-  }
+  d.baoGia = [0,1,2].map(i => ({
+    id:         existing[i]?.id || genId(),
+    ncc:        gv(`mh-ncc${i}-ten`),
+    model:      gv(`mh-ncc${i}-model`),
+    mota:       gv(`mh-ncc${i}-mota`),
+    gia:        parseFloat(gv(`mh-ncc${i}-gia`))||null,
+    baoHanh:    gv(`mh-ncc${i}-baohiem`),
+    khuyenMai:  gv(`mh-ncc${i}-khuyenmai`),
+    dieuKhoan:  gv(`mh-ncc${i}-thanhtoan`),
+    tggh:       gv(`mh-ncc${i}-giao`),
+    fileUrl:    gv(`mh-ncc${i}-fileurl`),
+    ghichu:     gv(`mh-ncc${i}-ghichu`),
+    isChon:     existing[i]?.isChon || false,
+    createdAt:  existing[i]?.createdAt || new Date().toISOString(),
+  })).filter(bg => bg.ncc || bg.gia);  // drop empty columns
 
   mhSave();
-  closeModal('modal-mh-baogia');
-  _mhRenderDetailBody(mhId);
   hcqtRenderMuaHang();
+  toast('✅ Đã lưu báo giá', 'ok');
   msalSpPushMuaHang(mhId).catch(err=>console.warn('[MH-SP]',err));
 }
 
-async function bgSelect(mhId, bgId){
+async function mhChonNCC(colIdx){
   mhLoad();
-  const d  = _muaHangData.find(x=>x.id===mhId); if(!d) return;
-  const bg = (d.baoGia||[]).find(x=>x.id===bgId); if(!bg) return;
+  const mhId = document.getElementById('mh-detail-id')?.value; if(!mhId) return;
+  const d = _muaHangData.find(x=>x.id===mhId); if(!d) return;
+  const gv = id => (document.getElementById(id)?.value||'').trim();
+
+  const ten = gv(`mh-ncc${colIdx}-ten`);
+  const gia = parseFloat(gv(`mh-ncc${colIdx}-gia`))||null;
+
+  // Save current form first
+  mhSaveBaoGia();
+
+  mhLoad();
+  const d2 = _muaHangData.find(x=>x.id===mhId); if(!d2) return;
 
   const ok = await showConfirm(
-    `Chọn <b>${hcqtEsc(bg.ncc)}</b> làm nhà cung cấp cho yêu cầu này?<br>
-    <span style="font-size:12px;color:var(--muted);">Giá báo: <b>${bg.gia?Number(bg.gia).toLocaleString('vi-VN')+' ₫':'chưa có'}</b>${bg.tggh?' · Giao: '+hcqtEsc(bg.tggh):''}</span>`,
+    `Chọn <b>${hcqtEsc(ten)}</b> làm nhà cung cấp?<br>
+    <span style="font-size:12px;color:var(--muted);">Giá: <b>${gia?Number(gia).toLocaleString('vi-VN')+' ₫':'chưa nhập'}</b></span>`,
     {title:'Chọn nhà cung cấp', okText:'✅ Xác nhận chọn', icon:'🏆'}
   );
   if(!ok) return;
 
-  // Deselect all, then select this one
-  (d.baoGia||[]).forEach(x => x.isChon = false);
-  bg.isChon = true;
-
-  // Update YC fields
-  d.ncc = bg.ncc;
-  if(bg.gia) d.giaUocTinh = bg.gia;
+  // Mark chosen
+  (d2.baoGia||[]).forEach((bg,i) => { bg.isChon = (i === colIdx); });
+  d2.ncc = ten;
+  if(gia) d2.giaUocTinh = gia;
 
   mhSave();
-  _mhRenderDetailBody(mhId);
+  closeModal('modal-mh-detail');
   hcqtRenderMuaHang();
-  toast(`🏆 Đã chọn ${bg.ncc} làm NCC — YC đã cập nhật`, 'ok');
-  msalSpPushMuaHang(mhId).catch(err=>console.warn('[MH-SP]',err));
-}
-
-async function bgDelete(mhId, bgId){
-  mhLoad();
-  const d  = _muaHangData.find(x=>x.id===mhId); if(!d) return;
-  const bg = (d.baoGia||[]).find(x=>x.id===bgId); if(!bg) return;
-
-  const ok = await showConfirm(
-    `Xóa báo giá của <b>${hcqtEsc(bg.ncc)}</b>?`,
-    {title:'Xóa báo giá', danger:true, okText:'Xóa', icon:'🗑️'}
-  );
-  if(!ok) return;
-
-  d.baoGia = (d.baoGia||[]).filter(x=>x.id!==bgId);
-  mhSave();
-  _mhRenderDetailBody(mhId);
-  hcqtRenderMuaHang();
-  toast('🗑️ Đã xóa báo giá','warn');
+  toast(`🏆 Đã chọn ${ten} làm NCC — YC đã cập nhật`, 'ok');
   msalSpPushMuaHang(mhId).catch(err=>console.warn('[MH-SP]',err));
 }
 
