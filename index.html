@@ -20299,7 +20299,10 @@ async function hcqtSync(silent=false){
     let all=[], nextUrl=null;
     const base = `${HCQT_SITE}/_api/web/lists/getbytitle('${HCQT_LIST}')/items?$select=${HCQT_SEL}&$top=500`;
     let url = base;
-    try{ await hcqtSpProvisionNewFields(); _hcqtVtFieldsProvisioned=true; }catch(e){}
+    // Provision chạy sau, không block sync chính
+    if(!_hcqtVtFieldsProvisioned){
+      setTimeout(()=>{ hcqtSpProvisionNewFields().then(()=>{ _hcqtVtFieldsProvisioned=true; }).catch(()=>{}); }, 3000);
+    }
     while(url){
       const tok = await hcqtGetToken();
       const res = await fetch(url, {headers:{'Authorization':'Bearer '+tok,'Accept':'application/json;odata=nometadata'}});
@@ -21668,9 +21671,10 @@ async function vatTuSpProvision(){
   }
 }
 
+let _vatTuListProvisioned = false;
 async function vatTuSpSaveGiaoDich(rec){
   if(!window._msalAccount) return;
-  await vatTuSpProvision();
+  if(!_vatTuListProvisioned){ try{ await vatTuSpProvision(); _vatTuListProvisioned=true; }catch(e){} }
   const body={Title:rec.id,AssetId:rec.assetId,LoaiGD:rec.loaiGD,
     SoLuong:rec.soLuong,NgayGD:rec.ngayGD||null,NguoiTH:rec.nguoiTH,
     NhaCungCap:rec.nhaCungCap,BoPhanNhan:rec.boPhanNhan,GhiChu:rec.ghiChu};
@@ -21682,7 +21686,7 @@ async function vatTuSpSaveGiaoDich(rec){
 async function vatTuSpLoad(){
   if(!window._msalAccount) return;
   try{
-    await vatTuSpProvision();
+    // Không provision ở đây — tránh block sync. List chưa có thì bỏ qua.
     const sel='Id,Title,AssetId,LoaiGD,SoLuong,NgayGD,NguoiTH,NhaCungCap,BoPhanNhan,GhiChu';
     const res=await msalSpReq(`${HCQT_SITE}/_api/web/lists/getbytitle('${HCQT_VT_LIST}')/items?$select=${sel}&$top=2000&$orderby=Id desc`);
     const spItems=(res.value||[]).map(it=>({
