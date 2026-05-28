@@ -21962,21 +21962,17 @@ async function msalSpProvisionMuaHangList(){
     await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')`);
     return true; // already exists
   }catch(e){}
-  // Create list
+  // Create list (no __metadata — using odata=nometadata)
   await msalSpReq(`${site}/_api/web/lists`,{
     method:'POST',
-    body: JSON.stringify({ __metadata:{type:'SP.List'}, BaseTemplate:100, Title:listTitle, Description:'Danh sách yêu cầu mua hàng HCQT' })
+    body: JSON.stringify({ BaseTemplate:100, Title:listTitle, Description:'Danh sách yêu cầu mua hàng HCQT' })
   });
   // Add columns
   for(const f of _MH_SP_FIELDS){
     try{
-      const body = f.type==='Note'
-        ? {__metadata:{type:'SP.Field'},FieldTypeKind:3,Title:f.name}
-        : f.type==='Number'
-        ? {__metadata:{type:'SP.Field'},FieldTypeKind:9,Title:f.name}
-        : f.type==='DateTime'
-        ? {__metadata:{type:'SP.Field'},FieldTypeKind:4,Title:f.name}
-        : {__metadata:{type:'SP.Field'},FieldTypeKind:2,Title:f.name,MaxLength:255};
+      const fk = f.type==='Note'?3 : f.type==='Number'?9 : f.type==='DateTime'?4 : 2;
+      const body = {FieldTypeKind:fk, Title:f.name};
+      if(fk===2) body.MaxLength=255;
       await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/fields`,{method:'POST',body:JSON.stringify(body)});
     }catch(e){}
   }
@@ -21987,8 +21983,7 @@ async function msalSpPushMuaHang(id, _retried){
   const d = _muaHangData.find(x=>x.id===id); if(!d) return;
   const site = HCQT_SITE;
   const listTitle = 'DanhSachMuaHang_HCQT';
-  const body = mhToSpItem(d);
-  body.__metadata = {type:'SP.Data.DanhSachMuaHang_HCQTListItem'};
+  const body = mhToSpItem(d); // no __metadata — odata=nometadata
   try{
     if(d._spId){
       await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items(${d._spId})`,{
