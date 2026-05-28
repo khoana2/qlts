@@ -21749,17 +21749,17 @@ function mhAdvance(id, next){
 
 function mhDelete(id){
   const d = _muaHangData.find(x=>x.id===id); if(!d) return;
-  // Xoá ngay, cho phép hoàn tác trong 5s
+  const spId = d._spId || null; // capture trước khi xóa khỏi array
   _muaHangData = _muaHangData.filter(x=>x.id!==id);
   mhSave();
   hcqtRenderMuaHang();
-  toastUndo('Đã xoá yêu cầu "'+( d.soYC||d.tenHang||'—')+'"', {
+  toastUndo('Đã xoá yêu cầu "'+(d.soYC||d.tenHang||'—')+'"', {
     onUndo: ()=>{
       _muaHangData.unshift(d);
       mhSave();
       hcqtRenderMuaHang();
     },
-    onCommit: ()=>{ msalSpDeleteMuaHang(id); }
+    onCommit: ()=>{ if(spId) msalSpDeleteMuaHangById(spId); }
   });
 }
 
@@ -22082,12 +22082,13 @@ async function msalSpPushMuaHang(id, _retried){
 }
 
 async function msalSpDeleteMuaHang(id){
-  const spId = (()=>{ const d=_muaHangData.find(x=>x.id===id); return d?d._spId:null; })();
+  const d=_muaHangData.find(x=>x.id===id);
+  if(d?._spId) await msalSpDeleteMuaHangById(d._spId);
+}
+async function msalSpDeleteMuaHangById(spId){
   if(!spId) return;
-  const site = HCQT_SITE;
-  const listTitle = 'DanhSachMuaHang_HCQT';
   try{
-    await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items(${spId})`,{method:'DELETE'});
+    await msalSpReq(`${HCQT_SITE}/_api/web/lists/getbytitle('DanhSachMuaHang_HCQT')/items(${spId})`,{method:'DELETE'});
   }catch(e){ console.warn('msalSpDeleteMuaHang error',e); }
 }
 
