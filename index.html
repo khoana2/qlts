@@ -4258,6 +4258,69 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 
 </div><!-- end .app -->
 
+<!-- ══════════════ MODAL: MUA HÀNG — CHI TIẾT & SO SÁNH BÁO GIÁ ══════════════ -->
+<div class="modal-backdrop" id="modal-mh-detail" style="display:none;">
+  <div class="modal" style="max-width:900px;width:97vw;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-head">
+      <span id="mh-detail-title"><i class="ph ph-chart-bar"></i> So sánh báo giá</span>
+      <button class="btn icon-only" onclick="closeModal('modal-mh-detail')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;">
+      <div id="mh-detail-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: MUA HÀNG — FORM BÁO GIÁ ══════════════ -->
+<div class="modal-backdrop" id="modal-mh-baogia" style="display:none;">
+  <div class="modal" style="max-width:540px;width:95vw;">
+    <div class="modal-head">
+      <span id="bg-form-title"><i class="ph ph-plus"></i> Thêm báo giá</span>
+      <button class="btn icon-only" onclick="closeModal('modal-mh-baogia')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px;">
+      <div style="grid-column:1/-1;">
+        <label style="font-size:11px;color:var(--muted);">Nhà cung cấp <span style="color:red">*</span></label>
+        <input type="text" id="bg-f-ncc" class="finput" style="width:100%;" placeholder="Tên nhà cung cấp">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Giá báo (VND)</label>
+        <input type="number" id="bg-f-gia" class="finput" style="width:100%;" min="0" placeholder="0">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Đơn vị tính</label>
+        <input type="text" id="bg-f-dvt" class="finput" style="width:100%;" placeholder="Cái, bộ…">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Thời gian giao hàng</label>
+        <input type="text" id="bg-f-tggh" class="finput" style="width:100%;" placeholder="VD: 3-5 ngày">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);">Bảo hành</label>
+        <input type="text" id="bg-f-baohang" class="finput" style="width:100%;" placeholder="VD: 12 tháng">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-size:11px;color:var(--muted);">Điều khoản thanh toán</label>
+        <input type="text" id="bg-f-dieukoan" class="finput" style="width:100%;" placeholder="VD: 30% đặt cọc, 70% khi nhận hàng">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-size:11px;color:var(--muted);">Link file báo giá (SharePoint / OneDrive…)</label>
+        <input type="url" id="bg-f-fileurl" class="finput" style="width:100%;" placeholder="https://...">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-size:11px;color:var(--muted);">Ghi chú</label>
+        <textarea id="bg-f-ghichu" class="finput" rows="2" style="width:100%;resize:vertical;" placeholder="Ghi chú thêm về báo giá này…"></textarea>
+      </div>
+      <input type="hidden" id="bg-f-id">
+      <input type="hidden" id="bg-f-mhid">
+    </div>
+    <div class="modal-foot" style="gap:10px;justify-content:flex-end;">
+      <button class="btn" onclick="closeModal('modal-mh-baogia')">Hủy</button>
+      <button class="btn success btn-icon-ph" onclick="bgSaveForm()"><i class="ph ph-floppy-disk"></i> Lưu báo giá</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════ MODAL: ADD/EDIT ══════════════ -->
 <div class="modal-backdrop" id="modal-form">
   <div class="modal">
@@ -11204,7 +11267,7 @@ function closeModal(id){
 const _FORM_MODALS = new Set([
   'modal-form', 'modal-transfer', 'modal-license', 'modal-dntt-form',
   'modal-import', 'modal-xfer-company', 'modal-supplement',
-  'modal-procurement',
+  'modal-procurement', 'modal-mh-form', 'modal-mh-baogia',
 ]);
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')){
@@ -20870,6 +20933,7 @@ function _mhRenderTable(){
       <td style="padding:9px 12px;text-align:center;">${mhBadge(d.trangThai)}</td>
       <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
         ${_mhNextActionBtn(d)}
+        <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE;margin-right:2px;" title="So sánh báo giá" onclick="mhOpenDetail('${d.id}')"><i class="ph ph-chart-bar"></i>${(d.baoGia&&d.baoGia.length)?` (${d.baoGia.length})`:''}</button>
         <button class="btn btn-icon-ph" style="padding:3px 7px;font-size:11px;" title="Chỉnh sửa" onclick="mhOpenForm('${d.id}')"><i class="ph ph-pencil-simple"></i></button>
         <button class="btn danger btn-icon-ph" style="padding:3px 7px;font-size:11px;" title="Xóa" onclick="mhDelete('${d.id}')"><i class="ph ph-trash"></i></button>
       </td>
@@ -20916,6 +20980,254 @@ async function mhDelete(id){
   mhSave();
   hcqtRenderMuaHang();
   toast('🗑️ Đã xóa yêu cầu','warn');
+}
+
+// ─── MUA HÀNG: BÁO GIÁ & SO SÁNH ──────────────────────────────────────────
+
+function mhOpenDetail(id){
+  mhLoad();
+  const d = _muaHangData.find(x=>x.id===id); if(!d) return;
+  document.getElementById('mh-detail-title').innerHTML =
+    `<i class="ph ph-chart-bar" style="color:#6366f1;"></i> <b>${hcqtEsc(d.soYC||d.tenHang)}</b> — Báo giá & So sánh`;
+  _mhRenderDetailBody(id);
+  openModal('modal-mh-detail');
+}
+
+function _mhRenderDetailBody(mhId){
+  const wrap = document.getElementById('mh-detail-body'); if(!wrap) return;
+  mhLoad();
+  const d = _muaHangData.find(x=>x.id===mhId); if(!d) return;
+  const baoGia = d.baoGia || [];
+  const e = hcqtEsc;
+  const fmtM = n => n ? Number(n).toLocaleString('vi-VN') + ' ₫' : '—';
+
+  // Find min price for highlight
+  const prices = baoGia.filter(x=>x.gia>0).map(x=>x.gia);
+  const minGia  = prices.length ? Math.min(...prices) : null;
+
+  // Sort: selected first, then by price asc
+  const sorted = [...baoGia].sort((a,b)=>{
+    if(a.isChon && !b.isChon) return -1;
+    if(!a.isChon && b.isChon) return 1;
+    return (a.gia||Infinity)-(b.gia||Infinity);
+  });
+
+  // Price analysis
+  let analysisHtml = '';
+  if(baoGia.length > 1 && prices.length > 1){
+    const maxGia = Math.max(...prices);
+    const diff   = maxGia - minGia;
+    const pct    = ((diff/maxGia)*100).toFixed(0);
+    const minNCC = baoGia.find(x=>x.gia===minGia)?.ncc || '';
+    const maxNCC = baoGia.find(x=>x.gia===maxGia)?.ncc || '';
+    analysisHtml = `<div style="margin-top:10px;padding:10px 14px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE;font-size:12px;color:#1D4ED8;">
+      <b>📊 Phân tích:</b> Chênh lệch <b>${Number(diff).toLocaleString('vi-VN')} ₫</b> (${pct}%) —
+      Thấp nhất: <b style="color:#166534;">${e(minNCC)} ${fmtM(minGia)}</b> ·
+      Cao nhất: <b style="color:#991B1B;">${e(maxNCC)} ${fmtM(maxGia)}</b>
+    </div>`;
+  }
+
+  // Table rows
+  const rows = sorted.map(bg=>{
+    const isCheap = minGia && bg.gia === minGia && !bg.isChon;
+    return `<tr style="border-top:1px solid var(--border);${bg.isChon?'background:#F0FDF4;':''}" onmouseenter="if(!this.dataset.chon)this.style.background='#f8fafc'" onmouseleave="this.style.background='${bg.isChon?'#F0FDF4':''}'" data-chon="${bg.isChon?'1':''}">
+      <td style="padding:8px 10px;text-align:center;width:28px;">${bg.isChon?'<span title="Đã chọn" style="font-size:15px;">✅</span>':''}</td>
+      <td style="padding:8px 10px;font-weight:${bg.isChon?700:500};">${e(bg.ncc||'—')}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:${bg.isChon?'#166534':'#0369a1'};white-space:nowrap;">
+        ${fmtM(bg.gia)}${isCheap?'<span style="font-size:10px;color:#166534;margin-left:3px;" title="Giá thấp nhất">▼</span>':''}
+      </td>
+      <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted);">${e(bg.tggh||'—')}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted);">${e(bg.baoHanh||'—')}</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--muted);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${e(bg.dieuKhoan||'')}">${e(bg.dieuKhoan||'—')}</td>
+      <td style="padding:8px 10px;text-align:center;">
+        ${bg.fileUrl ? `<a href="${e(bg.fileUrl)}" target="_blank" style="color:var(--accent);text-decoration:none;" title="Xem file báo giá"><i class="ph ph-file-arrow-down" style="font-size:17px;"></i></a>` : '<span style="color:var(--muted);font-size:12px;">—</span>'}
+      </td>
+      <td style="padding:8px 10px;text-align:center;white-space:nowrap;">
+        ${!bg.isChon
+          ? `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#F0FDF4;color:#166534;border-color:#86EFAC;" onclick="bgSelect('${mhId}','${bg.id}')" title="Chọn NCC này"><i class="ph ph-check-circle"></i> Chọn</button>`
+          : `<span style="font-size:11px;color:#166534;font-weight:700;white-space:nowrap;">✅ Đã chọn</span>`}
+        <button class="btn btn-icon-ph" style="padding:3px 7px;font-size:11px;margin-left:3px;" onclick="bgOpenForm('${mhId}','${bg.id}')" title="Chỉnh sửa"><i class="ph ph-pencil-simple"></i></button>
+        <button class="btn danger btn-icon-ph" style="padding:3px 7px;font-size:11px;margin-left:2px;" onclick="bgDelete('${mhId}','${bg.id}')" title="Xóa"><i class="ph ph-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+  <!-- YC info header -->
+  <div style="background:var(--surface2,#f8fafc);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;">
+    <div style="flex:2;min-width:200px;">
+      <div style="font-size:14px;font-weight:700;color:var(--text);">${e(d.tenHang||'—')}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px;">${e(d.soYC||'')}${d.nguoiYC?' · '+e(d.nguoiYC):''}${d.phongBan?' · '+e(d.phongBan):''}</div>
+      ${d.moTa?`<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic;">${e(d.moTa)}</div>`:''}
+    </div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;">
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Số lượng</div>
+        <div style="font-size:16px;font-weight:700;">${e(d.soLuong||'—')} <span style="font-size:11px;font-weight:400;color:var(--muted);">${e(d.donViTinh||'')}</span></div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Giá ước tính</div>
+        <div style="font-size:16px;font-weight:700;color:#0369a1;">${fmtM(d.giaUocTinh)}</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">NCC đã chọn</div>
+        <div style="font-size:13px;font-weight:700;color:#166534;">${baoGia.find(x=>x.isChon)?e(baoGia.find(x=>x.isChon).ncc):'<span style="color:var(--muted);font-weight:400;font-size:12px;">Chưa chọn</span>'}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quote comparison -->
+  <div style="padding:14px 18px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text);">
+        <i class="ph ph-chart-bar" style="color:#6366f1;"></i> Bảng so sánh báo giá
+        <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px;">${baoGia.length} nhà cung cấp</span>
+      </div>
+      <button class="btn primary btn-icon-ph" style="padding:5px 12px;font-size:12px;" onclick="bgOpenForm('${mhId}')">
+        <i class="ph ph-plus"></i> Thêm báo giá
+      </button>
+    </div>
+
+    ${baoGia.length === 0 ? `
+    <div style="text-align:center;padding:36px 16px;background:#f8fafc;border-radius:10px;border:1.5px dashed var(--border);">
+      <div style="font-size:30px;margin-bottom:8px;">📋</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text);">Chưa có báo giá nào</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Nhấn "+ Thêm báo giá" để nhập báo giá từ nhà cung cấp</div>
+    </div>` : `
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:10px;overflow:hidden;">
+      <thead><tr style="background:var(--surface2,#f8fafc);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);">
+        <th style="padding:8px 10px;width:28px;"></th>
+        <th style="padding:8px 10px;text-align:left;font-weight:600;">Nhà cung cấp</th>
+        <th style="padding:8px 10px;text-align:right;font-weight:600;">Giá báo</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:600;white-space:nowrap;">TG giao</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:600;">Bảo hành</th>
+        <th style="padding:8px 10px;text-align:left;font-weight:600;">Điều khoản TT</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:600;">File BG</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:600;">Thao tác</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>
+    ${analysisHtml}
+    `}
+
+    <!-- YC notes -->
+    ${d.ghichu?`<div style="margin-top:12px;padding:10px 12px;background:#f8fafc;border-radius:8px;border-left:3px solid var(--border);font-size:12px;color:var(--muted);"><b>Ghi chú YC:</b> ${e(d.ghichu)}</div>`:''}
+  </div>`;
+}
+
+function bgOpenForm(mhId, bgId){
+  mhLoad();
+  const d  = _muaHangData.find(x=>x.id===mhId); if(!d) return;
+  const bg = bgId ? (d.baoGia||[]).find(x=>x.id===bgId) : null;
+  const isEdit = !!bg;
+
+  document.getElementById('bg-form-title').innerHTML = isEdit
+    ? '<i class="ph ph-pencil-simple"></i> Chỉnh sửa báo giá'
+    : '<i class="ph ph-plus"></i> Thêm báo giá';
+
+  const sv = (id,v) => { const el=document.getElementById(id); if(el) el.value=v||''; };
+  sv('bg-f-id',       isEdit ? bg.id : '');
+  sv('bg-f-mhid',     mhId);
+  sv('bg-f-ncc',      isEdit ? (bg.ncc||'') : '');
+  sv('bg-f-gia',      isEdit ? (bg.gia||'') : '');
+  sv('bg-f-dvt',      isEdit ? (bg.dvt||'') : (d.donViTinh||''));
+  sv('bg-f-tggh',     isEdit ? (bg.tggh||'') : '');
+  sv('bg-f-baohang',  isEdit ? (bg.baoHanh||'') : '');
+  sv('bg-f-dieukoan', isEdit ? (bg.dieuKhoan||'') : '');
+  sv('bg-f-fileurl',  isEdit ? (bg.fileUrl||'') : '');
+  sv('bg-f-ghichu',   isEdit ? (bg.ghichu||'') : '');
+
+  openModal('modal-mh-baogia');
+}
+
+function bgSaveForm(){
+  mhLoad();
+  const gv  = id => (document.getElementById(id)?.value||'').trim();
+  const mhId = gv('bg-f-mhid');
+  const ncc  = gv('bg-f-ncc');
+  if(!ncc){ toast('⚠️ Vui lòng nhập tên nhà cung cấp','bad'); return; }
+
+  const d = _muaHangData.find(x=>x.id===mhId); if(!d) return;
+  if(!d.baoGia) d.baoGia = [];
+
+  const existingId = gv('bg-f-id');
+  const existing   = existingId ? d.baoGia.find(x=>x.id===existingId) : null;
+
+  const rec = {
+    id:         existingId || genId(),
+    ncc,
+    gia:        parseFloat(gv('bg-f-gia')) || null,
+    dvt:        gv('bg-f-dvt'),
+    tggh:       gv('bg-f-tggh'),
+    baoHanh:    gv('bg-f-baohang'),
+    dieuKhoan:  gv('bg-f-dieukoan'),
+    fileUrl:    gv('bg-f-fileurl'),
+    ghichu:     gv('bg-f-ghichu'),
+    isChon:     existing?.isChon || false,
+    createdAt:  existing?.createdAt || new Date().toISOString(),
+  };
+
+  if(existing){
+    Object.assign(existing, rec);
+    toast('✅ Đã cập nhật báo giá','ok');
+  } else {
+    d.baoGia.push(rec);
+    toast('✅ Đã thêm báo giá','ok');
+  }
+
+  mhSave();
+  closeModal('modal-mh-baogia');
+  _mhRenderDetailBody(mhId);
+  hcqtRenderMuaHang();
+  msalSpPushMuaHang(mhId).catch(err=>console.warn('[MH-SP]',err));
+}
+
+async function bgSelect(mhId, bgId){
+  mhLoad();
+  const d  = _muaHangData.find(x=>x.id===mhId); if(!d) return;
+  const bg = (d.baoGia||[]).find(x=>x.id===bgId); if(!bg) return;
+
+  const ok = await showConfirm(
+    `Chọn <b>${hcqtEsc(bg.ncc)}</b> làm nhà cung cấp cho yêu cầu này?<br>
+    <span style="font-size:12px;color:var(--muted);">Giá báo: <b>${bg.gia?Number(bg.gia).toLocaleString('vi-VN')+' ₫':'chưa có'}</b>${bg.tggh?' · Giao: '+hcqtEsc(bg.tggh):''}</span>`,
+    {title:'Chọn nhà cung cấp', okText:'✅ Xác nhận chọn', icon:'🏆'}
+  );
+  if(!ok) return;
+
+  // Deselect all, then select this one
+  (d.baoGia||[]).forEach(x => x.isChon = false);
+  bg.isChon = true;
+
+  // Update YC fields
+  d.ncc = bg.ncc;
+  if(bg.gia) d.giaUocTinh = bg.gia;
+
+  mhSave();
+  _mhRenderDetailBody(mhId);
+  hcqtRenderMuaHang();
+  toast(`🏆 Đã chọn ${bg.ncc} làm NCC — YC đã cập nhật`, 'ok');
+  msalSpPushMuaHang(mhId).catch(err=>console.warn('[MH-SP]',err));
+}
+
+async function bgDelete(mhId, bgId){
+  mhLoad();
+  const d  = _muaHangData.find(x=>x.id===mhId); if(!d) return;
+  const bg = (d.baoGia||[]).find(x=>x.id===bgId); if(!bg) return;
+
+  const ok = await showConfirm(
+    `Xóa báo giá của <b>${hcqtEsc(bg.ncc)}</b>?`,
+    {title:'Xóa báo giá', danger:true, okText:'Xóa', icon:'🗑️'}
+  );
+  if(!ok) return;
+
+  d.baoGia = (d.baoGia||[]).filter(x=>x.id!==bgId);
+  mhSave();
+  _mhRenderDetailBody(mhId);
+  hcqtRenderMuaHang();
+  toast('🗑️ Đã xóa báo giá','warn');
+  msalSpPushMuaHang(mhId).catch(err=>console.warn('[MH-SP]',err));
 }
 
 function mhGenSoYC(){
@@ -21038,6 +21350,7 @@ const _MH_SP_FIELDS = [
   { name:'NgayNhanHang',type:'DateTime' },
   { name:'NgayBanGiao', type:'DateTime' },
   { name:'GhiChu',      type:'Note'     },
+  { name:'BaoGia',      type:'Note'     },
   { name:'LocalId',     type:'Text'     },
   { name:'CreatedAt',   type:'Text'     },
 ];
@@ -21062,6 +21375,7 @@ function mhToSpItem(rec){
     NgayNhanHang:  rec.ngayNhanHang|| null,
     NgayBanGiao:   rec.ngayBanGiao || null,
     GhiChu:        rec.ghichu      || '',
+    BaoGia:        rec.baoGia && rec.baoGia.length ? JSON.stringify(rec.baoGia) : null,
     LocalId:       rec.id          || '',
     CreatedAt:     rec.createdAt   || '',
   };
@@ -21089,6 +21403,7 @@ function spItemToMh(item){
     ngayNhanHang: item.NgayNhanHang  || null,
     ngayBanGiao:  item.NgayBanGiao   || null,
     ghichu:       item.GhiChu        || '',
+    baoGia:       item.BaoGia ? (()=>{ try{ return JSON.parse(item.BaoGia); }catch(e){ return []; } })() : [],
     createdAt:    item.CreatedAt      || item.Created || new Date().toISOString(),
   };
 }
