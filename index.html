@@ -21957,24 +21957,25 @@ function spItemToMh(item){
 async function msalSpProvisionMuaHangList(){
   const site = HCQT_SITE;
   const listTitle = 'DanhSachMuaHang_HCQT';
-  // Check if list exists
+  // Ensure list exists (create if missing)
   try{
     await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')`);
-    return true; // already exists
-  }catch(e){}
-  // Create list (no __metadata — using odata=nometadata)
-  await msalSpReq(`${site}/_api/web/lists`,{
-    method:'POST',
-    body: JSON.stringify({ BaseTemplate:100, Title:listTitle, Description:'Danh sách yêu cầu mua hàng HCQT' })
-  });
-  // Add columns
+    // list exists — fall through to ensure columns
+  }catch(e){
+    // List missing → create it
+    await msalSpReq(`${site}/_api/web/lists`,{
+      method:'POST',
+      body: JSON.stringify({ BaseTemplate:100, Title:listTitle, Description:'Danh sách yêu cầu mua hàng HCQT' })
+    });
+  }
+  // Ensure all columns exist (ignore errors for already-existing fields)
   for(const f of _MH_SP_FIELDS){
     try{
       const fk = f.type==='Note'?3 : f.type==='Number'?9 : f.type==='DateTime'?4 : 2;
       const body = {FieldTypeKind:fk, Title:f.name};
       if(fk===2) body.MaxLength=255;
       await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/fields`,{method:'POST',body:JSON.stringify(body)});
-    }catch(e){}
+    }catch(e){} // silently skip if field already exists
   }
   return true;
 }
@@ -22039,10 +22040,22 @@ async function msalSpLoadMuaHang(){
     _muaHangData=[...items,..._muaHangData.filter(x=>!spIds.has(x.id))];
     mhSave(); return items.length;
   }catch(e){
-    if(e&&(e.message||'').includes('does not exist')){
-      console.log('[MH] List chưa có → tự tạo DanhSachMuaHang_HCQT...');
-      try{ await msalSpProvisionMuaHangList(); console.log('[MH] Đã tạo list ✅'); }catch(e2){ console.warn('[MH] Provision lỗi',e2); }
-      return 0;
+    const msg = (e&&e.message)||'';
+    if(msg.includes('does not exist')||msg.includes('does not exist')){
+      console.log('[MH] List/field chưa có → provision DanhSachMuaHang_HCQT...');
+      try{
+        await msalSpProvisionMuaHangList();
+        console.log('[MH] Provision xong ✅ — thử load lại...');
+        // Retry once after provisioning
+        try{
+          const sel2='Id,'+_MH_SP_FIELDS.map(f=>f.name).join(',');
+          const res2=await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items?$select=${sel2}&$top=2000&$orderby=Id desc`);
+          const items2=(res2.value||[]).map(spItemToMh);
+          const spIds2=new Set(items2.map(x=>x.id));
+          _muaHangData=[...items2,..._muaHangData.filter(x=>!spIds2.has(x.id))];
+          mhSave(); return items2.length;
+        }catch(e3){ return 0; }
+      }catch(e2){ console.warn('[MH] Provision lỗi',e2); return 0; }
     }
     console.warn('msalSpLoadMuaHang',e); return 0;
   }
