@@ -22106,62 +22106,68 @@ function hcqtPrintReport(){
   const total = _hcqtData.length;
   const totalValue = _hcqtData.reduce((s,d)=>s+(parseFloat(d.NguyenGia)||0),0);
   const fmtV = n=>new Intl.NumberFormat('vi-VN').format(n);
-  const grp=(key)=>{const m={};_hcqtData.forEach(d=>{const k=d[key]||'Chưa xác định';m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
-  const tblRows=(arr)=>arr.map(([k,v])=>`<tr><td style="padding:5px 8px;border:1px solid #ddd">${hcqtEsc(k)}</td><td style="padding:5px 8px;border:1px solid #ddd;text-align:center">${v}</td><td style="padding:5px 8px;border:1px solid #ddd;text-align:center">${total?(v/total*100).toFixed(1)+'%':'—'}</td></tr>`).join('');
-  const old = document.getElementById('hcqt-print-area');
-  if(old) old.remove();
-  const div = document.createElement('div');
-  div.id = 'hcqt-print-area';
-  div.style.display = 'none';
-  div.innerHTML = `
-    <style>
-      @media print {
-        body > *:not(#hcqt-print-area){ display:none!important; }
-        #hcqt-print-area{ display:block!important; }
-        @page{ margin:18mm; }
-      }
-      #hcqt-print-area{ font-family:Arial,sans-serif;font-size:12px;color:#111; }
-      #hcqt-print-area h1{ font-size:18px;text-align:center;margin:0 0 4px }
-      #hcqt-print-area .sub{ text-align:center;color:#666;font-size:11px;margin-bottom:16px }
-      #hcqt-print-area .kpi-grid{ display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px }
-      #hcqt-print-area .kpi-box{ border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center }
-      #hcqt-print-area .kpi-val{ font-size:22px;font-weight:800 }
-      #hcqt-print-area .kpi-lbl{ font-size:10px;color:#666;text-transform:uppercase }
-      #hcqt-print-area .tbl-grid{ display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px }
-      #hcqt-print-area table{ width:100%;border-collapse:collapse;font-size:11px }
-      #hcqt-print-area th{ background:#f1f5f9;padding:5px 8px;border:1px solid #ddd;text-align:left;font-weight:700 }
-      #hcqt-print-area .section-title{ font-size:12px;font-weight:700;text-transform:uppercase;color:#666;margin-bottom:6px;letter-spacing:.04em }
-    </style>
-    <h1>BÁO CÁO QUẢN LÝ TÀI SẢN</h1>
-    <div class="sub">Hành chính Quản trị — Ngày xuất: ${now.toLocaleDateString('vi-VN')}</div>
-    <div class="kpi-grid">
-      <div class="kpi-box"><div class="kpi-val">${total}</div><div class="kpi-lbl">Tổng tài sản</div></div>
-      <div class="kpi-box"><div class="kpi-val">${_hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length}</div><div class="kpi-lbl">Đang sử dụng</div></div>
-      <div class="kpi-box"><div class="kpi-val">${_hcqtData.filter(d=>{if(!d.NgayBaoTriTiepTheo)return false;const df=(new Date(d.NgayBaoTriTiepTheo)-now)/86400000;return df>=0&&df<=30;}).length}</div><div class="kpi-lbl">Bảo trì 30N</div></div>
-      <div class="kpi-box"><div class="kpi-val">${_hcqtCapPhat.filter(c=>c.trangThai==='Đang cấp phát').length}</div><div class="kpi-lbl">Đang cấp phát</div></div>
-      <div class="kpi-box"><div class="kpi-val" style="font-size:15px">${fmtV(totalValue)}đ</div><div class="kpi-lbl">Tổng nguyên giá</div></div>
-    </div>
-    <div class="tbl-grid">
-      <div>
-        <div class="section-title">Theo loại tài sản</div>
-        <table><tr><th>LOẠI</th><th style="text-align:center">SL</th><th style="text-align:center">%</th></tr>${tblRows(grp('LoaiTaiSan'))}</table>
-      </div>
-      <div>
-        <div class="section-title">Theo tình trạng</div>
-        <table><tr><th>TÌNH TRẠNG</th><th style="text-align:center">SL</th><th style="text-align:center">%</th></tr>${tblRows(grp('TinhTrang'))}</table>
-      </div>
-      <div>
-        <div class="section-title">Theo bộ phận sử dụng</div>
-        <table><tr><th>BỘ PHẬN</th><th style="text-align:center">SL</th><th style="text-align:center">%</th></tr>${tblRows(grp('BoPhanSuDung'))}</table>
-      </div>
-      <div>
-        <div class="section-title">Theo tòa nhà</div>
-        <table><tr><th>TÒA NHÀ</th><th style="text-align:center">SL</th><th style="text-align:center">%</th></tr>${tblRows(grp('ToaNha'))}</table>
-      </div>
-    </div>
-    <div style="margin-top:14px;font-size:10px;color:#999;text-align:center">Hệ thống QLTS TTG — ${now.toLocaleString('vi-VN')}</div>`;
-  document.body.appendChild(div);
-  window.print();
+  const grp = (key)=>{
+    const m={};
+    _hcqtData.forEach(d=>{const k=d[key]||'Chưa xác định';m[k]=(m[k]||0)+1;});
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  };
+  const tblRows = (arr)=>arr.map(([k,v])=>{
+    const pct = total?(v/total*100).toFixed(1)+'%':'—';
+    return '<tr>'
+      +'<td style="padding:5px 8px;border:1px solid #ddd">'+hcqtEsc(k)+'</td>'
+      +'<td style="padding:5px 8px;border:1px solid #ddd;text-align:center">'+v+'</td>'
+      +'<td style="padding:5px 8px;border:1px solid #ddd;text-align:center">'+pct+'</td>'
+      +'</tr>';
+  }).join('');
+
+  const active = _hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length;
+  const maint  = _hcqtData.filter(d=>{
+    if(!d.NgayBaoTriTiepTheo) return false;
+    const df=(new Date(d.NgayBaoTriTiepTheo)-now)/86400000;
+    return df>=0&&df<=30;
+  }).length;
+  const capphat = _hcqtCapPhat.filter(c=>c.trangThai==='Đang cấp phát').length;
+
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
+    +'<title>Báo cáo Quản lý Tài sản</title>'
+    +'<style>'
+    +'body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:18mm}'
+    +'h1{font-size:18px;text-align:center;margin:0 0 4px}'
+    +'.sub{text-align:center;color:#666;font-size:11px;margin-bottom:16px}'
+    +'.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}'
+    +'.kpi-box{border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center}'
+    +'.kpi-val{font-size:22px;font-weight:800}'
+    +'.kpi-lbl{font-size:10px;color:#666;text-transform:uppercase}'
+    +'.tbl-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}'
+    +'table{width:100%;border-collapse:collapse;font-size:11px}'
+    +'th{background:#f1f5f9;padding:5px 8px;border:1px solid #ddd;text-align:left;font-weight:700}'
+    +'.section-title{font-size:12px;font-weight:700;text-transform:uppercase;color:#666;margin-bottom:6px}'
+    +'@page{margin:18mm}'
+    +'</style></head><body>'
+    +'<h1>BÁO CÁO QUẢN LÝ TÀI SẢN</h1>'
+    +'<div class="sub">Hành chính Quản trị — Ngày xuất: '+now.toLocaleDateString('vi-VN')+'</div>'
+    +'<div class="kpi-grid">'
+    +'<div class="kpi-box"><div class="kpi-val">'+total+'</div><div class="kpi-lbl">Tổng tài sản</div></div>'
+    +'<div class="kpi-box"><div class="kpi-val">'+active+'</div><div class="kpi-lbl">Đang sử dụng</div></div>'
+    +'<div class="kpi-box"><div class="kpi-val">'+maint+'</div><div class="kpi-lbl">Bảo trì 30N</div></div>'
+    +'<div class="kpi-box"><div class="kpi-val">'+capphat+'</div><div class="kpi-lbl">Đang cấp phát</div></div>'
+    +'<div class="kpi-box"><div class="kpi-val" style="font-size:15px">'+fmtV(totalValue)+'đ</div><div class="kpi-lbl">Tổng nguyên giá</div></div>'
+    +'</div>'
+    +'<div class="tbl-grid">'
+    +'<div><div class="section-title">Theo loại tài sản</div><table><tr><th>LOẠI</th><th style="text-align:center">SL</th><th style="text-align:center">%</th></tr>'+tblRows(grp('LoaiTaiSan'))+'</table></div>'
+    +'<div><div class="section-title">Theo tình trạng</div><table><tr><th>TÌNH TRẠNG</th><th style="text-align:center">SL</th><th style="text-align:center">%</th></tr>'+tblRows(grp('TinhTrang'))+'</table></div>'
+    +'<div><div class="section-title">Theo bộ phận sử dụng</div><table><tr><th>BỘ PHẬN</th><th style="text-align:center">SL</th><th style="text-align:center">%</th></tr>'+tblRows(grp('BoPhanSuDung'))+'</table></div>'
+    +'<div><div class="section-title">Theo tòa nhà</div><table><tr><th>TÒA NHÀ</th><th style="text-align:center">SL</th><th style="text-align:center">%</th></tr>'+tblRows(grp('ToaNha'))+'</table></div>'
+    +'</div>'
+    +'<div style="margin-top:14px;font-size:10px;color:#999;text-align:center">Hệ thống QLTS TTG — '+now.toLocaleString('vi-VN')+'</div>'
+    +'</body></html>';
+
+  const w = window.open('','_blank','width=900,height=700');
+  if(!w){ toast('Cho phép popup để in PDF','warn'); return; }
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); }, 400);
 }
 
 </script>
