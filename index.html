@@ -21972,10 +21972,10 @@ async function msalSpProvisionMuaHangList(){
   for(const f of _MH_SP_FIELDS){
     try{
       const fk = f.type==='Note'?3 : f.type==='Number'?9 : f.type==='DateTime'?4 : 2;
-      const body = {FieldTypeKind:fk, Title:f.name};
-      if(fk===2) body.MaxLength=255;
-      await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/fields`,{method:'POST',body:JSON.stringify(body)});
-    }catch(e){} // silently skip if field already exists
+      await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/fields`,{
+        method:'POST', body:JSON.stringify({FieldTypeKind:fk, Title:f.name})
+      });
+    }catch(e){} // silently skip duplicate/existing fields
   }
   return true;
 }
