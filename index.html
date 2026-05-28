@@ -7915,10 +7915,17 @@ function _empAutocomplete(inputEl, opts={}){
   }
 
   function select(emp){
-    inputEl.value=emp.name||'';
+    const email=emp.email||(emp.user?emp.user+'@ttgvn.com':'');
+    // fillEmail:true → input nhận email (dùng cho trường email), còn tên điền vào nameField
+    if(opts.fillEmail){ inputEl.value=email; }
+    else { inputEl.value=emp.name||''; }
     if(opts.emailField){
       const el=document.getElementById(opts.emailField);
-      if(el) el.value=emp.email||(emp.user?emp.user+'@ttgvn.com':'');
+      if(el) el.value=email;
+    }
+    if(opts.nameField){
+      const el=document.getElementById(opts.nameField);
+      if(el) el.value=emp.name||'';
     }
     _setDept(emp.dept||'');
     close();
@@ -9542,6 +9549,15 @@ document.addEventListener('DOMContentLoaded', function(){
   // Form Sửa Chữa: Người dùng khi hỏng & Bàn giao sau SC
   _empAutocomplete(document.getElementById('rep-nguoi-hong'), {});
   _empAutocomplete(document.getElementById('rep-nguoi-nhan'), {});
+  // HCQT: Form Mua hàng — Người yêu cầu → tự điền Phòng ban
+  _empAutocomplete(document.getElementById('mh-f-nguoiYC'),{
+    deptField:'mh-f-phongBan'
+  });
+  // HCQT: Role modal — tìm theo tên → điền email + họ tên
+  _empAutocomplete(document.getElementById('hcqt-role-email'),{
+    fillEmail: true,
+    nameField: 'hcqt-role-ten'
+  });
 });
 
 
@@ -20851,6 +20867,10 @@ function hcqtAddCapPhat(assetId){
     </div>`;
     document.body.appendChild(m);
     m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
+    // Wire employee autocomplete cho Người nhận → tự điền Bộ phận
+    _empAutocomplete(document.getElementById('hcqt-cp-nguoi'),{
+      deptField:'hcqt-cp-bophan'
+    });
   }
 }
 
@@ -21348,6 +21368,11 @@ function hcqtOpenAdd(){
   _hcqtImgClear(true);
   _hcqtNccPopulate();
   m.style.display='flex';
+  // Wire employee autocomplete (guard _acDone tránh gắn 2 lần)
+  _empAutocomplete(document.getElementById('hcqt-f-NguoiPhuTrach'),{
+    emailField:'hcqt-f-EmailPhuTrach',
+    deptField:'hcqt-f-BoPhanSuDung'
+  });
 }
 
 function hcqtOpenEdit(id){
@@ -21365,6 +21390,11 @@ function hcqtOpenEdit(id){
   if(d.AnhUrl){ _hcqtAnhPreview(d.AnhUrl); }
   _hcqtNccPopulate();
   m.style.display='flex';
+  // Wire employee autocomplete
+  _empAutocomplete(document.getElementById('hcqt-f-NguoiPhuTrach'),{
+    emailField:'hcqt-f-EmailPhuTrach',
+    deptField:'hcqt-f-BoPhanSuDung'
+  });
 }
 
 function hcqtCloseForm(){
