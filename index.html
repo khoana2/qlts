@@ -21983,25 +21983,6 @@ async function msalSpProvisionMuaHangList(){
   return true;
 }
 
-async function msalSpLoadMuaHang(){
-  const site = HCQT_SITE;
-  const listTitle = 'DanhSachMuaHang_HCQT';
-  try{
-    const sel = 'Id,'+_MH_SP_FIELDS.map(f=>f.name).join(',');
-    const res = await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items?$select=${sel}&$top=2000&$orderby=Id desc`);
-    const items = (res.value||[]).map(spItemToMh);
-    // Merge: SP wins for existing LocalId, keep local-only items
-    const spIds = new Set(items.map(x=>x.id));
-    const localOnly = _muaHangData.filter(x=>!spIds.has(x.id));
-    _muaHangData = [...items, ...localOnly];
-    mhSave();
-    return items.length;
-  }catch(e){
-    console.warn('msalSpLoadMuaHang error',e);
-    return 0;
-  }
-}
-
 async function msalSpPushMuaHang(id, _retried){
   const d = _muaHangData.find(x=>x.id===id); if(!d) return;
   const site = HCQT_SITE;
@@ -22150,7 +22131,15 @@ async function msalSpLoadMuaHang(){
     const spIds=new Set(items.map(x=>x.id));
     _muaHangData=[...items,..._muaHangData.filter(x=>!spIds.has(x.id))];
     mhSave(); return items.length;
-  }catch(e){ console.warn('msalSpLoadMuaHang',e); return 0; }
+  }catch(e){
+    // List chưa tồn tại → tự tạo, không báo lỗi
+    if(e&&(e.message||'').includes('does not exist')){
+      console.log('[MH] List chưa có → tự tạo DanhSachMuaHang_HCQT...');
+      try{ await msalSpProvisionMuaHangList(); console.log('[MH] Đã tạo list ✅'); }catch(e2){ console.warn('[MH] Provision lỗi',e2); }
+      return 0;
+    }
+    console.warn('msalSpLoadMuaHang',e); return 0;
+  }
 }
 async function msalSpPushMuaHang(id,_retried){
   const d=_muaHangData.find(x=>x.id===id); if(!d) return;
