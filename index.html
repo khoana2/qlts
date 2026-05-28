@@ -20212,6 +20212,8 @@ let _hcqtFilter     = { q:'', loai:'', tinh:'', toanha:'' };
 let _hcqtPage       = 1;
 const HCQT_PAGE_SZ  = 30;
 let _hcqtPanelItem  = null;
+let _hcqtPendingImgFile = null; // file ảnh chờ upload khi save
+let _hcqtAnhMap     = {};       // cache ảnh offline: { localId → dataUrl }
 let _hcqtChart1     = null;
 let _hcqtChart2     = null;
 let _hcqtChart3     = null;
@@ -21279,7 +21281,8 @@ function _hcqtAnhPreview(url){
   if(img) img.src=url;
   if(urlInput && urlInput.value!==url) urlInput.value=url;
 }
-function _hcqtImgClear(clearUrl){
+function _hcqtImgClear(clearUrl=true){
+  _hcqtPendingImgFile=null;
   const preview=document.getElementById('hcqt-img-preview');
   const img=document.getElementById('hcqt-img-el');
   const fileInput=document.getElementById('hcqt-img-file');
@@ -21292,7 +21295,7 @@ function _hcqtImgClear(clearUrl){
 }
 function _hcqtImgFileChange(input){
   const file=input?.files?.[0]; if(!file) return;
-  // Hiển thị preview local bằng ObjectURL
+  _hcqtPendingImgFile=file; // lưu file để upload khi save
   const url=URL.createObjectURL(file);
   const preview=document.getElementById('hcqt-img-preview');
   const img=document.getElementById('hcqt-img-el');
@@ -21300,9 +21303,35 @@ function _hcqtImgFileChange(input){
   if(preview) preview.style.display='block';
   if(img){ img.src=url; img.onload=()=>URL.revokeObjectURL(url); }
   if(nameEl) nameEl.textContent=file.name;
-  // Lưu tên file vào AnhUrl field tạm thời — upload thật cần SP Document Library
   const urlInput=document.getElementById('hcqt-f-AnhUrl');
-  if(urlInput) urlInput.value='[local:'+file.name+']';
+  if(urlInput) urlInput.value='[chờ upload: '+file.name+']';
+}
+
+// Đổi file sang base64 data URL
+function _hcqtFileToDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=e=>resolve(e.target.result);
+    r.onerror=()=>reject(new Error('Không đọc được file ảnh'));
+    r.readAsDataURL(file);
+  });
+}
+// Lưu/load map ảnh offline vào localStorage
+function _hcqtSaveAnhMap(){ try{ localStorage.setItem('hcqt_anh_map',JSON.stringify(_hcqtAnhMap)); }catch(e){} }
+function _hcqtLoadAnhMap(){ try{ const d=localStorage.getItem('hcqt_anh_map'); if(d) _hcqtAnhMap=JSON.parse(d); }catch(e){} }
+// Upload ảnh lên SP attachments → trả về URL
+async function _hcqtUploadAttachment(itemId, file){
+  const site=HCQT_SITE, list=HCQT_LIST;
+  const fname=Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const buf=await file.arrayBuffer();
+  const tok=await hcqtGetToken();
+  const res=await fetch(
+    `${site}/_api/web/lists/getbytitle('${list}')/items(${itemId})/AttachmentFiles/add(FileName='${fname}')`,
+    { method:'POST', headers:{ 'Authorization':'Bearer '+tok, 'Accept':'application/json;odata=nometadata' }, body:buf }
+  );
+  if(!res.ok){ const t=await res.text(); throw new Error('Upload ảnh lỗi '+res.status+': '+t.slice(0,120)); }
+  const d=await res.json();
+  return d.ServerRelativeUrl ? (new URL(site).origin + d.ServerRelativeUrl) : '';
 }
 
 const _HCQT_FIELDS=['Title','MaTaiSan','LoaiTaiSan','NhomTaiSan','HangSanXuat','Model','SoSerial','MauSac','SoLuong',
