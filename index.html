@@ -2892,7 +2892,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </button>
         <div id="hcqt-subnav-sidebar" style="display:none">
           <button class="hcqt-sub-item active" id="hcqt-sub-dashboard" onclick="hcqtSubNav('dashboard')"><i class="ph ph-chart-bar"></i> Dashboard</button>
-          <button class="hcqt-sub-item" id="hcqt-sub-assets" onclick="hcqtSubNav('assets')"><i class="ph ph-list-bullets"></i> Danh sách TB</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-assets" onclick="hcqtSubNav('assets')"><i class="ph ph-list-bullets"></i> Tài sản</button>
           <button class="hcqt-sub-item" id="hcqt-sub-baocao" onclick="hcqtSubNav('baocao')"><i class="ph ph-chart-pie"></i> Báo cáo</button>
           <button class="hcqt-sub-item" id="hcqt-sub-muahang" onclick="hcqtSubNav('muahang')"><i class="ph ph-shopping-cart"></i> Mua hàng</button>
           <button class="hcqt-sub-item" id="hcqt-sub-lichsu" onclick="hcqtSubNav('lichsu')"><i class="ph ph-clock-counter-clockwise"></i> Lịch sử</button>
@@ -21205,6 +21205,42 @@ function _hcqtGetFormModal(){
   </div>`;
   document.body.appendChild(m);
   return m;
+}
+
+// ── Helpers ảnh cho HCQT form ─────────────────────────────────
+function _hcqtAnhPreview(url){
+  if(!url){ _hcqtImgClear(false); return; }
+  const preview=document.getElementById('hcqt-img-preview');
+  const img=document.getElementById('hcqt-img-el');
+  const urlInput=document.getElementById('hcqt-f-AnhUrl');
+  if(preview) preview.style.display='block';
+  if(img) img.src=url;
+  if(urlInput && urlInput.value!==url) urlInput.value=url;
+}
+function _hcqtImgClear(clearUrl){
+  const preview=document.getElementById('hcqt-img-preview');
+  const img=document.getElementById('hcqt-img-el');
+  const fileInput=document.getElementById('hcqt-img-file');
+  const nameEl=document.getElementById('hcqt-img-name');
+  if(preview) preview.style.display='none';
+  if(img) img.src='';
+  if(fileInput) fileInput.value='';
+  if(nameEl) nameEl.textContent='';
+  if(clearUrl){ const u=document.getElementById('hcqt-f-AnhUrl'); if(u) u.value=''; }
+}
+function _hcqtImgFileChange(input){
+  const file=input?.files?.[0]; if(!file) return;
+  // Hiển thị preview local bằng ObjectURL
+  const url=URL.createObjectURL(file);
+  const preview=document.getElementById('hcqt-img-preview');
+  const img=document.getElementById('hcqt-img-el');
+  const nameEl=document.getElementById('hcqt-img-name');
+  if(preview) preview.style.display='block';
+  if(img){ img.src=url; img.onload=()=>URL.revokeObjectURL(url); }
+  if(nameEl) nameEl.textContent=file.name;
+  // Lưu tên file vào AnhUrl field tạm thời — upload thật cần SP Document Library
+  const urlInput=document.getElementById('hcqt-f-AnhUrl');
+  if(urlInput) urlInput.value='[local:'+file.name+']';
 }
 
 const _HCQT_FIELDS=['Title','MaTaiSan','LoaiTaiSan','NhomTaiSan','HangSanXuat','Model','SoSerial','MauSac','SoLuong',
