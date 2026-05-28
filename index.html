@@ -20216,6 +20216,7 @@ let _hcqtChart1     = null;
 let _hcqtChart2     = null;
 let _hcqtChart3     = null;
 let _hcqtChart4     = null;
+let _hcqtChartTimer = null;
 const HCQT_CP_KEY   = 'hcqt_capphat_v1';
 let _hcqtCapPhat    = [];
 
@@ -20359,6 +20360,8 @@ const _HCQT_VIEW_TITLES = {
 
 function hcqtSubNav(v){
   _hcqtSubView=v;
+  // Đóng panel & overlay nếu đang mở — tránh overlay che kín tab mới
+  hcqtClosePanel();
   // Cập nhật active state ở sidebar
   document.querySelectorAll('.hcqt-sub-item').forEach(b=>{
     b.classList.toggle('active', b.id==='hcqt-sub-'+v);
@@ -20458,7 +20461,9 @@ function hcqtRenderDashboard(){
 
   if(!total) return;
 
-  setTimeout(()=>{
+  // Hủy timeout cũ nếu user navigate ra vào dashboard liên tục
+  clearTimeout(_hcqtChartTimer);
+  _hcqtChartTimer=setTimeout(()=>{
     const COLS=['#6366F1','#3B82F6','#10B981','#F59E0B','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16','#ec4899'];
     const mkBar=(data,color)=>({type:'bar',data:{labels:Object.keys(data),datasets:[{data:Object.values(data),backgroundColor:color,borderRadius:4}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}});
     const mkDoughnut=(data)=>({type:'doughnut',data:{labels:Object.keys(data),datasets:[{data:Object.values(data),backgroundColor:COLS}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}}},cutout:'55%'}});
@@ -20486,21 +20491,38 @@ function hcqtRenderDashboard(){
 }
 
 // ── Assets List ───────────────────────────────────────────────────
+// Debounce timer cho search
+let _hcqtSearchTimer = null;
+
 function hcqtRenderAssets(){
   const el=document.getElementById('hcqt-view-assets');
   const selStyle='height:32px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:0 8px;font-size:12px;background:var(--card-bg,#fff);outline:none;';
   const inpStyle='height:32px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:0 10px;font-size:12px;flex:1;min-width:160px;outline:none;background:var(--card-bg,#fff);';
 
-  // Toolbar chỉ render 1 lần — tránh mất focus khi gõ tìm kiếm
-  if(!document.getElementById('hcqt-assets-toolbar')){
+  // Rebuild toolbar nếu chưa có, hoặc nếu data version thay đổi (sau sync)
+  const dataVer = _hcqtData.length + '|' + (_hcqtData[0]?._id||'');
+  const toolbar = document.getElementById('hcqt-assets-toolbar');
+  const needRebuild = !toolbar || toolbar.dataset.ver !== dataVer;
+
+  if(needRebuild){
+    // Lưu lại focus & giá trị search trước khi rebuild
+    const prevQ   = document.getElementById('hcqt-search-q')?.value || _hcqtFilter.q;
+    const hadFocus = document.activeElement?.id === 'hcqt-search-q';
+
+    // Xóa toolbar cũ nếu có
+    if(toolbar) toolbar.remove();
+    const oldRes = document.getElementById('hcqt-assets-results');
+    if(oldRes) oldRes.remove();
+
     const loais=[...new Set(_hcqtData.map(d=>d.LoaiTaiSan).filter(Boolean))].sort();
     const tinhs=[...new Set(_hcqtData.map(d=>d.TinhTrang).filter(Boolean))].sort();
     const toaNhas=[...new Set(_hcqtData.map(d=>d.ToaNha).filter(Boolean))].sort();
-    const toolbar=document.createElement('div');
-    toolbar.id='hcqt-assets-toolbar';
-    toolbar.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap';
-    toolbar.innerHTML=`
-      <input id="hcqt-search-q" type="text" placeholder="🔍 Tìm tên, mã, phòng, người phụ trách..." style="${inpStyle}"/>
+    const tb=document.createElement('div');
+    tb.id='hcqt-assets-toolbar';
+    tb.dataset.ver=dataVer;
+    tb.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap';
+    tb.innerHTML=`
+      <input id="hcqt-search-q" type="text" placeholder="🔍 Tìm tên, mã, phòng, người phụ trách..." style="${inpStyle}" value="${prevQ.replace(/"/g,'&quot;')}"/>
       <select id="hcqt-sel-loai" style="${selStyle}">
         <option value="">Tất cả loại</option>${loais.map(l=>`<option>${l}</option>`).join('')}
       </select>
@@ -20513,11 +20535,18 @@ function hcqtRenderAssets(){
       <button class="btn btn-icon-ph" onclick="hcqtExportCSV()" style="padding:5px 12px;font-size:12px"><i class="ph ph-export"></i> Xuất CSV</button>
       <button class="btn btn-icon-ph" onclick="hcqtExportXLSX()" style="padding:5px 12px;font-size:12px;background:#217346;color:#fff;border:none" title="Xuất Excel"><i class="ph ph-microsoft-excel-logo"></i> Excel</button>
       <button class="btn btn-icon-ph" onclick="hcqtExportTemplate()" style="padding:5px 12px;font-size:12px" title="Template nhập liệu"><i class="ph ph-file-arrow-down"></i> Template</button>`;
-    el.appendChild(toolbar);
+    el.appendChild(tb);
 
-    // Gắn event một lần duy nhất
+    // Restore select values
+    const sl=document.getElementById('hcqt-sel-loai');   if(sl) sl.value=_hcqtFilter.loai;
+    const st=document.getElementById('hcqt-sel-tinh');   if(st) st.value=_hcqtFilter.tinh;
+    const sn=document.getElementById('hcqt-sel-toanha'); if(sn) sn.value=_hcqtFilter.toanha;
+
+    // Search với debounce 250ms — tránh render liên tục khi gõ nhanh
     document.getElementById('hcqt-search-q').addEventListener('input', function(){
-      _hcqtFilter.q=this.value; _hcqtPage=1; _hcqtRenderResults();
+      const v=this.value;
+      clearTimeout(_hcqtSearchTimer);
+      _hcqtSearchTimer=setTimeout(()=>{ _hcqtFilter.q=v; _hcqtPage=1; _hcqtRenderResults(); }, 250);
     });
     document.getElementById('hcqt-sel-loai').addEventListener('change', function(){
       _hcqtFilter.loai=this.value; _hcqtPage=1; _hcqtRenderResults();
@@ -20529,14 +20558,15 @@ function hcqtRenderAssets(){
       _hcqtFilter.toanha=this.value; _hcqtPage=1; _hcqtRenderResults();
     });
 
+    // Restore focus nếu user đang gõ trước khi sync
+    if(hadFocus) setTimeout(()=>{ const q=document.getElementById('hcqt-search-q'); if(q){ q.focus(); q.setSelectionRange(q.value.length,q.value.length); } }, 0);
+
     // Container kết quả
     const res=document.createElement('div');
     res.id='hcqt-assets-results';
     el.appendChild(res);
   } else {
-    // Sync lại giá trị filter vào toolbar (khi gọi từ pagination, etc.)
-    const qi=document.getElementById('hcqt-search-q');
-    if(qi && document.activeElement!==qi) qi.value=_hcqtFilter.q;
+    // Chỉ sync lại select values (search đang dùng debounce, không sync để tránh mất cursor)
     const sl=document.getElementById('hcqt-sel-loai');   if(sl) sl.value=_hcqtFilter.loai;
     const st=document.getElementById('hcqt-sel-tinh');   if(st) st.value=_hcqtFilter.tinh;
     const sn=document.getElementById('hcqt-sel-toanha'); if(sn) sn.value=_hcqtFilter.toanha;
