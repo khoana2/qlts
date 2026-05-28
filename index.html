@@ -22088,7 +22088,10 @@ async function msalSpDeleteMuaHang(id){
 async function msalSpDeleteMuaHangById(spId){
   if(!spId) return;
   try{
-    await msalSpReq(`${HCQT_SITE}/_api/web/lists/getbytitle('DanhSachMuaHang_HCQT')/items(${spId})`,{method:'DELETE'});
+    await msalSpReq(`${HCQT_SITE}/_api/web/lists/getbytitle('DanhSachMuaHang_HCQT')/items(${spId})`,{
+      method:'DELETE',
+      headers:{'IF-MATCH':'*','X-HTTP-Method':'DELETE'}
+    });
   }catch(e){ console.warn('msalSpDeleteMuaHang error',e); }
 }
 
