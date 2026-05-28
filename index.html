@@ -6335,7 +6335,7 @@ async function msalSpLoad(){
         _userRole = 'viewer'; // mặc định viewer cho HCQT-IT-viewer
         applyRoleUI();
       }
-      hcqtLoadLocal(); hcqtSync(true);
+      hcqtLoadLocal(); hcqtLoadCapPhat(); hcqtSync(true);
     }
     msalSetBar(msalBarLabel(assets.length + ' TS'),'s-ok');
     // HCQT IT-viewer: chỉ cần tài sản CNTT, bỏ qua license/transfer/ĐNTT
@@ -20191,9 +20191,13 @@ const HCQT_PAGE_SZ  = 30;
 let _hcqtPanelItem  = null;
 let _hcqtChart1     = null;
 let _hcqtChart2     = null;
+const HCQT_CP_KEY   = 'hcqt_capphat_v1';
+let _hcqtCapPhat    = [];
 
 function hcqtSaveLocal(){ try{ localStorage.setItem(HCQT_STORE_KEY, JSON.stringify(_hcqtData)); }catch(e){} }
 function hcqtLoadLocal(){ try{ const d=localStorage.getItem(HCQT_STORE_KEY); if(d) _hcqtData=JSON.parse(d); }catch(e){} }
+function hcqtSaveCapPhat(){ try{ localStorage.setItem(HCQT_CP_KEY, JSON.stringify(_hcqtCapPhat)); }catch(e){} }
+function hcqtLoadCapPhat(){ try{ const d=localStorage.getItem(HCQT_CP_KEY); if(d) _hcqtCapPhat=JSON.parse(d); }catch(e){} }
 
 // ── Lấy token MSAL (dùng chung với IT app) ────────────────────────
 async function hcqtGetToken(){
@@ -20294,6 +20298,7 @@ function hcqtLocalToSP(f){
 // ── Navigation ────────────────────────────────────────────────────
 function hcqtOnTabOpen(){
   hcqtLoadLocal();
+  hcqtLoadCapPhat();
   hcqtRenderSub();
   // Auto sync nếu chưa có data
   if(!_hcqtData.length && typeof _msalAccount!=='undefined' && _msalAccount) hcqtSync(true);
@@ -20530,6 +20535,353 @@ function hcqtRenderMaintenance(){
     :renderGroup('Đã quá hạn','🔴',overdue,'background:#fee2e2;color:#991b1b')
     +renderGroup('Trong 30 ngày','🟡',soon30,'background:#fef3c7;color:#92400e')
     +renderGroup('Trong 90 ngày','🔵',soon90,'background:#dbeafe;color:#1e40af');
+}
+
+// ── Cấp phát & Thu hồi ─────────────────────────────────────────
+function hcqtRenderCapPhat(){
+  const el=document.getElementById('hcqt-view-capphat');
+  if(!el) return;
+  const rows=[..._hcqtCapPhat].sort((a,b)=>new Date(b.ngayCap||0)-new Date(a.ngayCap||0));
+  const fmt=v=>v?new Date(v).toLocaleDateString('vi-VN'):'—';
+  const badge=s=>s==='Đang cấp phát'
+    ?'<span style="background:#dcfce7;color:#15803d;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600">Đang cấp phát</span>'
+    :'<span style="background:#f1f5f9;color:#64748b;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600">Đã thu hồi</span>';
+  el.innerHTML=`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:14px;font-weight:700">Lịch sử cấp phát & thu hồi tài sản</div>
+    <button class="btn" onclick="hcqtAddCapPhat(null)" style="font-size:12px;padding:5px 14px;background:#7C3AED;color:#fff;border:none;border-radius:6px;cursor:pointer"><i class="ph ph-plus"></i> Cấp phát mới</button>
+  </div>
+  ${!rows.length?`<div style="text-align:center;padding:40px;color:var(--muted)"><i class="ph ph-arrow-circle-right" style="font-size:36px;opacity:.4"></i><div style="margin-top:8px">Chưa có bản ghi cấp phát nào</div></div>`:`
+  <div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:var(--table-head,#f8fafc)">
+      <th style="padding:8px 10px;text-align:left;white-space:nowrap">Tài sản</th>
+      <th style="padding:8px 10px;text-align:left;white-space:nowrap">Người nhận</th>
+      <th style="padding:8px 10px;text-align:left;white-space:nowrap">Bộ phận</th>
+      <th style="padding:8px 10px;text-align:left;white-space:nowrap">Ngày cấp</th>
+      <th style="padding:8px 10px;text-align:left;white-space:nowrap">Ngày thu hồi</th>
+      <th style="padding:8px 10px;text-align:left;white-space:nowrap">Trạng thái</th>
+      <th style="padding:8px 10px;text-align:left;white-space:nowrap">Ghi chú</th>
+      <th style="padding:8px 10px;text-align:center;white-space:nowrap">Thao tác</th>
+    </tr></thead>
+    <tbody>
+    ${rows.map(r=>{
+      const asset=_hcqtData.find(d=>d._id===r.assetId);
+      return `<tr style="border-top:1px solid var(--border,#e2e8f0)">
+        <td style="padding:8px 10px"><div style="font-weight:600">${hcqtEsc(asset?asset.Title:r.maTaiSan||'—')}</div><div style="font-size:11px;color:var(--muted)">${hcqtEsc(asset?asset.MaTaiSan:'')}</div></td>
+        <td style="padding:8px 10px">${hcqtEsc(r.nguoiNhan||'—')}</td>
+        <td style="padding:8px 10px">${hcqtEsc(r.boPhan||'—')}</td>
+        <td style="padding:8px 10px;white-space:nowrap">${fmt(r.ngayCap)}</td>
+        <td style="padding:8px 10px;white-space:nowrap">${fmt(r.ngayThuHoi)}</td>
+        <td style="padding:8px 10px">${badge(r.trangThai)}</td>
+        <td style="padding:8px 10px;max-width:160px;color:var(--muted);font-size:11px">${hcqtEsc(r.ghiChu||'')}</td>
+        <td style="padding:8px 10px;text-align:center;white-space:nowrap">
+          ${r.trangThai==='Đang cấp phát'?`<button onclick="hcqtThuHoi('${r.id}')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:1px solid #f87171;color:#dc2626;background:#fff;cursor:pointer"><i class="ph ph-arrow-u-up-left"></i> Thu hồi</button>`:''}
+          <button onclick="hcqtDeleteCapPhat('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--border,#e2e8f0);color:var(--muted);background:#fff;cursor:pointer;margin-left:4px"><i class="ph ph-trash"></i></button>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table></div>`}
+  `;
+}
+
+function hcqtAddCapPhat(assetId){
+  // Build modal inline
+  let m=document.getElementById('hcqt-capphat-modal');
+  if(!m){
+    m=document.createElement('div');
+    m.id='hcqt-capphat-modal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;display:flex;align-items:center;justify-content:center';
+    m.innerHTML=`<div style="background:var(--card-bg,#fff);border-radius:14px;padding:24px 28px;width:420px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:15px;font-weight:700">Cấp phát tài sản</div>
+        <button onclick="document.getElementById('hcqt-capphat-modal').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">Tài sản *</label>
+          <select id="hcqt-cp-asset" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px">
+            <option value="">-- Chọn tài sản --</option>
+            ${_hcqtData.map(d=>`<option value="${d._id}" ${d._id===assetId?'selected':''}>${hcqtEsc(d.Title)} (${hcqtEsc(d.MaTaiSan||'')})</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">Người nhận *</label>
+          <input id="hcqt-cp-nguoi" placeholder="Họ tên người nhận" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">Bộ phận</label>
+          <input id="hcqt-cp-bophan" placeholder="Phòng ban / bộ phận" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">Ngày cấp phát *</label>
+            <input type="date" id="hcqt-cp-ngaycap" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box" value="${new Date().toISOString().slice(0,10)}">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">Ngày thu hồi</label>
+            <input type="date" id="hcqt-cp-thuhoi" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">Ghi chú</label>
+          <textarea id="hcqt-cp-ghichu" rows="2" placeholder="Mục đích sử dụng, ghi chú..." style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+        <button onclick="document.getElementById('hcqt-capphat-modal').remove()" style="padding:7px 18px;border-radius:7px;border:1px solid var(--border,#e2e8f0);background:#fff;cursor:pointer;font-size:13px">Huỷ</button>
+        <button onclick="hcqtSaveCapPhatForm()" style="padding:7px 18px;border-radius:7px;border:none;background:#7C3AED;color:#fff;cursor:pointer;font-size:13px;font-weight:600">Lưu cấp phát</button>
+      </div>
+    </div>`;
+    document.body.appendChild(m);
+    m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
+  }
+}
+
+function hcqtSaveCapPhatForm(){
+  const assetId=document.getElementById('hcqt-cp-asset')?.value;
+  const nguoiNhan=document.getElementById('hcqt-cp-nguoi')?.value.trim();
+  const boPhan=document.getElementById('hcqt-cp-bophan')?.value.trim();
+  const ngayCap=document.getElementById('hcqt-cp-ngaycap')?.value;
+  const ngayThuHoi=document.getElementById('hcqt-cp-thuhoi')?.value||null;
+  const ghiChu=document.getElementById('hcqt-cp-ghichu')?.value.trim();
+  if(!assetId||!nguoiNhan||!ngayCap){ toast('⚠️ Vui lòng điền đủ thông tin bắt buộc','warn'); return; }
+  const asset=_hcqtData.find(d=>d._id===+assetId||d._id===assetId);
+  const rec={
+    id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    assetId: assetId, maTaiSan: asset?asset.MaTaiSan:'',
+    nguoiNhan, boPhan, ngayCap, ngayThuHoi,
+    trangThai: ngayThuHoi&&new Date(ngayThuHoi)<new Date()?'Đã thu hồi':'Đang cấp phát',
+    ghiChu, createdAt: new Date().toISOString()
+  };
+  _hcqtCapPhat.push(rec);
+  hcqtSaveCapPhat();
+  document.getElementById('hcqt-capphat-modal')?.remove();
+  hcqtRenderSub();
+  toast('✅ Đã lưu bản ghi cấp phát','ok');
+}
+
+function hcqtThuHoi(id){
+  const r=_hcqtCapPhat.find(x=>x.id===id); if(!r) return;
+  if(!confirm('Xác nhận thu hồi tài sản này?')) return;
+  r.ngayThuHoi=new Date().toISOString().slice(0,10);
+  r.trangThai='Đã thu hồi';
+  hcqtSaveCapPhat();
+  hcqtRenderSub();
+  toast('✅ Đã cập nhật trạng thái thu hồi','ok');
+}
+
+function hcqtDeleteCapPhat(id){
+  if(!confirm('Xoá bản ghi này?')) return;
+  _hcqtCapPhat=_hcqtCapPhat.filter(x=>x.id!==id);
+  hcqtSaveCapPhat();
+  hcqtRenderSub();
+}
+
+// ── Kiểm kê ────────────────────────────────────────────────────
+function hcqtRenderKiemKe(){
+  const el=document.getElementById('hcqt-view-kiemke');
+  if(!el) return;
+  const now=new Date();
+  const fmt=v=>v?new Date(v).toLocaleDateString('vi-VN'):'Chưa kiểm kê';
+  const badge=v=>{
+    if(!v) return '<span style="background:#f1f5f9;color:#64748b;padding:1px 8px;border-radius:10px;font-size:11px">Chưa KK</span>';
+    if(v==='Đạt') return '<span style="background:#dcfce7;color:#15803d;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600">Đạt</span>';
+    if(v==='Không đạt') return '<span style="background:#fee2e2;color:#991b1b;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600">Không đạt</span>';
+    return `<span style="background:#fef3c7;color:#92400e;padding:1px 8px;border-radius:10px;font-size:11px">${hcqtEsc(v)}</span>`;
+  };
+
+  const rows=[..._hcqtData].sort((a,b)=>{
+    if(!a.NgayKiemKe&&!b.NgayKiemKe) return 0;
+    if(!a.NgayKiemKe) return -1;
+    if(!b.NgayKiemKe) return -1;
+    return new Date(a.NgayKiemKe)-new Date(b.NgayKiemKe);
+  });
+
+  const overdue=rows.filter(d=>!d.NgayKiemKe);
+  const notOk=rows.filter(d=>d.KetQuaKiemKe==='Không đạt');
+  const ok=rows.filter(d=>d.KetQuaKiemKe==='Đạt');
+
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px">
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Tổng tài sản</div>
+      <div style="font-size:22px;font-weight:800;color:#3B82F6">${rows.length}</div>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Đã kiểm kê (Đạt)</div>
+      <div style="font-size:22px;font-weight:800;color:#22c55e">${ok.length}</div>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Không đạt</div>
+      <div style="font-size:22px;font-weight:800;color:#ef4444">${notOk.length}</div>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Chưa kiểm kê</div>
+      <div style="font-size:22px;font-weight:800;color:#f59e0b">${overdue.length}</div>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:var(--table-head,#f8fafc)">
+      <th style="padding:8px 10px;text-align:left">Tài sản</th>
+      <th style="padding:8px 10px;text-align:left">Mã TS</th>
+      <th style="padding:8px 10px;text-align:left">Vị trí</th>
+      <th style="padding:8px 10px;text-align:left">Ngày KK</th>
+      <th style="padding:8px 10px;text-align:left">Kết quả</th>
+      <th style="padding:8px 10px;text-align:left">Ghi chú tình trạng</th>
+      <th style="padding:8px 10px;text-align:center">Chi tiết</th>
+    </tr></thead>
+    <tbody>
+    ${rows.map(d=>`<tr style="border-top:1px solid var(--border,#e2e8f0)">
+      <td style="padding:8px 10px;font-weight:600;cursor:pointer" onclick="hcqtOpenPanel(${d._id})">${hcqtEsc(d.Title)}</td>
+      <td style="padding:8px 10px;color:var(--muted)">${hcqtEsc(d.MaTaiSan||'—')}</td>
+      <td style="padding:8px 10px">${hcqtEsc([d.ToaNha,d.PhongViTri].filter(Boolean).join(' – '))}</td>
+      <td style="padding:8px 10px;white-space:nowrap;${!d.NgayKiemKe?'color:#f59e0b':''}">${fmt(d.NgayKiemKe)}</td>
+      <td style="padding:8px 10px">${badge(d.KetQuaKiemKe)}</td>
+      <td style="padding:8px 10px;max-width:180px;color:var(--muted);font-size:11px">${hcqtEsc(d.GhiChuTinhTrang||'')}</td>
+      <td style="padding:8px 10px;text-align:center"><button onclick="hcqtOpenPanel(${d._id})" style="font-size:11px;padding:3px 10px;border-radius:5px;border:1px solid var(--border,#e2e8f0);background:#fff;cursor:pointer"><i class="ph ph-eye"></i></button></td>
+    </tr>`).join('')}
+    </tbody>
+  </table></div>
+  ${!rows.length?`<div style="text-align:center;padding:40px;color:var(--muted)">Chưa có dữ liệu tài sản</div>`:''}
+  `;
+}
+
+// ── Báo cáo ────────────────────────────────────────────────────
+function hcqtRenderBaoCao(){
+  const el=document.getElementById('hcqt-view-baocao');
+  if(!el) return;
+  const data=_hcqtData;
+
+  const groupBy=(arr,key)=>{
+    const m={};
+    arr.forEach(d=>{ const k=d[key]||'(Không xác định)'; m[k]=(m[k]||0)+1; });
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  };
+  const sumBy=(arr,key)=>{
+    const m={};
+    arr.forEach(d=>{ const k=d[key]||'(Không xác định)'; m[k]=(m[k]||0)+(parseFloat(d.NguyenGia)||0); });
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  };
+  const fmtN=n=>n>=1e9?(n/1e9).toFixed(1)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':String(n);
+  const fmtVND=n=>new Intl.NumberFormat('vi-VN').format(n)+' đ';
+
+  const byLoai=groupBy(data,'LoaiTaiSan');
+  const byBoPhan=groupBy(data,'BoPhanSuDung');
+  const byToaNha=groupBy(data,'ToaNha');
+  const byTinhTrang=groupBy(data,'TinhTrang');
+  const valueByLoai=sumBy(data,'LoaiTaiSan');
+  const totalValue=data.reduce((s,d)=>s+(parseFloat(d.NguyenGia)||0),0);
+
+  const renderTable=(title,icon,color,rows,showVal=false)=>`
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:14px;border-top:3px solid ${color}">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;gap:5px"><i class="ph ${icon}" style="color:${color}"></i> ${title}</div>
+      ${rows.slice(0,8).map(([k,v])=>{
+        const pct=data.length?Math.round(v/data.length*100):0;
+        return `<div style="margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+            <span>${hcqtEsc(k)}</span>
+            <span style="font-weight:700;color:${color}">${showVal?fmtN(v)+'đ':v}</span>
+          </div>
+          <div style="height:6px;background:var(--border,#e2e8f0);border-radius:4px">
+            <div style="height:6px;background:${color};border-radius:4px;width:${showVal?Math.round(v/totalValue*100):pct}%;transition:width .4s"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px">
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Tổng tài sản</div>
+      <div style="font-size:22px;font-weight:800;color:#3B82F6">${data.length}</div>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Tổng nguyên giá</div>
+      <div style="font-size:18px;font-weight:800;color:#8B5CF6">${fmtN(totalValue)}</div>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Loại tài sản</div>
+      <div style="font-size:22px;font-weight:800;color:#10B981">${byLoai.length}</div>
+    </div>
+    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Tòa nhà / khu vực</div>
+      <div style="font-size:22px;font-weight:800;color:#F59E0B">${byToaNha.length}</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    ${renderTable('Theo loại tài sản','ph-package','#6366F1',byLoai)}
+    ${renderTable('Theo tình trạng','ph-activity','#10B981',byTinhTrang)}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    ${renderTable('Theo bộ phận sử dụng','ph-buildings','#3B82F6',byBoPhan)}
+    ${renderTable('Theo tòa nhà','ph-map-pin','#F59E0B',byToaNha)}
+  </div>
+  ${!data.length?`<div style="text-align:center;padding:40px;color:var(--muted);margin-top:16px">Chưa có dữ liệu để báo cáo</div>`:''}
+  `;
+}
+
+// ── Import file Excel/CSV ──────────────────────────────────────
+function hcqtImportFile(input){
+  const file=input?.files?.[0]; if(!file) return;
+  toast('⏳ Đang đọc file...','info');
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      let rows=[];
+      if(file.name.endsWith('.csv')){
+        // Parse CSV đơn giản
+        const text=e.target.result;
+        const lines=text.split('\n');
+        const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+        rows=lines.slice(1).filter(l=>l.trim()).map(line=>{
+          const vals=line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+          const obj={};
+          headers.forEach((h,i)=>obj[h]=vals[i]||'');
+          return obj;
+        });
+      } else {
+        // XLSX — cần thư viện SheetJS
+        toast('⚠️ Import Excel: cần mở app trong trình duyệt hỗ trợ SheetJS','warn');
+        input.value='';
+        return;
+      }
+      if(!rows.length){ toast('⚠️ File không có dữ liệu','warn'); input.value=''; return; }
+      let added=0;
+      rows.forEach(row=>{
+        const maTaiSan=row['MaTaiSan']||row['Mã tài sản']||row['ma_tai_san']||'';
+        if(!maTaiSan) return;
+        const existing=_hcqtData.find(d=>d.MaTaiSan===maTaiSan);
+        if(existing){
+          // Update existing
+          Object.assign(existing,{
+            Title:row['Title']||row['Tên tài sản']||existing.Title,
+            LoaiTaiSan:row['LoaiTaiSan']||row['Loại tài sản']||existing.LoaiTaiSan,
+            TinhTrang:row['TinhTrang']||row['Tình trạng']||existing.TinhTrang,
+          });
+        } else {
+          // Add new
+          const newItem={ _id: Date.now()+Math.floor(Math.random()*1000), MaTaiSan:maTaiSan };
+          ['Title','LoaiTaiSan','NhomTaiSan','HangSanXuat','Model','SoSerial','TinhTrang',
+           'ToaNha','Tang','PhongViTri','BoPhanSuDung','NguoiPhuTrach','NgayMua','NguyenGia'].forEach(k=>{
+            newItem[k]=row[k]||'';
+          });
+          _hcqtData.push(newItem);
+          added++;
+        }
+      });
+      hcqtSaveLocal();
+      hcqtRenderSub();
+      toast(`✅ Đã import ${added} tài sản mới, cập nhật ${rows.length-added} bản ghi`,'ok');
+    } catch(err){
+      toast('❌ Lỗi đọc file: '+err.message,'error');
+    }
+    input.value='';
+  };
+  if(file.name.endsWith('.csv')) reader.readAsText(file,'UTF-8');
+  else reader.readAsArrayBuffer(file);
 }
 
 // ── Detail Panel (dùng modal-detail của IT app hoặc tự render) ───
