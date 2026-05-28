@@ -2893,11 +2893,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div id="hcqt-subnav-sidebar" style="display:none">
           <button class="hcqt-sub-item active" id="hcqt-sub-dashboard" onclick="hcqtSubNav('dashboard')"><i class="ph ph-chart-bar"></i> Dashboard</button>
           <button class="hcqt-sub-item" id="hcqt-sub-assets" onclick="hcqtSubNav('assets')"><i class="ph ph-list-bullets"></i> Danh sách TB</button>
-          <button class="hcqt-sub-item" id="hcqt-sub-maintenance" onclick="hcqtSubNav('maintenance')"><i class="ph ph-wrench"></i> Bảo trì</button>
-          <button class="hcqt-sub-item" id="hcqt-sub-capphat" onclick="hcqtSubNav('capphat')"><i class="ph ph-swap"></i> Cấp phát</button>
           <button class="hcqt-sub-item" id="hcqt-sub-kiemke" onclick="hcqtSubNav('kiemke')"><i class="ph ph-clipboard-text"></i> Kiểm kê</button>
           <button class="hcqt-sub-item" id="hcqt-sub-baocao" onclick="hcqtSubNav('baocao')"><i class="ph ph-chart-pie"></i> Báo cáo</button>
           <button class="hcqt-sub-item" id="hcqt-sub-muahang" onclick="hcqtSubNav('muahang')"><i class="ph ph-shopping-cart"></i> Mua hàng</button>
+          <button class="hcqt-sub-item" id="hcqt-sub-lichsu" onclick="hcqtSubNav('lichsu')"><i class="ph ph-clock-counter-clockwise"></i> Lịch sử</button>
         </div>
       </nav>
 
@@ -4193,6 +4192,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div id="hcqt-view-kiemke" style="display:none"></div>
       <div id="hcqt-view-baocao" style="display:none"></div>
       <div id="hcqt-view-muahang" style="display:none"></div>
+      <div id="hcqt-view-lichsu" style="display:none"></div>
     </div>
   </div>
 
@@ -20351,7 +20351,7 @@ const _HCQT_VIEW_TITLES = {
   dashboard:'Dashboard', assets:'Danh sách thiết bị',
   maintenance:'Lịch bảo trì', capphat:'Cấp phát & Thu hồi',
   kiemke:'Kiểm kê tài sản', baocao:'Báo cáo tổng hợp',
-  muahang:'Yêu cầu mua hàng'
+  muahang:'Yêu cầu mua hàng', lichsu:'Lịch sử hoạt động'
 };
 
 function hcqtSubNav(v){
@@ -20370,17 +20370,16 @@ function hcqtSubNav(v){
 }
 
 function hcqtRenderSub(){
-  ['dashboard','assets','maintenance','capphat','kiemke','baocao','muahang'].forEach(v=>{
+  ['dashboard','assets','maintenance','capphat','kiemke','baocao','muahang','lichsu'].forEach(v=>{
     const el=document.getElementById('hcqt-view-'+v);
     if(el) el.style.display=v===_hcqtSubView?'':'none';
   });
   if(_hcqtSubView==='dashboard')   hcqtRenderDashboard();
   if(_hcqtSubView==='assets')      hcqtRenderAssets();
-  if(_hcqtSubView==='maintenance') hcqtRenderMaintenance();
-  if(_hcqtSubView==='capphat')     hcqtRenderCapPhat();
   if(_hcqtSubView==='kiemke')      hcqtRenderKiemKe();
   if(_hcqtSubView==='baocao')      hcqtRenderBaoCao();
-  if(_hcqtSubView==='muahang')    hcqtRenderMuaHang();
+  if(_hcqtSubView==='muahang')     hcqtRenderMuaHang();
+  if(_hcqtSubView==='lichsu')      hcqtRenderLichSu();
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────
@@ -20594,6 +20593,111 @@ function hcqtRenderMaintenance(){
     :renderGroup('Đã quá hạn','🔴',overdue,'background:#fee2e2;color:#991b1b')
     +renderGroup('Trong 30 ngày','🟡',soon30,'background:#fef3c7;color:#92400e')
     +renderGroup('Trong 90 ngày','🔵',soon90,'background:#dbeafe;color:#1e40af');
+}
+
+// ── Lịch sử hoạt động ─────────────────────────────────────────
+function hcqtRenderLichSu(){
+  const el=document.getElementById('hcqt-view-lichsu');
+  if(!el) return;
+
+  const fmt=v=>v?new Date(v).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
+  const events=[];
+
+  // 1. Cấp phát / Thu hồi
+  _hcqtCapPhat.forEach(r=>{
+    const asset=_hcqtData.find(d=>d._id===r.assetId||d._id===+r.assetId);
+    const name=asset?asset.Title:r.maTaiSan||'Tài sản không xác định';
+    events.push({
+      date:r.ngayCap, type:'capphat',
+      icon:'ph-arrow-circle-right', color:'#7C3AED', bg:'#F5F3FF',
+      title:'Cấp phát: '+hcqtEsc(name),
+      sub:'→ '+hcqtEsc(r.nguoiNhan||'—')+(r.boPhan?' ('+hcqtEsc(r.boPhan)+')':''),
+      badge:'Cấp phát', badgeStyle:'background:#ede9fe;color:#5b21b6'
+    });
+    if(r.ngayThuHoi) events.push({
+      date:r.ngayThuHoi, type:'thuhoi',
+      icon:'ph-arrow-u-up-left', color:'#0891b2', bg:'#ecfeff',
+      title:'Thu hồi: '+hcqtEsc(name),
+      sub:'← '+hcqtEsc(r.nguoiNhan||'—'),
+      badge:'Thu hồi', badgeStyle:'background:#cffafe;color:#0e7490'
+    });
+  });
+
+  // 2. Kiểm kê
+  _hcqtData.filter(d=>d.NgayKiemKe).forEach(d=>{
+    events.push({
+      date:d.NgayKiemKe, type:'kiemke',
+      icon:'ph-clipboard-text', color:'#0284c7', bg:'#e0f2fe',
+      title:'Kiểm kê: '+hcqtEsc(d.Title),
+      sub:'Kết quả: '+(d.KetQuaKiemKe||'—')+(d.GhiChuTinhTrang?' — '+hcqtEsc(d.GhiChuTinhTrang):''),
+      badge:d.KetQuaKiemKe||'KK',
+      badgeStyle:d.KetQuaKiemKe==='Đạt'?'background:#dcfce7;color:#15803d':d.KetQuaKiemKe==='Không đạt'?'background:#fee2e2;color:#991b1b':'background:#f1f5f9;color:#475569'
+    });
+  });
+
+  // 3. Bảo trì gần nhất
+  _hcqtData.filter(d=>d.NgayBaoTriGanNhat).forEach(d=>{
+    events.push({
+      date:d.NgayBaoTriGanNhat, type:'baotri',
+      icon:'ph-wrench', color:'#d97706', bg:'#fffbeb',
+      title:'Bảo trì: '+hcqtEsc(d.Title),
+      sub:(d.DonViBaoTri?hcqtEsc(d.DonViBaoTri)+' — ':'')+(d.ChiPhiBaoTri?Number(d.ChiPhiBaoTri).toLocaleString('vi-VN')+' ₫':''),
+      badge:'Bảo trì', badgeStyle:'background:#fef3c7;color:#92400e'
+    });
+  });
+
+  // 4. Mua hàng (yêu cầu đã hoàn thành)
+  _muaHangData.filter(d=>d.ngayBanGiao||d.ngayNhanHang).forEach(d=>{
+    events.push({
+      date:d.ngayBanGiao||d.ngayNhanHang, type:'muahang',
+      icon:'ph-shopping-cart', color:'#059669', bg:'#ecfdf5',
+      title:'Mua hàng: '+hcqtEsc(d.tenHang||'—'),
+      sub:'YC: '+hcqtEsc(d.soYC||'—')+(d.ncc?' — NCC: '+hcqtEsc(d.ncc):'')+(d.giaUocTinh?' — '+Number(d.giaUocTinh).toLocaleString('vi-VN')+' ₫':''),
+      badge:'Đã nhận', badgeStyle:'background:#d1fae5;color:#065f46'
+    });
+  });
+
+  // Sắp xếp mới nhất trước
+  events.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+
+  if(!events.length){
+    el.innerHTML=`<div style="text-align:center;padding:48px;color:var(--muted)">
+      <i class="ph ph-clock-counter-clockwise" style="font-size:40px;opacity:.3"></i>
+      <div style="margin-top:10px;font-size:13px">Chưa có hoạt động nào được ghi nhận</div>
+    </div>`;
+    return;
+  }
+
+  // Group by month-year
+  const groups={};
+  events.forEach(e=>{
+    const d=e.date?new Date(e.date):null;
+    const key=d?`Tháng ${d.getMonth()+1}/${d.getFullYear()}`:'Không có ngày';
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(e);
+  });
+
+  el.innerHTML=`
+  <div style="font-size:11px;color:var(--muted);margin-bottom:12px;text-align:right">${events.length} sự kiện</div>
+  <div style="position:relative">
+  ${Object.entries(groups).map(([month,evs])=>`
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;padding-left:36px">${month}</div>
+    ${evs.map(e=>`
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border,#f1f5f9)">
+      <div style="width:32px;height:32px;border-radius:50%;background:${e.bg};color:${e.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+        <i class="ph ${e.icon}" style="font-size:15px"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:600">${e.title}</span>
+          <span style="${e.badgeStyle};padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600">${e.badge}</span>
+        </div>
+        ${e.sub?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${e.sub}</div>`:''}
+      </div>
+      <div style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;margin-top:4px">${fmt(e.date)}</div>
+    </div>`).join('')}
+  `).join('')}
+  </div>`;
 }
 
 // ── Cấp phát & Thu hồi ─────────────────────────────────────────
