@@ -21622,11 +21622,17 @@ function mhAdvance(id, next){
 
 function mhDelete(id){
   const d = _muaHangData.find(x=>x.id===id); if(!d) return;
-  showUndo('Xoá yêu cầu "'+d.soYC+'"', ()=>{
-    _muaHangData = _muaHangData.filter(x=>x.id!==id);
-    mhSave();
-    hcqtRenderMuaHang();
-    msalSpDeleteMuaHang(id);
+  // Xoá ngay, cho phép hoàn tác trong 5s
+  _muaHangData = _muaHangData.filter(x=>x.id!==id);
+  mhSave();
+  hcqtRenderMuaHang();
+  toastUndo('Đã xoá yêu cầu "'+( d.soYC||d.tenHang||'—')+'"', {
+    onUndo: ()=>{
+      _muaHangData.unshift(d);
+      mhSave();
+      hcqtRenderMuaHang();
+    },
+    onCommit: ()=>{ msalSpDeleteMuaHang(id); }
   });
 }
 
