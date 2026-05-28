@@ -20237,6 +20237,7 @@ let _hcqtPage       = 1;
 const HCQT_PAGE_SZ  = 30;
 let _hcqtPanelItem  = null;
 let _hcqtPendingImgFile = null; // file ảnh chờ upload khi save
+let _hcqtVtFieldsProvisioned = false; // flag: đã provision VT columns vào SP chưa
 let _hcqtAnhMap     = {};       // cache ảnh offline: { localId → dataUrl }
 let _hcqtChart1     = null;
 let _hcqtChart2     = null;
@@ -20298,7 +20299,7 @@ async function hcqtSync(silent=false){
     let all=[], nextUrl=null;
     const base = `${HCQT_SITE}/_api/web/lists/getbytitle('${HCQT_LIST}')/items?$select=${HCQT_SEL}&$top=500`;
     let url = base;
-    try{ await hcqtSpProvisionNewFields(); }catch(e){}
+    try{ await hcqtSpProvisionNewFields(); _hcqtVtFieldsProvisioned=true; }catch(e){}
     while(url){
       const tok = await hcqtGetToken();
       const res = await fetch(url, {headers:{'Authorization':'Bearer '+tok,'Accept':'application/json;odata=nometadata'}});
@@ -21909,6 +21910,10 @@ async function hcqtSaveItem(){
   try{
     const hasAuth=typeof _msalAccount!=='undefined'&&_msalAccount;
     let savedId=_hcqtEditId;
+    // Provision VT columns lần đầu (idempotent — SP bỏ qua nếu field đã tồn tại)
+    if(hasAuth && !_hcqtVtFieldsProvisioned){
+      try{ await hcqtSpProvisionNewFields(); _hcqtVtFieldsProvisioned=true; }catch(e){}
+    }
     const payload=hcqtLocalToSP(form);
     if(hasAuth){
       if(_hcqtEditId){
@@ -22782,12 +22787,12 @@ function hcqtPrintHandover(id){
     </table>
     <div class="sig">
       <div class="sig-box"><div>Người bàn giao</div><div class="name">&nbsp;</div></div>
-      <div class="sig-box"><div>Người nhận</div><div class="name">${d.NguoiPhuTrach||'&nbsp;'}</div></div>
+      <div class="sig-box"><div>Người nhận</div><div class="name">${d.NguoiPhuTrach||}}</div></div>
     </div>
-    <script>window.onload=function(){window.print();}<\/script>
-    </body></html>`;
-  const w=window.open('','_blank','width=900,height=700,scrollbars=yes');
-  if(!w){ toast('⚠️ Trình duyệt chặn popup!','bad'); return; }
+    <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){ toast('⚠️ Trình duyệt chặn popup! Vui lòng cho phép popup.','bad'); return; }
   w.document.open(); w.document.write(html); w.document.close();
 }
 </script>
