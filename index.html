@@ -16084,6 +16084,7 @@ const _DNTT_SP_FIELDS = [
   { name:'NgayNopKeToan',    type:'DateTime' },  // lúc nộp hồ sơ kế toán
   { name:'NgayThanhToan',    type:'DateTime' },  // lúc kế toán thanh toán xong
   { name:'RepairRef',        type:'Text'     },  // JSON: {assetId, repairTs} liên kết phiếu SC
+  { name:'ChungTu',          type:'Note'     },  // JSON: [{loai,ngay,donvi,goc,sao}] chứng từ kèm theo
   { name:'TrangThai',        type:'Text'     },  // giữ lại cho backward compat
   { name:'LocalId',          type:'Text'     },
 ];
@@ -16118,6 +16119,7 @@ function dnttToSpItem(rec){
     NgayNopKeToan:    rec.ketoanSubmittedAt || null,
     NgayThanhToan:    rec.paidAt            || null,
     RepairRef:        rec.repairRef ? JSON.stringify(rec.repairRef) : null,
+    ChungTu:          rec.chungTu  ? JSON.stringify(rec.chungTu)   : null,
     TrangThai:        rec.trangThai||'draft',  // backward compat
     LocalId:          rec.id      || '',
   };
@@ -16156,6 +16158,7 @@ function spItemToDntt(item){
     ketoanSubmittedAt:   item.NgayNopKeToan    || null,
     paidAt:              item.NgayThanhToan     || null,
     repairRef:           item.RepairRef ? (()=>{ try{ return JSON.parse(item.RepairRef); }catch(e){ return null; } })() : null,
+    chungTu:             item.ChungTu  ? (()=>{ try{ return JSON.parse(item.ChungTu);  }catch(e){ return null; } })() : null,
     trangThai:           item.TrangThai         || 'draft',  // backward compat
     createdAt:           item.Created           || new Date().toISOString(),
   };
