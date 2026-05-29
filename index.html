@@ -1819,10 +1819,9 @@ td, th { font-size: 13px; }
 .proc-ncc-table td{padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:top;word-break:break-word;}
 /* Column widths mới — 7 cột: # | Tên | Thông số | SL/ĐVT | NCC1 | NCC2 | NCC3 */
 .proc-ncc-table th:nth-child(1){width:28px;text-align:center;}
-.proc-ncc-table th:nth-child(2){min-width:130px;}
-.proc-ncc-table th:nth-child(3){min-width:130px;}
-.proc-ncc-table th:nth-child(4){width:70px;text-align:center;}
-.proc-ncc-table th:nth-child(n+5){width:140px;text-align:right;}
+.proc-ncc-table th:nth-child(2){min-width:160px;}
+.proc-ncc-table th:nth-child(3){width:70px;text-align:center;}
+.proc-ncc-table th:nth-child(n+4){width:150px;text-align:right;}
 .proc-ncc-table tr.proc-total-row td{background:var(--surface2,#f8fafc);font-weight:700;}
 .proc-ncc-table tr.proc-action-row td{background:#fff;}
 .proc-ncc-table tr.proc-info-row td{background:#fff;}
@@ -12210,15 +12209,17 @@ function renderProcurement(){
     const hasNCCBtn = _items.length>0 || p.nhaCC.some(n=>n.ten);
     const nccRowsWithBtn = !_items.length ? '' : (() => {
       const itemRows = _items.map((it,ii)=>`<tr>
-    <td style="font-size:11px;color:#888;text-align:center;padding:5px 8px;white-space:nowrap">${ii+1}</td>
-    <td style="padding:5px 8px;font-weight:500;min-width:120px">${esc(it.tenHang||'—')}</td>
-    <td style="padding:5px 8px;font-size:11px;color:var(--muted);max-width:180px;word-break:break-word;white-space:pre-wrap">${esc(it.thongSo||'')}</td>
-    <td style="padding:5px 8px;text-align:center;white-space:nowrap">${it.soLuong||1} ${esc(it.donViTinh||'cái')}</td>
-    ${[0,1,2].map(ni=>{const g=it.gia[ni]||0;return `<td style="padding:5px 8px;text-align:right;font-size:12px">${g>0?Number(g).toLocaleString('vi-VN')+'đ':'—'}</td>`;}).join('')}
+    <td style="font-size:11px;color:#aaa;text-align:center;padding:6px 8px;white-space:nowrap;vertical-align:top">${ii+1}</td>
+    <td style="padding:6px 10px;vertical-align:top">
+      <div style="font-weight:600;font-size:13px">${esc(it.tenHang||'—')}</div>
+      ${it.thongSo?`<div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4">${esc(it.thongSo)}</div>`:''}
+    </td>
+    <td style="padding:6px 8px;text-align:center;white-space:nowrap;vertical-align:top;font-size:12px">${it.soLuong||1}<br><span style="font-size:10px;color:var(--muted)">${esc(it.donViTinh||'cái')}</span></td>
+    ${[0,1,2].map(ni=>{const g=it.gia[ni]||0;return `<td style="padding:6px 10px;text-align:right;vertical-align:top;font-size:12px">${g>0?Number(g).toLocaleString('vi-VN')+'đ':'<span style=\"color:var(--muted)\">—</span>'}</td>`;}).join('')}
   </tr>`).join('');
       // ── Hàng TỔNG CỘNG — gọn, không lặp tên NCC ─────────────────────
       const totalRow = `<tr class="proc-total-row" style="border-top:2px solid var(--border,#e2e8f0)">
-        <td colspan="4" style="padding:8px 10px;font-size:12px;letter-spacing:.02em">TỔNG CỘNG</td>
+        <td colspan="3" style="padding:8px 10px;font-size:12px;letter-spacing:.02em">TỔNG CỘNG</td>
         ${[0,1,2].map(ni=>{
           const tot=_itemTotals[ni];
           const isBest=tot>0&&tot===_minTotal&&_validTotals.length>1;
@@ -12233,7 +12234,7 @@ function renderProcurement(){
       // ── Hàng nút Tạo ĐNTT — tách riêng cho gọn ───────────────────────────
       const hasAnyPrice = _validTotals.length > 0;
       const actionRow = hasAnyPrice ? `<tr class="proc-action-row" style="border-top:1px solid var(--border,#f1f5f9)">
-        <td colspan="4"></td>
+        <td colspan="3"></td>
         ${[0,1,2].map(ni=>{
           const ncc=p.nhaCC[ni]; const tot=_itemTotals[ni];
           return `<td style="padding:5px 10px;text-align:right">
@@ -12249,7 +12250,7 @@ function renderProcurement(){
           const vals=p.nhaCC.map(n=>n[k]||'');
           if(vals.every(v=>!v)) return '';
           return `<tr class="proc-info-row">
-            <td colspan="4" style="padding:5px 10px;font-size:11px;color:var(--muted);font-weight:500">${l}</td>
+            <td colspan="3" style="padding:5px 10px;font-size:11px;color:var(--muted);font-weight:500">${l}</td>
             ${vals.map(v=>`<td style="padding:5px 10px;font-size:11px;color:var(--muted);text-align:right">${esc(v)||'—'}</td>`).join('')}
           </tr>`;
         }).join('');
@@ -12283,9 +12284,8 @@ function renderProcurement(){
       <table class="proc-ncc-table" style="margin-top:10px;table-layout:auto;">
         <thead><tr>
           <th style="text-align:center;width:28px">#</th>
-          <th>Tên hàng / SKU</th>
-          <th>Thông số kỹ thuật</th>
-          <th style="text-align:center">SL / ĐVT</th>
+          <th>Tên hàng / SKU &amp; Thông số</th>
+          <th style="text-align:center;width:80px">SL/ĐVT</th>
           <th style="text-align:right">${p.nhaCC[0]?.ten||'NCC 1'}</th>
           <th style="text-align:right">${p.nhaCC[1]?.ten||'NCC 2'}</th>
           <th style="text-align:right">${p.nhaCC[2]?.ten||'NCC 3'}</th>
