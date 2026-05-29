@@ -1818,10 +1818,12 @@ td, th { font-size: 13px; }
   text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:2px solid var(--border);}
 .proc-ncc-table td{padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:top;word-break:break-word;}
 /* Column widths mới — 7 cột: # | Tên | Thông số | SL/ĐVT | NCC1 | NCC2 | NCC3 */
+.proc-ncc-table{table-layout:fixed;}
 .proc-ncc-table th:nth-child(1){width:28px;text-align:center;}
-.proc-ncc-table th:nth-child(2){min-width:160px;}
+.proc-ncc-table th:nth-child(2){width:auto;}  /* chiếm hết space còn lại */
 .proc-ncc-table th:nth-child(3){width:70px;text-align:center;}
-.proc-ncc-table th:nth-child(n+4){width:150px;text-align:right;}
+.proc-ncc-table th:nth-child(4),.proc-ncc-table th:nth-child(5),.proc-ncc-table th:nth-child(6){width:150px;text-align:right;}
+.proc-ncc-table td:nth-child(2){word-break:break-word;}
 .proc-ncc-table tr.proc-total-row td{background:var(--surface2,#f8fafc);font-weight:700;}
 .proc-ncc-table tr.proc-action-row td{background:#fff;}
 .proc-ncc-table tr.proc-info-row td{background:#fff;}
