@@ -1817,8 +1817,7 @@ td, th { font-size: 13px; }
 .proc-ncc-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px;table-layout:auto;}
 .proc-ncc-table th{padding:7px 10px;background:var(--bg2,#f8fafc);font-size:10px;font-weight:700;
   text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);}
-.proc-ncc-table th:first-child,.proc-ncc-table td:first-child{padding-left:18px;}
-.proc-ncc-table th:last-child,.proc-ncc-table td:last-child{padding-right:18px;}
+.proc-ncc-table th:first-child,.proc-ncc-table td:first-child{padding-left:10px;}
 .proc-ncc-table td{padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:top;word-break:break-word;}
 /* Column widths mới — 7 cột: # | Tên | Thông số | SL/ĐVT | NCC1 | NCC2 | NCC3 */
 .proc-ncc-table{table-layout:fixed;}
@@ -12286,8 +12285,8 @@ function renderProcurement(){
         </div>
       </div>
       ${hasNCCBtn ? `
-      <div style="overflow-x:auto;margin-top:10px;margin-left:-18px;margin-right:-18px;border-top:1px solid var(--border,#e2e8f0);border-bottom:1px solid var(--border,#e2e8f0)">
-      <table class="proc-ncc-table" style="margin-top:0;border:none;padding-left:0;">
+      <div style="overflow-x:auto;margin-top:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;">
+      <table class="proc-ncc-table" style="margin-top:0;border:none;">
         <thead><tr>
           <th style="text-align:center;width:28px">#</th>
           <th>Tên hàng / SKU &amp; Thông số</th>
