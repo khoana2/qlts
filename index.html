@@ -12283,7 +12283,8 @@ function renderProcurement(){
         </div>
       </div>
       ${hasNCCBtn ? `
-      <table class="proc-ncc-table" style="margin-top:10px;table-layout:auto;">
+      <div style="overflow-x:auto;margin-top:10px;border-radius:8px;border:1px solid var(--border,#e2e8f0)">
+      <table class="proc-ncc-table" style="margin-top:0;border:none;">
         <thead><tr>
           <th style="text-align:center;width:28px">#</th>
           <th>Tên hàng / SKU &amp; Thông số</th>
@@ -12293,7 +12294,7 @@ function renderProcurement(){
           <th style="text-align:right">${p.nhaCC[2]?.ten||'NCC 3'}</th>
         </tr></thead>
         <tbody>${nccRowsWithBtn}</tbody>
-      </table>` : ''}
+      </table></div>` : ''}
       ${p.mucDich ? `<div style="margin-top:6px;font-size:11px;color:var(--muted);">📋 ${esc(p.mucDich)}</div>` : ''}
     </div>`;
   }).join('');
