@@ -1815,10 +1815,17 @@ td, th { font-size: 13px; }
 #proc-print-area .prt-sig-box{flex:1;border-top:1px solid #aaa;padding-top:6px;font-size:11px;color:#555;}
 /* Supplier comparison table inside card */
 .proc-ncc-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px;table-layout:auto;}
-.proc-ncc-table th{padding:7px 10px;background:var(--bg2,#f8fafc);font-size:10px;font-weight:700;
-  text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);}
+.proc-ncc-table th{padding:8px 10px;background:var(--bg2,#f8fafc);font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+  border-bottom:2px solid var(--border,#e2e8f0);
+  border-right:1px solid var(--border,#e2e8f0);}
+.proc-ncc-table th:last-child{border-right:none;}
 .proc-ncc-table th:first-child,.proc-ncc-table td:first-child{padding-left:10px;}
-.proc-ncc-table td{padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:top;word-break:break-word;}
+.proc-ncc-table td{padding:8px 10px;
+  border-bottom:1px solid var(--border,#e2e8f0);
+  border-right:1px solid var(--border,#e2e8f0);
+  vertical-align:top;word-break:break-word;}
+.proc-ncc-table td:last-child{border-right:none;}
 /* Column widths mới — 7 cột: # | Tên | Thông số | SL/ĐVT | NCC1 | NCC2 | NCC3 */
 .proc-ncc-table{table-layout:auto;}
 .proc-ncc-table th:nth-child(1){width:28px;text-align:center;}
