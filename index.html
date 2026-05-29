@@ -20436,11 +20436,18 @@ function hcqtRenderSub(){
     const el=document.getElementById('hcqt-view-'+v);
     if(el) el.style.display=v===_hcqtSubView?'':'none';
   });
-  if(_hcqtSubView==='dashboard')   hcqtRenderDashboard();
-  if(_hcqtSubView==='assets')      hcqtRenderAssets();
-  if(_hcqtSubView==='muahang')     hcqtRenderMuaHang();
-  if(_hcqtSubView==='lichsu')      hcqtRenderLichSu();
-  if(_hcqtSubView==='vattu')       hcqtRenderVatTu();
+  const _renders={
+    dashboard: hcqtRenderDashboard,
+    assets:    hcqtRenderAssets,
+    maintenance: hcqtRenderMaintenance,
+    capphat:   hcqtRenderCapPhat,
+    baocao:    hcqtRenderBaoCao,
+    muahang:   hcqtRenderMuaHang,
+    lichsu:    hcqtRenderLichSu,
+    vattu:     hcqtRenderVatTu
+  };
+  const fn = _renders[_hcqtSubView];
+  if(fn){ try{ fn(); }catch(e){ console.error('[HCQT] Render error ('+_hcqtSubView+'):', e); } }
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────
