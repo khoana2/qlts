@@ -12078,8 +12078,10 @@ function _procRenderItemsTable(items){
   if(!tbody) return;
   tbody.innerHTML = _procItemsData.map((it,idx) => `<tr id="proc-item-row-${idx}" style="border-bottom:1px solid var(--border,#e2e8f0)">
   <td style="padding:4px 6px;font-size:12px;color:#666;text-align:center">${idx+1}</td>
-  <td style="padding:4px"><input id="proc-item-${idx}-ten" class="finput" value="${(it.tenHang||'').replace(/"/g,'&quot;')}" placeholder="Tên hàng / Mã SKU" style="width:100%;font-size:12px;min-width:140px;" oninput="procLiveUpdate()"></td>
-  <td style="padding:4px"><input id="proc-item-${idx}-thongso" class="finput" value="${(it.thongSo||'').replace(/"/g,'&quot;')}" placeholder="Thông số kỹ thuật" style="width:100%;font-size:12px;min-width:120px;" oninput="procLiveUpdate()"></td>
+  <td style="padding:4px">
+    <input id="proc-item-${idx}-ten" class="finput" value="${(it.tenHang||'').replace(/"/g,'&quot;')}" placeholder="Tên hàng / SKU" style="width:100%;font-size:12px;" oninput="procLiveUpdate()">
+    <input id="proc-item-${idx}-thongso" class="finput" value="${(it.thongSo||'').replace(/"/g,'&quot;')}" placeholder="Thông số kỹ thuật (CPU, RAM…)" style="width:100%;font-size:11px;margin-top:3px;color:var(--muted);" oninput="procLiveUpdate()">
+  </td>
   <td style="padding:4px"><input id="proc-item-${idx}-soluong" class="finput" type="number" value="${it.soLuong||1}" min="1" style="width:60px;font-size:12px;text-align:right;" oninput="procLiveUpdate()"></td>
   <td style="padding:4px"><input id="proc-item-${idx}-donvi" class="finput" value="${(it.donViTinh||'cái').replace(/"/g,'&quot;')}" placeholder="cái" style="width:50px;font-size:12px;" list="proc-donvi-list"></td>
   <td style="padding:4px"><input id="proc-item-${idx}-gia0" class="finput" type="number" value="${it.gia&&it.gia[0]?it.gia[0]:''}" min="0" placeholder="0" style="width:110px;font-size:12px;text-align:right;" oninput="procLiveUpdate()"></td>
