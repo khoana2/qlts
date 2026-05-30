@@ -1051,88 +1051,6 @@ tr:hover .eye-btn{
 }
 #qr-modal .qr-footer button{flex:1;max-width:140px;}
 /* QR Print label */
-
-/* ══════════════ HCQT MOBILE ══════════════ */
-@media(max-width:767px){
-  /* Bottom nav bar for HCQT sub-navigation */
-  #hcqt-bottom-nav{
-    display:flex !important;
-    position:fixed;bottom:0;left:0;right:0;
-    background:var(--card-bg,#fff);
-    border-top:1px solid var(--border,#e2e8f0);
-    z-index:500;padding:0;
-    box-shadow:0 -2px 12px rgba(0,0,0,.08);
-    height:56px;
-  }
-  #hcqt-bottom-nav button{
-    flex:1;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;gap:2px;border:none;background:transparent;
-    color:var(--muted,#64748b);font-size:9px;font-weight:600;
-    text-transform:uppercase;letter-spacing:.04em;
-    padding:6px 2px;cursor:pointer;transition:color .15s;
-    min-height:44px;
-  }
-  #hcqt-bottom-nav button i{ font-size:18px; }
-  #hcqt-bottom-nav button.active{ color:#7C3AED; }
-  #hcqt-bottom-nav button.active i{ color:#7C3AED; }
-
-  /* Hide sidebar sub-nav on mobile (replaced by bottom nav) */
-  #hcqt-subnav-sidebar{ display:none !important; }
-
-  /* Padding bottom so content isn't hidden behind bottom nav */
-  #hcqt-app{ padding-bottom:68px !important; }
-
-  /* Header toolbar: stack buttons */
-  #hcqt-app > div:first-child{
-    flex-direction:column !important;
-    align-items:flex-start !important;
-  }
-  #hcqt-app > div:first-child > div:last-child{
-    width:100%;
-    display:grid !important;
-    grid-template-columns:1fr 1fr;
-    gap:6px;
-  }
-  #hcqt-app > div:first-child > div:last-child .btn{
-    width:100%;justify-content:center;min-height:40px;font-size:12px !important;
-  }
-
-  /* Panel: full screen bottom sheet on mobile */
-  #hcqt-panel{
-    width:100% !important;
-    height:90vh !important;
-    top:auto !important;
-    bottom:0 !important;
-    border-radius:16px 16px 0 0 !important;
-    border-left:none !important;
-    border-top:1px solid var(--border,#e2e8f0) !important;
-    transform:translateY(100%) !important;
-  }
-  #hcqt-panel.panel-open{ transform:translateY(0) !important; }
-
-  /* Asset table → hide on mobile, show cards instead */
-  .hcqt-assets-table-wrap{ display:none; }
-  .hcqt-assets-cards{ display:flex !important; flex-direction:column; gap:8px; }
-
-  /* Form: single column */
-  #hcqt-form .grid2,
-  #hcqt-form [style*="grid-template-columns"]{
-    grid-template-columns:1fr !important;
-  }
-  .hcqt-form-row-2col{ grid-template-columns:1fr !important; }
-
-  /* Larger touch targets */
-  .hcqt-sub-item, #hcqt-app .btn{ min-height:44px; }
-
-  /* Dashboard KPI: 2 cột thay vì auto-fill */
-  #hcqt-view-dashboard > div:first-child{
-    grid-template-columns:1fr 1fr !important;
-  }
-}
-
-/* Bottom nav hidden on desktop */
-#hcqt-bottom-nav{ display:none; }
-
 @media print{
   .qr-no-print{display:none!important;}
   .qr-print-label{display:block!important;}
@@ -4287,24 +4205,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <div id="hcqt-view-muahang" style="display:none"></div>
       <div id="hcqt-view-lichsu" style="display:none"></div>
       <div id="hcqt-view-vattu" style="display:none"></div>
-    <!-- HCQT Mobile bottom navigation (hidden on desktop) -->
-    <div id="hcqt-bottom-nav" style="display:none">
-      <button id="hcqt-bnav-dashboard" onclick="hcqtSubNav('dashboard')" class="active">
-        <i class="ph ph-chart-bar"></i>Dashboard
-      </button>
-      <button id="hcqt-bnav-assets" onclick="hcqtSubNav('assets')">
-        <i class="ph ph-list-bullets"></i>Tài sản
-      </button>
-      <button id="hcqt-bnav-capphat" onclick="hcqtSubNav('capphat')">
-        <i class="ph ph-arrow-circle-right"></i>Cấp phát
-      </button>
-      <button id="hcqt-bnav-muahang" onclick="hcqtSubNav('muahang')">
-        <i class="ph ph-shopping-cart"></i>Mua hàng
-      </button>
-      <button id="hcqt-bnav-vattu" onclick="hcqtSubNav('vattu')">
-        <i class="ph ph-package"></i>Vật tư
-      </button>
-    </div>
     </div>
   </div>
 
@@ -5791,51 +5691,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 <script>
 // ═══════════════════════ STATE ═══════════════════════
 const STORE_KEY = 'qlts_v14_data';
-// ── App version & cache busting ──────────────────────────────────────────────
-(function(){
-  const APP_VER = '2.6.0';
-  const stored = localStorage.getItem('qlts_app_ver');
-  if(stored && stored !== APP_VER){
-    // Version thay đổi → clear toàn bộ cache cũ
-    const CACHE_KEYS = ['qlts_v14_data','hcqt_assets_v2','hcqt_capphat_v1',
-      'hcqt_vattu_v1','hcqt_anh_map','qlts_proc_v1','qlts_mh_v1'];
-    CACHE_KEYS.forEach(k=>{ try{ localStorage.removeItem(k); }catch(_){} });
-    console.log('[QLTS] Cache cleared for version', APP_VER);
-  }
-  try{ localStorage.setItem('qlts_app_ver', APP_VER); }catch(_){}
-})();
-
-// ── localStorage safe helper ─────────────────────────────────────────────────
-function _lsSet(key, value){
-  try{ localStorage.setItem(key, value); }
-  catch(e){
-    if(e && (e.name==='QuotaExceededError' || e.code===22)){
-      console.warn('[LS] Quota exceeded — clearing old caches...');
-      // Xóa cache cũ theo thứ tự ưu tiên thấp nhất trước
-      const PURGEABLE=['hcqt_assets_v2','hcqt_capphat_v1','hcqt_vattu_v1','hcqt_anh_map'];
-      for(const k of PURGEABLE){
-        try{ localStorage.removeItem(k); } catch(_){}
-        try{ localStorage.setItem(key, value); return; } catch(_){}
-      }
-    }
-  }
-}
-
-function _lsGetJSON(key, fallback){
-  try{
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  }catch(e){ 
-    console.warn('[LS] Corrupt data for key:', key, '— resetting');
-    try{ localStorage.removeItem(key); }catch(_){}
-    return fallback; 
-  }
-}
-function _lsGet(key, fallback=''){
-  try{ return localStorage.getItem(key) ?? fallback; }
-  catch(e){ return fallback; }
-}
-
 
 // ─── Lazy library loaders (xlsx + exceljs tải khi cần, không block init) ──
 function _loadScript(src){
@@ -6175,51 +6030,6 @@ async function logoutScreenSignIn(){
 }
 
 // ─── SP request với Bearer token ─────────────────────────────────────────────
-
-
-// ── SP ETag / change-detection cache ────────────────────────────────────────
-const _spETagCache = {};   // { listKey: { etag, ts } }
-function _spCacheValid(key, maxAge = 300000){ // 5 phút
-  const e = _spETagCache[key];
-  return e && (Date.now() - e.ts < maxAge);
-}
-function _spCacheSet(key, etag){ _spETagCache[key] = { etag, ts: Date.now() }; }
-function _spCacheInvalidate(key){ delete _spETagCache[key]; }
-// ── SP request helpers — timeout + retry ─────────────────────────────────────
-const _SP_TIMEOUT_MS  = 25000;  // 25s timeout per request
-const _SP_RETRY_MAX   = 3;      // tối đa 3 lần retry
-const _SP_RETRY_CODES = new Set([429, 503, 504]); // retry khi SP throttle/unavailable
-
-async function _spFetchWithTimeout(url, opts, timeoutMs = _SP_TIMEOUT_MS){
-  const ctrl = new AbortController();
-  const tid  = setTimeout(() => ctrl.abort(), timeoutMs);
-  try{
-    return await fetch(url, { ...opts, signal: ctrl.signal });
-  } catch(e) {
-    if(e.name === 'AbortError') throw new Error(`SP timeout sau ${timeoutMs/1000}s — kiểm tra kết nối mạng`);
-    throw e;
-  } finally {
-    clearTimeout(tid);
-  }
-}
-
-async function _spWithRetry(fn, label='SP'){
-  let lastErr;
-  for(let attempt = 1; attempt <= _SP_RETRY_MAX; attempt++){
-    try{ return await fn(); }
-    catch(e){
-      lastErr = e;
-      const status = parseInt(e.message?.match(/SP (\d{3})/)?.[1] || '0');
-      // Retry nếu throttle/service unavailable, không retry nếu lỗi logic (4xx khác)
-      const shouldRetry = _SP_RETRY_CODES.has(status) || e.name === 'AbortError';
-      if(!shouldRetry || attempt === _SP_RETRY_MAX) break;
-      const wait = Math.min(1000 * Math.pow(2, attempt - 1), 8000); // 1s, 2s, 4s
-      console.warn(`[${label}] Attempt ${attempt} failed (${e.message?.slice(0,60)}), retry in ${wait}ms...`);
-      await new Promise(r => setTimeout(r, wait));
-    }
-  }
-  throw lastErr;
-}
 async function msalSpReq(url, opts={}){
   const token = await msalGetToken();
   if(!token) throw new Error('Không lấy được token');
@@ -6229,11 +6039,7 @@ async function msalSpReq(url, opts={}){
     'Authorization': 'Bearer ' + token,
     ...(opts.headers||{})
   };
-  // Dùng timeout + retry tự động
-  const r = await _spWithRetry(
-    () => _spFetchWithTimeout(url, { ...opts, headers }),
-    'msalSpReq'
-  );
+  const r = await fetch(url, { ...opts, headers });
   if(!r.ok){
     let msg = `SP ${r.status}`;
     let detail = '';
@@ -7014,7 +6820,7 @@ function loginScreenPopulateStats(){
   try{
     const a = JSON.parse(localStorage.getItem('qlts_v14_data')||'[]');
     const l = JSON.parse(localStorage.getItem('qlts_v14_licenses')||'[]');
-    const d = _lsGetJSON('qlts_dntt_v1',[]);
+    const d = JSON.parse(localStorage.getItem('qlts_dntt_v1')||'[]');
     if(!a.length && !l.length && !d.length) return; // không có data → không hiện stats
     const wrap = document.getElementById('login-stats');
     if(wrap) wrap.style.display = 'flex';
@@ -7228,8 +7034,8 @@ async function _loadFileData(handle){
   const data = JSON.parse(text);
   if(Array.isArray(data.assets)) assets = data.assets;
   if(data.transfers && typeof data.transfers==='object') transfers = data.transfers;
-  _lsSet(STORE_KEY, JSON.stringify(assets));
-  _lsSet(TRANSFER_KEY, JSON.stringify(transfers));
+  localStorage.setItem(STORE_KEY, JSON.stringify(assets));
+  localStorage.setItem(TRANSFER_KEY, JSON.stringify(transfers));
   populateDeptSelects(); applyFilters(); updateDashboard(); renderEvents(); updateTopbarSub();
 }
 
@@ -7510,16 +7316,16 @@ function _dedupeLocalTransfers(){
     transfers[aid] = recs;
   }
   if(changed){
-    try{ _lsSet(TRANSFER_KEY, JSON.stringify(transfers)); }catch(e){}
+    try{ localStorage.setItem(TRANSFER_KEY, JSON.stringify(transfers)); }catch(e){}
     console.log('[TRANSFER] _dedupeLocalTransfers: đã dọn bản ghi trùng');
   }
 }
 function saveToStorage(){
-  _lsSet(STORE_KEY, JSON.stringify(assets));
+  localStorage.setItem(STORE_KEY, JSON.stringify(assets));
   fsSave();   // ghi vào file OneDrive (nếu đã chọn)
 }
 function saveTransfers(){
-  _lsSet(TRANSFER_KEY, JSON.stringify(transfers));
+  localStorage.setItem(TRANSFER_KEY, JSON.stringify(transfers));
   fsSave();   // ghi vào file OneDrive (nếu đã chọn)
 }
 
@@ -7985,8 +7791,6 @@ async function _loadEmployees(force=false){
     if(!colUser&&!colName) return;
     // Các domain nội bộ được chấp nhận
     const ALLOWED_DOMAINS=['@ttgvn.com','@lancaster.com.vn','@ttg.com.vn'];
-const _DEFAULT_DOMAIN = '@ttgvn.com'; // Domain email mặc định TTG
-
     const seen=new Set();
     window._qltsEmployees=items.map(item=>{
       const rawEmail=colUser?String(item[colUser]||'').trim():'';
@@ -8154,7 +7958,7 @@ function _empAutocomplete(inputEl, opts={}){
   }
 
   function select(emp){
-    const email=emp.email||(emp.user?emp.user+_DEFAULT_DOMAIN:'');
+    const email=emp.email||(emp.user?emp.user+'@ttgvn.com':'');
     // fillEmail:true → input nhận email (dùng cho trường email), còn tên điền vào nameField
     if(opts.fillEmail){ inputEl.value=email; }
     else { inputEl.value=emp.name||''; }
@@ -8254,7 +8058,7 @@ function _empAutocomplete(inputEl, opts={}){
     const localRes=(window._qltsEmployees||[])
       .filter(e=>(e.name||'').toLowerCase().includes(lq)||((e.user||'').includes(lq))||((e.email||'').toLowerCase().includes(lq)))
       .slice(0,6)
-      .map(e=>({...e, email:e.email||(e.user?e.user+_DEFAULT_DOMAIN:'')})); // email đã lưu full domain kể từ bản này
+      .map(e=>({...e, email:e.email||(e.user?e.user+'@ttgvn.com':'')})); // email đã lưu full domain kể từ bản này
 
     if(localRes.length){
       _renderMatches(localRes, []);
@@ -8976,34 +8780,29 @@ function switchTab(t){
     console.warn('[QLTS] HCQT user: access to tab "' + t + '" blocked');
     return;
   }
-  // Error boundary — lỗi trong 1 tab không crash toàn bộ app
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+t).classList.add('active');
   document.getElementById('tab-'+t).classList.add('active');
-  try {
-    if(t==='dashboard') updateDashboard();
-    if(t==='events')   { populateEvDeptSelect(); renderEvents(); }
-    if(t==='license')  renderLicenses();
-    if(t==='dntt'){        renderDNTT(); _dnttUpdateTplUI(); }
-    if(t==='procurement')  renderProcurement();
-    if(t==='roles'){
-      renderRolesTable();
-      const isTopAdmin = _userRole === 'global_admin' || _userRole === 'admin';
-      const hcqtSec = document.getElementById('hcqt-roles-section');
-      if(hcqtSec){
-        hcqtSec.style.display = isTopAdmin ? 'block' : 'none';
-        if(isTopAdmin) msalHCQTLoadAllRoles();
-      }
+  if(t==='dashboard') updateDashboard();
+  if(t==='events')   { populateEvDeptSelect(); renderEvents(); }
+  if(t==='license')  renderLicenses();
+  if(t==='dntt'){        renderDNTT(); _dnttUpdateTplUI(); }
+  if(t==='procurement')  renderProcurement();
+  if(t==='roles'){
+    renderRolesTable();
+    // Hiện section HCQT roles chỉ cho global_admin / admin
+    const isTopAdmin = _userRole === 'global_admin' || _userRole === 'admin';
+    const hcqtSec = document.getElementById('hcqt-roles-section');
+    if(hcqtSec){
+      hcqtSec.style.display = isTopAdmin ? 'block' : 'none';
+      if(isTopAdmin) msalHCQTLoadAllRoles();
     }
-    if(t==='auditlog')     renderAuditLog();
-    if(t==='fuji')         fujiOnTabOpen();
-    if(t==='repairs')      renderRepairs();
-    if(t==='hcqt')         hcqtOnTabOpen();
-  } catch(err) {
-    console.error('[switchTab] Lỗi render tab "'+t+'":', err);
-    toast('⚠️ Lỗi hiển thị tab — thử reload trang nếu vấn đề tiếp tục', 'warn');
   }
+  if(t==='auditlog')     renderAuditLog();
+  if(t==='fuji')         fujiOnTabOpen();
+  if(t==='repairs')      renderRepairs();
+  if(t==='hcqt')         hcqtOnTabOpen();
   // Sync bottom nav
   setBottomNav(t);
   // Đóng sidebar drawer trên mobile sau khi chọn tab
@@ -9732,7 +9531,7 @@ applyFilters = function(keepPage=false){
 
 // ─── COLUMN TOGGLE ────────────────────────────────────────────────────────────
 const COL_STORAGE_KEY = 'qlts_hidden_cols';
-let hiddenCols = JSON.parse(_lsGet(COL_STORAGE_KEY,'[]'));
+let hiddenCols = JSON.parse(localStorage.getItem(COL_STORAGE_KEY)||'[]');
 
 function toggleColMenu(){
   document.getElementById('col-toggle-menu').classList.toggle('open');
@@ -9747,7 +9546,7 @@ function toggleCol(colId, visible){
   const tbl = document.getElementById('assets-table');
   if(visible){ tbl.classList.remove('hide-'+colId); hiddenCols=hiddenCols.filter(c=>c!==colId); }
   else { tbl.classList.add('hide-'+colId); if(!hiddenCols.includes(colId)) hiddenCols.push(colId); }
-  _lsSet(COL_STORAGE_KEY, JSON.stringify(hiddenCols));
+  localStorage.setItem(COL_STORAGE_KEY, JSON.stringify(hiddenCols));
 }
 function initColVisibility(){
   const tbl = document.getElementById('assets-table');
@@ -11721,7 +11520,8 @@ function startDraftTimer(modalId){
                               'modal-transfer':'tr-asset-id', 'modal-license':'lic-f-id' };
       const idField = _editIdFields[modalId];
       const isEdit  = !!(idField && (document.getElementById(idField)?.value||'').trim());
-      try{ localStorage.setItem(_DRAFT_KEY(modalId), JSON.stringify({ ts: Date.now(), data: d, isEdit })); }catch(e){ console.warn("[Draft]", e?.message||e); }
+      try{ localStorage.setItem(_DRAFT_KEY(modalId), JSON.stringify({ ts: Date.now(), data: d, isEdit })); }
+      catch(e){}
     }
   }, 30000);
 }
@@ -11763,7 +11563,7 @@ function checkAndOfferDraftRestore(modalId, onRestore){
         onclick="_dismissDraft('${modalId}')">Bỏ qua</button>`;
     const body = document.querySelector(`#${modalId} .modal-body`);
     if(body) body.prepend(banner);
-  }catch(e){ console.warn("[Draft]", e?.message||e); }
+  }catch(e){}
 }
 
 function _applyDraft(modalId, onRestore){
@@ -11775,7 +11575,7 @@ function _applyDraft(modalId, onRestore){
     const banner = document.getElementById(`draft-banner-${modalId}`);
     if(banner) banner.remove();
     if(onRestore){ try{ window[onRestore]?.(); }catch(e){} }
-  }catch(e){ console.warn("[Draft]", e?.message||e); }
+  }catch(e){}
 }
 
 function _dismissDraft(modalId){
@@ -11787,7 +11587,7 @@ function _dismissDraft(modalId){
       obj.dismissed = true;
       localStorage.setItem(_DRAFT_KEY(modalId), JSON.stringify(obj));
     }
-  }catch(e){ console.warn("[Draft]", e?.message||e); }
+  }catch(e){}
   stopDraftTimer(modalId);
   const banner = document.getElementById(`draft-banner-${modalId}`);
   if(banner) banner.remove();
@@ -14319,7 +14119,7 @@ async function autoSendLicenseAlert(){
 
   // Chỉ gửi 1 lần mỗi ngày
   const today = new Date().toISOString().slice(0,10);
-  if(_lsGet(LIC_ALERT_DATE_KEY) === today) return;
+  if(localStorage.getItem(LIC_ALERT_DATE_KEY) === today) return;
 
   const WARN_DAYS = 30;
   const expiring = licenses.filter(l => {
@@ -16087,14 +15887,14 @@ function openDNTTForm(prefill){
 }
 
 // ── Tạo ĐNTT từ phiếu sửa chữa ──
-async function openDNTTFromRepair(assetId, idx){
+function openDNTTFromRepair(assetId, idx){
   const rec   = (repairs[assetId]||[])[idx];
   const asset = assets.find(x=>x.id===assetId);
   if(!rec) return;
   // Kiểm tra đã có ĐNTT liên kết chưa
   const existing = dnttList.find(d=>d.repairRef?.assetId===assetId && d.repairRef?.repairTs===rec.ts);
   if(existing){
-    if(!await showConfirm(`Phiếu sửa chữa này đã có ĐNTT liên kết (${existing.soPhieu||existing.id}). Tạo thêm ĐNTT mới?`,{title:'Xác nhận',icon:'⚠️',okText:'Tạo ĐNTT mới'})) return;
+    if(!confirm(`Phiếu sửa chữa này đã có ĐNTT liên kết (${existing.soPhieu||existing.id}).\nTạo thêm ĐNTT mới?`)) return;
   }
   const assetDesc = [asset?.maTaiSan, asset?.tenTaiSan, asset?.model].filter(Boolean).join(' — ');
   // Dùng openDNTTForm với prefill — tránh dùng setV local
@@ -16967,12 +16767,12 @@ async function msalSpPushDNTT(id, _retried){
         try{
           const cur = await msalSpReq(`${base}(${rec._spId})?$select=Modified`);
           if(cur?.Modified && cur.Modified !== rec._spModified){
-            const ok = await showConfirm(
+            const ok = confirm(
               `⚠️ Phiếu "${rec.soPhieu||rec.id}" đã bị chỉnh sửa bởi người khác trên SharePoint.\n\n` +
               `SP: ${new Date(cur.Modified).toLocaleString('vi-VN')}\n` +
               `Local: ${new Date(rec._spModified).toLocaleString('vi-VN')}\n\n` +
               `Ghi đè bản trên SharePoint bằng bản local?`
-            ,{title:'Xung đột dữ liệu',icon:'⚠️',okText:'Ghi đè',danger:true});
+            );
             if(!ok){ console.warn('[DNTT-SP] Conflict — bỏ qua push theo yêu cầu người dùng'); return; }
           }
         }catch(ce){ console.warn('[DNTT-SP] Conflict check lỗi, bỏ qua:', ce.message); }
@@ -16986,7 +16786,7 @@ async function msalSpPushDNTT(id, _retried){
       try{
         const updated = await msalSpReq(`${base}(${rec._spId})?$select=Modified`);
         if(updated?.Modified){ rec._spModified = updated.Modified; saveDNTT(); }
-      }catch(e){ console.warn("[QLTS]", e?.message||e); }
+      }catch(e){}
     } else {
       const res = await msalSpReq(base, { method:'POST', body: JSON.stringify(body) });
       if(res?.ID){
@@ -17316,7 +17116,7 @@ async function _generateFromTemplate(d, tplBase64){
           toast('⚠️ Template upload có hình ảnh/drawings — tự động dùng template chuẩn. Hãy upload file template không có hình vẽ.','warn');
           return null;   // fallback về built-in
         }
-      }catch(e){ console.warn("[Draft]", e?.message||e); }
+      }catch(e){}
     }
     // ─────────────────────────────────────────────────────────────────────
 
@@ -17341,7 +17141,7 @@ async function _generateFromTemplate(d, tplBase64){
             }
           });
         });
-      }catch(e){ console.warn("[Draft]", e?.message||e); }
+      }catch(e){}
       if(found){ ws = sheet; console.log('[TPL] Dùng sheet:', sheet.name); break; }
     }
     if(!ws) throw new Error('Không tìm thấy sheet trong template');
@@ -17391,7 +17191,7 @@ async function _generateFromTemplate(d, tplBase64){
         cell.font = { bold: isSelected, size:10, color:{ argb: isSelected ? 'FF006100' : 'FF888888' } };
         cell.fill = { type:'pattern', pattern:'solid',
           fgColor:{ argb: isSelected ? 'FFC6EFCE' : 'FFF2F2F2' } };
-      }catch(e){ console.warn("[Draft]", e?.message||e); }
+      }catch(e){}
     };
     if(map.hinhThucTM){
       // Template có 2 ô riêng cho CK và TM
@@ -17407,7 +17207,7 @@ async function _generateFromTemplate(d, tplBase64){
         cell.value = `${ckStr}                    ${tmStr}`;
         cell.alignment = { horizontal:'left', vertical:'middle' };
         cell.font = { bold: false, size:10 };
-      }catch(e){ console.warn("[Draft]", e?.message||e); }
+      }catch(e){}
     }
     set(map.soTien,      soTien, '#,##0');
     set(map.tienTe,      tt);
@@ -19083,7 +18883,7 @@ function printQRLabel(){
       };
       localStorage.setItem(_fujiLsKey(cycle),JSON.stringify(payload));
       // Cập nhật index
-      const idx=_lsGetJSON(LS_IDX,[]);
+      const idx=JSON.parse(localStorage.getItem(LS_IDX)||'[]');
       if(!idx.includes(cycle)){ idx.unshift(cycle); localStorage.setItem(LS_IDX,JSON.stringify(idx)); }
       else { // Đưa lên đầu
         const ni=[cycle,...idx.filter(c=>c!==cycle)]; localStorage.setItem(LS_IDX,JSON.stringify(ni));
@@ -19115,12 +18915,12 @@ function printQRLabel(){
   };
 
   // Xoá 1 chu kỳ khỏi cache
-  window._fujiLocalDelete=async function(cycle,evt){
+  window._fujiLocalDelete=function(cycle,evt){
     if(evt) evt.stopPropagation();
-    if(!await showConfirm('Xoá cache chu kỳ '+_fujiCycleLabel(cycle)+'?',{title:'Xoá cache',danger:true,okText:'Xoá'})) return;
+    if(!confirm('Xoá cache chu kỳ '+_fujiCycleLabel(cycle)+'?')) return;
     try{
       localStorage.removeItem(_fujiLsKey(cycle));
-      const idx=_lsGetJSON(LS_IDX,[]).filter(c=>c!==cycle);
+      const idx=JSON.parse(localStorage.getItem(LS_IDX)||'[]').filter(c=>c!==cycle);
       localStorage.setItem(LS_IDX,JSON.stringify(idx));
       _fujiRenderQuickCycles();
       toast('🗑️ Đã xoá cache chu kỳ '+_fujiCycleLabel(cycle),'ok');
@@ -19143,7 +18943,7 @@ function printQRLabel(){
     const selA=$('fuji-cmp-a'), selB=$('fuji-cmp-b');
     if(!selA||!selB) return;
     // Ghép: localStorage cycles + SP cycles
-    const lsIdx=_lsGetJSON(LS_IDX,[]);
+    const lsIdx=JSON.parse(localStorage.getItem(LS_IDX)||'[]');
     const spCycles=Object.keys(_spCycleMap);
     const allCycles=[...new Set([...lsIdx,...spCycles])].sort().reverse();
     const opts='<option value="">-- Chọn chu kỳ --</option>'+allCycles.map(c=>{
@@ -19160,7 +18960,7 @@ function printQRLabel(){
     try{
       const raw=localStorage.getItem(_fujiLsKey(cycle));
       if(raw){ const d=JSON.parse(raw); if(d.agg?.length) return d; }
-    }catch(e){ console.warn("[Draft]", e?.message||e); }
+    }catch(e){}
     // 2. Thử SP cache
     if(_spCycleMap[cycle]) return _spCycleMap[cycle];
     // 3. Tải từ SP
@@ -19284,7 +19084,7 @@ function printQRLabel(){
   window._fujiRenderLocalCycles=function(){
     const wrap=$('fuji-local-cycles-wrap'), list=$('fuji-local-cycles-list'), cnt=$('fuji-local-cycle-count');
     if(!wrap||!list) return;
-    const idx=_lsGetJSON(LS_IDX,[]);
+    const idx=JSON.parse(localStorage.getItem(LS_IDX)||'[]');
     if(!idx.length){ wrap.style.display='none'; return; }
     wrap.style.display='';
     if(cnt) cnt.textContent='('+idx.length+' chu kỳ)';
@@ -19295,7 +19095,7 @@ function printQRLabel(){
         const d=JSON.parse(localStorage.getItem(_fujiLsKey(cycle))||'{}');
         if(d.savedAt){ const dt=new Date(d.savedAt); savedAt=String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear(); }
         totalPages=(d.agg||[]).reduce((a,r)=>a+r.total,0);
-      }catch(e){ console.warn("[Draft]", e?.message||e); }
+      }catch(e){}
       const card=document.createElement('div');
       card.style.cssText='border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--surface2);cursor:pointer;min-width:180px;flex:1;max-width:240px;position:relative;';
       card.innerHTML=`
@@ -19549,7 +19349,7 @@ function printQRLabel(){
     const frag=document.createDocumentFragment();
     rows.forEach(r=>{
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${esc(r.user||'')}</td><td>${esc(r.name||'')}</td><td>${esc(r.dept||'')}</td>
+      tr.innerHTML=`<td>${r.user||''}</td><td>${r.name||''}</td><td>${r.dept||''}</td>
         <td style="text-align:right">${r.bw.toLocaleString('vi-VN')}</td>
         <td style="text-align:right">${r.color.toLocaleString('vi-VN')}</td>
         <td style="text-align:right"><strong>${r.total.toLocaleString('vi-VN')}</strong></td>
@@ -19804,7 +19604,7 @@ function printQRLabel(){
         const pct=r.PhanTramMau||0;
         const bar=`<div style="display:inline-block;width:${Math.min(pct,60)}px;height:6px;background:#F59E0B;border-radius:3px;vertical-align:middle;margin-left:4px;"></div>`;
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td><strong>${esc(_fujiCycleLabel(r.Thang)||r.Thang||'')}</strong></td>
+        tr.innerHTML=`<td><strong>${_fujiCycleLabel(r.Thang)||r.Thang||''}</strong></td>
           <td>${r.Model||'—'}</td>
           <td style="color:var(--muted);font-size:12px">${r.Serial||'—'}</td>
           <td style="text-align:right">${(r.SoUser||0)}</td>
@@ -20160,7 +19960,7 @@ function printQRLabel(){
       const arrow=delta>0?'▲':delta<0?'▼':'—';
       const pct=c.total?Math.round(c.color*100/c.total):0;
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td><strong>${esc(dept)}</strong></td>
+      tr.innerHTML=`<td><strong>${dept}</strong></td>
         <td style="text-align:right">${p.total.toLocaleString('vi-VN')}</td>
         <td style="text-align:right">${c.total.toLocaleString('vi-VN')}</td>
         <td style="text-align:right" class="${cls}">${arrow} ${sign}${delta.toLocaleString('vi-VN')}</td>
@@ -20385,8 +20185,8 @@ const _AI_KEY_LS = 'qlts_claude_key_v1';
 let _aiChatHistory = []; // lịch sử chat với AI
 let _aiAssetContext = ''; // context tài sản hiện tại
 
-function _getAiKey(){ return _lsGet(_AI_KEY_LS,''); }
-function _setAiKey(k){ _lsSet(_AI_KEY_LS, k.trim()); }
+function _getAiKey(){ return localStorage.getItem(_AI_KEY_LS)||''; }
+function _setAiKey(k){ localStorage.setItem(_AI_KEY_LS, k.trim()); }
 
 // Mở chat panel khi click nút "Tư vấn AI"
 function openAiChat(){
@@ -20638,7 +20438,7 @@ async function hcqtGetToken(){
 // ── SP API helper ─────────────────────────────────────────────────
 async function hcqtSpFetch(path,opts={}){
   const tok = await hcqtGetToken();
-  const fullOpts = {
+  const res = await fetch(HCQT_SITE+'/_api/'+path,{
     ...opts,
     headers:{
       'Authorization':'Bearer '+tok,
@@ -20646,11 +20446,7 @@ async function hcqtSpFetch(path,opts={}){
       'Content-Type':'application/json;odata=nometadata',
       ...(opts.headers||{})
     }
-  };
-  const res = await _spWithRetry(
-    () => _spFetchWithTimeout(HCQT_SITE+'/_api/'+path, fullOpts),
-    'hcqtSpFetch'
-  );
+  });
   if(!res.ok){ const t=await res.text(); throw new Error('SP '+res.status+': '+t.slice(0,200)); }
   return res.status===204?null:res.json();
 }
@@ -20782,10 +20578,6 @@ function hcqtSubNav(v){
   // Cập nhật active state ở sidebar
   document.querySelectorAll('.hcqt-sub-item').forEach(b=>{
     b.classList.toggle('active', b.id==='hcqt-sub-'+v);
-  });
-  // Sync bottom nav active state on mobile
-  document.querySelectorAll('#hcqt-bottom-nav button').forEach(b=>{
-    b.classList.toggle('active', b.id==='hcqt-bnav-'+v);
   });
   // Cập nhật title
   const titleEl = document.getElementById('hcqt-view-title');
@@ -21003,24 +20795,6 @@ function hcqtRenderAssets(){
   _hcqtRenderResults();
 }
 
-function _hcqtMobileCards(filtered){
-  if(window.innerWidth > 767) return '';
-  const page = filtered.slice((_hcqtPage-1)*HCQT_PAGE_SZ, _hcqtPage*HCQT_PAGE_SZ);
-  return `<div class="hcqt-assets-cards">
-    ${page.map(d=>`
-    <div onclick="hcqtOpenPanel(${d._id})" style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;">
-      <div style="width:38px;height:38px;border-radius:9px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
-        ${d.LoaiTaiSan==='Laptop'||d.LoaiTaiSan?.includes('Laptop')?'💻':d.LoaiTaiSan?.includes('Màn')?'🖥️':d.LoaiTaiSan?.includes('Điện')?'📱':'📦'}
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hcqtEsc(d.Title||'—')}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:1px">${hcqtEsc(d.MaTaiSan||'')} ${d.BoPhanSuDung?'· '+hcqtEsc(d.BoPhanSuDung):''}</div>
-      </div>
-      <span style="${hcqtTtStyle(d.TinhTrang)};font-size:10px">${hcqtEsc(d.TinhTrang||'—')}</span>
-    </div>`).join('')}
-  </div>`;
-}
-
 function _hcqtRenderResults(){
   const res=document.getElementById('hcqt-assets-results');
   if(!res) return;
@@ -21039,8 +20813,8 @@ function _hcqtRenderResults(){
   if(_hcqtPage>pages)_hcqtPage=1;
   const paged=rows.slice((_hcqtPage-1)*HCQT_PAGE_SZ,_hcqtPage*HCQT_PAGE_SZ);
 
-  res.innerHTML=_hcqtMobileCards(rows)+`
-  <div class="hcqt-assets-table-wrap" style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;overflow:auto">
+  res.innerHTML=`
+  <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;overflow:auto">
   <table style="width:100%;border-collapse:collapse">
     <thead><tr style="background:#f8fafc">
       <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap">Mã TS</th>
@@ -21066,7 +20840,6 @@ function _hcqtRenderResults(){
     </tr>`).join('')}
     </tbody>
   </table>
-  </div>
   </div>
   ${pages>1?`<div style="display:flex;gap:5px;padding:10px 0;justify-content:center;align-items:center">
     <button onclick="_hcqtPage=Math.max(1,_hcqtPage-1);_hcqtRenderResults()" ${_hcqtPage===1?'disabled':''} style="min-width:28px;height:28px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:6px;cursor:pointer">‹</button>
@@ -21425,8 +21198,8 @@ function hcqtThuHoiConfirm(id){
   toast('✅ Đã thu hồi tài sản','ok');
 }
 
-async function hcqtDeleteCapPhat(id){
-  if(!await showConfirm('Xoá bản ghi này?',{title:'Xoá bản ghi',danger:true,okText:'Xoá'})) return;
+function hcqtDeleteCapPhat(id){
+  if(!confirm('Xoá bản ghi này?')) return;
   _hcqtCapPhat=_hcqtCapPhat.filter(x=>x.id!==id);
   hcqtSaveCapPhat();
   hcqtRenderSub();
@@ -21909,7 +21682,7 @@ function hcqtOpenPanel(id){
       <button onclick="hcqtClosePanel()" style="border:1px solid var(--border,#e2e8f0);background:none;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px">✕</button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:16px 18px">
-      ${d.AnhUrl?`<img src="${d.AnhUrl}" loading="lazy" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:12px" onerror="this.style.display='none'">`:''}
+      ${d.AnhUrl?`<img src="${d.AnhUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:12px" onerror="this.style.display='none'">`:''}
       ${sec('📋 Định danh')}
       ${r('Mã tài sản',`<code style="background:#f1f5f9;padding:1px 5px;border-radius:4px">${hcqtEsc(d.MaTaiSan)}</code>`)}
       ${r('Loại',hcqtEsc(d.LoaiTaiSan))} ${r('Nhóm',hcqtEsc(d.NhomTaiSan))}
@@ -21942,13 +21715,11 @@ function hcqtOpenPanel(id){
     </div>
   `;
   panel.style.transform='translateX(0)';
-  if(window.innerWidth <= 767) panel.classList.add('panel-open');
   document.getElementById('hcqt-overlay').style.display='block';
 }
 
 function hcqtClosePanel(){
   const p=document.getElementById('hcqt-panel'); if(p) p.style.transform='translateX(100%)';
-  if(p) p.classList.remove('panel-open');
   const o=document.getElementById('hcqt-overlay'); if(o) o.style.display='none';
   _hcqtPanelItem=null;
 }
@@ -22152,7 +21923,7 @@ async function vatTuSpProvision(){
       const fk=f.type==='Number'?9:f.type==='DateTime'?4:2;
       await msalSpReq(`${HCQT_SITE}/_api/web/lists/getbytitle('${HCQT_VT_LIST}')/fields`,
         {method:'POST',body:JSON.stringify({FieldTypeKind:fk,Title:f.name})});
-    }catch(e){ console.warn("[QLTS]", e?.message||e); }
+    }catch(e){}
   }
 }
 
@@ -22195,7 +21966,7 @@ async function hcqtSpProvisionNewFields(){
     try{
       await msalSpReq(`${site}/_api/web/lists/getbytitle('${list}')/fields`,
         {method:'POST',body:JSON.stringify({FieldTypeKind:f.type,Title:f.name})});
-    }catch(e){ console.warn("[QLTS]", e?.message||e); }
+    }catch(e){}
   }
 }
 
@@ -22384,7 +22155,7 @@ function _hcqtNccPopulate(){
   // Scan toàn bộ tài sản HCQT đã load từ SP → tự động chia sẻ giữa mọi người dùng
   const list = [...new Set((_hcqtData||[]).map(d=>d.HangSanXuat).filter(Boolean))].sort();
   const dl = document.getElementById('hcqt-ncc-datalist');
-  if(dl) dl.innerHTML = list.map(n=>`<option value="${esc(n)}">`).join('');
+  if(dl) dl.innerHTML = list.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">`).join('');
 }
 
 async function hcqtSaveItem(){
