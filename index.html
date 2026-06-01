@@ -1786,17 +1786,27 @@ td, th { font-size: 13px; }
 .proc-card{
   background:var(--surface);border:1px solid var(--border);border-radius:14px;
   padding:16px 18px;margin-bottom:12px;transition:box-shadow .15s;
-  overflow:hidden;box-sizing:border-box;min-width:0;
+  box-sizing:border-box;min-width:0;overflow:visible;
 }
 .proc-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.08);}
-.proc-card.status-da_mua{border-left:4px solid #8B5CF6;}
-.proc-card.status-draft{border-left:4px solid var(--border);}
+.proc-card.status-draft{border-left:4px solid #94A3B8;}
+.proc-card.status-cho_duyet{border-left:4px solid #F97316;}
+.proc-card.status-da_duyet{border-left:4px solid #3B82F6;}
+.proc-card.status-da_dat_hang{border-left:4px solid #EAB308;}
+.proc-card.status-da_nhan_hang{border-left:4px solid #14B8A6;}
+.proc-card.status-da_mua{border-left:4px solid #10B981;}
+.proc-card.status-tu_choi{border-left:4px solid #EF4444;}
 .proc-status-badge{
   display:inline-flex;align-items:center;gap:4px;
   padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
 }
 .proc-status-badge.draft{background:rgba(148,163,184,.12);color:#64748B;}
-.proc-status-badge.da_mua{background:rgba(139,92,246,.12);color:#7C3AED;}
+.proc-status-badge.cho_duyet{background:rgba(249,115,22,.12);color:#EA580C;}
+.proc-status-badge.da_duyet{background:rgba(59,130,246,.12);color:#2563EB;}
+.proc-status-badge.da_dat_hang{background:rgba(234,179,8,.14);color:#B45309;}
+.proc-status-badge.da_nhan_hang{background:rgba(20,184,166,.12);color:#0D9488;}
+.proc-status-badge.da_mua{background:rgba(16,185,129,.12);color:#059669;}
+.proc-status-badge.tu_choi{background:rgba(239,68,68,.1);color:#DC2626;}
 /* Print styles for procurement comparison */
 @media print {
   body > *:not(#proc-print-area){ display:none !important; }
@@ -1814,7 +1824,7 @@ td, th { font-size: 13px; }
 #proc-print-area .prt-sig{display:flex;gap:40px;margin-top:32px;}
 #proc-print-area .prt-sig-box{flex:1;border-top:1px solid #aaa;padding-top:6px;font-size:11px;color:#555;}
 /* Supplier comparison table inside card */
-.proc-ncc-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px;table-layout:fixed;}
+.proc-ncc-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px;}
 .proc-ncc-table th{padding:8px 10px;background:var(--bg2,#f8fafc);font-size:10px;font-weight:700;
   text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
   border-bottom:2px solid var(--border,#e2e8f0);
@@ -1828,15 +1838,16 @@ td, th { font-size: 13px; }
 .proc-ncc-table td:last-child{border-right:none;}
 /* Column widths mới — 7 cột: # | Tên | Thông số | SL/ĐVT | NCC1 | NCC2 | NCC3 */
 .proc-ncc-table th:nth-child(1){width:28px;text-align:center;}
-.proc-ncc-table th:nth-child(2){width:99%;}   /* Tên hàng: chiếm hết space còn lại */
-.proc-ncc-table th:nth-child(3){white-space:nowrap;text-align:center;}
-.proc-ncc-table th:nth-child(4),.proc-ncc-table th:nth-child(5),.proc-ncc-table th:nth-child(6){white-space:nowrap;text-align:right;}
-.proc-ncc-table td:nth-child(2){word-break:break-word;min-width:120px;}
+.proc-ncc-table th:nth-child(2){min-width:160px;}
+.proc-ncc-table th:nth-child(3){text-align:center;width:76px;}
+.proc-ncc-table th:nth-child(4),.proc-ncc-table th:nth-child(5),.proc-ncc-table th:nth-child(6){min-width:130px;text-align:right;}
+.proc-ncc-table td:nth-child(2){word-break:break-word;min-width:160px;}
 .proc-ncc-table td:nth-child(3){white-space:nowrap;text-align:center;}
-.proc-ncc-table td:nth-child(n+4){white-space:nowrap;text-align:right;}
+.proc-ncc-table td:nth-child(n+4){text-align:right;}
+.proc-ncc-table tr:not(.proc-info-row):not(.proc-action-row) td:nth-child(n+4){white-space:nowrap;}
 .proc-ncc-table tr.proc-total-row td{background:var(--surface2,#f8fafc);font-weight:700;}
 .proc-ncc-table tr.proc-action-row td{background:#fff;}
-.proc-ncc-table tr.proc-info-row td{background:#fff;}
+.proc-ncc-table tr.proc-info-row td{background:#fff;white-space:normal;word-break:break-word;max-width:150px;}
 .proc-ncc-table tr:last-child td{border-bottom:none;}
 .proc-ncc-table tr.best-price td{background:rgba(16,185,129,.05);}
 .proc-ncc-table tr.selected-ncc td{background:#EFF6FF;}
@@ -4148,10 +4159,15 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Tạo yêu cầu mua thiết bị, so sánh báo giá 3 nhà cung cấp, duyệt và tạo ĐNTT trong một quy trình.</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <select class="fsel" id="proc-filter-status" onchange="renderProcurement()" style="min-width:130px;">
+        <select class="fsel" id="proc-filter-status" onchange="renderProcurement()" style="min-width:140px;">
           <option value="">Tất cả</option>
-          <option value="draft">Nháp</option>
-          <option value="da_mua">Đã mua</option>
+          <option value="draft">⬜ Nháp</option>
+          <option value="cho_duyet">⏳ Chờ duyệt</option>
+          <option value="da_duyet">✅ Đã duyệt</option>
+          <option value="da_dat_hang">📦 Đã đặt hàng</option>
+          <option value="da_nhan_hang">📬 Đã nhận hàng</option>
+          <option value="da_mua">🎯 Hoàn tất</option>
+          <option value="tu_choi">❌ Từ chối</option>
         </select>
         <input type="text" id="proc-search" class="finput" placeholder="🔍 Tìm thiết bị, NCC…" style="min-width:180px;" oninput="renderProcurement()">
         <button class="btn primary btn-icon-ph" onclick="openProcurementForm()"><i class="ph ph-plus"></i> Tạo yêu cầu mua</button>
@@ -5030,7 +5046,8 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     <div class="modal-foot" style="justify-content:space-between;">
       <button class="btn" onclick="closeModal('modal-procurement')">Hủy</button>
       <div style="display:flex;gap:8px;">
-        <button class="btn primary btn-icon-ph" onclick="saveProcurement('draft')"><i class="ph ph-floppy-disk"></i> Lưu</button>
+        <button class="btn btn-icon-ph" onclick="saveProcurement('draft')"><i class="ph ph-floppy-disk"></i> Lưu nháp</button>
+        <button class="btn primary btn-icon-ph" onclick="saveProcurement('cho_duyet')"><i class="ph ph-paper-plane-tilt"></i> Gửi duyệt</button>
       </div>
     </div>
   </div>
@@ -11962,9 +11979,19 @@ function saveProc(){ try{ localStorage.setItem(PROC_KEY, JSON.stringify(procList
 function loadProc(){ try{ procList = JSON.parse(localStorage.getItem(PROC_KEY)||'[]'); }catch(e){ procList=[]; } }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const _PROC_STATUS_LABEL = { draft:'Nháp', da_mua:'Đã mua' };
+const _PROC_STATUS_LABEL = {
+  draft:'Nháp', cho_duyet:'Chờ duyệt', da_duyet:'Đã duyệt',
+  da_dat_hang:'Đã đặt hàng', da_nhan_hang:'Đã nhận hàng',
+  da_mua:'Hoàn tất', tu_choi:'Từ chối'
+};
+const _PROC_STATUS_ICON = {
+  draft:'⬜', cho_duyet:'⏳', da_duyet:'✅',
+  da_dat_hang:'📦', da_nhan_hang:'📬', da_mua:'🎯', tu_choi:'❌'
+};
 function _procStatusBadge(s){
-  return `<span class="proc-status-badge ${s||'draft'}">${_PROC_STATUS_LABEL[s]||s}</span>`;
+  const lbl = _PROC_STATUS_LABEL[s]||s;
+  const ico = _PROC_STATUS_ICON[s]||'';
+  return `<span class="proc-status-badge ${s||'draft'}">${ico} ${lbl}</span>`;
 }
 function _procFmt(n){ return n ? Number(n).toLocaleString('vi-VN')+'đ' : '—'; }
 
@@ -12215,13 +12242,14 @@ function renderProcurement(){
   // Stats
   const statsEl = document.getElementById('proc-stats');
   if(statsEl){
-    const counts = {draft:0, da_mua:0};
+    const _SC = {draft:'#94A3B8',cho_duyet:'#F97316',da_duyet:'#3B82F6',da_dat_hang:'#EAB308',da_nhan_hang:'#14B8A6',da_mua:'#10B981',tu_choi:'#EF4444'};
+    const counts = Object.fromEntries(Object.keys(_SC).map(k=>[k,0]));
     procList.forEach(p=>{ if(counts[p.trangThai]!==undefined) counts[p.trangThai]++; });
-    const colors = {draft:'#94A3B8', da_mua:'#7C3AED'};
     statsEl.innerHTML = Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>
-      `<span style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;
-        background:${colors[k]}18;color:${colors[k]};border:1px solid ${colors[k]}33;">
-        ${_PROC_STATUS_LABEL[k]} <strong>${v}</strong>
+      `<span style="padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
+        background:${_SC[k]}18;color:${_SC[k]};border:1px solid ${_SC[k]}33;"
+        onclick="document.getElementById('proc-filter-status').value='${k}';renderProcurement()">
+        ${_PROC_STATUS_ICON[k]||''} ${_PROC_STATUS_LABEL[k]} <strong>${v}</strong>
       </span>`
     ).join('');
   }
@@ -12234,7 +12262,7 @@ function renderProcurement(){
       <div class="es-icon"><i class="ph ${_hasProc?'ph-funnel':'ph-shopping-cart'}"></i></div>
       <p>${_hasProc?'Không tìm thấy yêu cầu phù hợp':'Chưa có yêu cầu mua sắm nào'}</p>
       <small>${_hasProc?'Thử thay đổi bộ lọc tìm kiếm':'Tạo yêu cầu để theo dõi quá trình mua sắm thiết bị'}</small>
-      ${!_hasProc?`<div style="margin-top:14px;"><button class="btn primary btn-icon-ph" onclick="openProcurementModal()"><i class="ph ph-plus"></i> Tạo yêu cầu mua</button></div>`:''}
+      ${!_hasProc?`<div style="margin-top:14px;"><button class="btn primary btn-icon-ph" onclick="openProcurementForm()"><i class="ph ph-plus"></i> Tạo yêu cầu mua</button></div>`:''}
     </div>`;
     if(countEl) countEl.textContent = '';
     return;
@@ -12319,7 +12347,9 @@ function renderProcurement(){
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;">
           <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="printProcurement('${p.id}')"><i class="ph ph-printer"></i> In báo giá</button>
-          ${p.trangThai==='da_mua' ? `<span style="font-size:11px;color:#7C3AED;padding:4px 8px;background:rgba(139,92,246,.08);border-radius:8px;"><i class="ph ph-check-square"></i> Đã mua</span>` : `<button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="procMarkBought('${p.id}')"><i class="ph ph-check-square"></i> Đã mua</button>`}
+          <select class="fsel" style="font-size:11px;padding:3px 6px;height:28px;border-radius:8px;max-width:140px;" onchange="procChangeStatus('${p.id}',this.value,this)" title="Đổi trạng thái">
+            ${Object.entries(_PROC_STATUS_LABEL).map(([k,v])=>`<option value="${k}"${p.trangThai===k?' selected':''}>${_PROC_STATUS_ICON[k]||''} ${v}</option>`).join('')}
+          </select>
           <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;color:#7C3AED;border-color:#DDD6FE;" onclick="openProcAttachments('${p.id}')" title="Đính kèm hóa đơn, hợp đồng"><i class="ph ph-paperclip"></i> Hồ sơ</button>
           <button class="btn btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="openProcurementForm('${p.id}')"><i class="ph ph-pencil-simple"></i> Sửa</button>
           <button class="btn danger btn-icon-ph" style="font-size:11px;padding:4px 10px;" onclick="deleteProc('${p.id}',this)"><i class="ph ph-trash"></i></button>
@@ -12534,6 +12564,14 @@ function procMarkBought(id){
   saveProc();
   renderProcurement();
   toast('✅ Đã đánh dấu hoàn tất mua sắm','ok');
+}
+function procChangeStatus(id, newStatus, sel){
+  const p = procList.find(x=>x.id===id);
+  if(!p) return;
+  p.trangThai = newStatus;
+  saveProc();
+  renderProcurement();
+  toast(`✅ Chuyển sang: ${_PROC_STATUS_LABEL[newStatus]||newStatus}`,'ok');
 }
 
 function deleteProc(id, btn){
