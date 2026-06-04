@@ -20871,104 +20871,56 @@ function _hcqtRenderResults(){
   if(_hcqtPage>pages)_hcqtPage=1;
   const paged=rows.slice((_hcqtPage-1)*HCQT_PAGE_SZ,_hcqtPage*HCQT_PAGE_SZ);
 
-  // ── Loại icon map ─────────────────────────────────────────────────
-  const _loaiIcon = l => {
-    const m = {
-      'Laptop':'ph-laptop','Máy tính':'ph-desktop','PC':'ph-desktop','PC Desktop':'ph-desktop',
-      'Màn hình':'ph-monitor','Máy in':'ph-printer','Điện thoại':'ph-device-mobile',
-      'Máy chiếu':'ph-projector-screen','Thiết bị mạng':'ph-wifi-high','Router':'ph-wifi-high',
-      'Switch':'ph-wifi-high','Server':'ph-hard-drives','Camera':'ph-camera',
-      'UPS':'ph-battery-charging','Tivi':'ph-television','Điều hòa':'ph-thermometer',
-      'Vật tư tiêu hao':'ph-package','Văn phòng phẩm':'ph-pencil',
-    };
-    if(!l) return 'ph-cube';
-    for(const [k,v] of Object.entries(m)) if(l.toLowerCase().includes(k.toLowerCase())) return v;
-    return 'ph-cube';
-  };
+  const _TD = 'padding:8px 10px;border:1px solid var(--border,#d1d5db);font-size:12px;vertical-align:middle;word-break:break-word;';
+  const _TH = 'padding:8px 10px;border:1px solid #c5cad4;font-size:11px;font-weight:700;color:#fff;background:#4B5563;white-space:nowrap;text-align:left;';
 
-  const _ttColor = tt => {
-    const m = {
-      'Đang sử dụng':'#10b981','Chờ cấp phát':'#f59e0b','Đang sửa chữa':'#3b82f6',
-      'Tạm ngừng sử dụng':'#94a3b8','Đề xuất thanh lý':'#ef4444','Đã thanh lý':'#64748b',
-      'Hỏng':'#ef4444',
-    };
-    return m[tt]||'#94a3b8';
-  };
-
-  if(!paged.length){
-    res.innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--muted)">
-      <i class="ph ph-package" style="font-size:48px;opacity:.25;display:block;margin-bottom:12px"></i>
-      <div style="font-size:14px">Chưa có tài sản nào</div>
-    </div>`;
-  } else {
-    res.innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px">
-      ${paged.map(d=>{
-        const icon  = _loaiIcon(d.LoaiTaiSan);
-        const color = _ttColor(d.TinhTrang);
-        const viTri = [d.ToaNha, d.Tang, d.PhongViTri].filter(Boolean).map(hcqtEsc).join(' · ');
-        const statusEl = d.LoaiTaiSan==='Vật tư tiêu hao'
-          ? _vatTuTonBadge(d)
-          : `<span style="${hcqtTtStyle(d.TinhTrang)}">${hcqtEsc(d.TinhTrang)||'—'}</span>`;
-        return `<div onclick="hcqtOpenPanel(${d._id})"
-          style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;
-                 padding:0;cursor:pointer;transition:box-shadow .15s,border-color .15s;overflow:hidden;
-                 border-top:3px solid ${color};"
-          onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)';this.style.borderColor='${color}'"
-          onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border,#e2e8f0)';this.style.borderTopColor='${color}'">
-
-          <!-- Header -->
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 0">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="width:34px;height:34px;border-radius:9px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <i class="ph ${icon}" style="font-size:17px;color:${color}"></i>
-              </div>
-              <div>
-                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">${hcqtEsc(d.LoaiTaiSan||'Tài sản')}</div>
-                <code style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;color:#475569">${hcqtEsc(d.MaTaiSan||'—')}</code>
-              </div>
-            </div>
-            ${statusEl}
-          </div>
-
-          <!-- Body -->
-          <div style="padding:8px 14px 10px">
-            <div style="font-size:13px;font-weight:700;color:var(--text,#1e293b);line-height:1.4;word-break:break-word;margin-bottom:2px">
-              ${hcqtEsc(d.Title)}
-            </div>
-            ${d.Model?`<div style="font-size:11px;color:var(--muted);word-break:break-word">${hcqtEsc(d.Model)}</div>`:''}
-          </div>
-
-          <!-- Footer -->
-          <div style="border-top:1px solid var(--border,#f1f5f9);padding:8px 14px;display:flex;flex-direction:column;gap:4px">
-            ${viTri?`<div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--muted)">
-              <i class="ph ph-map-pin" style="flex-shrink:0;margin-top:1px"></i>
-              <span style="word-break:break-word">${viTri}</span>
-            </div>`:''}
-            ${d.NguoiPhuTrach?`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
-              <i class="ph ph-user"></i>
-              <span>${hcqtEsc(d.NguoiPhuTrach)}</span>
-            </div>`:''}
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
-              <div style="font-size:11px;color:var(--muted)">
-                ${d.NgayMua?`<i class="ph ph-calendar-blank"></i> ${hcqtFmtDate(d.NgayMua)}`:''}
-              </div>
-              <button class="btn btn-icon-ph" onclick="event.stopPropagation();hcqtOpenEdit(${d._id})"
-                style="padding:3px 10px;font-size:11px;border-radius:7px" title="Sửa">
-                <i class="ph ph-pencil-simple"></i> Sửa
-              </button>
-            </div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-    ${pages>1?`<div style="display:flex;gap:5px;padding:6px 0 10px;justify-content:center;align-items:center">
-      <button onclick="_hcqtPage=Math.max(1,_hcqtPage-1);_hcqtRenderResults()" ${_hcqtPage===1?'disabled':''} style="min-width:30px;height:30px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:7px;cursor:pointer;font-size:14px">‹</button>
-      ${Array.from({length:Math.min(pages,7)},(_,i)=>{let p=Math.max(1,Math.min(_hcqtPage-3,pages-6))+i;return`<button onclick="_hcqtPage=${p};_hcqtRenderResults()" style="min-width:30px;height:30px;border:1px solid;background:${p===_hcqtPage?'var(--accent,#3B82F6)':'var(--card-bg,#fff)'};color:${p===_hcqtPage?'#fff':'inherit'};border-color:${p===_hcqtPage?'var(--accent,#3B82F6)':'var(--border,#e2e8f0)'};border-radius:7px;cursor:pointer;font-size:13px">${p}</button>`;}).join('')}
-      <button onclick="_hcqtPage=Math.min(pages,_hcqtPage+1);_hcqtRenderResults()" ${_hcqtPage===pages?'disabled':''} style="min-width:30px;height:30px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:7px;cursor:pointer;font-size:14px">›</button>
-      <span style="font-size:12px;color:var(--muted);margin-left:8px">${total} tài sản</span>
-    </div>`:''}`;
-  }
+  res.innerHTML=`
+  <div style="overflow-x:auto;border-radius:10px;border:2px solid #4B5563;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+  <table style="width:100%;border-collapse:collapse;min-width:700px">
+    <thead><tr>
+      <th style="${_TH}">#</th>
+      <th style="${_TH}">Mã TS</th>
+      <th style="${_TH}">Tên tài sản</th>
+      <th style="${_TH}">Loại</th>
+      <th style="${_TH}">Vị trí</th>
+      <th style="${_TH}">Người phụ trách</th>
+      <th style="${_TH}">Tình trạng</th>
+      <th style="${_TH}">Ngày mua</th>
+      <th style="${_TH}"></th>
+    </tr></thead>
+    <tbody>
+    ${!paged.length
+      ? `<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--muted);border:1px solid var(--border,#d1d5db)">
+           <i class="ph ph-package" style="font-size:36px;display:block;margin-bottom:8px;opacity:.3"></i>Chưa có tài sản nào
+         </td></tr>`
+      : paged.map((d,i)=>{
+          const rowNum = (_hcqtPage-1)*HCQT_PAGE_SZ + i + 1;
+          const bg = i%2===0 ? 'background:#fff' : 'background:#f9fafb';
+          const viTri = [d.ToaNha, d.Tang, d.PhongViTri].filter(Boolean).map(hcqtEsc).join('\n');
+          return `<tr style="${bg};cursor:pointer" onclick="hcqtOpenPanel(${d._id})"
+            onmouseover="this.style.background='#EFF6FF'" onmouseout="this.style.background='${i%2===0?'#fff':'#f9fafb'}'">
+            <td style="${_TD}color:#9ca3af;text-align:center;width:32px">${rowNum}</td>
+            <td style="${_TD}width:90px"><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;white-space:nowrap">${hcqtEsc(d.MaTaiSan||'—')}</code></td>
+            <td style="${_TD}min-width:160px"><span style="font-weight:600">${hcqtEsc(d.Title)}</span>${d.Model?`<br><span style="font-size:11px;color:var(--muted)">${hcqtEsc(d.Model)}</span>`:''}</td>
+            <td style="${_TD}min-width:90px">${hcqtEsc(d.LoaiTaiSan||'—')}</td>
+            <td style="${_TD}min-width:130px;white-space:pre-line">${viTri||'—'}</td>
+            <td style="${_TD}min-width:120px">${hcqtEsc(d.NguoiPhuTrach||'—')}</td>
+            <td style="${_TD}white-space:nowrap">${d.LoaiTaiSan==='Vật tư tiêu hao'?_vatTuTonBadge(d):`<span style="${hcqtTtStyle(d.TinhTrang)}">${hcqtEsc(d.TinhTrang)||'—'}</span>`}</td>
+            <td style="${_TD}white-space:nowrap;color:var(--muted)">${hcqtFmtDate(d.NgayMua)||'—'}</td>
+            <td style="${_TD}text-align:center;width:50px">
+              <button class="btn btn-icon-ph" onclick="event.stopPropagation();hcqtOpenEdit(${d._id})" style="padding:3px 8px;font-size:11px" title="Sửa"><i class="ph ph-pencil-simple"></i></button>
+            </td>
+          </tr>`;
+        }).join('')}
+    </tbody>
+  </table>
+  </div>
+  ${pages>1?`<div style="display:flex;gap:5px;padding:10px 0;justify-content:center;align-items:center">
+    <button onclick="_hcqtPage=Math.max(1,_hcqtPage-1);_hcqtRenderResults()" ${_hcqtPage===1?'disabled':''} style="min-width:30px;height:30px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:6px;cursor:pointer">‹</button>
+    ${Array.from({length:Math.min(pages,7)},(_,i)=>{let p=Math.max(1,Math.min(_hcqtPage-3,pages-6))+i;return`<button onclick="_hcqtPage=${p};_hcqtRenderResults()" style="min-width:30px;height:30px;border:1px solid;background:${p===_hcqtPage?'#4B5563':'var(--card-bg,#fff)'};color:${p===_hcqtPage?'#fff':'inherit'};border-color:${p===_hcqtPage?'#4B5563':'var(--border,#e2e8f0)'};border-radius:6px;cursor:pointer;font-size:13px">${p}</button>`;}).join('')}
+    <button onclick="_hcqtPage=Math.min(pages,_hcqtPage+1);_hcqtRenderResults()" ${_hcqtPage===pages?'disabled':''} style="min-width:30px;height:30px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:6px;cursor:pointer">›</button>
+    <span style="font-size:12px;color:var(--muted);margin-left:8px">${total} tài sản</span>
+  </div>`:''}`;
 }
 
 // ── Maintenance ───────────────────────────────────────────────────
