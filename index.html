@@ -21135,23 +21135,21 @@ function hcqtAddCapPhat(assetId){
 
         <div style="border-top:1px solid var(--border,#e2e8f0);padding-top:10px;margin-top:2px;">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">📧 Gửi email thông báo</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--muted)">Email người nhận</label>
-              <input id="hcqt-cp-email-nhan" type="email" placeholder="example@ttgvn.com"
-                style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--muted)">Người phụ trách gửi</label>
-              <select id="hcqt-cp-nguoi-gui" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
-                <option value="">-- Chọn người phụ trách --</option>
-                ${_msalAccount ? `<option value="${_msalAccount.username}" selected>${_msalAccount.name||_msalAccount.username} (bạn)</option>` : ''}
-                ${Object.values(_hcqtRoles)
-                  .filter(r => !_msalAccount || r.email.toLowerCase() !== (_msalAccount.username||'').toLowerCase())
-                  .map(r=>`<option value="${hcqtEsc(r.email)}">${hcqtEsc(r.ten||r.email)}</option>`)
-                  .join('')}
-              </select>
-            </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">Email người nhận</label>
+            <input id="hcqt-cp-email-nhan" type="text" placeholder="example@ttgvn.com" autocomplete="off"
+              style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">Người phụ trách gửi</label>
+            <select id="hcqt-cp-nguoi-gui" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+              <option value="">-- Chọn người phụ trách --</option>
+              ${_msalAccount ? `<option value="${_msalAccount.username}" selected>${_msalAccount.name||_msalAccount.username} (bạn)</option>` : ''}
+              ${Object.values(_hcqtRoles)
+                .filter(r => !_msalAccount || r.email.toLowerCase() !== (_msalAccount.username||'').toLowerCase())
+                .map(r=>`<option value="${hcqtEsc(r.email)}">${hcqtEsc(r.ten||r.email)}</option>`)
+                .join('')}
+            </select>
           </div>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;user-select:none;">
             <input type="checkbox" id="hcqt-cp-send-email" style="width:15px;height:15px;accent-color:#7C3AED;">
