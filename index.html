@@ -21910,7 +21910,7 @@ function hcqtOpenPanel(id){
     ov.onclick=hcqtClosePanel;
     document.body.appendChild(ov);
   }
-  const r=(lbl,val)=>val?`<div style="display:flex;margin-bottom:8px"><span style="width:150px;flex-shrink:0;font-size:12px;font-weight:600;color:var(--muted)">${lbl}</span><span style="font-size:13px;font-weight:500;flex:1">${val}</span></div>`:'';
+  const r=(lbl,val)=>val?`<div style="display:flex;margin-bottom:8px"><span style="width:150px;flex-shrink:0;font-size:12px;font-weight:600;color:var(--muted)">${lbl}</span><span style="font-size:13px;font-weight:500;flex:1;word-break:break-word;overflow-wrap:break-word;">${val}</span></div>`:'';
   const sec=(t)=>`<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#7C3AED;border-bottom:2px solid #EDE9FE;padding-bottom:5px;margin:16px 0 10px">${t}</div>`;
   panel.innerHTML=`
     <div style="padding:14px 18px;border-bottom:1px solid var(--border,#e2e8f0);display:flex;align-items:center;gap:8px">
