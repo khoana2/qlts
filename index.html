@@ -20871,7 +20871,7 @@ function _hcqtRenderResults(){
   if(_hcqtPage>pages)_hcqtPage=1;
   const paged=rows.slice((_hcqtPage-1)*HCQT_PAGE_SZ,_hcqtPage*HCQT_PAGE_SZ);
 
-  const _TD = 'padding:8px 10px;border:1px solid var(--border,#d1d5db);font-size:12px;vertical-align:middle;position:relative;';
+  const _TD = 'padding:8px 10px;border:1px solid var(--border,#d1d5db);font-size:12px;vertical-align:middle;word-break:break-all;overflow-wrap:anywhere;';
   const _TH = 'padding:8px 10px;border:1px solid #c5cad4;font-size:11px;font-weight:700;color:#fff;background:#4B5563;white-space:nowrap;text-align:left;';
 
   res.innerHTML=`
@@ -20911,11 +20911,11 @@ function _hcqtRenderResults(){
           return `<tr style="${bg};cursor:pointer" onclick="hcqtOpenPanel(${d._id})"
             onmouseover="this.style.background='#EFF6FF'" onmouseout="this.style.background='${i%2===0?'#fff':'#f9fafb'}'">
             <td style="${_TD}color:#9ca3af;text-align:center;width:32px">${rowNum}</td>
-            <td style="${_TD}"><div style="word-break:break-all;overflow-wrap:anywhere;max-width:100%;overflow:hidden;"><code style="background:#f1f5f9;padding:2px 5px;border-radius:4px;font-size:11px;">${hcqtEsc(d.MaTaiSan||'—')}</code></div></td>
-            <td style="${_TD}"><div style="word-break:break-all;overflow-wrap:anywhere;max-width:100%;overflow:hidden;"><strong>${hcqtEsc(d.Title)}</strong>${d.Model?`<br><span style="font-size:11px;color:var(--muted)">${hcqtEsc(d.Model)}</span>`:''}</div></td>
-            <td style="${_TD}"><div style="word-break:break-word;max-width:100%;overflow:hidden;">${hcqtEsc(d.LoaiTaiSan||'—')}</div></td>
-            <td style="${_TD}"><div style="word-break:break-word;max-width:100%;overflow:hidden;white-space:pre-line;">${viTri||'—'}</div></td>
-            <td style="${_TD}"><div style="word-break:break-word;max-width:100%;overflow:hidden;">${hcqtEsc(d.NguoiPhuTrach||'—')}</div></td>
+            <td style="${_TD}"><code style="background:#f1f5f9;padding:2px 5px;border-radius:4px;font-size:11px;">${hcqtEsc(d.MaTaiSan||'—')}</code></td>
+            <td style="${_TD}"><strong>${hcqtEsc(d.Title)}</strong>${d.Model?`<br><span style="font-size:11px;color:var(--muted)">${hcqtEsc(d.Model)}</span>`:''}</td>
+            <td style="${_TD}">${hcqtEsc(d.LoaiTaiSan||'—')}</td>
+            <td style="${_TD}white-space:pre-line;">${viTri||'—'}</td>
+            <td style="${_TD}">${hcqtEsc(d.NguoiPhuTrach||'—')}</td>
             <td style="${_TD}white-space:nowrap">${d.LoaiTaiSan==='Vật tư tiêu hao'?_vatTuTonBadge(d):`<span style="${hcqtTtStyle(d.TinhTrang)}">${hcqtEsc(d.TinhTrang)||'—'}</span>`}</td>
             <td style="${_TD}white-space:nowrap;color:var(--muted)">${hcqtFmtDate(d.NgayMua)||'—'}</td>
             <td style="${_TD}text-align:center;width:50px">
