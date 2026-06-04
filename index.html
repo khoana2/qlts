@@ -7995,6 +7995,7 @@ function _empAutocomplete(inputEl, opts={}){
       if(el) el.value=emp.name||'';
     }
     _setDept(emp.dept||'');
+    if(opts.onSelect) opts.onSelect(emp);
     close();
     inputEl.dispatchEvent(new Event('change',{bubbles:true}));
   }
@@ -21137,19 +21138,18 @@ function hcqtAddCapPhat(assetId){
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">📧 Gửi email thông báo</div>
           <div style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;color:var(--muted)">Email người nhận</label>
-            <input id="hcqt-cp-email-nhan" type="text" placeholder="example@ttgvn.com" autocomplete="off"
-              style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+            <input id="hcqt-cp-email-nhan" type="text" placeholder="Tự điền khi chọn tên người nhận ở trên" autocomplete="off" readonly
+              style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box;background:var(--bg,#f8fafc);color:var(--muted);">
           </div>
           <div style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;color:var(--muted)">Người phụ trách gửi</label>
-            <select id="hcqt-cp-nguoi-gui" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
-              <option value="">-- Chọn người phụ trách --</option>
-              ${_msalAccount ? `<option value="${_msalAccount.username}" selected>${_msalAccount.name||_msalAccount.username} (bạn)</option>` : ''}
-              ${Object.values(_hcqtRoles)
-                .filter(r => !_msalAccount || r.email.toLowerCase() !== (_msalAccount.username||'').toLowerCase())
-                .map(r=>`<option value="${hcqtEsc(r.email)}">${hcqtEsc(r.ten||r.email)}</option>`)
-                .join('')}
-            </select>
+            <input id="hcqt-cp-nguoi-gui-ten" type="text" placeholder="Tìm tên trong Azure AD…" autocomplete="off"
+              value="${_msalAccount ? (_msalAccount.name||_msalAccount.username) : ''}"
+              style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+            <input id="hcqt-cp-nguoi-gui" type="hidden" value="${_msalAccount ? _msalAccount.username : ''}">
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;" id="hcqt-cp-nguoi-gui-hint">
+              ${_msalAccount ? `📧 ${_msalAccount.username}` : 'Chưa đăng nhập'}
+            </div>
           </div>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;user-select:none;">
             <input type="checkbox" id="hcqt-cp-send-email" style="width:15px;height:15px;accent-color:#7C3AED;">
@@ -21166,7 +21166,15 @@ function hcqtAddCapPhat(assetId){
     m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
     // Wire employee autocomplete cho Người nhận → tự điền Bộ phận
     _empAutocomplete(document.getElementById('hcqt-cp-nguoi'),{
-      deptField:'hcqt-cp-bophan'
+      deptField:'hcqt-cp-bophan',
+      emailField:'hcqt-cp-email-nhan'
+    });
+    _empAutocomplete(document.getElementById('hcqt-cp-nguoi-gui-ten'),{
+      emailField:'hcqt-cp-nguoi-gui',
+      onSelect: emp => {
+        const hint = document.getElementById('hcqt-cp-nguoi-gui-hint');
+        if(hint) hint.textContent = '📧 ' + (emp.email||'');
+      }
     });
   }
 }
