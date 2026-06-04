@@ -543,8 +543,8 @@ tbody td{
 }
 .hcqt-asset-table tbody td{
   white-space:normal!important;
-  word-break:break-all!important;
-  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+  overflow-wrap:break-word!important;
   font-size:13px!important;
   line-height:1.5!important;
 }
@@ -20920,7 +20920,7 @@ function _hcqtRenderResults(){
       <col style="width:90px">
       <col style="width:230px">
       <col style="width:110px">
-      <col style="width:150px">
+      <col style="width:160px">
       <col style="width:130px">
       <col style="width:120px">
       <col style="width:84px">
@@ -20945,14 +20945,14 @@ function _hcqtRenderResults(){
       : paged.map((d,i)=>{
           const rowNum = (_hcqtPage-1)*HCQT_PAGE_SZ + i + 1;
           const bg = i%2===0 ? 'background:#fff' : 'background:#FAFAFF';
-          const viTri = [d.ToaNha, d.Tang, d.PhongViTri].filter(Boolean).map(hcqtEsc).join('\n');
+          const viTri = [d.ToaNha, d.Tang, d.PhongViTri].filter(Boolean).map(hcqtEsc).join(' · ');
           return `<tr style="${bg};cursor:pointer" onclick="hcqtOpenPanel(${d._id})"
             onmouseover="this.style.background='#F5F3FF'" onmouseout="this.style.background='${i%2===0?'#fff':'#FAFAFF'}'">
             <td style="${_TD}color:#C4B5FD;text-align:center;width:32px;font-weight:600">${rowNum}</td>
             <td style="${_TD}"><code style="background:#f1f5f9;padding:2px 5px;border-radius:4px;font-size:11px;">${hcqtEsc(d.MaTaiSan||'—')}</code></td>
             <td style="${_TD}"><strong style="display:block;word-break:break-all;overflow-wrap:anywhere;">${hcqtEsc(d.Title)}</strong>${d.Model?`<span style="display:block;font-size:11px;color:var(--muted);word-break:break-all;">${hcqtEsc(d.Model)}</span>`:''}</td>
             <td style="${_TD}">${hcqtEsc(d.LoaiTaiSan||'—')}</td>
-            <td style="${_TD}white-space:pre-line;">${viTri||'—'}</td>
+            <td style="${_TD}">${viTri||'—'}</td>
             <td style="${_TD}">${hcqtEsc(d.NguoiPhuTrach||'—')}</td>
             <td style="${_TD}white-space:nowrap">${d.LoaiTaiSan==='Vật tư tiêu hao'?_vatTuTonBadge(d):`<span style="${hcqtTtStyle(d.TinhTrang)}">${hcqtEsc(d.TinhTrang)||'—'}</span>`}</td>
             <td style="${_TD}white-space:nowrap;color:var(--muted)">${hcqtFmtDate(d.NgayMua)||'—'}</td>
