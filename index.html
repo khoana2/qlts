@@ -20651,6 +20651,11 @@ function hcqtSubNav(v){
   _hcqtSubView=v;
   // Đóng panel & overlay nếu đang mở — tránh overlay che kín tab mới
   hcqtClosePanel();
+  // Nếu chưa ở tab HCQT → switch vào trước, rồi hcqtOnTabOpen sẽ gọi hcqtRenderSub
+  if(!document.getElementById('view-hcqt')?.classList.contains('active')){
+    switchTab('hcqt');
+    return;
+  }
   // Cập nhật active state ở sidebar
   document.querySelectorAll('.hcqt-sub-item').forEach(b=>{
     b.classList.toggle('active', b.id==='hcqt-sub-'+v);
