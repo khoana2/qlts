@@ -5715,8 +5715,8 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 const STORE_KEY = 'qlts_v14_data';
 
 // Khai báo sớm để tránh ReferenceError khi HCQT script block chưa parse
+// Chỉ dùng var (không let/const) để tránh redeclaration conflict với script block sau
 var _hcqtHasITAccess = false;
-var _isHCQTUser      = false;
 
 // ─── Lazy library loaders (xlsx + exceljs tải khi cần, không block init) ──
 function _loadScript(src){
@@ -23109,4 +23109,68 @@ function hcqtExportReport(){
     ['Đang sử dụng', _hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length],
     ['Chờ cấp phát', _hcqtData.filter(d=>d.TinhTrang==='Chờ cấp phát').length],
     ['Đang sửa chữa', _hcqtData.filter(d=>d.TinhTrang==='Đang sửa chữa').length],
-    ['Đang cấp phát', _hcqtCapPhat.filter(c=>c.trangThai==='
+    ['Đang cấp phát', _hcqtCapPhat.filter(c=>c.trangThai==='ngth],
+    ['Chờ cấp phát', _hcqtData.filter(d=>d.TinhTrang==='Chờ cấp phát').length],
+    ['Đang sửa chữa', _hcqtData.filter(d=>d.TinhTrang==='Đang sửa chữa').length],
+    ['Đang cấp phát', _hcqtCapPhat.filter(c=>c.trangThai==='Đang cấp phát').length],
+    ['Tổng nguyên giá (đ)', totalValue],
+  ];
+  const grp=(key)=>{const m={};_hcqtData.forEach(d=>{const k=d[key]||'Chưa xác định';m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpi), 'Tổng quan');
+  const loaiRows=[['Loại tài sản','Số lượng','%'],...grp('LoaiTaiSan').map(([k,v])=>[k,v,((v/_hcqtData.length||0)*100).toFixed(1)+'%'])];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(loaiRows), 'Theo loại');
+  const bpRows=[['Bộ phận','Số lượng','%'],...grp('BoPhanSuDung').map(([k,v])=>[k,v,((v/_hcqtData.length||0)*100).toFixed(1)+'%'])];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(bpRows), 'Theo bộ phận');
+  const headers=['Mã TS','Tên TS','Loại','Tình trạng','Người phụ trách','Vị trí','Nguyên giá','Ngày mua'];
+  const rows=[headers,..._hcqtData.map(d=>[d.MaTaiSan||'',d.Title||'',d.LoaiTaiSan||'',d.TinhTrang||'',d.NguoiPhuTrach||'',[d.ToaNha,d.Tang,d.PhongViTri].filter(Boolean).join(' - '),parseFloat(d.NguyenGia)||0,d.NgayMua||''])];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Danh sách TS');
+  const fname='BaoCaoTaiSan_HCQT_'+now.toLocaleDateString('vi-VN').replace(/\//g,'-')+'.xlsx';
+  XLSX.writeFile(wb,fname);
+  toast('✅ Đã xuất '+fname,'ok');
+}
+
+// ── In PDF báo cáo Dashboard ──────────────────────────────────
+function hcqtPrintReport(){
+  const now = new Date();
+  const total = _hcqtData.length;
+  const fmtV = n=>new Intl.NumberFormat('vi-VN').format(n);
+  const totalValue = _hcqtData.reduce((s,d)=>s+(parseFloat(d.NguyenGia)||0),0);
+  const grp=(key)=>{const m={};_hcqtData.forEach(d=>{const k=d[key]||'Chưa xác định';m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
+  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Báo cáo HCQT</title>'
+    +'<style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}h1{font-size:18px}'
+    +'table{width:100%;border-collapse:collapse;margin:12px 0}'
+    +'th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}'
+    +'th{background:#EDE9FE;color:#5B21B6;font-weight:700}'
+    +'tr:nth-child(even)td{background:#FAFAFF}'
+    +'@media print{button{display:none}}</style></head><body>'
+    +'<h1>Báo cáo Tài sản — HC Quản Trị</h1>'
+    +'<p style="color:#666">Ngày in: '+now.toLocaleDateString('vi-VN')+'</p>'
+    +'<table><thead><tr><th>Chỉ số</th><th>Giá trị</th></tr></thead><tbody>'
+    +'<tr><td>Tổng tài sản</td><td>'+total+'</td></tr>'
+    +'<tr><td>Đang sử dụng</td><td>'+_hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length+'</td></tr>'
+    +'<tr><td>Chờ cấp phát</td><td>'+_hcqtData.filter(d=>d.TinhTrang==='Chờ cấp phát').length+'</td></tr>'
+    +'<tr><td>Đang sửa chữa</td><td>'+_hcqtData.filter(d=>d.TinhTrang==='Đang sửa chữa').length+'</td></tr>'
+    +'<tr><td>Tổng nguyên giá</td><td>'+fmtV(totalValue)+' đ</td></tr>'
+    +'</tbody></table>'
+    +'<button onclick="window.print()" style="margin:12px 0;padding:8px 20px;background:#7C3AED;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ In</button>'
+    +'<script>window.onload=function(){window.print();}<\/script>'
+    +'</body></html>';
+  const w=window.open('','_blank','width=900,height=700');
+  if(!w){toast('⚠️ Trình duyệt chặn popup','bad');return;}
+  w.document.open(); w.document.write(html); w.document.close();
+}
+</script>
+</body>
+</html>
+\/script>';
+  const w=window.open('','_blank','width=900,height=700');
+  if(!w){toast('⚠️ Trình duyệt chặn popup','bad');return;}
+  w.document.open(); w.document.write(html); w.document.close();
+}
+</script>
+</body>
+</html>
+ipt>
+</body>
+</html>
