@@ -20876,11 +20876,11 @@ function _hcqtRenderResults(){
   if(_hcqtPage>pages)_hcqtPage=1;
   const paged=rows.slice((_hcqtPage-1)*HCQT_PAGE_SZ,_hcqtPage*HCQT_PAGE_SZ);
 
-  const _TD = 'padding:8px 10px;border:1px solid var(--border,#d1d5db);font-size:12px;vertical-align:middle;word-break:break-all;overflow-wrap:anywhere;';
-  const _TH = 'padding:8px 10px;border:1px solid #c5cad4;font-size:11px;font-weight:700;color:#fff;background:#4B5563;white-space:nowrap;text-align:left;';
+  const _TD = 'padding:8px 10px;border:1px solid #EDE9FE;font-size:12px;vertical-align:middle;word-break:break-all;overflow-wrap:anywhere;';
+  const _TH = 'padding:8px 10px;border:1px solid #C4B5FD;font-size:11px;font-weight:700;color:#5B21B6;background:#EDE9FE;white-space:nowrap;text-align:left;letter-spacing:.03em;';
 
   res.innerHTML=`
-  <div style="overflow-x:auto;border-radius:10px;border:2px solid #4B5563;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+  <div style="overflow-x:auto;border-radius:10px;border:1.5px solid #C4B5FD;box-shadow:0 2px 12px rgba(124,58,237,.08)">
   <table class="hcqt-asset-table" style="width:1000px;border-collapse:collapse;table-layout:fixed">
     <colgroup>
       <col style="width:36px">
@@ -20911,11 +20911,11 @@ function _hcqtRenderResults(){
          </td></tr>`
       : paged.map((d,i)=>{
           const rowNum = (_hcqtPage-1)*HCQT_PAGE_SZ + i + 1;
-          const bg = i%2===0 ? 'background:#fff' : 'background:#f9fafb';
+          const bg = i%2===0 ? 'background:#fff' : 'background:#FAFAFF';
           const viTri = [d.ToaNha, d.Tang, d.PhongViTri].filter(Boolean).map(hcqtEsc).join('\n');
           return `<tr style="${bg};cursor:pointer" onclick="hcqtOpenPanel(${d._id})"
-            onmouseover="this.style.background='#EFF6FF'" onmouseout="this.style.background='${i%2===0?'#fff':'#f9fafb'}'">
-            <td style="${_TD}color:#9ca3af;text-align:center;width:32px">${rowNum}</td>
+            onmouseover="this.style.background='#F5F3FF'" onmouseout="this.style.background='${i%2===0?'#fff':'#FAFAFF'}'">
+            <td style="${_TD}color:#C4B5FD;text-align:center;width:32px;font-weight:600">${rowNum}</td>
             <td style="${_TD}"><code style="background:#f1f5f9;padding:2px 5px;border-radius:4px;font-size:11px;">${hcqtEsc(d.MaTaiSan||'—')}</code></td>
             <td style="${_TD}"><strong style="display:block;word-break:break-all;overflow-wrap:anywhere;">${hcqtEsc(d.Title)}</strong>${d.Model?`<span style="display:block;font-size:11px;color:var(--muted);word-break:break-all;">${hcqtEsc(d.Model)}</span>`:''}</td>
             <td style="${_TD}">${hcqtEsc(d.LoaiTaiSan||'—')}</td>
@@ -20933,7 +20933,7 @@ function _hcqtRenderResults(){
   </div>
   ${pages>1?`<div style="display:flex;gap:5px;padding:10px 0;justify-content:center;align-items:center">
     <button onclick="_hcqtPage=Math.max(1,_hcqtPage-1);_hcqtRenderResults()" ${_hcqtPage===1?'disabled':''} style="min-width:30px;height:30px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:6px;cursor:pointer">‹</button>
-    ${Array.from({length:Math.min(pages,7)},(_,i)=>{let p=Math.max(1,Math.min(_hcqtPage-3,pages-6))+i;return`<button onclick="_hcqtPage=${p};_hcqtRenderResults()" style="min-width:30px;height:30px;border:1px solid;background:${p===_hcqtPage?'#4B5563':'var(--card-bg,#fff)'};color:${p===_hcqtPage?'#fff':'inherit'};border-color:${p===_hcqtPage?'#4B5563':'var(--border,#e2e8f0)'};border-radius:6px;cursor:pointer;font-size:13px">${p}</button>`;}).join('')}
+    ${Array.from({length:Math.min(pages,7)},(_,i)=>{let p=Math.max(1,Math.min(_hcqtPage-3,pages-6))+i;return`<button onclick="_hcqtPage=${p};_hcqtRenderResults()" style="min-width:30px;height:30px;border:1px solid;background:${p===_hcqtPage?'#7C3AED':'var(--card-bg,#fff)'};color:${p===_hcqtPage?'#fff':'#7C3AED'};border-color:${p===_hcqtPage?'#7C3AED':'#DDD6FE'};border-radius:6px;cursor:pointer;font-size:13px">${p}</button>`;}).join('')}
     <button onclick="_hcqtPage=Math.min(pages,_hcqtPage+1);_hcqtRenderResults()" ${_hcqtPage===pages?'disabled':''} style="min-width:30px;height:30px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:6px;cursor:pointer">›</button>
     <span style="font-size:12px;color:var(--muted);margin-left:8px">${total} tài sản</span>
   </div>`:''}`;
@@ -23105,160 +23105,4 @@ function hcqtExportReport(){
     ['Đang sử dụng', _hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length],
     ['Chờ cấp phát', _hcqtData.filter(d=>d.TinhTrang==='Chờ cấp phát').length],
     ['Đang sửa chữa', _hcqtData.filter(d=>d.TinhTrang==='Đang sửa chữa').length],
-    ['Đang cấp phát', _hcqtCapPhat.filter(c=>c.trangThai==='Đang cấp phát').length],
-    ['Báo trì trong 30 ngày', _hcqtData.filter(d=>{if(!d.NgayBaoTriTiepTheo)return false;const df=(new Date(d.NgayBaoTriTiepTheo)-now)/86400000;return df>=0&&df<=30;}).length],
-    ['Tổng nguyên giá (đ)', totalValue],
-  ];
-  const grp=(key)=>{const m={};_hcqtData.forEach(d=>{const k=d[key]||'Chưa xác định';m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
-  const wb = XLSX.utils.book_new();
-  // Sheet 1: KPI
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpi), 'Tổng quan');
-  // Sheet 2: Theo loại
-  const loaiRows=[['Loại tài sản','Số lượng','%'],...grp('LoaiTaiSan').map(([k,v])=>[k,v,((v/_hcqtData.length||0)*100).toFixed(1)+'%'])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(loaiRows), 'Theo loại');
-  // Sheet 3: Theo bộ phận
-  const bpRows=[['Bộ phận','Số lượng','%'],...grp('BoPhanSuDung').map(([k,v])=>[k,v,((v/_hcqtData.length||0)*100).toFixed(1)+'%'])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(bpRows), 'Theo bộ phận');
-  // Sheet 4: Theo tòa nhà
-  const tnRows=[['Tòa nhà','Số lượng','%'],...grp('ToaNha').map(([k,v])=>[k,v,((v/_hcqtData.length||0)*100).toFixed(1)+'%'])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tnRows), 'Theo tòa nhà');
-  // Sheet 5: Danh sách đầy đủ
-  const headers=['Mã TS','Tên TS','Loại','Tình trạng','Bộ phận','Tòa nhà','Nguyên giá','Ngày mua','Bảo hành đến'];
-  const rows=[headers,..._hcqtData.map(d=>[d.MaTS||'',d.Title||'',d.LoaiTaiSan||'',d.TinhTrang||'',d.BoPhanSuDung||'',d.ToaNha||'',parseFloat(d.NguyenGia)||0,d.NgayMua||'',d.BaoHanhDen||''])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Danh sách TS');
-
-  const fname = 'BaoCaoTaiSan_'+now.toLocaleDateString('vi-VN').replace(/\//g,'-')+'.xlsx';
-  XLSX.writeFile(wb, fname);
-  toast('✅ Đã xuất '+fname,'ok');
-}
-
-// ── In PDF báo cáo Dashboard ──────────────────────────────────
-function hcqtPrintReport(){
-  const now = new Date();
-  const total = _hcqtData.length;
-  const totalValue = _hcqtData.reduce((s,d)=>s+(parseFloat(d.NguyenGia)||0),0);
-  const fmtV = n=>new Intl.NumberFormat('vi-VN').format(n);
-  const grp = (key)=>{
-    const m={};
-    _hcqtData.forEach(d=>{const k=d[key]||'Chưa xác định';m[k]=(m[k]||0)+1;});
-    return Object.entries(m).sort((a,b)=>b[1]-a[1]);
-  };
-  const tblRows = (arr)=>arr.map(([k,v])=>{
-    const pct = total?(v/total*100).toFixed(1)+'%':'—';
-    return '<tr>'
-      +'<td style="padding:5px 8px;border:1px solid #ddd">'+hcqtEsc(k)+'</td>'
-      +'<td style="padding:5px 8px;border:1px solid #ddd;text-align:center">'+v+'</td>'
-      +'<td style="padding:5px 8px;border:1px solid #ddd;text-align:center">'+pct+'</td>'
-      +'</tr>';
-  }).join('');
-
-  const active = _hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length;
-  const maint  = _hcqtData.filter(d=>{
-    if(!d.NgayBaoTriTiepTheo) return false;
-    const df=(new Date(d.NgayBaoTriTiepTheo)-now)/86400000;
-    return df>=0&&df<=30;
-  }).length;
-  const capphat = _hcqtCapPhat.filter(c=>c.trangThai==='Đang cấp phát').length;
-
-  const html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
-    +'<title>Báo cáo Quản lý Tài sản</title>'
-    +'<style>'
-    +'body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:18mm}'
-    +'h1{font-size:18px;text-align:center;margin:0 0 4px}'
-    +'.sub{text-align:center;color:#666;font-size:11px;margin-bottom:16px}'
-    +'.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}'
-    +'.kpi-box{border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center}'
-    +'.kpi-val{font-size:22px;font-weight:800}'
-    +'.kpi-lbl{font-size:10px;color:#666;text-transform:uppercase}'
-    +'.tbl-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}'
-    +'table{width:100%;border-collapse:collapse;font-size:11px}'
-    +'th{background:#f1f5f9;padding:5px 8px;border:1px solid #ddd;text-align:left;font-weight:700}'
-    +'.section-title{font-size:12px;font-weight:700;text-transform:uppercase;color:#666;margin-bottom:6px}'
-    +'@page{margin:18mm}'
-    +'</style></head><body>'
-    +'<h1>BÁO CÁO QUẢN LÝ TÀI SẢN</h1>'
-    +'<div class="sub">Hành chính Quản trị — Ngày xuất: '+now.toLocaleDateString('vi-VN')+'</div>'
-    +'<div class="kpi-grid">'
-    +'<div class="kpi-box"><div class="kpi-val">'+total+'</div><div class="kpi-lbl">Tổng tài sản</div></div>'
-    +'<div class="kpi-box"><div class="kpi-val">'+active+'</div><div class="kpi-lbl">Đang sử dụng</div></div>'
-    +'<div class="kpi-box"><div class="kpi-val">'+capphat+'</div><div class="kpi-lbl">Đang cấp phát</div></div>'
-    +'<div class="kpi-box"><div class="kpi-val">'+maint+'</div><div class="kpi-lbl">BT trong 30 ngày</div></div>'
-    +'<div class="kpi-box"><div class="kpi-val">'+fmtV(totalValue)+'</div><div class="kpi-lbl">Tổng nguyên giá (đ)</div></div>'
-    +'</div>'
-    +'<div class="tbl-grid">'
-    +'<div><div class="section-title">Theo loại tài sản</div>'
-    +'<table><thead><tr><th>Loại</th><th>SL</th><th>%</th></tr></thead><tbody>'
-    +tblRows(grp('LoaiTaiSan'))
-    +'</tbody></table></div>'
-    +'<div><div class="section-title">Theo bộ phận</div>'
-    +'<table><thead><tr><th>Bộ phận</th><th>SL</th><th>%</th></tr></thead><tbody>'
-    +tblRows(grp('BoPhanSuDung'))
-    +'</tbody></table></div>'
-    +'</div>'
-    +'<div class="tbl-grid">'
-    +'<div><div class="section-title">Theo tòa nhà</div>'
-    +'<table><thead><tr><th>Tòa nhà</th><th>SL</th><th>%</th></tr></thead><tbody>'
-    +tblRows(grp('ToaNha'))
-    +'</tbody></table></div>'
-    +'<div><div class="section-title">Theo tình trạng</div>'
-    +'<table><thead><tr><th>Tình trạng</th><th>SL</th><th>%</th></tr></thead><tbody>'
-    +tblRows(grp('TinhTrang'))
-    +'</tbody></table></div>'
-    +'</div>'
-    +'<div style="margin-top:10px;font-size:10px;color:#999;text-align:center">Xuất bởi QLTS HCQT — Trung Thủy Group — '+now.toLocaleString('vi-VN')+'</div>'
-    +'<script>window.onload=function(){window.print();}<\/script>'
-    +'</body></html>';
-  const w = window.open('','_blank','width=1000,height=800,scrollbars=yes');
-  if(!w){ toast('⚠️ Trình duyệt chặn popup! Vui lòng cho phép popup.','bad'); return; }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-}
-
-function hcqtPrintHandover(id){
-  const d=_hcqtData.find(x=>x._id===id); if(!d) return;
-  const now=new Date();
-  const fmt=s=>s?new Date(s).toLocaleDateString('vi-VN'):'—';
-  const row=(lbl,val)=>`<tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-weight:600;width:35%;background:#f8fafc">${lbl}</td><td style="padding:6px 10px;border:1px solid #e2e8f0">${val||'—'}</td></tr>`;
-  const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
-    <title>Phiếu bàn giao tài sản</title>
-    <style>
-      body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:20mm 18mm}
-      h2{text-align:center;font-size:16px;margin:0 0 4px}
-      .sub{text-align:center;color:#666;font-size:11px;margin-bottom:18px}
-      table{width:100%;border-collapse:collapse;margin-bottom:14px}
-      .sig{display:flex;justify-content:space-between;margin-top:40px}
-      .sig-box{text-align:center;width:45%}
-      .sig-box .name{margin-top:50px;font-weight:600;border-top:1px solid #333;padding-top:4px}
-      @page{margin:20mm 18mm}
-    </style></head><body>
-    <h2>PHIẾU BÀN GIAO TÀI SẢN</h2>
-    <div class="sub">Hành chính Quản trị — Trung Thủy Group — Ngày: ${now.toLocaleDateString('vi-VN')}</div>
-    <table>
-      ${row('Tên tài sản',d.Title)}
-      ${row('Mã tài sản',d.MaTaiSan)}
-      ${row('Loại / Nhóm',[d.LoaiTaiSan,d.NhomTaiSan].filter(Boolean).join(' / '))}
-      ${row('Hãng / Model',[d.HangSanXuat,d.Model].filter(Boolean).join(' — '))}
-      ${row('Số serial',d.SoSerial)}
-      ${row('Màu sắc',d.MauSac)}
-      ${row('Tình trạng',d.TinhTrang)}
-      ${row('Vị trí',[d.ToaNha,d.Tang,d.PhongViTri].filter(Boolean).join(' · '))}
-      ${row('Người phụ trách',d.NguoiPhuTrach)}
-      ${row('Bộ phận sử dụng',d.BoPhanSuDung)}
-      ${row('Ngày mua',fmt(d.NgayMua))}
-      ${row('Nguyên giá',d.NguyenGia?Number(d.NguyenGia).toLocaleString('vi-VN')+' VND':'')}
-      ${row('Ghi chú',d.GhiChu)}
-    </table>
-    <div class="sig">
-      <div class="sig-box"><div>Người bàn giao</div><div class="name">&nbsp;</div></div>
-      <div class="sig-box"><div>Người nhận</div><div class="name">${d.NguoiPhuTrach||'&nbsp;'}</div></div>
-    </div>
-    <script>window.onload=function(){window.print()}<\/script>
-  </body></html>`;
-  const w=window.open('','_blank');
-  if(!w){ toast('⚠️ Trình duyệt chặn popup! Vui lòng cho phép popup.','bad'); return; }
-  w.document.open(); w.document.write(html); w.document.close();
-}
-</script>
-</body>
-</html>
+    ['Đang cấp phát', _hcqtCapPhat.filter(c=>c.trangThai==='
