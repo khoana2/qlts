@@ -6447,7 +6447,7 @@ async function msalSpLoad(){
     const dnttBtn = document.getElementById('dntt-sp-sync-btn');
     if(dnttBtn) dnttBtn.style.display = can('sync') ? 'inline-flex' : 'none';
     await msalSpLoadDNTT();
-    await msalSpLoadMuaHang();
+    if(typeof msalSpLoadMuaHang === 'function') await msalSpLoadMuaHang();
     // Load employee directory nền (localStorage cache trước, fetch HubIT nếu không có)
     _loadEmployees(false);
     // Hiện nút đồng bộ NV trên topbar sau khi đã login
