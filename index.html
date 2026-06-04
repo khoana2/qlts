@@ -2992,6 +2992,11 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div class="kpi-val" id="kpi-stock">0</div>
         <div class="kpi-label">Lưu kho</div>
         <div class="kpi-sub">Chưa phân bổ</div>
+        <div id="kpi-stock-hong" style="display:none;margin-top:5px;padding:3px 8px;border-radius:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);">
+          <span style="font-size:11px;font-weight:700;color:#EF4444;cursor:pointer;" onclick="event.stopPropagation();goKpiFilter('hong')">
+            <i class="ph ph-warning-circle"></i> <span id="kpi-stock-hong-count">0</span> máy hỏng
+          </span>
+        </div>
       </div>
       <div class="kpi red clickable" onclick="goKpiFilter('hong')" title="Lọc tài sản hỏng chưa gửi sửa">
         <div class="kpi-icon-wrap" style="background:rgba(239,68,68,.13);color:#EF4444;"><i class="ph ph-warning-circle"></i></div>
@@ -8901,6 +8906,12 @@ function updateDashboard(){
   document.getElementById('kpi-active-pct').textContent =
     total ? Math.round(active/total*100)+'% tổng số' : '0%';
   document.getElementById('kpi-stock').textContent = stock;
+  const _stockHong = document.getElementById('kpi-stock-hong');
+  const _stockHongCount = document.getElementById('kpi-stock-hong-count');
+  if(_stockHong && _stockHongCount){
+    _stockHongCount.textContent = hong;
+    _stockHong.style.display = hong > 0 ? '' : 'none';
+  }
   const brokenEl = document.getElementById('kpi-broken'); if(brokenEl) brokenEl.textContent = hong+sua;
   const hongEl = document.getElementById('kpi-hong'); if(hongEl) hongEl.textContent = hong;
   const suaEl  = document.getElementById('kpi-sua');  if(suaEl)  suaEl.textContent  = sua;
