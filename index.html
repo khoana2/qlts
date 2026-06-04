@@ -541,6 +541,11 @@ tbody td{
   padding:10px 10px;font-size:13px;color:#1E293B;
   white-space:nowrap;vertical-align:middle;
 }
+.hcqt-asset-table tbody td{
+  white-space:normal!important;
+  word-break:break-all!important;
+  overflow-wrap:anywhere!important;
+}
 /* ── CSS custom property cho màu nền row ──
    Variable cascade từ tr → td (khác background:inherit không chạy trên sticky) */
 tbody tr           {--row-bg:#ffffff;}
@@ -20876,7 +20881,7 @@ function _hcqtRenderResults(){
 
   res.innerHTML=`
   <div style="overflow-x:auto;border-radius:10px;border:2px solid #4B5563;box-shadow:0 2px 8px rgba(0,0,0,.08)">
-  <table style="width:1000px;border-collapse:collapse;table-layout:fixed">
+  <table class="hcqt-asset-table" style="width:1000px;border-collapse:collapse;table-layout:fixed">
     <colgroup>
       <col style="width:36px">
       <col style="width:90px">
