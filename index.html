@@ -5714,6 +5714,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 // ═══════════════════════ STATE ═══════════════════════
 const STORE_KEY = 'qlts_v14_data';
 
+// Khai báo sớm để tránh ReferenceError khi HCQT script block chưa parse
+var _hcqtHasITAccess = false;
+var _isHCQTUser      = false;
+
 // ─── Lazy library loaders (xlsx + exceljs tải khi cần, không block init) ──
 function _loadScript(src){
   return new Promise((res,rej)=>{
