@@ -20871,40 +20871,104 @@ function _hcqtRenderResults(){
   if(_hcqtPage>pages)_hcqtPage=1;
   const paged=rows.slice((_hcqtPage-1)*HCQT_PAGE_SZ,_hcqtPage*HCQT_PAGE_SZ);
 
-  res.innerHTML=`
-  <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;overflow:auto">
-  <table style="width:100%;border-collapse:collapse">
-    <thead><tr style="background:#f8fafc">
-      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap">Mã TS</th>
-      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Tên tài sản</th>
-      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Loại</th>
-      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Vị trí</th>
-      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Phụ trách</th>
-      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Tình trạng</th>
-      <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Ngày mua</th>
-      <th style="padding:9px 12px"></th>
-    </tr></thead>
-    <tbody>
-    ${!paged.length?`<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--muted)"><div style="font-size:36px">📦</div><div style="margin-top:8px">Chưa có tài sản nào</div></td></tr>`
-    :paged.map(d=>`<tr style="border-top:1px solid var(--border,#e2e8f0);cursor:pointer" onclick="hcqtOpenPanel(${d._id})" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-      <td style="padding:9px 12px;font-size:12px"><code style="background:#f1f5f9;padding:1px 5px;border-radius:4px">${hcqtEsc(d.MaTaiSan)}</code></td>
-      <td style="padding:9px 12px"><strong style="font-size:13px">${hcqtEsc(d.Title)}</strong>${d.Model?`<br><span style="font-size:11px;color:var(--muted)">${hcqtEsc(d.Model)}</span>`:''}</td>
-      <td style="padding:9px 12px;font-size:12px">${hcqtEsc(d.LoaiTaiSan)}</td>
-      <td style="padding:9px 12px;font-size:12px">${[d.ToaNha,d.Tang,d.PhongViTri].filter(Boolean).map(hcqtEsc).join(' · ')}</td>
-      <td style="padding:9px 12px;font-size:12px">${hcqtEsc(d.NguoiPhuTrach)}</td>
-      <td style="padding:9px 12px">${d.LoaiTaiSan==='Vật tư tiêu hao'?_vatTuTonBadge(d):`<span style="${hcqtTtStyle(d.TinhTrang)}">${hcqtEsc(d.TinhTrang)||'—'}</span>`}</td>
-      <td style="padding:9px 12px;font-size:11px;color:var(--muted)">${hcqtFmtDate(d.NgayMua)}</td>
-      <td style="padding:9px 12px"><button class="btn btn-icon-ph" onclick="event.stopPropagation();hcqtOpenEdit(${d._id})" style="padding:3px 8px;font-size:11px" title="Sửa"><i class="ph ph-pencil-simple"></i></button></td>
-    </tr>`).join('')}
-    </tbody>
-  </table>
-  </div>
-  ${pages>1?`<div style="display:flex;gap:5px;padding:10px 0;justify-content:center;align-items:center">
-    <button onclick="_hcqtPage=Math.max(1,_hcqtPage-1);_hcqtRenderResults()" ${_hcqtPage===1?'disabled':''} style="min-width:28px;height:28px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:6px;cursor:pointer">‹</button>
-    ${Array.from({length:Math.min(pages,5)},(_,i)=>{let p=Math.max(1,Math.min(_hcqtPage-2,pages-4))+i;return`<button onclick="_hcqtPage=${p};_hcqtRenderResults()" style="min-width:28px;height:28px;border:1px solid var(--border,#e2e8f0);background:${p===_hcqtPage?'var(--accent,#3B82F6)':'var(--card-bg,#fff)'};color:${p===_hcqtPage?'#fff':'inherit'};border-color:${p===_hcqtPage?'var(--accent,#3B82F6)':'var(--border,#e2e8f0)'};border-radius:6px;cursor:pointer">${p}</button>`;}).join('')}
-    <button onclick="_hcqtPage=Math.min(pages,_hcqtPage+1);_hcqtRenderResults()" ${_hcqtPage===pages?'disabled':''} style="min-width:28px;height:28px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:6px;cursor:pointer">›</button>
-    <span style="font-size:11px;color:var(--muted);margin-left:6px">${total} kết quả</span>
-  </div>`:''}`;
+  // ── Loại icon map ─────────────────────────────────────────────────
+  const _loaiIcon = l => {
+    const m = {
+      'Laptop':'ph-laptop','Máy tính':'ph-desktop','PC':'ph-desktop','PC Desktop':'ph-desktop',
+      'Màn hình':'ph-monitor','Máy in':'ph-printer','Điện thoại':'ph-device-mobile',
+      'Máy chiếu':'ph-projector-screen','Thiết bị mạng':'ph-wifi-high','Router':'ph-wifi-high',
+      'Switch':'ph-wifi-high','Server':'ph-hard-drives','Camera':'ph-camera',
+      'UPS':'ph-battery-charging','Tivi':'ph-television','Điều hòa':'ph-thermometer',
+      'Vật tư tiêu hao':'ph-package','Văn phòng phẩm':'ph-pencil',
+    };
+    if(!l) return 'ph-cube';
+    for(const [k,v] of Object.entries(m)) if(l.toLowerCase().includes(k.toLowerCase())) return v;
+    return 'ph-cube';
+  };
+
+  const _ttColor = tt => {
+    const m = {
+      'Đang sử dụng':'#10b981','Chờ cấp phát':'#f59e0b','Đang sửa chữa':'#3b82f6',
+      'Tạm ngừng sử dụng':'#94a3b8','Đề xuất thanh lý':'#ef4444','Đã thanh lý':'#64748b',
+      'Hỏng':'#ef4444',
+    };
+    return m[tt]||'#94a3b8';
+  };
+
+  if(!paged.length){
+    res.innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--muted)">
+      <i class="ph ph-package" style="font-size:48px;opacity:.25;display:block;margin-bottom:12px"></i>
+      <div style="font-size:14px">Chưa có tài sản nào</div>
+    </div>`;
+  } else {
+    res.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px">
+      ${paged.map(d=>{
+        const icon  = _loaiIcon(d.LoaiTaiSan);
+        const color = _ttColor(d.TinhTrang);
+        const viTri = [d.ToaNha, d.Tang, d.PhongViTri].filter(Boolean).map(hcqtEsc).join(' · ');
+        const statusEl = d.LoaiTaiSan==='Vật tư tiêu hao'
+          ? _vatTuTonBadge(d)
+          : `<span style="${hcqtTtStyle(d.TinhTrang)}">${hcqtEsc(d.TinhTrang)||'—'}</span>`;
+        return `<div onclick="hcqtOpenPanel(${d._id})"
+          style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;
+                 padding:0;cursor:pointer;transition:box-shadow .15s,border-color .15s;overflow:hidden;
+                 border-top:3px solid ${color};"
+          onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)';this.style.borderColor='${color}'"
+          onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border,#e2e8f0)';this.style.borderTopColor='${color}'">
+
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 0">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:34px;height:34px;border-radius:9px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="ph ${icon}" style="font-size:17px;color:${color}"></i>
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">${hcqtEsc(d.LoaiTaiSan||'Tài sản')}</div>
+                <code style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;color:#475569">${hcqtEsc(d.MaTaiSan||'—')}</code>
+              </div>
+            </div>
+            ${statusEl}
+          </div>
+
+          <!-- Body -->
+          <div style="padding:8px 14px 10px">
+            <div style="font-size:13px;font-weight:700;color:var(--text,#1e293b);line-height:1.4;word-break:break-word;margin-bottom:2px">
+              ${hcqtEsc(d.Title)}
+            </div>
+            ${d.Model?`<div style="font-size:11px;color:var(--muted);word-break:break-word">${hcqtEsc(d.Model)}</div>`:''}
+          </div>
+
+          <!-- Footer -->
+          <div style="border-top:1px solid var(--border,#f1f5f9);padding:8px 14px;display:flex;flex-direction:column;gap:4px">
+            ${viTri?`<div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--muted)">
+              <i class="ph ph-map-pin" style="flex-shrink:0;margin-top:1px"></i>
+              <span style="word-break:break-word">${viTri}</span>
+            </div>`:''}
+            ${d.NguoiPhuTrach?`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+              <i class="ph ph-user"></i>
+              <span>${hcqtEsc(d.NguoiPhuTrach)}</span>
+            </div>`:''}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+              <div style="font-size:11px;color:var(--muted)">
+                ${d.NgayMua?`<i class="ph ph-calendar-blank"></i> ${hcqtFmtDate(d.NgayMua)}`:''}
+              </div>
+              <button class="btn btn-icon-ph" onclick="event.stopPropagation();hcqtOpenEdit(${d._id})"
+                style="padding:3px 10px;font-size:11px;border-radius:7px" title="Sửa">
+                <i class="ph ph-pencil-simple"></i> Sửa
+              </button>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    ${pages>1?`<div style="display:flex;gap:5px;padding:6px 0 10px;justify-content:center;align-items:center">
+      <button onclick="_hcqtPage=Math.max(1,_hcqtPage-1);_hcqtRenderResults()" ${_hcqtPage===1?'disabled':''} style="min-width:30px;height:30px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:7px;cursor:pointer;font-size:14px">‹</button>
+      ${Array.from({length:Math.min(pages,7)},(_,i)=>{let p=Math.max(1,Math.min(_hcqtPage-3,pages-6))+i;return`<button onclick="_hcqtPage=${p};_hcqtRenderResults()" style="min-width:30px;height:30px;border:1px solid;background:${p===_hcqtPage?'var(--accent,#3B82F6)':'var(--card-bg,#fff)'};color:${p===_hcqtPage?'#fff':'inherit'};border-color:${p===_hcqtPage?'var(--accent,#3B82F6)':'var(--border,#e2e8f0)'};border-radius:7px;cursor:pointer;font-size:13px">${p}</button>`;}).join('')}
+      <button onclick="_hcqtPage=Math.min(pages,_hcqtPage+1);_hcqtRenderResults()" ${_hcqtPage===pages?'disabled':''} style="min-width:30px;height:30px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);border-radius:7px;cursor:pointer;font-size:14px">›</button>
+      <span style="font-size:12px;color:var(--muted);margin-left:8px">${total} tài sản</span>
+    </div>`:''}`;
+  }
 }
 
 // ── Maintenance ───────────────────────────────────────────────────
