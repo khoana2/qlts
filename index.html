@@ -6047,6 +6047,13 @@ async function logoutScreenSignIn(){
 }
 
 // ─── SP request với Bearer token ─────────────────────────────────────────────
+// ── Helper: kiểm tra lỗi SP "item đã bị xóa / không tồn tại" ─────────────────
+// Dùng để swallow lỗi khi xóa item đã gone trên SP (tránh toast đỏ vô nghĩa)
+function _spIsGone(e){
+  const m = (e?.message||'').toLowerCase();
+  return m.includes('does not exist') || m.includes('-2130575338') || m.includes('item not found');
+}
+
 async function msalSpReq(url, opts={}){
   const token = await msalGetToken();
   if(!token) throw new Error('Không lấy được token');
@@ -6559,7 +6566,7 @@ async function msalSpDeleteAsset(id){
   const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items(${a._spId})`;
   try{
     await msalSpReq(url,{ method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
-  }catch(e){ console.error('[MSAL] delete error:', e); }
+  }catch(e){ if(!_spIsGone(e)) console.error('[MSAL] delete error:', e); }
 }
 
 // ═══════════════════════ AUDIT LOG — SHAREPOINT PUSH/PULL ════════════════════
@@ -12720,15 +12727,19 @@ function deleteTransfer(assetId, idx, btn){
 
 async function msalSpDeleteTransfer(spId){
   const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')/items(${spId})`;
-  await fetch(url, {
-    method: 'DELETE',
-    headers:{
-      'Authorization': `Bearer ${_msalToken}`,
-      'Accept':        'application/json;odata=nometadata',
-      'IF-MATCH':      '*',
-    }
-  });
-  console.log('[TRANSFER] Deleted SP item', spId);
+  try{
+    const r = await fetch(url, {
+      method: 'DELETE',
+      headers:{
+        'Authorization': `Bearer ${_msalToken}`,
+        'Accept':        'application/json;odata=nometadata',
+        'IF-MATCH':      '*',
+      }
+    });
+    if(r.ok || r.status===404) { console.log('[TRANSFER] Deleted SP item', spId); return; }
+    const txt = await r.text().catch(()=>'');
+    if(!_spIsGone({message:txt})) console.warn('[TRANSFER] Delete lỗi:', r.status, txt.substring(0,200));
+  }catch(e){ if(!_spIsGone(e)) console.warn('[TRANSFER] Delete exception:', e.message); }
 }
 
 function printHandover(){
@@ -13700,7 +13711,7 @@ function deleteLicense(id){
       toast('↩ Đã hoàn tác', 'ok');
     },
     onCommit: ()=>{
-      if(spId && _msalAccount) msalSpDeleteLicense(spId).catch(e=>toast('⚠️ Xóa SP lỗi: '+e.message,'bad'));
+      if(spId && _msalAccount) msalSpDeleteLicense(spId).catch(e=>{ if(!_spIsGone(e)) toast('⚠️ Xóa SP lỗi: '+e.message,'bad'); });
     }
   });
 }
@@ -13923,11 +13934,13 @@ async function msalSpPushLicense(id){
 async function msalSpDeleteLicense(spId){
   if(!_msalAccount || !spId) return;
   const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spLicenseList}')/items(${spId})`;
-  await msalSpReq(url, {
-    method: 'POST',
-    headers: { 'X-HTTP-Method': 'DELETE', 'IF-MATCH': '*' },
-    body: '',
-  });
+  try{
+    await msalSpReq(url, {
+      method: 'POST',
+      headers: { 'X-HTTP-Method': 'DELETE', 'IF-MATCH': '*' },
+      body: '',
+    });
+  }catch(e){ if(!_spIsGone(e)) throw e; } // item đã gone → coi như xóa thành công
 }
 
 // ─── Sync all licenses to SP (button handler) ─────────────────────
@@ -16862,7 +16875,7 @@ async function msalSpDeleteDNTT(spId){
   try{
     await msalSpReq(url, { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
     console.log('[DNTT-SP] 🗑️ Đã xóa SP item:', spId);
-  }catch(e){ console.warn('[DNTT-SP] Delete lỗi:', e.message); }
+  }catch(e){ if(!_spIsGone(e)) console.warn('[DNTT-SP] Delete lỗi:', e.message); }
 }
 
 // Sync thủ công toàn bộ ĐNTT lên SP (dùng cho nút "Sync SP")
@@ -22877,7 +22890,7 @@ async function msalSpDeleteMuaHangById(spId){
       method:'DELETE',
       headers:{'IF-MATCH':'*','X-HTTP-Method':'DELETE'}
     });
-  }catch(e){ console.warn('msalSpDeleteMuaHang error',e); }
+  }catch(e){ if(!_spIsGone(e)) console.warn('msalSpDeleteMuaHang error',e); }
 }
 
 async function mhSyncSP(btn){
