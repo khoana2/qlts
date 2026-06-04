@@ -21132,10 +21132,36 @@ function hcqtAddCapPhat(assetId){
           <label style="font-size:12px;font-weight:600;color:var(--muted)">Ghi chú</label>
           <textarea id="hcqt-cp-ghichu" rows="2" placeholder="Mục đích sử dụng, ghi chú..." style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;resize:vertical;box-sizing:border-box"></textarea>
         </div>
+
+        <div style="border-top:1px solid var(--border,#e2e8f0);padding-top:10px;margin-top:2px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">📧 Gửi email thông báo</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+              <label style="font-size:12px;font-weight:600;color:var(--muted)">Email người nhận</label>
+              <input id="hcqt-cp-email-nhan" type="email" placeholder="example@ttgvn.com"
+                style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:var(--muted)">Người phụ trách gửi</label>
+              <select id="hcqt-cp-nguoi-gui" style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
+                <option value="">-- Chọn người phụ trách --</option>
+                ${_msalAccount ? `<option value="${_msalAccount.username}" selected>${_msalAccount.name||_msalAccount.username} (bạn)</option>` : ''}
+                ${Object.values(_hcqtRoles)
+                  .filter(r => !_msalAccount || r.email.toLowerCase() !== (_msalAccount.username||'').toLowerCase())
+                  .map(r=>`<option value="${hcqtEsc(r.email)}">${hcqtEsc(r.ten||r.email)}</option>`)
+                  .join('')}
+              </select>
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;user-select:none;">
+            <input type="checkbox" id="hcqt-cp-send-email" style="width:15px;height:15px;accent-color:#7C3AED;">
+            <span>Gửi email thông báo cho người nhận sau khi lưu</span>
+          </label>
+        </div>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
         <button onclick="document.getElementById('hcqt-capphat-modal').remove()" style="padding:7px 18px;border-radius:7px;border:1px solid var(--border,#e2e8f0);background:#fff;cursor:pointer;font-size:13px">Huỷ</button>
-        <button onclick="hcqtSaveCapPhatForm()" style="padding:7px 18px;border-radius:7px;border:none;background:#7C3AED;color:#fff;cursor:pointer;font-size:13px;font-weight:600">Lưu cấp phát</button>
+        <button onclick="hcqtSaveCapPhatForm()" style="padding:7px 18px;border-radius:7px;border:none;background:#7C3AED;color:#fff;cursor:pointer;font-size:13px;font-weight:600">💾 Lưu cấp phát</button>
       </div>
     </div>`;
     document.body.appendChild(m);
@@ -21155,7 +21181,11 @@ function hcqtSaveCapPhatForm(){
   const ngayThuHoi=document.getElementById('hcqt-cp-thuhoi')?.value||null;
   const tinhTrangCap=document.getElementById('hcqt-cp-tinhtrang')?.value||'';
   const ghiChu=document.getElementById('hcqt-cp-ghichu')?.value.trim();
+  const emailNhan=(document.getElementById('hcqt-cp-email-nhan')?.value||'').trim();
+  const nguoiGui=(document.getElementById('hcqt-cp-nguoi-gui')?.value||'').trim();
+  const sendEmail=document.getElementById('hcqt-cp-send-email')?.checked;
   if(!assetId||!nguoiNhan||!ngayCap){ toast('⚠️ Vui lòng điền đủ thông tin bắt buộc','warn'); return; }
+  if(sendEmail && !emailNhan){ toast('⚠️ Vui lòng nhập email người nhận để gửi thông báo','warn'); return; }
   const asset=_hcqtData.find(d=>d._id===+assetId||d._id===assetId);
   const rec={
     id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
@@ -21163,7 +21193,8 @@ function hcqtSaveCapPhatForm(){
     nguoiNhan, boPhan, ngayCap, ngayThuHoi,
     tinhTrangCap, tinhTrangThuHoi:'',
     trangThai: ngayThuHoi&&new Date(ngayThuHoi)<new Date()?'Đã thu hồi':'Đang cấp phát',
-    ghiChu, createdAt: new Date().toISOString()
+    ghiChu, emailNhan, nguoiGui,
+    createdAt: new Date().toISOString()
   };
   _hcqtCapPhat.push(rec);
   hcqtSaveCapPhat();
@@ -21179,6 +21210,86 @@ function hcqtSaveCapPhatForm(){
   document.getElementById('hcqt-capphat-modal')?.remove();
   hcqtRenderSub();
   toast('✅ Đã lưu bản ghi cấp phát','ok');
+  if(sendEmail && emailNhan) hcqtSendCapPhatEmail(rec, asset).catch(e=>toast('⚠️ Lưu OK nhưng gửi email lỗi: '+e.message,'warn'));
+}
+
+async function hcqtSendCapPhatEmail(rec, asset){
+  if(!_msalAccount){ toast('⚠️ Chưa đăng nhập M365','bad'); return; }
+
+  // Lấy Graph token (Mail.Send scope)
+  const GRAPH_SCOPES = ['https://graph.microsoft.com/Mail.Send'];
+  let graphToken;
+  try {
+    const r = await _msalApp.acquireTokenSilent({ scopes: GRAPH_SCOPES, account: _msalAccount });
+    graphToken = r.accessToken;
+  } catch(e) {
+    const r = await _msalApp.acquireTokenPopup({ scopes: GRAPH_SCOPES, account: _msalAccount });
+    graphToken = r.accessToken;
+  }
+
+  // Tên người phụ trách (chọn từ dropdown)
+  const nguoiGuiTen = rec.nguoiGui
+    ? (Object.values(_hcqtRoles).find(r=>r.email.toLowerCase()===rec.nguoiGui.toLowerCase())?.ten || rec.nguoiGui)
+    : (_msalAccount.name || _msalAccount.username);
+
+  const assetTitle = asset ? (asset.Title||asset.TenTS||'') : rec.maTaiSan || '';
+  const assetMa    = asset ? (asset.MaTaiSan||'') : '';
+  const assetTT    = asset ? (asset.TinhTrang||rec.tinhTrangCap||'') : '';
+  const ngayStr    = rec.ngayCap ? new Date(rec.ngayCap).toLocaleDateString('vi-VN') : '';
+
+  const htmlBody = `
+<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;max-width:600px;margin:0 auto;">
+  <div style="background:linear-gradient(135deg,#7C3AED,#A855F7);padding:20px 24px;border-radius:10px 10px 0 0;">
+    <div style="color:#fff;font-size:18px;font-weight:700;">📦 Thông báo Cấp phát Tài sản</div>
+    <div style="color:#E9D5FF;font-size:12px;margin-top:4px;">Hành Chính Quản Trị — Trung Thủy Group</div>
+  </div>
+  <div style="background:#F8FAFC;padding:20px 24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 10px 10px;">
+    <p>Kính gửi <strong>${hcqtEsc(rec.nguoiNhan)}</strong>,</p>
+    <p>Bạn vừa được cấp phát tài sản từ Phòng Hành Chính Quản Trị. Vui lòng kiểm tra thông tin bên dưới.</p>
+
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      <tr style="background:#EDE9FE;">
+        <td style="padding:9px 14px;font-weight:600;border:1px solid #DDD6FE;width:42%;">📦 Tên tài sản</td>
+        <td style="padding:9px 14px;border:1px solid #DDD6FE;">${hcqtEsc(assetTitle)}</td>
+      </tr>
+      ${assetMa?`<tr><td style="padding:9px 14px;font-weight:600;border:1px solid #E2E8F0;">🔢 Mã tài sản</td><td style="padding:9px 14px;border:1px solid #E2E8F0;">${hcqtEsc(assetMa)}</td></tr>`:''}
+      <tr><td style="padding:9px 14px;font-weight:600;border:1px solid #E2E8F0;">📅 Ngày cấp phát</td><td style="padding:9px 14px;border:1px solid #E2E8F0;">${hcqtEsc(ngayStr)}</td></tr>
+      ${rec.boPhan?`<tr><td style="padding:9px 14px;font-weight:600;border:1px solid #E2E8F0;">🏢 Bộ phận</td><td style="padding:9px 14px;border:1px solid #E2E8F0;">${hcqtEsc(rec.boPhan)}</td></tr>`:''}
+      ${assetTT?`<tr><td style="padding:9px 14px;font-weight:600;border:1px solid #E2E8F0;">🔧 Tình trạng</td><td style="padding:9px 14px;border:1px solid #E2E8F0;">${hcqtEsc(assetTT)}</td></tr>`:''}
+      ${rec.ngayThuHoi?`<tr><td style="padding:9px 14px;font-weight:600;border:1px solid #E2E8F0;">📆 Ngày thu hồi dự kiến</td><td style="padding:9px 14px;border:1px solid #E2E8F0;">${new Date(rec.ngayThuHoi).toLocaleDateString('vi-VN')}</td></tr>`:''}
+      ${rec.ghiChu?`<tr><td style="padding:9px 14px;font-weight:600;border:1px solid #E2E8F0;">📝 Ghi chú</td><td style="padding:9px 14px;border:1px solid #E2E8F0;">${hcqtEsc(rec.ghiChu)}</td></tr>`:''}
+    </table>
+
+    <p style="font-size:12px;color:#6B7280;margin-top:20px;">
+      Nếu có thắc mắc, vui lòng liên hệ người phụ trách: <strong>${hcqtEsc(nguoiGuiTen)}</strong>
+      ${rec.nguoiGui ? ` — <a href="mailto:${hcqtEsc(rec.nguoiGui)}" style="color:#7C3AED;">${hcqtEsc(rec.nguoiGui)}</a>` : ''}
+    </p>
+    <p style="font-size:11px;color:#9CA3AF;text-align:center;margin-top:16px;border-top:1px solid #E2E8F0;padding-top:12px;">
+      Email này được gửi tự động từ hệ thống QLTS — Hành Chính Quản Trị · Trung Thủy Group
+    </p>
+  </div>
+</div>`;
+
+  const resp = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + graphToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: {
+        subject: `[HCQT] Thông báo cấp phát tài sản — ${assetTitle}`,
+        body: { contentType: 'HTML', content: htmlBody },
+        toRecipients: [{ emailAddress: { address: rec.emailNhan, name: rec.nguoiNhan } }],
+        replyTo: rec.nguoiGui ? [{ emailAddress: { address: rec.nguoiGui, name: nguoiGuiTen } }] : [],
+      },
+      saveToSentItems: true
+    })
+  });
+
+  if(resp.ok || resp.status===202){
+    toast(`📧 Đã gửi email thông báo tới ${rec.emailNhan}`,'ok');
+  } else {
+    const err = await resp.text().catch(()=>'');
+    throw new Error(`Graph ${resp.status}: ${err.substring(0,150)}`);
+  }
 }
 
 function hcqtThuHoi(id){
