@@ -21199,13 +21199,11 @@ function hcqtAddCapPhat(assetId){
           </div>
           <div style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;color:var(--muted)">Người phụ trách gửi</label>
-            <input id="hcqt-cp-nguoi-gui-ten" type="text" placeholder="Tìm tên trong Azure AD…" autocomplete="off"
-              value="${_msalAccount ? (_msalAccount.name||_msalAccount.username) : ''}"
+            <input id="hcqt-cp-nguoi-gui-ten" type="text" placeholder="Gõ tên để tìm trong Azure AD…" autocomplete="off"
+              value=""
               style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:13px;margin-top:3px;box-sizing:border-box">
-            <input id="hcqt-cp-nguoi-gui" type="hidden" value="${_msalAccount ? _msalAccount.username : ''}">
-            <div style="font-size:11px;color:var(--muted);margin-top:3px;" id="hcqt-cp-nguoi-gui-hint">
-              ${_msalAccount ? `📧 ${_msalAccount.username}` : 'Chưa đăng nhập'}
-            </div>
+            <input id="hcqt-cp-nguoi-gui" type="hidden" value="">
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;" id="hcqt-cp-nguoi-gui-hint"></div>
           </div>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;user-select:none;">
             <input type="checkbox" id="hcqt-cp-send-email" style="width:15px;height:15px;accent-color:#7C3AED;">
@@ -22045,7 +22043,7 @@ ${d.AnhUrl?`<img src="${esc(d.AnhUrl)}" class="photo" onerror="this.style.displa
   <tr><td colspan="2" style="white-space:pre-wrap;line-height:1.6">${esc(d.GhiChu)}</td></tr>`:''}
 </table>
 
-<div class="sig-area">
+<div class="sig-area" style="grid-template-columns:1fr 1fr;">
   <div class="sig-box">
     <div class="sig-title">Người phụ trách</div>
     <div style="font-size:11px;color:#7C3AED;margin-bottom:4px">${esc(d.NguoiPhuTrach||'')}</div>
@@ -22053,12 +22051,7 @@ ${d.AnhUrl?`<img src="${esc(d.AnhUrl)}" class="photo" onerror="this.style.displa
     <div>Ký và ghi rõ họ tên</div>
   </div>
   <div class="sig-box">
-    <div class="sig-title">Người kiểm tra</div>
-    <div class="sig-line"></div>
-    <div>Ký và ghi rõ họ tên</div>
-  </div>
-  <div class="sig-box">
-    <div class="sig-title">Trưởng bộ phận</div>
+    <div class="sig-title">Người bàn giao</div>
     <div class="sig-line"></div>
     <div>Ký và ghi rõ họ tên</div>
   </div>
