@@ -20694,57 +20694,77 @@ function hcqtRenderDashboard(){
   const totalValue=_hcqtData.reduce((s,d)=>s+(parseFloat(d.NguyenGia)||0),0);
   const fmtVal=n=>n>=1e9?(n/1e9).toFixed(1)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':'0';
 
-  const kpi=(icon,bg,color,label,val,click)=>`
-    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px;cursor:pointer;transition:box-shadow .15s,transform .15s;display:flex;align-items:center;gap:10px"
-      onclick="${click}" onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)';this.style.transform='translateY(-1px)'" onmouseleave="this.style.boxShadow='';this.style.transform=''">
-      <div style="width:34px;height:34px;border-radius:9px;background:${bg};color:${color};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><i class="ph ${icon}"></i></div>
-      <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">${label}</div>
-      <div style="font-size:22px;font-weight:800;color:${color};line-height:1.2">${val}</div></div>
+  const pct = total ? Math.round(active/total*100) : 0;
+
+  const kpi=(icon,bg,color,label,val,sub,click)=>`
+    <div onclick="${click}" style="background:#fff;border-radius:14px;padding:16px 18px;cursor:pointer;
+      box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid #EDE9FE;border-top:3px solid ${color};
+      transition:box-shadow .15s,transform .15s;"
+      onmouseenter="this.style.boxShadow='0 6px 20px rgba(124,58,237,.12)';this.style.transform='translateY(-2px)'"
+      onmouseleave="this.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';this.style.transform=''">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="width:38px;height:38px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;">
+          <i class="ph ${icon}" style="font-size:18px;color:${color}"></i>
+        </div>
+      </div>
+      <div style="font-size:26px;font-weight:800;color:#1e293b;line-height:1">${val}</div>
+      <div style="font-size:12px;font-weight:600;color:#64748b;margin-top:4px">${label}</div>
+      ${sub?`<div style="font-size:11px;color:${color};margin-top:3px;font-weight:500">${sub}</div>`:''}
     </div>`;
 
-  const chart=(id,title,icon,color)=>`
-    <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:12px;border-top:3px solid ${color}">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;display:flex;align-items:center;gap:5px">
-        <i class="ph ${icon}" style="color:${color}"></i> ${title}
+  const chartCard=(id,title,icon,color,h=160)=>`
+    <div style="background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid #EDE9FE;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+        <div style="width:28px;height:28px;border-radius:8px;background:${color}18;display:flex;align-items:center;justify-content:center;">
+          <i class="ph ${icon}" style="font-size:14px;color:${color}"></i>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:#374151">${title}</div>
       </div>
-      <div style="position:relative;height:150px"><canvas id="${id}"></canvas></div>
+      <div style="position:relative;height:${h}px"><canvas id="${id}"></canvas></div>
     </div>`;
 
   el.innerHTML=`
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px">
-    ${kpi('ph-package','rgba(59,130,246,.12)','#3B82F6','Tổng tài sản',total,"hcqtSubNav('assets')")}
-    ${kpi('ph-check-circle','rgba(34,197,94,.12)','#22c55e','Đang sử dụng',active,"_hcqtFilter.tinh='Đang sử dụng';hcqtSubNav('assets')")}
-    ${kpi('ph-wrench','rgba(245,158,11,.12)','#f59e0b','Bảo trì 30 ngày',maintain,"hcqtSubNav('assets')")}
-    ${kpi('ph-arrow-circle-right','rgba(139,92,246,.12)','#8b5cf6','Đang cấp phát',capphatCount,"hcqtSubNav('lichsu')")}
-    ${kpi('ph-currency-circle-dollar','rgba(16,185,129,.12)','#10B981','Tổng nguyên giá',fmtVal(totalValue),"hcqtSubNav('assets')")}
+  <!-- KPI row -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
+    ${kpi('ph-stack','rgba(124,58,237,.1)','#7C3AED','Tổng tài sản',total,'','hcqtSubNav(\'assets\')')}
+    ${kpi('ph-check-circle','rgba(16,185,129,.1)','#10B981','Đang sử dụng',active,pct+'% tổng số',"_hcqtFilter.tinh='Đang sử dụng';hcqtSubNav('assets')")}
+    ${kpi('ph-wrench','rgba(245,158,11,.1)','#F59E0B','Bảo trì 30 ngày',maintain,maintain>0?'⚠️ Cần xử lý':'✓ Ổn định',"hcqtSubNav('maintenance')")}
+    ${kpi('ph-arrow-circle-right','rgba(59,130,246,.1)','#3B82F6','Đang cấp phát',capphatCount,'','hcqtSubNav(\'lichsu\')')}
+    ${kpi('ph-coins','rgba(16,185,129,.1)','#059669','Tổng nguyên giá',fmtVal(totalValue)+'đ','','hcqtSubNav(\'assets\')')}
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-    ${chart('hcqt-chart-loai','Theo loại tài sản','ph-chart-donut','#6366F1')}
-    ${chart('hcqt-chart-tt','Theo tình trạng','ph-activity','#10B981')}
-    ${chart('hcqt-chart-bp','Theo bộ phận','ph-buildings','#3B82F6')}
-    ${chart('hcqt-chart-tn','Theo tòa nhà','ph-map-pin','#F59E0B')}
+  <!-- Charts 2x2 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    ${chartCard('hcqt-chart-loai','Theo loại tài sản','ph-chart-donut','#7C3AED',170)}
+    ${chartCard('hcqt-chart-tt','Theo tình trạng','ph-activity','#10B981',170)}
+    ${chartCard('hcqt-chart-bp','Theo bộ phận','ph-buildings','#3B82F6',170)}
+    ${chartCard('hcqt-chart-tn','Theo tòa nhà','ph-map-pin','#F59E0B',170)}
   </div>
 
   ${overdueMaint.length?`
-  <div style="background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:12px;border-left:4px solid #ef4444">
-    <div style="font-size:11px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
-      <i class="ph ph-warning-circle"></i> Bảo trì quá hạn (${overdueMaint.length})
+  <div style="background:#fff;border-radius:14px;padding:16px 18px;border:1px solid #FECACA;box-shadow:0 1px 4px rgba(239,68,68,.08);margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;">
+        <i class="ph ph-warning-circle" style="font-size:14px;color:#EF4444"></i>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:#DC2626;">Bảo trì quá hạn — ${overdueMaint.length} tài sản</div>
     </div>
     ${overdueMaint.slice(0,5).map(d=>{
       const days=Math.abs(Math.round((new Date(d.NgayBaoTriTiepTheo)-now)/86400000));
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border,#f1f5f9);cursor:pointer" onclick="hcqtOpenPanel(${d._id})">
-        <span style="background:#fee2e2;color:#991b1b;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap">Quá ${days} ngày</span>
-        <span style="font-size:12px;font-weight:600;flex:1">${hcqtEsc(d.Title)}</span>
-        <span style="font-size:11px;color:var(--muted)">${hcqtEsc(d.DonViBaoTri||'—')}</span>
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;background:#FFF7F7;cursor:pointer;border:1px solid #FEE2E2" onclick="hcqtOpenPanel(${d._id})">
+        <span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;">Quá ${days}N</span>
+        <span style="font-size:13px;font-weight:600;flex:1;color:#1e293b">${hcqtEsc(d.Title)}</span>
+        <span style="font-size:11px;color:#94a3b8;white-space:nowrap">${hcqtEsc(d.DonViBaoTri||'—')}</span>
+        <i class="ph ph-arrow-right" style="color:#94a3b8;font-size:13px;flex-shrink:0"></i>
       </div>`;
     }).join('')}
-    ${overdueMaint.length>5?`<div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">...và ${overdueMaint.length-5} tài sản khác</div>`:''}
+    ${overdueMaint.length>5?`<div style="font-size:11px;color:#EF4444;margin-top:6px;text-align:center;font-weight:600">+${overdueMaint.length-5} tài sản khác →</div>`:''}
   </div>`:''}
 
-  ${!total?`<div style="text-align:center;padding:32px;color:var(--muted)">
-    <i class="ph ph-package" style="font-size:36px;opacity:.4"></i>
-    <div style="margin-top:8px;font-size:13px">Chưa có dữ liệu. Nhấn <strong>Sync SP</strong> để tải từ SharePoint.</div>
+  ${!total?`<div style="text-align:center;padding:60px 20px;background:#fff;border-radius:14px;border:1px dashed #DDD6FE;">
+    <i class="ph ph-package" style="font-size:48px;color:#DDD6FE;display:block;margin-bottom:12px"></i>
+    <div style="font-size:15px;font-weight:600;color:#7C3AED;margin-bottom:6px">Chưa có dữ liệu tài sản</div>
+    <div style="font-size:13px;color:#94a3b8">Nhấn <strong style="color:#7C3AED">Sync SP</strong> để tải dữ liệu từ SharePoint</div>
   </div>`:''}`;
 
   if(!total) return;
