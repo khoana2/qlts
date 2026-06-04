@@ -20912,7 +20912,7 @@ function _hcqtRenderResults(){
             onmouseover="this.style.background='#EFF6FF'" onmouseout="this.style.background='${i%2===0?'#fff':'#f9fafb'}'">
             <td style="${_TD}color:#9ca3af;text-align:center;width:32px">${rowNum}</td>
             <td style="${_TD}"><code style="background:#f1f5f9;padding:2px 5px;border-radius:4px;font-size:11px;">${hcqtEsc(d.MaTaiSan||'—')}</code></td>
-            <td style="${_TD}"><strong>${hcqtEsc(d.Title)}</strong>${d.Model?`<br><span style="font-size:11px;color:var(--muted)">${hcqtEsc(d.Model)}</span>`:''}</td>
+            <td style="${_TD}"><strong style="display:block;word-break:break-all;overflow-wrap:anywhere;">${hcqtEsc(d.Title)}</strong>${d.Model?`<span style="display:block;font-size:11px;color:var(--muted);word-break:break-all;">${hcqtEsc(d.Model)}</span>`:''}</td>
             <td style="${_TD}">${hcqtEsc(d.LoaiTaiSan||'—')}</td>
             <td style="${_TD}white-space:pre-line;">${viTri||'—'}</td>
             <td style="${_TD}">${hcqtEsc(d.NguoiPhuTrach||'—')}</td>
