@@ -429,12 +429,13 @@ body{
 .view.active{display:block;}
 
 /* ═══════════════════════════ KPIs ═══════════════════════════ */
-.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:14px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px;}
 .kpi{
   background:#FFFFFF;border:1px solid var(--border);
   border-radius:var(--radius);padding:14px 16px;
   box-shadow:var(--shadow);position:relative;overflow:hidden;
   transition:box-shadow .2s,border-color .2s;
+  display:flex;flex-direction:column;
 }
 .kpi::before{
   content:'';position:absolute;top:0;left:0;right:0;height:3px;
@@ -2992,8 +2993,8 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div class="kpi-val" id="kpi-stock">0</div>
         <div class="kpi-label">Lưu kho</div>
         <div class="kpi-sub">Chưa phân bổ</div>
-        <div id="kpi-stock-hong" style="display:none;margin-top:5px;padding:3px 8px;border-radius:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);">
-          <span style="font-size:11px;font-weight:700;color:#EF4444;cursor:pointer;" onclick="event.stopPropagation();goKpiFilter('hong')">
+        <div id="kpi-stock-hong" style="display:none;margin-top:auto;padding-top:6px;">
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);font-size:11px;font-weight:700;color:#EF4444;cursor:pointer;" onclick="event.stopPropagation();goKpiFilter('hong')">
             <i class="ph ph-warning-circle"></i> <span id="kpi-stock-hong-count">0</span> máy hỏng
           </span>
         </div>
