@@ -545,6 +545,15 @@ tbody td{
   white-space:normal!important;
   word-break:break-all!important;
   overflow-wrap:anywhere!important;
+  font-size:13px!important;
+  line-height:1.5!important;
+}
+/* HCQT global typography */
+#hcqt-app, #hcqt-view-dashboard, #hcqt-view-assets,
+#hcqt-view-capphat, #hcqt-view-maintenance, #hcqt-view-baocao,
+#hcqt-view-muahang, #hcqt-view-lichsu, #hcqt-view-vattu {
+  font-size:13px;
+  line-height:1.6;
 }
 /* ── CSS custom property cho màu nền row ──
    Variable cascade từ tr → td (khác background:inherit không chạy trên sticky) */
@@ -20707,9 +20716,9 @@ function hcqtRenderDashboard(){
           <i class="ph ${icon}" style="font-size:18px;color:${color}"></i>
         </div>
       </div>
-      <div style="font-size:26px;font-weight:800;color:#1e293b;line-height:1">${val}</div>
-      <div style="font-size:12px;font-weight:600;color:#64748b;margin-top:4px">${label}</div>
-      ${sub?`<div style="font-size:11px;color:${color};margin-top:3px;font-weight:500">${sub}</div>`:''}
+      <div style="font-size:28px;font-weight:800;color:#1e293b;line-height:1">${val}</div>
+      <div style="font-size:13px;font-weight:600;color:#64748b;margin-top:5px">${label}</div>
+      ${sub?`<div style="font-size:12px;color:${color};margin-top:3px;font-weight:500">${sub}</div>`:''}
     </div>`;
 
   const chartCard=(id,title,icon,color,h=160)=>`
@@ -20718,7 +20727,7 @@ function hcqtRenderDashboard(){
         <div style="width:28px;height:28px;border-radius:8px;background:${color}18;display:flex;align-items:center;justify-content:center;">
           <i class="ph ${icon}" style="font-size:14px;color:${color}"></i>
         </div>
-        <div style="font-size:12px;font-weight:700;color:#374151">${title}</div>
+        <div style="font-size:13px;font-weight:700;color:#374151">${title}</div>
       </div>
       <div style="position:relative;height:${h}px"><canvas id="${id}"></canvas></div>
     </div>`;
@@ -20900,8 +20909,8 @@ function _hcqtRenderResults(){
   if(_hcqtPage>pages)_hcqtPage=1;
   const paged=rows.slice((_hcqtPage-1)*HCQT_PAGE_SZ,_hcqtPage*HCQT_PAGE_SZ);
 
-  const _TD = 'padding:8px 10px;border:1px solid #EDE9FE;font-size:12px;vertical-align:middle;word-break:break-all;overflow-wrap:anywhere;';
-  const _TH = 'padding:8px 10px;border:1px solid #C4B5FD;font-size:11px;font-weight:700;color:#5B21B6;background:#EDE9FE;white-space:nowrap;text-align:left;letter-spacing:.03em;';
+  const _TD = 'padding:9px 12px;border:1px solid #EDE9FE;font-size:13px;vertical-align:middle;word-break:break-all;overflow-wrap:anywhere;';
+  const _TH = 'padding:9px 12px;border:1px solid #C4B5FD;font-size:12px;font-weight:700;color:#5B21B6;background:#EDE9FE;white-space:nowrap;text-align:left;letter-spacing:.03em;';
 
   res.innerHTML=`
   <div style="overflow-x:auto;border-radius:10px;border:1.5px solid #C4B5FD;box-shadow:0 2px 12px rgba(124,58,237,.08)">
@@ -21901,11 +21910,11 @@ function hcqtOpenPanel(id){
     ov.onclick=hcqtClosePanel;
     document.body.appendChild(ov);
   }
-  const r=(lbl,val)=>val?`<div style="display:flex;margin-bottom:7px"><span style="width:145px;flex-shrink:0;font-size:12px;color:var(--muted)">${lbl}</span><span style="font-size:13px;font-weight:500">${val}</span></div>`:'';
-  const sec=(t)=>`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border,#e2e8f0);padding-bottom:4px;margin:14px 0 8px">${t}</div>`;
+  const r=(lbl,val)=>val?`<div style="display:flex;margin-bottom:8px"><span style="width:150px;flex-shrink:0;font-size:12px;font-weight:600;color:var(--muted)">${lbl}</span><span style="font-size:13px;font-weight:500;flex:1">${val}</span></div>`:'';
+  const sec=(t)=>`<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#7C3AED;border-bottom:2px solid #EDE9FE;padding-bottom:5px;margin:16px 0 10px">${t}</div>`;
   panel.innerHTML=`
     <div style="padding:14px 18px;border-bottom:1px solid var(--border,#e2e8f0);display:flex;align-items:center;gap:8px">
-      <strong style="flex:1;font-size:15px">${hcqtEsc(d.Title)}</strong>
+      <strong style="flex:1;font-size:15px;font-weight:700;color:#1e293b;line-height:1.4">${hcqtEsc(d.Title)}</strong>
       <button class="btn btn-icon-ph" onclick="hcqtOpenEdit(${d._id});hcqtClosePanel()" style="padding:4px 10px;font-size:12px"><i class="ph ph-pencil-simple"></i> Sửa</button>
       <button onclick="hcqtClosePanel()" style="border:1px solid var(--border,#e2e8f0);background:none;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px">✕</button>
     </div>
@@ -22102,7 +22111,7 @@ function _hcqtGetFormModal(){
       :`<input id="hcqt-f-${id}" type="${type}" style="width:100%;box-sizing:border-box;height:32px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:0 10px;font-size:12px;background:var(--surface,#fff)">`
     }</div>`;
   const g2=(a,b)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">${a}${b}</div>`;
-  const sec=(t)=>`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted,#64748b);border-bottom:1px solid var(--border,#e2e8f0);padding-bottom:4px;margin:14px 0 10px">${t}</div>`;
+  const sec=(t)=>`<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#7C3AED;border-bottom:2px solid #EDE9FE;padding-bottom:5px;margin:16px 0 10px">${t}</div>`;
   const loai=['Nội thất văn phòng','Thiết bị điện lạnh','Thiết bị văn phòng','Thiết bị nghe nhìn','Phương tiện','Thiết bị bếp Pantry','Thiết bị an ninh','Công cụ Dụng cụ','Vật tư tiêu hao','Khác'].map(o=>`<option>${o}</option>`).join('');
   const nhom=['Bàn làm việc','Ghế văn phòng','Tủ Kệ Giá','Bàn ghế phòng họp','Sofa Ghế tiếp khách','Điều hòa','Máy in Máy photocopy','Điện thoại cố định','Máy chiếu Màn chiếu','Tivi Màn hình','Xe ô tô','Máy pha cà phê Nước','Tủ lạnh Lò vi sóng','Camera an ninh','Khóa tủ Thẻ từ','Rèm Mành Thảm','Cây cảnh Vật trang trí','Dụng cụ vệ sinh','Khác'].map(o=>`<option>${o}</option>`).join('');
   const tinh=['Đang sử dụng','Chờ cấp phát','Đang sửa chữa','Tạm ngừng sử dụng','Đề xuất thanh lý','Đã thanh lý','Mất Thất lạc'].map(o=>`<option>${o}</option>`).join('');
