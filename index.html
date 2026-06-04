@@ -20689,6 +20689,11 @@ function hcqtRenderSub(){
 
 // ── Dashboard ─────────────────────────────────────────────────────
 function hcqtRenderDashboard(){
+  // Destroy chart instances trước khi replace DOM — tránh Chart.js hang khi canvas bị xóa
+  clearTimeout(_hcqtChartTimer);
+  [_hcqtChart1,_hcqtChart2,_hcqtChart3,_hcqtChart4].forEach(c=>{ try{ if(c) c.destroy(); }catch(e){} });
+  _hcqtChart1=_hcqtChart2=_hcqtChart3=_hcqtChart4=null;
+
   const el=document.getElementById('hcqt-view-dashboard');
   const total=_hcqtData.length;
   const active=_hcqtData.filter(d=>d.TinhTrang==='Đang sử dụng').length;
@@ -20789,12 +20794,11 @@ function hcqtRenderDashboard(){
     const loaiC=grp('LoaiTaiSan'); const ttC=grp('TinhTrang');
     const bpC=grp('BoPhanSuDung'); const tnC=grp('ToaNha');
 
-    [[_hcqtChart1,'hcqt-chart-loai',mkDoughnut(loaiC)],
-     [_hcqtChart2,'hcqt-chart-tt',mkBar(ttC,'#10B981')],
-     [_hcqtChart3,'hcqt-chart-bp',mkBar(bpC,'#3B82F6')],
-     [_hcqtChart4,'hcqt-chart-tn',mkBar(tnC,'#F59E0B')]
-    ].forEach(([ref,id,cfg],i)=>{
-      if(ref) ref.destroy();
+    [['hcqt-chart-loai',mkDoughnut(loaiC)],
+     ['hcqt-chart-tt',mkBar(ttC,'#10B981')],
+     ['hcqt-chart-bp',mkBar(bpC,'#3B82F6')],
+     ['hcqt-chart-tn',mkBar(tnC,'#F59E0B')]
+    ].forEach(([id,cfg],i)=>{
       const c=document.getElementById(id);
       if(c&&typeof Chart!=='undefined'){
         const inst=new Chart(c,cfg);
