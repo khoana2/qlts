@@ -6424,6 +6424,7 @@ async function msalSpLoad(){
     if(all.length){
       transfers = {};
       assets = all.map(i=>spItemToAsset(i));
+      _restoreManHinhFromStore(); // merge manHinh từ local store nếu SP chưa có cột
       saveToStorage(); saveTransfers(); saveRepairs();
       populateDeptSelects(); applyFilters(); updateDashboard(); renderEvents(); updateTopbarSub();
       if(!_hcqtHasITAccess) loadRepairsSP(); // load phiếu sửa chữa từ SP list riêng
@@ -6509,6 +6510,10 @@ async function msalSpPushAsset(id){
     const skipped = body._skippedFields || [];
     delete body._skippedFields;
     if(skipped.length) console.warn('[MSAL] SKIPPED:', skipped);
+    if(skipped.includes('Màn hình') && !window._warnedMHCol){
+      window._warnedMHCol=true;
+      toast('⚠️ SP chưa có cột "Màn hình" — dữ liệu màn hình chỉ lưu trên máy này','warn');
+    }
 
     // ── Sanitize: quét toàn bộ body, xử lý đúng kiểu trước khi gửi SP ──
     const problematic = [];
@@ -7370,7 +7375,34 @@ function _dedupeLocalTransfers(){
 }
 function saveToStorage(){
   localStorage.setItem(STORE_KEY, JSON.stringify(assets));
+  _saveManHinhToStore(); // persist manHinh riêng đề phòng SP chưa có cột
   fsSave();   // ghi vào file OneDrive (nếu đã chọn)
+}
+
+// ── Màn hình local store ──────────────────────────────────────
+// Lưu manHinh vào localStorage riêng để không mất sau khi reload từ SP
+// (phòng trường hợp SP list chưa có cột "Màn hình")
+const _MH_STORE = 'qlts_manhinh_v1';
+function _saveManHinhToStore(){
+  try{
+    const m={};
+    assets.forEach(a=>{ if(a.manHinh&&a.manHinh.trim()) m[a.maTaiSan||a.id]=a.manHinh; });
+    localStorage.setItem(_MH_STORE, JSON.stringify(m));
+  }catch(e){}
+}
+function _restoreManHinhFromStore(){
+  try{
+    const m=JSON.parse(localStorage.getItem(_MH_STORE)||'{}');
+    if(!Object.keys(m).length) return;
+    let restored=0;
+    assets.forEach(a=>{
+      if(!a.manHinh){
+        const v=m[a.maTaiSan||a.id];
+        if(v){ a.manHinh=v; restored++; }
+      }
+    });
+    if(restored) console.log(`[ManHinh] Restored ${restored} entries from local store`);
+  }catch(e){}
 }
 function saveTransfers(){
   localStorage.setItem(TRANSFER_KEY, JSON.stringify(transfers));
@@ -7700,6 +7732,10 @@ async function spPushAsset(id){
     const skipped2 = body._skippedFields || [];
     delete body._skippedFields;
     if(skipped2.length) console.warn('[SP] skipped fields:', skipped2);
+    if(skipped2.includes('Màn hình') && !window._warnedMHCol){
+      window._warnedMHCol=true;
+      toast('⚠️ SP chưa có cột "Màn hình" — dữ liệu màn hình chỉ lưu trên máy này','warn');
+    }
     if(a._spId){
       await spUpdate(a._spId, body);
     } else {
@@ -7766,6 +7802,7 @@ async function spInitLoad(){
       transfers = {};
       const spAssets = items.map(i => spItemToAsset(i));
       assets = spAssets;
+      _restoreManHinhFromStore(); // merge manHinh từ local store nếu SP chưa có cột
       saveToStorage();
       saveTransfers();
       populateDeptSelects();
