@@ -8939,11 +8939,11 @@ function updateDashboard(){
   if(suaSubEl) suaSubEl.textContent = suaByRepair > 0 ? `${suaByRepair} có phiếu SC` : 'Có phiếu SC';
   document.getElementById('kpi-dept').textContent = depts;
   document.getElementById('kpi-warranty').textContent = expiringSoon;
-  const monitors = _assets.filter(a=>(a.tenTaiSan||'').toLowerCase().includes('màn hình')).length;
+  const monitors = _assets.filter(a => a.manHinh && a.manHinh.trim()).length;
   const monEl = document.getElementById('kpi-monitors');
   const monSub = document.getElementById('kpi-monitors-sub');
   if(monEl) monEl.textContent = monitors;
-  if(monSub) monSub.textContent = monitors > 0 ? `${monitors} thiết bị` : 'Chưa có';
+  if(monSub) monSub.textContent = monitors > 0 ? `${monitors} người dùng` : 'Chưa có';
   document.getElementById('kpi-warranty-sub').textContent =
     expired ? `${expired} đã hết · ${expiringSoon} sắp hết` : `${expiringSoon} sắp hết trong 90 ngày`;
 
