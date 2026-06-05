@@ -2842,6 +2842,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
       <button class="btn success btn-icon-ph" id="btn-import-asset" onclick="openImport()"><i class="ph ph-upload-simple"></i> Import Excel</button>
       <button class="btn warn btn-icon-ph" id="btn-export-asset" onclick="exportExcel()"><i class="ph ph-download-simple"></i> Export</button>
+      <button class="btn btn-icon-ph" onclick="showManHinhReport()" title="Xem danh sách ai đang có màn hình kèm" style="background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE;"><i class="ph ph-monitor"></i> Màn hình</button>
       <button class="btn primary btn-icon-ph" id="btn-add-asset" onclick="openAdd()"><i class="ph ph-plus"></i> Thêm Tài Sản</button>
     </div>
   </div>
@@ -12598,6 +12599,74 @@ function _linkProcToDNTT(dnttId){
   const p = procList.find(x=>x.id===_pendingProcLink);
   if(p){ p.dnttId = dnttId; p.trangThai = 'da_mua'; saveProc(); }
   _pendingProcLink = null;
+}
+
+function showManHinhReport(){
+  const withMonitor = assets.filter(a => a.manHinh && a.manHinh.trim());
+  const existing    = assets.filter(a => (a.tenTaiSan||'').toLowerCase().includes('màn hình'));
+  const existingOwners = new Set(existing.map(a => (a.nguoiDung||'').toLowerCase().trim()));
+
+  const esc2 = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const rows = withMonitor.map(a => {
+    const alreadyHas = existingOwners.has((a.nguoiDung||'').toLowerCase().trim());
+    return `<tr style="border-bottom:1px solid #e2e8f0;">
+      <td style="padding:8px 10px;font-size:13px;font-weight:600">${esc2(a.nguoiDung||'—')}</td>
+      <td style="padding:8px 10px;font-size:12px;color:#64748b">${esc2(a.boPhan||'—')}</td>
+      <td style="padding:8px 10px;font-size:12px">${esc2(a.tenTaiSan||'')} ${esc2(a.model||'')}</td>
+      <td style="padding:8px 10px;font-size:12px;color:#0EA5E9;font-weight:600">${esc2(a.manHinh)}</td>
+      <td style="padding:8px 10px;text-align:center">
+        ${alreadyHas
+          ? '<span style="color:#10B981;font-size:12px;">✓ Đã có</span>'
+          : `<button onclick="autoCreateManHinh('${a.id}')" style="padding:3px 10px;border:1px solid #1D4ED8;color:#1D4ED8;background:#EFF6FF;border-radius:6px;cursor:pointer;font-size:12px;">+ Tạo TS</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+
+  const html = `<div style="max-height:60vh;overflow-y:auto;">
+    ${!withMonitor.length
+      ? '<div style="text-align:center;padding:40px;color:#64748b;"><i class="ph ph-monitor" style="font-size:36px;display:block;margin-bottom:8px;opacity:.3"></i>Không có tài sản nào ghi nhận màn hình kèm</div>'
+      : `<div style="font-size:12px;color:#64748b;margin-bottom:10px;">Tìm thấy <strong>${withMonitor.length}</strong> tài sản có màn hình kèm · <strong>${withMonitor.length - withMonitor.filter(a=>existingOwners.has((a.nguoiDung||'').toLowerCase())).length}</strong> chưa có TS màn hình</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="background:#EFF6FF;font-size:11px;color:#1D4ED8;font-weight:700;text-transform:uppercase;">
+          <th style="padding:8px 10px;text-align:left">Người dùng</th>
+          <th style="padding:8px 10px;text-align:left">Bộ phận</th>
+          <th style="padding:8px 10px;text-align:left">Thiết bị kèm</th>
+          <th style="padding:8px 10px;text-align:left">Màn hình</th>
+          <th style="padding:8px 10px;text-align:center">Tình trạng</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`}
+    </div>`;
+
+  // Mở modal chung
+  const m = document.createElement('div');
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:800;display:flex;align-items:center;justify-content:center';
+  m.innerHTML=`<div style="background:#fff;border-radius:14px;width:760px;max-width:96vw;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:15px;font-weight:700"><i class="ph ph-monitor" style="color:#0EA5E9"></i> Danh sách màn hình kèm tài sản</div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#94a3b8">✕</button>
+    </div>
+    <div style="padding:16px 20px">${html}</div>
+  </div>`;
+  m.addEventListener('click', e => { if(e.target===m) m.remove(); });
+  document.body.appendChild(m);
+}
+
+function autoCreateManHinh(assetId){
+  const a = assets.find(x=>x.id===assetId);
+  if(!a){ toast('Không tìm thấy tài sản','bad'); return; }
+  // Prefill form thêm tài sản mới với thông tin màn hình
+  openAdd();
+  setTimeout(()=>{
+    const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val; };
+    set('f-tenTaiSan','Màn hình');
+    set('f-manHinh', a.manHinh||'');
+    set('f-model',   a.manHinh||'');
+    set('f-nguoiDung', a.nguoiDung||'');
+    set('f-boPhan',  a.boPhan||'');
+    set('f-tinhTrang','Đang dùng');
+    toast('✅ Đã điền sẵn thông tin màn hình — kiểm tra và lưu','ok');
+  }, 200);
 }
 
 function procMarkBought(id){
