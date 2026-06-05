@@ -7599,13 +7599,14 @@ function assetToSpItem(a){
       _skippedFields.push(displayName);
       return;
     }
-    // Không push chuỗi rỗng
-    if(val === undefined || val === null || val === '') return;
+    // Skip null/undefined nhưng CHO PHÉP empty string để clear text field trên SP
+    if(val === undefined || val === null) return;
     const ftype = SP_FIELD_TYPES[internal] || '';
     // Skip Calculated và ReadOnly fields — SP từ chối ghi
     if(ftype === 'Calculated' || ftype === 'Computed') return;
-    // Number / Currency: cần gửi số, không gửi string
+    // Number / Currency: empty string → skip (tránh NaN)
     if(ftype === 'Number' || ftype === 'Currency'){
+      if(val === '') return;
       const num = parseFloat(String(val).replace(/[^0-9.\-]/g, ''));
       if(!isNaN(num)) body[internal] = num;
       else _skippedFields.push(displayName + '(Number→NaN)');
