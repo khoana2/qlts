@@ -429,7 +429,7 @@ body{
 .view.active{display:block;}
 
 /* ═══════════════════════════ KPIs ═══════════════════════════ */
-.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:14px;}
 .kpi{
   background:#FFFFFF;border:1px solid var(--border);
   border-radius:var(--radius);padding:14px 16px;
@@ -3030,6 +3030,12 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div class="kpi-val" id="kpi-warranty">0</div>
         <div class="kpi-label">Cảnh báo BH</div>
         <div class="kpi-sub" id="kpi-warranty-sub">Trong 90 ngày</div>
+      </div>
+      <div class="kpi clickable" onclick="switchTab('assets');setTimeout(()=>{const s=document.getElementById('f-tenTaiSan');if(s){s.value='Màn hình';applyFilters();}},80)" title="Số màn hình đang quản lý">
+        <div class="kpi-icon-wrap" style="background:rgba(14,165,233,.13);color:#0EA5E9;"><i class="ph ph-monitor"></i></div>
+        <div class="kpi-val" id="kpi-monitors">0</div>
+        <div class="kpi-label">Màn hình</div>
+        <div class="kpi-sub" id="kpi-monitors-sub">Tổng số</div>
       </div>
     </div>
 
@@ -8933,6 +8939,11 @@ function updateDashboard(){
   if(suaSubEl) suaSubEl.textContent = suaByRepair > 0 ? `${suaByRepair} có phiếu SC` : 'Có phiếu SC';
   document.getElementById('kpi-dept').textContent = depts;
   document.getElementById('kpi-warranty').textContent = expiringSoon;
+  const monitors = _assets.filter(a=>(a.tenTaiSan||'').toLowerCase().includes('màn hình')).length;
+  const monEl = document.getElementById('kpi-monitors');
+  const monSub = document.getElementById('kpi-monitors-sub');
+  if(monEl) monEl.textContent = monitors;
+  if(monSub) monSub.textContent = monitors > 0 ? `${monitors} thiết bị` : 'Chưa có';
   document.getElementById('kpi-warranty-sub').textContent =
     expired ? `${expired} đã hết · ${expiringSoon} sắp hết` : `${expiringSoon} sắp hết trong 90 ngày`;
 
