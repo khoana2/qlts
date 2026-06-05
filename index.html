@@ -2842,7 +2842,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
       <button class="btn success btn-icon-ph" id="btn-import-asset" onclick="openImport()"><i class="ph ph-upload-simple"></i> Import Excel</button>
       <button class="btn warn btn-icon-ph" id="btn-export-asset" onclick="exportExcel()"><i class="ph ph-download-simple"></i> Export</button>
-      <button class="btn btn-icon-ph" onclick="showManHinhReport()" title="Xem danh sách ai đang có màn hình kèm" style="background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE;"><i class="ph ph-monitor"></i> Màn hình</button>
       <button class="btn primary btn-icon-ph" id="btn-add-asset" onclick="openAdd()"><i class="ph ph-plus"></i> Thêm Tài Sản</button>
     </div>
   </div>
@@ -3032,7 +3031,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div class="kpi-label">Cảnh báo BH</div>
         <div class="kpi-sub" id="kpi-warranty-sub">Trong 90 ngày</div>
       </div>
-      <div class="kpi clickable" onclick="switchTab('assets');setTimeout(()=>{const s=document.getElementById('f-tenTaiSan');if(s){s.value='Màn hình';applyFilters();}},80)" title="Số màn hình đang quản lý">
+      <div class="kpi clickable" onclick="showManHinhReport()" title="Xem danh sách màn hình kèm theo">
         <div class="kpi-icon-wrap" style="background:rgba(14,165,233,.13);color:#0EA5E9;"><i class="ph ph-monitor"></i></div>
         <div class="kpi-val" id="kpi-monitors">0</div>
         <div class="kpi-label">Màn hình</div>
