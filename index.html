@@ -4965,6 +4965,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--accent2,#6366f1);margin-bottom:5px;display:flex;align-items:center;gap:5px;">
             <i class="ph ph-storefront"></i> Nhà cung cấp 1
             <span class="best-tag" id="proc-best-tag-0" style="display:none;">Rẻ nhất</span>
+            <button onclick="procImportQuote(0)" title="Import file báo giá (.xlsx, .pdf)" style="margin-left:auto;border:1px solid #c7d2fe;background:#eef2ff;color:#6366f1;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;"><i class="ph ph-upload-simple"></i> Import</button>
           </div>
           <input type="text" id="proc-ncc0-ten" class="finput" placeholder="Tên nhà cung cấp *" style="font-size:13px;font-weight:600;margin-bottom:6px;width:100%;box-sizing:border-box;" oninput="procLiveUpdate()">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
@@ -4982,6 +4983,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--accent2,#6366f1);margin-bottom:5px;display:flex;align-items:center;gap:5px;">
             <i class="ph ph-storefront"></i> Nhà cung cấp 2
             <span class="best-tag" id="proc-best-tag-1" style="display:none;">Rẻ nhất</span>
+            <button onclick="procImportQuote(1)" title="Import file báo giá (.xlsx, .pdf)" style="margin-left:auto;border:1px solid #c7d2fe;background:#eef2ff;color:#6366f1;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;"><i class="ph ph-upload-simple"></i> Import</button>
           </div>
           <input type="text" id="proc-ncc1-ten" class="finput" placeholder="Tên nhà cung cấp" style="font-size:13px;font-weight:600;margin-bottom:6px;width:100%;box-sizing:border-box;" oninput="procLiveUpdate()">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
@@ -4999,6 +5001,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--accent2,#6366f1);margin-bottom:5px;display:flex;align-items:center;gap:5px;">
             <i class="ph ph-storefront"></i> Nhà cung cấp 3
             <span class="best-tag" id="proc-best-tag-2" style="display:none;">Rẻ nhất</span>
+            <button onclick="procImportQuote(2)" title="Import file báo giá (.xlsx, .pdf)" style="margin-left:auto;border:1px solid #c7d2fe;background:#eef2ff;color:#6366f1;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;"><i class="ph ph-upload-simple"></i> Import</button>
           </div>
           <input type="text" id="proc-ncc2-ten" class="finput" placeholder="Tên nhà cung cấp" style="font-size:13px;font-weight:600;margin-bottom:6px;width:100%;box-sizing:border-box;" oninput="procLiveUpdate()">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
@@ -12242,6 +12245,293 @@ function procRemoveItem(idx){
   if(current.length<=1){ toast('⚠️ Cần ít nhất 1 dòng hàng hóa!','bad'); return; }
   current.splice(idx,1);
   _procRenderItemsTable(current);
+}
+
+// ═══════════════════════ PROCUREMENT IMPORT ═══════════════════════
+let _procImportTempData = null; // lưu data parsed để dùng trong _procApplyImport
+
+// Lazy load PDF.js khi cần
+let _pdfJSPromise = null;
+async function _ensurePDFJS(){
+  if(typeof pdfjsLib !== 'undefined') return;
+  if(!_pdfJSPromise){
+    _pdfJSPromise = new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+      s.onload=()=>{ try{ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; }catch(e){} res(); };
+      s.onerror=rej; document.head.appendChild(s);
+    });
+  }
+  await _pdfJSPromise;
+}
+
+async function procImportQuote(nccIdx){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='.xlsx,.xls,.csv,.pdf';
+  inp.onchange=async(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const ext=file.name.split('.').pop().toLowerCase();
+    toast('⟳ Đang đọc file báo giá…','info');
+    try{
+      let data;
+      if(ext==='pdf') data=await _procParsePDF(file);
+      else data=await _procParseExcel(file);
+      if(data){ _procImportTempData=data; _procShowImportPreview(nccIdx,data); }
+      else toast('⚠️ Không trích xuất được dữ liệu từ file này','warn');
+    }catch(err){ console.error('procImportQuote:',err); toast('❌ Lỗi đọc file: '+err.message,'bad'); }
+  };
+  inp.click();
+}
+
+async function _procParseExcel(file){
+  await _ensureXLSX();
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=(e)=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        resolve(_procExtractFromRows(rows, rows.map(r=>r.join(' ')).join('\n')));
+      }catch(err){ reject(err); }
+    };
+    reader.onerror=()=>reject(new Error('Không đọc được file'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function _procParsePDF(file){
+  await _ensurePDFJS();
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  const allLines=[];
+  for(let p=1;p<=Math.min(pdf.numPages,8);p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    const yMap={};
+    content.items.forEach(item=>{
+      const y=Math.round(item.transform[5]);
+      if(!yMap[y]) yMap[y]=[];
+      yMap[y].push(item.str);
+    });
+    Object.keys(yMap).sort((a,b)=>b-a).forEach(y=>allLines.push(yMap[y].join(' ')));
+  }
+  const rawText=allLines.join('\n');
+  const rows=allLines.map(line=>line.split(/\s{3,}|\t/));
+  return _procExtractFromRows(rows, rawText);
+}
+
+function _procExtractFromRows(rows, rawText){
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const result={ nccName:'', baoHanh:'', thanhToan:'', giaoHang:'', items:[] };
+
+  // ── Tên nhà cung cấp ──
+  for(let i=0;i<Math.min(15,rows.length);i++){
+    for(const cell of rows[i]){
+      const s=String(cell||'').trim();
+      if(s.length>5 && /công ty|tnhh|ctcp|co\.\s*ltd|corporation|corp\b|joint\s*stock|one\s*member/i.test(s)){
+        result.nccName=s.replace(/^(kính\s*gửi|to|từ|from)[:\s]+/i,'').trim();
+        break;
+      }
+    }
+    if(result.nccName) break;
+  }
+
+  // ── Tìm header row sản phẩm ──
+  let hRow=-1, colName=-1, colQty=-1, colPrice=-1, colSpec=-1;
+  for(let i=0;i<rows.length;i++){
+    const rn=rows[i].map(c=>norm(c));
+    const rs=rn.join('|');
+    const hasName=/(ten\s*(hang|san\s*pham|thiet\s*bi|mo\s*ta)|^item$|description|product)/.test(rs);
+    const hasPrice=/(don\s*gia|unit\s*price|gia\s*ban|don\s*gia|thanh\s*tien|price)/.test(rs);
+    if(hasName||hasPrice){
+      hRow=i;
+      rn.forEach((c,ci)=>{
+        if(colName<0 && /(ten\s*(hang|san|thiet|mo)|^item$|description|product)/.test(c)) colName=ci;
+        if(colQty<0  && /(^sl$|so\s*luong|^qty$|quantity)/.test(c)) colQty=ci;
+        if(colPrice<0 && /(don\s*gia|unit\s*price|gia\s*ban|^gia$|price)/.test(c)) colPrice=ci;
+        if(colSpec<0  && /(cau\s*hinh|thong\s*so|spec|mo\s*ta|config)/.test(c)) colSpec=ci;
+      });
+      if(colName<0) colName=rn.findIndex(c=>c&&!/^(stt|no|#|tt)$/.test(c));
+      break;
+    }
+  }
+
+  // Fallback: tìm dòng có giá tiền (số > 50000)
+  if(hRow<0){
+    for(let i=2;i<rows.length;i++){
+      if(rows[i].some(c=>{const n=parseFloat(String(c).replace(/[^0-9]/g,''));return n>50000;})){
+        hRow=i-1; colName=1; colQty=2; colPrice=3; break;
+      }
+    }
+  }
+
+  // ── Trích xuất sản phẩm ──
+  if(hRow>=0){
+    for(let i=hRow+1;i<rows.length;i++){
+      const row=rows[i]; if(!row||!row.length) continue;
+      const rs=row.join(' ').trim(); if(!rs) continue;
+      const rn=norm(rs);
+      if(/(^tong\s*(cong|gia\s*tri|tien)|^total|^dieu\s*khoan|^terms|^ghi\s*chu:|^note:)/.test(rn)) break;
+
+      let name=colName>=0 ? String(row[colName]||'').trim() : '';
+      if(!name && row.length>1) name=String(row[1]||'').trim();
+      if(!name||name.length<2) continue;
+      if(/^[\d\s.,]+$/.test(name)) continue;
+      if(/(stt|no\.|ten\s*hang|item\s*name|product\s*name)/i.test(name)) continue;
+
+      const qty=parseFloat(String(colQty>=0?row[colQty]:row[2]||'').replace(/[^0-9.]/g,''))||1;
+      const rawP=colPrice>=0?String(row[colPrice]||''):String(row[3]||row[4]||'');
+      const price=parseFloat(rawP.replace(/[^0-9]/g,''))||0;
+      const spec=colSpec>=0?String(row[colSpec]||'').trim():'';
+      result.items.push({tenHang:name,thongSo:spec,soLuong:qty,gia:price});
+    }
+  }
+
+  // ── Điều khoản từ raw text ──
+  const ft=rawText||'';
+  const m=(pattern)=>{ const r=ft.match(pattern); return r?r[1].trim().slice(0,80):''; };
+  result.baoHanh   = m(/bao\s*hanh\s*[:\-]\s*([^\n;,]+)/i) || m(/warranty\s*[:\-]\s*([^\n;,]+)/i) ||
+                     (ft.match(/(\d+\s*(?:tháng|năm|months?|years?))/i)||[''])[1];
+  result.thanhToan = m(/thanh\s*toan\s*[:\-]\s*([^\n;]+)/i) || m(/payment\s*[:\-]\s*([^\n;]+)/i);
+  result.giaoHang  = m(/giao\s*hang\s*[:\-]\s*([^\n;]+)/i)  || m(/delivery\s*[:\-]\s*([^\n;]+)/i);
+
+  return result;
+}
+
+function _procShowImportPreview(nccIdx, data){
+  document.getElementById('proc-import-modal')?.remove();
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const fmtGia=n=>n>0?n.toLocaleString('vi-VN')+'đ':'—';
+  const itemRows=data.items.map((it,i)=>`
+    <tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:5px 8px;font-size:11px;color:#94a3b8;">${i+1}</td>
+      <td style="padding:5px 8px;font-size:12px;font-weight:500;">${esc(it.tenHang)}${it.thongSo?`<div style="font-size:10px;color:#94a3b8;">${esc(it.thongSo)}</div>`:''}
+      </td>
+      <td style="padding:5px 8px;font-size:12px;text-align:center;">${it.soLuong}</td>
+      <td style="padding:5px 8px;font-size:12px;text-align:right;color:#1D4ED8;font-weight:600;">${fmtGia(it.gia)}</td>
+    </tr>`).join('');
+
+  const m=document.createElement('div');
+  m.id='proc-import-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1100;display:flex;align-items:center;justify-content:center';
+  m.innerHTML=`
+  <div style="background:#fff;border-radius:14px;width:700px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.22);">
+    <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;">
+      <i class="ph ph-file-arrow-up" style="font-size:20px;color:#6366f1"></i>
+      <div>
+        <div style="font-size:14px;font-weight:700;">Preview báo giá — NCC ${nccIdx+1}</div>
+        <div style="font-size:11px;color:#94a3b8;">Kiểm tra và chỉnh sửa trước khi áp dụng vào form</div>
+      </div>
+      <button onclick="document.getElementById('proc-import-modal')?.remove()" style="margin-left:auto;border:none;background:none;font-size:18px;cursor:pointer;color:#94a3b8">✕</button>
+    </div>
+    <div style="padding:16px 20px;overflow-y:auto;flex:1;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div class="field span2" style="grid-column:span 2">
+          <label style="font-size:11px;font-weight:600;color:#64748b;">Tên nhà cung cấp</label>
+          <input id="proc-imp-ncc" class="finput" value="${esc(data.nccName)}" placeholder="Nhập tên NCC…" style="width:100%;box-sizing:border-box;font-size:13px;font-weight:600;">
+        </div>
+        <div class="field">
+          <label style="font-size:11px;font-weight:600;color:#64748b;">Bảo hành</label>
+          <input id="proc-imp-bh" class="finput" value="${esc(data.baoHanh)}" placeholder="VD: 12 tháng">
+        </div>
+        <div class="field">
+          <label style="font-size:11px;font-weight:600;color:#64748b;">Thanh toán</label>
+          <input id="proc-imp-tt" class="finput" value="${esc(data.thanhToan)}" placeholder="VD: 30 ngày sau giao hàng">
+        </div>
+        <div class="field span2" style="grid-column:span 2">
+          <label style="font-size:11px;font-weight:600;color:#64748b;">Giao hàng</label>
+          <input id="proc-imp-gh" class="finput" value="${esc(data.giaoHang)}" placeholder="VD: 5–7 ngày làm việc">
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin-bottom:6px;">
+        Danh sách hàng hóa — <span style="color:#6366f1;">${data.items.length} dòng</span>
+      </div>
+      ${data.items.length?`
+      <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;max-height:260px;overflow-y:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead style="background:#f8fafc;position:sticky;top:0;">
+            <tr>
+              <th style="padding:7px 8px;font-size:11px;color:#64748b;text-align:left;border-bottom:1px solid #e2e8f0;width:28px">#</th>
+              <th style="padding:7px 8px;font-size:11px;color:#64748b;text-align:left;border-bottom:1px solid #e2e8f0;">Tên hàng / Thông số</th>
+              <th style="padding:7px 8px;font-size:11px;color:#64748b;text-align:center;border-bottom:1px solid #e2e8f0;width:40px">SL</th>
+              <th style="padding:7px 8px;font-size:11px;color:#64748b;text-align:right;border-bottom:1px solid #e2e8f0;width:110px">Đơn giá</th>
+            </tr>
+          </thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+      </div>`
+      :`<div style="padding:20px;text-align:center;color:#94a3b8;font-size:12px;border:1px dashed #e2e8f0;border-radius:8px;">Không nhận diện được danh sách hàng hóa — có thể nhập tay sau khi áp dụng</div>`}
+
+      <div style="margin-top:12px;font-size:11px;color:#94a3b8;background:#f8fafc;padding:8px 12px;border-radius:6px;">
+        <i class="ph ph-info"></i> Sản phẩm sẽ được <strong>gộp vào</strong> bảng hiện tại (không xóa dòng đã có). Giá áp vào cột NCC ${nccIdx+1}.
+        ${!data.items.length?'<br><i class="ph ph-warning" style="color:#F59E0B"></i> Nếu file không nhận diện được — hãy thử chuyển sang định dạng Excel chuẩn hơn.':''}
+      </div>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid #f1f5f9;display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="document.getElementById('proc-import-modal')?.remove()" class="btn" style="font-size:13px;">Hủy</button>
+      <button onclick="_procApplyImport(${nccIdx})" class="btn primary" style="font-size:13px;"><i class="ph ph-check"></i> Áp dụng vào NCC ${nccIdx+1}</button>
+    </div>
+  </div>`;
+  m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
+  document.body.appendChild(m);
+}
+
+function _procApplyImport(nccIdx){
+  const data=_procImportTempData; if(!data){ toast('Lỗi: không có dữ liệu','bad'); return; }
+
+  // Đọc giá trị đã chỉnh sửa trong preview
+  const nccName  = document.getElementById('proc-imp-ncc')?.value||data.nccName;
+  const baoHanh  = document.getElementById('proc-imp-bh')?.value||data.baoHanh;
+  const thanhToan= document.getElementById('proc-imp-tt')?.value||data.thanhToan;
+  const giaoHang = document.getElementById('proc-imp-gh')?.value||data.giaoHang;
+
+  document.getElementById('proc-import-modal')?.remove();
+
+  // Điền thông tin NCC
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
+  set(`proc-ncc${nccIdx}-ten`,    nccName);
+  set(`proc-ncc${nccIdx}-thanhtoan`, thanhToan);
+  set(`proc-ncc${nccIdx}-giao`,   giaoHang);
+  // Bảo hành: tìm option gần nhất hoặc skip
+  if(baoHanh){
+    const sel=document.getElementById(`proc-ncc${nccIdx}-baohiem`);
+    if(sel){
+      // Tìm option chứa số tháng/năm
+      const monthMatch=baoHanh.match(/(\d+)\s*(tháng|month)/i);
+      const yearMatch =baoHanh.match(/(\d+)\s*(năm|year)/i);
+      const months = monthMatch ? parseInt(monthMatch[1]) : (yearMatch ? parseInt(yearMatch[1])*12 : 0);
+      const options=[3,6,9,12,18,24,36];
+      const closest=options.reduce((prev,curr)=>Math.abs(curr-months)<Math.abs(prev-months)?curr:prev,0);
+      if(months>0 && closest) sel.value=closest+' tháng';
+    }
+  }
+
+  // Gộp items vào bảng
+  if(data.items.length){
+    const current=_procReadItemsFromDOM();
+    // Nếu bảng chỉ có 1 dòng trống → thay thế
+    const isEmpty=current.length===1&&!current[0].tenHang;
+    const merged = isEmpty ? [] : current.filter(it=>it.tenHang);
+
+    data.items.forEach((it,i)=>{
+      // Tìm xem đã có dòng tên tương tự chưa
+      const existing=merged.findIndex(m=>m.tenHang.toLowerCase().includes(it.tenHang.toLowerCase().slice(0,10)));
+      if(existing>=0){
+        // Cập nhật giá cho cột NCC này
+        merged[existing].gia[nccIdx]=it.gia;
+      } else {
+        // Thêm dòng mới, giá chỉ có cột này
+        const gia=[0,0,0]; gia[nccIdx]=it.gia;
+        merged.push({id:'imp_'+Date.now()+'_'+i, tenHang:it.tenHang, thongSo:it.thongSo, soLuong:it.soLuong, donViTinh:'cái', gia});
+      }
+    });
+    _procRenderItemsTable(merged);
+  }
+
+  procLiveUpdate();
+  toast(`✅ Đã import báo giá vào NCC ${nccIdx+1}${data.items.length?' ('+data.items.length+' sản phẩm)':''}`, 'ok');
 }
 
 // ── Save ──────────────────────────────────────────────────────────────────────
