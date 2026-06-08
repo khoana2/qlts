@@ -12325,11 +12325,11 @@ function _procExtractFromRows(rows, rawText){
   const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
   const result={ nccName:'', baoHanh:'', thanhToan:'', giaoHang:'', items:[] };
 
-  // ── Tên nhà cung cấp ──
+  // ── 1. Tên nhà cung cấp ──
   for(let i=0;i<Math.min(15,rows.length);i++){
     for(const cell of rows[i]){
       const s=String(cell||'').trim();
-      if(s.length>5 && /công ty|tnhh|ctcp|co\.\s*ltd|corporation|corp\b|joint\s*stock|one\s*member/i.test(s)){
+      if(s.length>5 && /công ty|tnhh|ctcp|co\.\s*ltd|corporation|corp\b|joint\s*stock/i.test(s)){
         result.nccName=s.replace(/^(kính\s*gửi|to|từ|from)[:\s]+/i,'').trim();
         break;
       }
@@ -12337,14 +12337,36 @@ function _procExtractFromRows(rows, rawText){
     if(result.nccName) break;
   }
 
-  // ── Tìm header row sản phẩm ──
+  // ── 2. Hàm phán đoán loại dòng ──
+  const isSkipRow = name => {
+    const n=norm(name);
+    return /^\(vn[dd]\)/.test(n)                                     // (vnđ) header cột
+      || /^ma\s*(sp|san\s*pham|hang|hieu)\s*[:\-]/.test(n)         // Mã SP:
+      || /^(sku|code|model\s*(no|so))\s*[:\-]/.test(n)             // SKU: Code:
+      || /mien\s*phi\s*(giao|van\s*chuyen|ship)/.test(n)           // Miễn phí giao hàng
+      || /^free\s*(ship|delivery)/.test(n)
+      || /^(luu\s*y|note|ghi\s*chu)\s*[:\-]/.test(n)              // Lưu ý: Note:
+      || /^(vat|thue|tax)\s*[:\-]/.test(n)                        // VAT:
+      || /^(don\s*vi|dvt|unit)\s*[:\-]/.test(n)                   // Đơn vị:
+      || /^(thanh\s*tien|tong\s*cong|subtotal|total)\s*[:\-]/.test(n); // Thành tiền:
+  };
+  // Dòng chứa thông số kỹ thuật tiếp theo (không phải tên SP mới)
+  const isSpecRow = name => {
+    const n=norm(name);
+    const pipes=(name.match(/\|/g)||[]).length;
+    return /^(bao\s*hanh|warranty)\s+\d/.test(n)                   // "12 Tháng ..." dòng BH
+      || (pipes>=2 && name.length<120)                              // "1TB | 16GB | ..."
+      || /^(ram|ssd|hdd|cpu|gpu|core\s*i|gen\s*\d|\d+\s*inch|fhd|uhd|win(dows)?)[\s|,]/i.test(name); // specs prefix
+  };
+
+  // ── 3. Tìm header row bảng sản phẩm ──
   let hRow=-1, colName=-1, colQty=-1, colPrice=-1, colSpec=-1;
   for(let i=0;i<rows.length;i++){
-    const rn=rows[i].map(c=>norm(c));
-    const rs=rn.join('|');
+    const rn=rows[i].map(c=>norm(c)); const rs=rn.join('|');
     const hasName=/(ten\s*(hang|san\s*pham|thiet\s*bi|mo\s*ta)|^item$|description|product)/.test(rs);
-    const hasPrice=/(don\s*gia|unit\s*price|gia\s*ban|don\s*gia|thanh\s*tien|price)/.test(rs);
-    if(hasName||hasPrice){
+    const hasPrice=/(don\s*gia|unit\s*price|gia\s*ban|thanh\s*tien|price)/.test(rs);
+    const hasSTT=/^(stt|no|tt|#)$/.test(rn[0]);
+    if((hasName||hasPrice) && (hasSTT||hasName)){
       hRow=i;
       rn.forEach((c,ci)=>{
         if(colName<0 && /(ten\s*(hang|san|thiet|mo)|^item$|description|product)/.test(c)) colName=ci;
@@ -12352,12 +12374,11 @@ function _procExtractFromRows(rows, rawText){
         if(colPrice<0 && /(don\s*gia|unit\s*price|gia\s*ban|^gia$|price)/.test(c)) colPrice=ci;
         if(colSpec<0  && /(cau\s*hinh|thong\s*so|spec|mo\s*ta|config)/.test(c)) colSpec=ci;
       });
-      if(colName<0) colName=rn.findIndex(c=>c&&!/^(stt|no|#|tt)$/.test(c));
+      if(colName<0) colName=rn.findIndex(c=>c&&!/^(stt|no|#|tt|sl|qty|gia|price|vnd|dvt)$/.test(c));
       break;
     }
   }
-
-  // Fallback: tìm dòng có giá tiền (số > 50000)
+  // Fallback: tìm dòng có giá tiền lớn
   if(hRow<0){
     for(let i=2;i<rows.length;i++){
       if(rows[i].some(c=>{const n=parseFloat(String(c).replace(/[^0-9]/g,''));return n>50000;})){
@@ -12366,35 +12387,57 @@ function _procExtractFromRows(rows, rawText){
     }
   }
 
-  // ── Trích xuất sản phẩm ──
+  // ── 4. Trích xuất sản phẩm (với spec merging) ──
   if(hRow>=0){
     for(let i=hRow+1;i<rows.length;i++){
       const row=rows[i]; if(!row||!row.length) continue;
       const rs=row.join(' ').trim(); if(!rs) continue;
       const rn=norm(rs);
-      if(/(^tong\s*(cong|gia\s*tri|tien)|^total|^dieu\s*khoan|^terms|^ghi\s*chu:|^note:)/.test(rn)) break;
+      // Dừng ở footer
+      if(/(^tong\s*(cong|gia\s*tri|don\s*hang|tien)|^total|^dieu\s*khoan|^terms\s*and|ky\s*xac\s*nhan|nguoi\s*lap\s*phieu)/.test(rn)) break;
 
       let name=colName>=0 ? String(row[colName]||'').trim() : '';
       if(!name && row.length>1) name=String(row[1]||'').trim();
       if(!name||name.length<2) continue;
       if(/^[\d\s.,]+$/.test(name)) continue;
-      if(/(stt|no\.|ten\s*hang|item\s*name|product\s*name)/i.test(name)) continue;
+      if(/(^stt$|^no\.$|^ten\s*hang$|^item\s*name$|^product\s*name$)/i.test(name)) continue;
 
-      const qty=parseFloat(String(colQty>=0?row[colQty]:row[2]||'').replace(/[^0-9.]/g,''))||1;
+      const qty=parseFloat(String(colQty>=0?row[colQty]:(row[2]||'')).replace(/[^0-9.]/g,''))||1;
       const rawP=colPrice>=0?String(row[colPrice]||''):String(row[3]||row[4]||'');
       const price=parseFloat(rawP.replace(/[^0-9]/g,''))||0;
       const spec=colSpec>=0?String(row[colSpec]||'').trim():'';
-      result.items.push({tenHang:name,thongSo:spec,soLuong:qty,gia:price});
+
+      // Dòng rác → skip
+      if(isSkipRow(name)) continue;
+
+      // "Mã SP: ..." → thêm vào thongSo của SP trước
+      if(/^(ma\s*(sp|san|hang)|sku|code|model\s*(no|so))\s*[:\-]/i.test(name)){
+        if(result.items.length>0) result.items[result.items.length-1].thongSo+=(' | '+name);
+        continue;
+      }
+
+      // Dòng spec tiếp theo → gộp vào SP trước
+      if(result.items.length>0 && isSpecRow(name)){
+        const prev=result.items[result.items.length-1];
+        prev.thongSo=(prev.thongSo?prev.thongSo+' | ':'')+name.slice(0,100);
+        if(price>0 && !prev.gia) prev.gia=price;
+        continue;
+      }
+
+      result.items.push({tenHang:name, thongSo:spec, soLuong:qty, gia:price});
     }
   }
 
-  // ── Điều khoản từ raw text ──
+  // ── 5. Điều khoản từ raw text ──
   const ft=rawText||'';
-  const m=(pattern)=>{ const r=ft.match(pattern); return r?r[1].trim().slice(0,80):''; };
-  result.baoHanh   = m(/bao\s*hanh\s*[:\-]\s*([^\n;,]+)/i) || m(/warranty\s*[:\-]\s*([^\n;,]+)/i) ||
-                     (ft.match(/(\d+\s*(?:tháng|năm|months?|years?))/i)||[''])[1];
-  result.thanhToan = m(/thanh\s*toan\s*[:\-]\s*([^\n;]+)/i) || m(/payment\s*[:\-]\s*([^\n;]+)/i);
-  result.giaoHang  = m(/giao\s*hang\s*[:\-]\s*([^\n;]+)/i)  || m(/delivery\s*[:\-]\s*([^\n;]+)/i);
+  const m=pat=>{ const r=ft.match(pat); return r?(r[1]||r[2]||'').trim().slice(0,80):''; };
+  result.baoHanh   = m(/bao\s*hanh\s*[:\-]\s*([^\n;,]{3,50})/i)
+                  || m(/warranty\s*[:\-]\s*([^\n;,]{3,50})/i)
+                  || (ft.match(/(\d+\s*(?:tháng|năm|months?|years?))/i)||['',''])[1];
+  result.thanhToan = m(/thanh\s*toan\s*[:\-]\s*([^\n;]{3,80})/i)
+                  || m(/payment\s*(term[s]?)?\s*[:\-]\s*([^\n;]{3,80})/i);
+  result.giaoHang  = m(/giao\s*hang\s*[:\-]\s*([^\n;]{3,80})/i)
+                  || m(/delivery\s*[:\-]\s*([^\n;]{3,80})/i);
 
   return result;
 }
