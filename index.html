@@ -12308,17 +12308,20 @@ async function _procParsePDF(file){
   for(let p=1;p<=Math.min(pdf.numPages,8);p++){
     const page=await pdf.getPage(p);
     const content=await page.getTextContent();
+    // Group by y-coord with ±3px tolerance (same visual line)
     const yMap={};
     content.items.forEach(item=>{
-      const y=Math.round(item.transform[5]);
+      if(!item.str.trim()) return;
+      const y=Math.round(item.transform[5]/3)*3;
       if(!yMap[y]) yMap[y]=[];
-      yMap[y].push(item.str);
+      yMap[y].push({x:item.transform[4],t:item.str});
     });
-    Object.keys(yMap).sort((a,b)=>b-a).forEach(y=>allLines.push(yMap[y].join(' ')));
+    Object.keys(yMap).sort((a,b)=>b-a).forEach(y=>{
+      const ln=yMap[y].sort((a,b)=>a.x-b.x).map(i=>i.t).join(' ').trim();
+      if(ln) allLines.push(ln);
+    });
   }
-  const rawText=allLines.join('\n');
-  const rows=allLines.map(line=>line.split(/\s{3,}|\t/));
-  return _procExtractFromRows(rows, rawText);
+  return _procExtractFromPDFLines(allLines, allLines.join('\n'));
 }
 
 function _procExtractFromRows(rows, rawText){
@@ -12449,6 +12452,98 @@ function _procExtractFromRows(rows, rawText){
   result.giaoHang  = m(/giao\s*hang\s*[:\-]\s*([^\n;]{3,80})/i)
                   || m(/delivery\s*[:\-]\s*([^\n;]{3,80})/i);
 
+  return result;
+}
+
+function _procExtractFromPDFLines(lines, rawText){
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const result={nccName:'',baoHanh:'',thanhToan:'',giaoHang:'',items:[]};
+
+  // ── 1. Tên NCC ──
+  for(const line of lines.slice(0,40)){
+    if(/công ty|tnhh|ctcp|co\.?\s*ltd/i.test(line)&&line.length>5){
+      result.nccName=line.replace(/^(kính\s*gửi|to|từ)[:\s]+/i,'').trim();
+      if(result.nccName.length>5) break;
+    }
+  }
+
+  // ── 2. Helpers ──
+  const getBigs=line=>[...line.matchAll(/([\d,]+)/g)].map(m=>parseFloat(m[1].replace(/,/g,''))).filter(n=>n>=500000);
+  const isFooter=n=>/^(tong\s*(cong|don\s*hang|tien\s*(san\s*pham)?)|total|dieu\s*kien|ky\s*xac|nguoi\s*lap|mien\s*phi\s*giao)/i.test(n);
+  const isHeader=n=>/(stt|ten\s*(san\s*pham|hang)|so\s*luong|don\s*gia|thanh\s*tien|bao\s*hanh)/.test(n)&&n.split(/\s+/).filter(w=>w.length>2).length>=3;
+  // Regex nhận diện tên thiết bị đầu dòng
+  const PROD_RE=/^(Laptop|PC|Desktop|Màn\s*hình|Máy\s*(tính|in|chiếu)|NB\s+|Monitor|Server|Switch|Router|UPS|Projector|[A-Z]{2,}\s+(?:Dell|HP|Lenovo|Asus|Acer|Apple|MSI|Samsung|LG|Cisco|Hikvision|Dahua|Brother|Canon))/i;
+  // Tên "quá chung chung" → cần tìm tên đầy đủ thay thế
+  const isGeneric=name=>!name||name.length<10||/^(laptop|pc|desktop|màn\s*hình|máy\s*tính|thiết\s*bị|máy\s*in|server|switch|router|ups|projector|monitor)$/i.test(name.trim());
+
+  // ── 3. Phân loại từng dòng ──
+  const tagged=lines.map((line,i)=>{
+    const n=norm(line);
+    const bigs=getBigs(line);
+    const footer=isFooter(n), header=isHeader(n);
+    let dataRow=null;
+    if(!footer&&!header){
+      const sm=line.trim().match(/^(\d{1,2})\s+(.{2,})/);
+      if(sm){
+        const stt=parseInt(sm[1]);
+        if(stt>=1&&stt<=50&&bigs.length>=1){
+          const rest=sm[2];
+          // Tìm số lớn đầu tiên (giá tiền)
+          const fb=[...rest.matchAll(/([\d,]+)/g)].find(m=>parseFloat(m[1].replace(/,/g,''))>=500000);
+          const before=fb?rest.slice(0,fb.index):'';
+          // Tên = text trước giá, bỏ "N Năm/Tháng" và số cuối (qty)
+          let name=before.replace(/\s+\d{1,2}\s*(tháng|năm|months?|years?)\s*$/i,'').replace(/\s+\d{1,4}\s*$/,'').trim();
+          // Bỏ trường hợp tên chỉ là đơn vị bảo hành ("2 Năm" bị hiểu là STT=2)
+          if(/^(năm|tháng|months?|years?)\s*$/i.test(name)) name='';
+          // Qty: số nguyên cuối cùng trong `before` trước giá
+          const qm=before.match(/\b(\d{1,4})\b(?!\s*(?:tháng|năm|[,.\d]))/g);
+          const qty=qm?parseInt(qm[qm.length-1])||1:1;
+          const price=Math.min(...bigs);
+          dataRow={stt,name,qty,price};
+        }
+      }
+    }
+    // Dòng tên sản phẩm: bắt đầu từ khóa thiết bị, không có giá lớn
+    const isProductName=!footer&&!header&&bigs.length===0&&line.length>=10&&PROD_RE.test(line.trim())
+      &&!/(^thanh\s*toan|^giao\s*hang|^bao\s*hanh\s*:|^ma\s*(sp|hang))/i.test(n);
+    return{line,i,n,bigs,footer,header,dataRow,isProductName};
+  });
+
+  // ── 4. Ghép tên đầy đủ vào data rows ──
+  const dataEntries=tagged.filter(t=>t.dataRow);
+  const nameCands=tagged.filter(t=>t.isProductName).sort((a,b)=>a.i-b.i);
+  const genericEntries=dataEntries.filter(e=>isGeneric(e.dataRow.name)).sort((a,b)=>a.i-b.i);
+
+  if(genericEntries.length&&nameCands.length>=genericEntries.length){
+    // Ghép theo thứ tự: data row 1 → name candidate 1, data row 2 → name candidate 2…
+    genericEntries.forEach((entry,idx)=>{ entry.dataRow.name=nameCands[idx].line.trim(); });
+  } else if(genericEntries.length&&nameCands.length>0){
+    // Fallback: ghép theo khoảng cách gần nhất (không dùng lại)
+    const used=new Set();
+    genericEntries.forEach(entry=>{
+      const cands=nameCands.filter(t=>!used.has(t.i)&&Math.abs(t.i-entry.i)<=10)
+        .sort((a,b)=>Math.abs(a.i-entry.i)-Math.abs(b.i-entry.i));
+      if(cands.length){entry.dataRow.name=cands[0].line.trim();used.add(cands[0].i);}
+    });
+  }
+
+  // ── 5. Build items ──
+  dataEntries.forEach(e=>{
+    const{name,qty,price}=e.dataRow;
+    if(!name||name.length<2) return;
+    result.items.push({tenHang:name.replace(/\s+/g,' ').trim(),thongSo:'',soLuong:qty,gia:price});
+  });
+  // Fallback: không có data row → dùng các dòng tên SP
+  if(!result.items.length&&nameCands.length){
+    nameCands.forEach(t=>{result.items.push({tenHang:t.line.trim(),thongSo:'',soLuong:1,gia:0});});
+  }
+
+  // ── 6. Điều khoản ──
+  const ft=rawText||'';
+  const m=pat=>{const r=ft.match(pat);return r?(r[1]||r[2]||'').trim().slice(0,80):'';};
+  result.baoHanh=m(/bảo\s*hành\s*[:\-]\s*([^\n;,]{3,50})/i)||m(/bao\s*hanh\s*[:\-]\s*([^\n;,]{3,50})/i)||m(/warranty\s*[:\-]\s*([^\n;,]{3,50})/i)||(ft.match(/(\d+\s*(?:tháng|năm|months?|years?))/i)||['',''])[1];
+  result.thanhToan=m(/thanh\s*toán?\s*[:\-]\s*([^\n;]{3,80})/i)||m(/payment\s*(terms?)?\s*[:\-]\s*([^\n;]{3,80})/i);
+  result.giaoHang=m(/giao\s*hàng?\s*[:\-]\s*([^\n;]{3,80})/i)||m(/delivery\s*[:\-]\s*([^\n;]{3,80})/i);
   return result;
 }
 
