@@ -12366,7 +12366,7 @@ function _procExtractFromRows(rows, rawText){
     const hasName=/(ten\s*(hang|san\s*pham|thiet\s*bi|mo\s*ta)|^item$|description|product)/.test(rs);
     const hasPrice=/(don\s*gia|unit\s*price|gia\s*ban|thanh\s*tien|price)/.test(rs);
     const hasSTT=/^(stt|no|tt|#)$/.test(rn[0]);
-    if((hasName||hasPrice) && (hasSTT||hasName)){
+    if(hasName||hasPrice){
       hRow=i;
       rn.forEach((c,ci)=>{
         if(colName<0 && /(ten\s*(hang|san|thiet|mo)|^item$|description|product)/.test(c)) colName=ci;
@@ -12378,12 +12378,12 @@ function _procExtractFromRows(rows, rawText){
       break;
     }
   }
-  // Fallback: tìm dòng có giá tiền lớn
+  // Fallback: tìm dòng có giá tiền lớn (PDF không có header rõ ràng)
   if(hRow<0){
     for(let i=2;i<rows.length;i++){
-      if(rows[i].some(c=>{const n=parseFloat(String(c).replace(/[^0-9]/g,''));return n>50000;})){
-        hRow=i-1; colName=1; colQty=2; colPrice=3; break;
-      }
+      const hasBigNum=rows[i].some(c=>{const n=parseFloat(String(c).replace(/[^0-9]/g,''));return n>50000;});
+      const hasTextName=rows[i].some(c=>/[a-zắằặấầậẵẳáàảãạăâéèẻẽẹêíìỉĩịóòỏõọôơúùủũụưýỳỷỹỵđ]/i.test(String(c)));
+      if(hasBigNum && hasTextName){ hRow=i-1; colName=0; colQty=-1; colPrice=-1; break; }
     }
   }
 
@@ -12396,15 +12396,25 @@ function _procExtractFromRows(rows, rawText){
       // Dừng ở footer
       if(/(^tong\s*(cong|gia\s*tri|don\s*hang|tien)|^total|^dieu\s*khoan|^terms\s*and|ky\s*xac\s*nhan|nguoi\s*lap\s*phieu)/.test(rn)) break;
 
+      // Lấy tên: ưu tiên cột detect, fallback row[0] (PDF single-column)
       let name=colName>=0 ? String(row[colName]||'').trim() : '';
-      if(!name && row.length>1) name=String(row[1]||'').trim();
+      if(!name) name=String(row[1]||row[0]||'').trim();
+      // Strip số thứ tự đầu dòng: "1. Laptop..." → "Laptop..."
+      name=name.replace(/^\s*\d+\s*[.。、)\]]\s*/,'').trim();
       if(!name||name.length<2) continue;
       if(/^[\d\s.,]+$/.test(name)) continue;
       if(/(^stt$|^no\.$|^ten\s*hang$|^item\s*name$|^product\s*name$)/i.test(name)) continue;
 
+      // Lấy số lượng
       const qty=parseFloat(String(colQty>=0?row[colQty]:(row[2]||'')).replace(/[^0-9.]/g,''))||1;
+      // Lấy giá: ưu tiên cột, fallback scan số > 10000 trong toàn dòng
       const rawP=colPrice>=0?String(row[colPrice]||''):String(row[3]||row[4]||'');
-      const price=parseFloat(rawP.replace(/[^0-9]/g,''))||0;
+      let price=parseFloat(rawP.replace(/[^0-9]/g,''))||0;
+      if(!price){
+        const nums=[...row.join(' ').matchAll(/(\d[\d,.]+)/g)]
+          .map(m=>parseFloat(m[1].replace(/[,.]/g,''))).filter(n=>n>10000);
+        if(nums.length) price=nums[nums.length-1]; // số cuối dòng = đơn giá
+      }
       const spec=colSpec>=0?String(row[colSpec]||'').trim():'';
 
       // Dòng rác → skip
