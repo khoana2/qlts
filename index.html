@@ -11037,8 +11037,10 @@ function viewDetail(id){
       </div>
       <div class="transfer-log">
         ${tLog.map((t,i)=>{
-          // Dòng mới nhất (i===0) → gắn trạng thái xác nhận nếu có
-          const xn = i===0 ? getXacNhan(a.id) : null;
+          // Gắn xác nhận vào đúng dòng bàn giao: so khớp nguoiNhan == người nhận (t.to)
+          const _xnAll = getXacNhan(a.id);
+          const _toNorm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+          const xn = (_xnAll && t.to && _toNorm(_xnAll.nguoiNhan) === _toNorm(t.to)) ? _xnAll : null;
           const xnHtml = xn
             ? (() => {
                 const d = xn.thoiGian ? new Date(xn.thoiGian).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
