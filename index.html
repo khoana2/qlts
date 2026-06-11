@@ -6594,11 +6594,15 @@ async function msalSpPushAsset(id){
 async function msalSpDeleteAsset(id){
   if(!_msalAccount || !SP_MODE) return;
   const a = assets.find(x=>x.id===id);
-  if(!a?._spId) return;
+  if(!a?._spId){
+    // Không có SP ID → chỉ xóa local, cảnh báo để biết
+    console.warn('[DELETE] Asset không có _spId, chỉ xóa local:', id);
+    return;
+  }
   const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items(${a._spId})`;
   try{
     await msalSpReq(url,{ method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
-  }catch(e){ if(!_spIsGone(e)) console.error('[MSAL] delete error:', e); }
+  }catch(e){ if(!_spIsGone(e)) throw e; } // throw để openDelete catch và hiện lỗi thật
 }
 
 // ═══════════════════════ AUDIT LOG — SHAREPOINT PUSH/PULL ════════════════════
