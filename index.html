@@ -4190,7 +4190,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <option value="tu_choi">❌ Từ chối</option>
         </select>
         <input type="text" id="proc-search" class="finput" placeholder="🔍 Tìm thiết bị, NCC…" style="min-width:180px;" oninput="renderProcurement()">
-        <button class="btn btn-icon-ph" onclick="exportProcExcel()" title="Xuất Excel"><i class="ph ph-file-xls"></i> Xuất Excel</button>
+        <button class="btn btn-icon-ph" onclick="downloadProcTemplate()" title="Tải file Excel mẫu"><i class="ph ph-file-xls"></i> Tải template</button>
         <button class="btn primary btn-icon-ph" onclick="openProcurementForm()"><i class="ph ph-plus"></i> Tạo yêu cầu mua</button>
       </div>
     </div>
@@ -13054,6 +13054,105 @@ function printProcurement(id){
 }
 
 // ── Export Excel toàn bộ mua sắm ─────────────────────────────────────────────
+async function downloadProcTemplate(){
+  await _ensureXLSX();
+  const wb = XLSX.utils.book_new();
+
+  // ── Cấu trúc template ────────────────────────────────────────────────────
+  const rows = [
+    // Tiêu đề
+    ['BẢNG SO SÁNH BÁO GIÁ'],
+    [],
+    ['Tiêu đề / Tên thiết bị:', ''],
+    ['Loại tài sản:', ''],
+    ['Bộ phận đề xuất:', ''],
+    ['Người đề xuất:', ''],
+    ['Ngày đề xuất:', ''],
+    ['Mục đích sử dụng:', ''],
+    [],
+    // NCC header
+    ['', '', '', '', '', 'NHÀ CUNG CẤP 1', '', 'NHÀ CUNG CẤP 2', '', 'NHÀ CUNG CẤP 3'],
+    ['', '', '', '', '', '(Tên NCC)', '', '(Tên NCC)', '', '(Tên NCC)'],
+    ['', 'Bảo hành', '', '', '', '', '', '', '', ''],
+    ['', 'Hình thức thanh toán', '', '', '', '', '', '', '', ''],
+    ['', 'Thời gian giao hàng', '', '', '', '', '', '', '', ''],
+    [],
+    // Items header
+    ['STT', 'Tên hàng hóa / Dịch vụ', 'Thông số kỹ thuật', 'Số lượng', 'ĐVT',
+      'Đơn giá NCC1', 'Thành tiền NCC1',
+      'Đơn giá NCC2', 'Thành tiền NCC2',
+      'Đơn giá NCC3', 'Thành tiền NCC3'],
+  ];
+
+  // 15 dòng item trống với công thức
+  // Dòng đầu tiên ở row 18 (index 17, 1-based = 18)
+  const ITEM_START_ROW = 18;
+  for(let i=0;i<15;i++){
+    const r = ITEM_START_ROW + i;
+    rows.push([
+      i+1, '', '', '', '',
+      0, {f:`F${r}*D${r}`},
+      0, {f:`H${r}*D${r}`},
+      0, {f:`J${r}*D${r}`},
+    ]);
+  }
+
+  const TOTAL_ROW = ITEM_START_ROW + 15;
+  const LAST_ITEM = ITEM_START_ROW + 14;
+
+  rows.push([]); // blank
+  rows.push([
+    '', 'TỔNG CỘNG (chưa VAT)', '', '', '',
+    '', {f:`SUM(G${ITEM_START_ROW}:G${LAST_ITEM})`},
+    '', {f:`SUM(I${ITEM_START_ROW}:I${LAST_ITEM})`},
+    '', {f:`SUM(K${ITEM_START_ROW}:K${LAST_ITEM})`},
+  ]);
+  rows.push([
+    '', 'VAT 8%', '', '', '',
+    '', {f:`G${TOTAL_ROW+1}*0.08`},
+    '', {f:`I${TOTAL_ROW+1}*0.08`},
+    '', {f:`K${TOTAL_ROW+1}*0.08`},
+  ]);
+  rows.push([
+    '', 'TỔNG SAU VAT', '', '', '',
+    '', {f:`G${TOTAL_ROW+1}+G${TOTAL_ROW+2}`},
+    '', {f:`I${TOTAL_ROW+1}+I${TOTAL_ROW+2}`},
+    '', {f:`K${TOTAL_ROW+1}+K${TOTAL_ROW+2}`},
+  ]);
+  rows.push([]);
+  rows.push(['', '→ NCC ĐỀ XUẤT CHỌN:', '']);
+  rows.push(['', 'Lý do:', '']);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Độ rộng cột
+  ws['!cols'] = [
+    {wch:5},{wch:30},{wch:35},{wch:8},{wch:7},
+    {wch:16},{wch:18},{wch:16},{wch:18},{wch:16},{wch:18}
+  ];
+
+  // Merge tiêu đề
+  ws['!merges'] = [
+    {s:{r:0,c:0},e:{r:0,c:10}}, // "BẢNG SO SÁNH BÁO GIÁ"
+    {s:{r:2,c:1},e:{r:2,c:10}}, // Tiêu đề value
+    {s:{r:3,c:1},e:{r:3,c:4}},
+    {s:{r:4,c:1},e:{r:4,c:4}},
+    {s:{r:5,c:1},e:{r:5,c:4}},
+    {s:{r:6,c:1},e:{r:6,c:4}},
+    {s:{r:7,c:1},e:{r:7,c:4}},
+    {s:{r:9,c:5},e:{r:9,c:6}},  // NCC1 header
+    {s:{r:9,c:7},e:{r:9,c:8}},  // NCC2 header
+    {s:{r:9,c:9},e:{r:9,c:10}}, // NCC3 header
+    {s:{r:10,c:5},e:{r:10,c:6}},
+    {s:{r:10,c:7},e:{r:10,c:8}},
+    {s:{r:10,c:9},e:{r:10,c:10}},
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Báo giá');
+  XLSX.writeFile(wb, 'Template_MuaSam_BaoGia.xlsx');
+  toast('📥 Đã tải template Excel mua sắm!', 'ok');
+}
+
 async function exportProcExcel(){
   if(!procList.length){ toast('⚠️ Chưa có yêu cầu mua sắm nào!','bad'); return; }
   await _ensureXLSX();
