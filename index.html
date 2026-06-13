@@ -4190,6 +4190,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <option value="tu_choi">❌ Từ chối</option>
         </select>
         <input type="text" id="proc-search" class="finput" placeholder="🔍 Tìm thiết bị, NCC…" style="min-width:180px;" oninput="renderProcurement()">
+        <button class="btn btn-icon-ph" onclick="exportProcExcel()" title="Xuất Excel"><i class="ph ph-file-xls"></i> Xuất Excel</button>
         <button class="btn primary btn-icon-ph" onclick="openProcurementForm()"><i class="ph ph-plus"></i> Tạo yêu cầu mua</button>
       </div>
     </div>
@@ -6594,15 +6595,34 @@ async function msalSpPushAsset(id){
 async function msalSpDeleteAsset(id){
   if(!_msalAccount || !SP_MODE) return;
   const a = assets.find(x=>x.id===id);
+  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')`;
+
+  // Nếu không có _spId (asset tạo local, push SP bị lỗi → _spId null)
+  // → thử tìm SP item bằng maTaiSan (Title) rồi xóa
   if(!a?._spId){
-    // Không có SP ID → chỉ xóa local, cảnh báo để biết
+    if(a?.maTaiSan){
+      try{
+        const ma = a.maTaiSan.replace(/'/g,"''"); // escape single quote
+        const found = await msalSpReq(`${base}/items?$filter=Title eq '${ma}'&$select=ID&$top=5`);
+        if(found?.value?.length){
+          const spId = found.value[0].ID;
+          a._spId = spId; // cập nhật để lần sau dùng
+          await msalSpReq(`${base}/items(${spId})`,{
+            method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:''
+          });
+          console.log('[DELETE] Đã xóa SP item tìm qua Title:', a.maTaiSan, '→ ID:', spId);
+          return;
+        }
+      }catch(e){ if(!_spIsGone(e)) throw e; }
+    }
     console.warn('[DELETE] Asset không có _spId, chỉ xóa local:', id);
     return;
   }
-  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spList}')/items(${a._spId})`;
+
+  const url = `${base}/items(${a._spId})`;
   try{
     await msalSpReq(url,{ method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
-  }catch(e){ if(!_spIsGone(e)) throw e; } // throw để openDelete catch và hiện lỗi thật
+  }catch(e){ if(!_spIsGone(e)) throw e; }
 }
 
 // ═══════════════════════ AUDIT LOG — SHAREPOINT PUSH/PULL ════════════════════
@@ -13031,6 +13051,112 @@ function printProcurement(id){
   w.document.open();
   w.document.write(fullHtml);
   w.document.close();
+}
+
+// ── Export Excel toàn bộ mua sắm ─────────────────────────────────────────────
+async function exportProcExcel(){
+  if(!procList.length){ toast('⚠️ Chưa có yêu cầu mua sắm nào!','bad'); return; }
+  await _ensureXLSX();
+
+  const wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: Danh sách tóm tắt ───────────────────────────────────────────
+  const summaryData = procList.map((p, idx) => {
+    const _p = _procMigrateItems(Object.assign({}, p));
+    const items = _p.items || [];
+    const totals = [0,1,2].map(ni => items.reduce((s,it) => s+(it.gia[ni]||0)*(it.soLuong||1), 0));
+    const selectedTotal = p.nccChonIdx != null ? totals[p.nccChonIdx] : 0;
+    return {
+      'STT': idx+1,
+      'Tiêu đề': p.tieuDe||'',
+      'Loại TS': p.loaiTS||'',
+      'Bộ phận': p.boPhan||'',
+      'Người đề xuất': p.nguoiDeXuat||'',
+      'Ngày đề xuất': p.ngayDeXuat||'',
+      'Hạn phê duyệt': p.hanPheDuyet||'',
+      'Trạng thái': _PROC_STATUS_LABEL[p.trangThai]||p.trangThai||'',
+      ['NCC1: '+(p.nhaCC[0]?.ten||'—')]: totals[0]||'',
+      ['NCC2: '+(p.nhaCC[1]?.ten||'—')]: totals[1]||'',
+      ['NCC3: '+(p.nhaCC[2]?.ten||'—')]: totals[2]||'',
+      'NCC được chọn': p.nccChonIdx!=null ? (p.nhaCC[p.nccChonIdx]?.ten||('NCC '+(p.nccChonIdx+1))) : '',
+      'Tổng tiền chọn': selectedTotal||'',
+      'Ghi chú': p.ghiChu||'',
+    };
+  });
+  const ws1 = XLSX.utils.json_to_sheet(summaryData);
+  // Đặt độ rộng cột
+  ws1['!cols'] = [
+    {wch:5},{wch:30},{wch:15},{wch:18},{wch:18},{wch:14},{wch:14},{wch:14},
+    {wch:18},{wch:18},{wch:18},{wch:18},{wch:16},{wch:30}
+  ];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Danh sách');
+
+  // ── Sheet per yêu cầu có items ────────────────────────────────────────────
+  procList.forEach(p => {
+    const _p = _procMigrateItems(Object.assign({}, p));
+    const items = _p.items || [];
+    if(!items.length) return;
+
+    const nccNames = p.nhaCC.map((n,i) => n.ten||('NCC '+(i+1)));
+    const rows = [];
+
+    // Meta
+    rows.push(['Tiêu đề:', p.tieuDe||'']);
+    rows.push(['Người đề xuất:', p.nguoiDeXuat||'', 'Bộ phận:', p.boPhan||'']);
+    rows.push(['Ngày đề xuất:', p.ngayDeXuat||'', 'Trạng thái:', _PROC_STATUS_LABEL[p.trangThai]||'']);
+    if(p.mucDich) rows.push(['Mục đích:', p.mucDich]);
+    rows.push([]); // blank
+
+    // Header
+    rows.push([
+      'STT','Tên hàng','Thông số','SL','ĐVT',
+      'Đơn giá '+nccNames[0], 'Thành tiền '+nccNames[0],
+      'Đơn giá '+nccNames[1], 'Thành tiền '+nccNames[1],
+      'Đơn giá '+nccNames[2], 'Thành tiền '+nccNames[2],
+    ]);
+
+    // Items
+    items.forEach((it, ii) => {
+      const sl = it.soLuong||1;
+      rows.push([
+        ii+1, it.tenHang||'', it.thongSo||'', sl, it.donViTinh||'cái',
+        it.gia[0]||0, (it.gia[0]||0)*sl,
+        it.gia[1]||0, (it.gia[1]||0)*sl,
+        it.gia[2]||0, (it.gia[2]||0)*sl,
+      ]);
+    });
+
+    // Total row
+    const totals = [0,1,2].map(ni => items.reduce((s,it) => s+(it.gia[ni]||0)*(it.soLuong||1), 0));
+    rows.push(['','TỔNG CỘNG','','','','',totals[0],'',totals[1],'',totals[2]]);
+    rows.push([]);
+
+    // NCC info
+    const infoFields = [
+      ['Bảo hành',   'baoHanh'],
+      ['Khuyến mãi', 'khuyenMai'],
+      ['Thanh toán', 'hinhThucTT'],
+      ['Giao hàng',  'thoiGianGiao'],
+      ['Ghi chú NCC','ghiChu'],
+    ];
+    infoFields.forEach(([label, key]) => {
+      const vals = p.nhaCC.map(n => n[key]||'');
+      if(vals.some(v=>v)) rows.push(['',label,'','','','',vals[0],'',vals[1],'',vals[2]]);
+    });
+
+    // Append sheet (tên sheet giới hạn 31 ký tự, bỏ ký tự đặc biệt)
+    const sheetName = (p.tieuDe||'YC').replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      {wch:5},{wch:28},{wch:30},{wch:5},{wch:7},
+      {wch:16},{wch:18},{wch:16},{wch:18},{wch:16},{wch:18}
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  const fname = `MuaSam_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  toast('📊 Đã xuất: '+fname, 'ok');
 }
 
 // ── Tạo ĐNTT từ NCC cụ thể ───────────────────────────────────────────────────
