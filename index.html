@@ -9887,9 +9887,20 @@ function xacNhanDetailHTML(assetId){
   // Hiện "Chờ xác nhận" nếu: có lịch sử bàn giao HOẶC đang có người dùng
   const hasTx = (transfers[assetId]||[]).length > 0;
   const daBanGiao = a && (hasTx || a.nguoiDung);
+  // Nếu lần bàn giao mới nhất là thu hồi về kho → auto xác nhận
+  const latestTx = (transfers[assetId]||[])[0];
+  const isKhoReturn = latestTx && /^kho$/i.test((latestTx.to||'').trim());
 
   if(!rec){
     if(!daBanGiao) return ''; // chưa bàn giao lần nào → không hiện
+    if(isKhoReturn) return `
+    <div style="margin-top:14px;padding:12px 14px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:10px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">✅</span>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#065F46;">Đã thu hồi về kho</div>
+        <div style="font-size:11px;color:#047857;margin-top:2px;">Xác nhận tự động khi thu hồi về kho.</div>
+      </div>
+    </div>`;
     return `
     <div style="margin-top:14px;padding:12px 14px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:10px;">
@@ -11076,10 +11087,14 @@ function viewDetail(id){
                 </div>`;
               })()
             : (i===0
-                ? `<div style="margin-top:8px;padding:5px 10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                    <span style="color:#92400E;">⏳ Chờ xác nhận</span>
-                    <button class="btn" style="padding:1px 8px;font-size:10px;" onclick="msalSpLoadXacNhan().then(()=>viewDetail('${a.id}'))"><i class="ph ph-arrows-clockwise"></i></button>
-                  </div>`
+                ? (/^kho$/i.test((t.to||'').trim())
+                    ? `<div style="margin-top:8px;padding:5px 10px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:7px;font-size:11px;">
+                        <span style="color:#059669;font-weight:700;display:inline-flex;align-items:center;gap:4px;"><i class="ph ph-check-circle"></i> Đã thu hồi về kho</span>
+                      </div>`
+                    : `<div style="margin-top:8px;padding:5px 10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <span style="color:#92400E;">⏳ Chờ xác nhận</span>
+                        <button class="btn" style="padding:1px 8px;font-size:10px;" onclick="msalSpLoadXacNhan().then(()=>viewDetail('${a.id}'))"><i class="ph ph-arrows-clockwise"></i></button>
+                      </div>`)
                 : '');
           const isSupp = t.type === 'supplement';
           return isSupp ? `
