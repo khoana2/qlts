@@ -8008,7 +8008,7 @@ async function searchGraphUsers(query){
     const token = await _getGraphBearerToken();
     _graphTokenCache = token;
     const q=encodeURIComponent(query);
-    const url=`https://graph.microsoft.com/v1.0/users?$search="displayName:${q}"&$select=displayName,mail,jobTitle,department,userPrincipalName&$top=8&$orderby=displayName`;
+    const url=`https://graph.microsoft.com/v1.0/users?$search="displayName:${q} OR mail:${q} OR userPrincipalName:${q}"&$select=displayName,mail,jobTitle,department,userPrincipalName&$top=8&$orderby=displayName`;
     const res=await fetch(url,{headers:{Authorization:`Bearer ${token}`,'ConsistencyLevel':'eventual'}});
     if(!res.ok) return [];
     const data=await res.json();
