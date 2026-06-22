@@ -4364,6 +4364,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <input type="number" id="mh-ncc0-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="mhLiveUpdate()">
           </div>
           <div class="field" style="margin-bottom:5px;">
+            <label style="font-size:10px;color:var(--muted);">VAT % (để trống = không tính VAT)</label>
+            <input type="number" id="mh-ncc0-vat" class="finput" placeholder="VD: 8 hoặc 10" min="0" max="100" step="0.1" style="font-size:12px;" oninput="mhLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
             <input type="text" id="mh-ncc0-baohiem" class="finput" placeholder="Bảo hành (VD: 12 tháng tại nhà)" style="font-size:12px;">
           </div>
           <div class="field" style="margin-bottom:5px;">
@@ -4406,6 +4410,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <input type="number" id="mh-ncc1-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="mhLiveUpdate()">
           </div>
           <div class="field" style="margin-bottom:5px;">
+            <label style="font-size:10px;color:var(--muted);">VAT % (để trống = không tính VAT)</label>
+            <input type="number" id="mh-ncc1-vat" class="finput" placeholder="VD: 8 hoặc 10" min="0" max="100" step="0.1" style="font-size:12px;" oninput="mhLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
             <input type="text" id="mh-ncc1-baohiem" class="finput" placeholder="Bảo hành" style="font-size:12px;">
           </div>
           <div class="field" style="margin-bottom:5px;">
@@ -4446,6 +4454,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <div class="field" style="margin-bottom:5px;">
             <label style="font-size:10px;color:var(--muted);">Đơn giá (VNĐ)</label>
             <input type="number" id="mh-ncc2-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="mhLiveUpdate()">
+          </div>
+          <div class="field" style="margin-bottom:5px;">
+            <label style="font-size:10px;color:var(--muted);">VAT % (để trống = không tính VAT)</label>
+            <input type="number" id="mh-ncc2-vat" class="finput" placeholder="VD: 8 hoặc 10" min="0" max="100" step="0.1" style="font-size:12px;" oninput="mhLiveUpdate()">
           </div>
           <div class="field" style="margin-bottom:5px;">
             <input type="text" id="mh-ncc2-baohiem" class="finput" placeholder="Bảo hành" style="font-size:12px;">
@@ -23762,6 +23774,7 @@ function mhOpenDetail(id){
     sv(pfx+'-khuyenmai',b.khuyenMai||'');
     sv(pfx+'-thanhtoan',b.dieuKhoan||'');
     sv(pfx+'-giao',  b.tggh||'');
+    sv(pfx+'-vat',    b.vat||'');
     sv(pfx+'-fileurl',b.fileUrl||'');
     sv(pfx+'-ghichu',b.ghichu||'');
     // Sync hyperlink button
@@ -23788,39 +23801,60 @@ function mhSyncFileLink(inputEl, linkId){
 }
 
 function mhLiveUpdate(){
-  const prices = [0,1,2].map(i=>{
-    const v = parseFloat(document.getElementById('mh-ncc'+i+'-gia')?.value||0)||0;
-    const name = document.getElementById('mh-ncc'+i+'-ten')?.value?.trim();
-    return { i, v, hasName: !!name };
-  });
-  const validPrices = prices.filter(p=>p.v>0);
-  const minPrice = validPrices.length ? Math.min(...validPrices.map(p=>p.v)) : 0;
+  // Lấy số lượng từ yêu cầu gốc
+  const id = document.getElementById('mh-detail-id')?.value;
+  const d  = id ? _muaHangData.find(x=>x.id===id) : null;
+  const qty = d ? (parseFloat(d.soLuong)||1) : 1;
+  const fmtN = n => Number(Math.round(n)).toLocaleString('vi-VN');
 
-  prices.forEach(({i,v,hasName})=>{
+  const cols = [0,1,2].map(i=>{
+    const donGia = parseFloat(document.getElementById('mh-ncc'+i+'-gia')?.value)||0;
+    const vatPct = parseFloat(document.getElementById('mh-ncc'+i+'-vat')?.value)||0;
+    const subtotal = donGia * qty;
+    const vatAmt   = vatPct > 0 ? subtotal * vatPct / 100 : 0;
+    const total    = subtotal + vatAmt;
+    const name     = document.getElementById('mh-ncc'+i+'-ten')?.value?.trim();
+    return { i, donGia, vatPct, subtotal, vatAmt, total, hasName: !!name };
+  });
+
+  const validTotals = cols.filter(c=>c.total>0);
+  const minTotal = validTotals.length ? Math.min(...validTotals.map(c=>c.total)) : 0;
+
+  cols.forEach(({i,donGia,vatPct,subtotal,vatAmt,total,hasName})=>{
     const totalEl = document.getElementById('mh-total-'+i);
     const diffEl  = document.getElementById('mh-diff-'+i);
     const btnEl   = document.getElementById('mh-chon-btn-'+i);
     const bestTag = document.getElementById('mh-best-tag-'+i);
     const colEl   = document.getElementById('mh-col-'+i);
 
-    if(totalEl) totalEl.textContent = v>0 ? Number(v).toLocaleString('vi-VN')+' ₫' : '—';
+    if(totalEl){
+      if(total > 0){
+        let html = '';
+        if(qty > 1) html += `<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">${fmtN(donGia)} ₫ × ${qty} = ${fmtN(subtotal)} ₫</div>`;
+        if(vatPct > 0) html += `<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">VAT ${vatPct}%: +${fmtN(vatAmt)} ₫</div>`;
+        html += `<div style="font-size:15px;font-weight:700;color:var(--accent,#6366f1);">${fmtN(total)} ₫</div>`;
+        totalEl.innerHTML = html;
+      } else {
+        totalEl.innerHTML = '<span style="color:var(--muted)">—</span>';
+      }
+    }
 
-    const isBest = v>0 && v===minPrice && validPrices.length>0;
-    if(bestTag) bestTag.style.display = isBest?'':'none';
-    if(colEl){ colEl.classList.toggle('col-best',isBest); }
+    const isBest = total>0 && total===minTotal && validTotals.length>1;
+    if(bestTag) bestTag.style.display = isBest ? '' : 'none';
+    if(colEl) colEl.classList.toggle('col-best', isBest);
 
     if(diffEl){
-      if(v>0 && minPrice>0 && v!==minPrice){
-        const pct = Math.round((v-minPrice)/minPrice*100);
+      if(total>0 && minTotal>0 && total!==minTotal){
+        const pct = Math.round((total-minTotal)/minTotal*100);
         diffEl.textContent = '+'+pct+'% so với rẻ nhất';
-        diffEl.style.color='#ef4444';
-      } else { diffEl.textContent=''; }
+        diffEl.style.color = '#ef4444';
+      } else { diffEl.textContent = ''; }
     }
-    // Show "chọn" button only if has name or price
+
     if(btnEl){
       const badgeEl = document.getElementById('mh-chon-badge-'+i);
-      const alreadyChosen = badgeEl && badgeEl.style.display!=='none';
-      btnEl.style.display = (hasName||v>0) && !alreadyChosen ? '' : 'none';
+      const alreadyChosen = badgeEl && badgeEl.style.display !== 'none';
+      btnEl.style.display = (hasName || total>0) && !alreadyChosen ? '' : 'none';
     }
   });
 }
@@ -23834,6 +23868,7 @@ function mhSaveBaoGia(){
     model:     d.tenHang||'',   // lấy từ yêu cầu gốc, không nhập lại
     mota:      d.moTa||'',      // lấy từ yêu cầu gốc, không nhập lại
     gia:       parseFloat(gv('mh-ncc'+i+'-gia'))||0,
+    vat:       parseFloat(gv('mh-ncc'+i+'-vat'))||0,
     baoHanh:   gv('mh-ncc'+i+'-baohiem'),
     khuyenMai: gv('mh-ncc'+i+'-khuyenmai'),
     dieuKhoan: gv('mh-ncc'+i+'-thanhtoan'),
@@ -23859,6 +23894,7 @@ function mhChonNCC(colIdx){
     ncc:       gv('mh-ncc'+i+'-ten'),
     model:     d.tenHang||'',
     mota:      d.moTa||'',
+    vat:       parseFloat(gv('mh-ncc'+i+'-vat'))||0,
     gia:       parseFloat(gv('mh-ncc'+i+'-gia'))||0,
     baoHanh:   gv('mh-ncc'+i+'-baohiem'),
     khuyenMai: gv('mh-ncc'+i+'-khuyenmai'),
