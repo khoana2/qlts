@@ -4337,8 +4337,11 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   display:none;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.35);
   font-size:13px;white-space:nowrap;animation:slideUp .2s ease;">
   <span id="mh-float-count" style="font-weight:700;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;"></span>
-  <button onclick="mhPrintSelectedMatrix()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
-    <i class="ph ph-printer"></i> In bảng báo giá
+  <button onclick="mhOpenSplit()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+    <i class="ph ph-arrows-split"></i> Phân chia đặt hàng
+  </button>
+  <button onclick="mhPrintSelectedMatrix()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;">
+    <i class="ph ph-printer"></i> In so sánh
   </button>
   <button onclick="mhClearSelected()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">
     ✕ Bỏ chọn
@@ -4347,6 +4350,61 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 <style>
 @keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(12px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 </style>
+
+<!-- Modal Phân chia đặt hàng theo NCC -->
+<div class="modal-backdrop" id="modal-mh-split" style="display:none;">
+  <div class="modal" style="max-width:98vw;width:1200px;max-height:96vh;display:flex;flex-direction:column;">
+    <div class="modal-head">
+      <div>
+        <div style="font-size:14px;font-weight:700;"><i class="ph ph-arrows-split"></i> Phân chia đặt hàng theo NCC</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Click vào ô giá để chọn NCC cho từng mặt hàng</div>
+      </div>
+      <button class="btn icon-only" onclick="closeModal('modal-mh-split')" style="border:none;font-size:18px;">✕</button>
+    </div>
+
+    <div class="modal-body" style="flex:1;overflow:hidden;display:flex;gap:0;padding:0;">
+      <!-- Ma trận so sánh (left, scrollable) -->
+      <div style="flex:1;overflow:auto;padding:14px 16px;border-right:1px solid var(--border);">
+        <!-- Legend -->
+        <div style="display:flex;gap:14px;align-items:center;margin-bottom:10px;font-size:11px;flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:5px;">
+            <span style="width:14px;height:14px;background:#C0DD97;border-radius:3px;display:inline-block;"></span> Đã chọn mua
+          </span>
+          <span style="display:flex;align-items:center;gap:5px;">
+            <span style="width:14px;height:14px;background:#FFF9C4;border-radius:3px;border:1px solid #F9A825;display:inline-block;"></span> Rẻ nhất (chưa chọn)
+          </span>
+          <span style="display:flex;align-items:center;gap:5px;">
+            <span style="width:14px;height:14px;background:var(--bg2,#f8fafc);border-radius:3px;border:1px dashed #ccc;display:inline-block;"></span> Chưa báo giá
+          </span>
+          <button class="btn btn-icon-ph" style="margin-left:auto;font-size:11px;padding:3px 10px;background:#EAF3DE;color:#27500A;border-color:#86EFAC;" onclick="mhSplitAutoSelect()">
+            <i class="ph ph-magic-wand"></i> Tự động chọn rẻ nhất
+          </button>
+          <button class="btn btn-icon-ph" style="font-size:11px;padding:3px 10px;" onclick="mhSplitClearAll()">
+            <i class="ph ph-x-circle"></i> Bỏ chọn tất cả
+          </button>
+        </div>
+        <div id="mh-split-matrix"></div>
+      </div>
+
+      <!-- Panel tổng hợp theo NCC (right, fixed width) -->
+      <div style="width:260px;flex-shrink:0;overflow-y:auto;padding:14px 14px;background:var(--surface2,#f8fafc);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;">
+          <i class="ph ph-stack"></i> Tổng hợp đặt hàng
+        </div>
+        <div id="mh-split-summary"></div>
+      </div>
+    </div>
+
+    <div class="modal-foot" style="justify-content:space-between;">
+      <button class="btn" onclick="closeModal('modal-mh-split')">Đóng</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-icon-ph" onclick="mhPrintSplit()" style="background:#6366f1;color:#fff;border-color:#6366f1;">
+          <i class="ph ph-printer"></i> In đơn đặt hàng
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Modal Import Excel Mua Hàng -->
 <div class="modal-backdrop" id="modal-mh-import" style="display:none;">
@@ -9672,6 +9730,8 @@ document.addEventListener('DOMContentLoaded', function(){
   // Form Sửa Chữa: Người dùng khi hỏng & Bàn giao sau SC
   _empAutocomplete(document.getElementById('rep-nguoi-hong'), {});
   _empAutocomplete(document.getElementById('rep-nguoi-nhan'), {});
+  // HCQT: Mua hàng — tải lịch sử NCC từ localStorage
+  mhLoadNccHistory();
   // HCQT: Form Mua hàng — Người yêu cầu → tự điền Phòng ban
   _empAutocomplete(document.getElementById('mh-f-nguoiYC'),{
     deptField:'mh-f-phongBan'
@@ -11564,7 +11624,7 @@ function closeModal(id){
 const _FORM_MODALS = new Set([
   'modal-form', 'modal-transfer', 'modal-license', 'modal-dntt-form',
   'modal-import', 'modal-xfer-company', 'modal-supplement',
-  'modal-procurement', 'modal-mh-form', 'modal-mh-detail', 'modal-mh-import',
+  'modal-procurement', 'modal-mh-form', 'modal-mh-detail', 'modal-mh-import', 'modal-mh-split',
 ]);
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')){
@@ -23461,6 +23521,66 @@ const MH_STORE_KEY = 'hcqt_muahang_v1';
 let _muaHangData = [];
 let _mhNccCount  = 3;    // số cột NCC hiện tại trong modal so sánh báo giá
 let _mhSelected  = new Set(); // IDs đang được tick checkbox để in
+let _mhSplitMap  = new Map(); // itemId → nccName: NCC được chọn cho từng mặt hàng
+let _mhNccHistory = [];       // danh sách NCC đã nhập, lưu localStorage
+
+const _MH_NCC_KEY = 'qlts_ncc_history';
+
+function mhLoadNccHistory(){
+  try{
+    const raw = localStorage.getItem(_MH_NCC_KEY);
+    _mhNccHistory = raw ? JSON.parse(raw) : [];
+    if(!Array.isArray(_mhNccHistory)) _mhNccHistory = [];
+  }catch(e){ _mhNccHistory = []; }
+}
+function mhPersistNccHistory(){
+  try{ localStorage.setItem(_MH_NCC_KEY, JSON.stringify(_mhNccHistory)); }catch(e){}
+}
+function mhAddNccToHistory(name){
+  name = (name||'').trim();
+  if(name.length < 2) return;
+  _mhNccHistory = _mhNccHistory.filter(n => n.toLowerCase() !== name.toLowerCase());
+  _mhNccHistory.unshift(name);
+  if(_mhNccHistory.length > 60) _mhNccHistory.length = 60;
+  mhPersistNccHistory();
+}
+function mhRemoveNccFromHistory(name){
+  _mhNccHistory = _mhNccHistory.filter(n => n !== name);
+  mhPersistNccHistory();
+}
+function mhShowNccDrop(input, idx){
+  const drop = document.getElementById('mh-ncc-drop-'+idx); if(!drop) return;
+  const q = (input.value||'').trim().toLowerCase();
+  const matches = q
+    ? _mhNccHistory.filter(n => n.toLowerCase().includes(q))
+    : _mhNccHistory.slice(0,12);
+  if(!matches.length){ drop.style.display='none'; return; }
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  drop.innerHTML = matches.map(n=>{
+    const ne = esc(n), nq = n.replace(/'/g,"\\'");
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--bg2,#f3f4f6);transition:background .1s;"
+      onmousedown="mhPickNcc(${idx},'${nq}')"
+      onmouseover="this.style.background='var(--bg2,#f0f4f8)'" onmouseout="this.style.background=''">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><i class="ph ph-storefront" style="font-size:10px;color:var(--muted);margin-right:5px;"></i>${ne}</span>
+      <button onmousedown="event.stopPropagation();mhDeleteNccHistory('${nq}',${idx})"
+        style="background:none;border:none;cursor:pointer;color:#aaa;font-size:10px;padding:0 2px;flex-shrink:0;" title="Xóa">✕</button>
+    </div>`;
+  }).join('');
+  drop.style.display = 'block';
+}
+function mhHideNccDrop(idx){
+  const d = document.getElementById('mh-ncc-drop-'+idx); if(d) d.style.display='none';
+}
+function mhPickNcc(idx, name){
+  const inp = document.getElementById('mh-ncc'+idx+'-ten');
+  if(inp){ inp.value=name; mhLiveUpdate(); }
+  mhHideNccDrop(idx);
+}
+function mhDeleteNccHistory(name, idx){
+  mhRemoveNccFromHistory(name);
+  const inp = document.getElementById('mh-ncc'+idx+'-ten');
+  if(inp) mhShowNccDrop(inp, idx);
+}
 
 function mhSave(){ try{ localStorage.setItem(MH_STORE_KEY, JSON.stringify(_muaHangData)); }catch(e){} }
 function mhLoad(){ try{ const d=localStorage.getItem(MH_STORE_KEY); if(d) _muaHangData=JSON.parse(d); }catch(e){} }
@@ -23726,6 +23846,359 @@ function mhSaveForm(){
 
 // ── So sánh báo giá 3 NCC ──────────────────────────────────────
 // ── In bảng so sánh báo giá (mua hàng HCQT) ─────────────────────────────────
+// ── Phân chia đặt hàng theo NCC ────────────────────────────────
+function mhOpenSplit(){
+  if(!_mhSelected.size){ toast('Chưa chọn mục nào','warn'); return; }
+
+  // Khởi tạo _mhSplitMap từ isChon đã lưu
+  _mhSplitMap.clear();
+  [..._mhSelected].forEach(id=>{
+    const d = _muaHangData.find(x=>x.id===id); if(!d) return;
+    const chosen = (d.baoGia||[]).find(b=>b.isChon);
+    if(chosen?.ncc) _mhSplitMap.set(id, chosen.ncc.trim());
+  });
+
+  mhRenderSplitMatrix();
+  mhRenderSplitSummary();
+  openModal('modal-mh-split');
+}
+
+function _mhSplitItems(){
+  return [..._mhSelected]
+    .map(id=>_muaHangData.find(x=>x.id===id))
+    .filter(Boolean);
+}
+
+function _mhSplitNccs(items){
+  const seen = new Map();
+  items.forEach(d=>(d.baoGia||[]).forEach(b=>{
+    const n=(b.ncc||'').trim(); if(n&&!seen.has(n)) seen.set(n,seen.size);
+  }));
+  return [...seen.keys()];
+}
+
+function mhRenderSplitMatrix(){
+  const wrap = document.getElementById('mh-split-matrix'); if(!wrap) return;
+  const items   = _mhSplitItems();
+  const nccNames = _mhSplitNccs(items);
+  const fmt = n => n>0 ? Number(Math.round(n)).toLocaleString('vi-VN') : '';
+  const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const thNcc = nccNames.map(n=>`<th style="padding:8px 12px;text-align:center;background:#1e3a5f;color:#fff;font-size:11px;min-width:130px;white-space:nowrap;">${esc(n)}</th>`).join('');
+
+  const rows = items.map((d,idx)=>{
+    const qty = parseFloat(d.soLuong)||1;
+    const bg  = d.baoGia||[];
+    const prices = nccNames.map(name=>{
+      const b = bg.find(x=>(x.ncc||'').trim()===name);
+      if(!b||!b.gia) return 0;
+      const sub = b.gia*qty, vat = b.vat>0?sub*b.vat/100:0;
+      return sub+vat;
+    });
+    const validPrices = prices.filter(p=>p>0);
+    const minPrice    = validPrices.length ? Math.min(...validPrices) : 0;
+    const selectedNcc = _mhSplitMap.get(d.id)||null;
+
+    const cells = prices.map((p,i)=>{
+      const ncc = nccNames[i];
+      const isSelected = selectedNcc === ncc;
+      const isCheapest = p>0 && p===minPrice && validPrices.length>0;
+      const hasPrice = p>0;
+
+      let bg2='', textColor='', border='', cursor='default', title='';
+      if(isSelected){
+        bg2='#C0DD97'; textColor='#1a5c2a'; border='2px solid #27500A'; cursor='pointer';
+        title = 'Đã chọn — click để bỏ chọn';
+      } else if(isCheapest && hasPrice){
+        bg2='#FFF9C4'; textColor='#5c3a00'; border='1px dashed #F9A825'; cursor='pointer';
+        title = 'Rẻ nhất — click để chọn';
+      } else if(hasPrice){
+        bg2=''; textColor=''; border='1px solid transparent'; cursor='pointer';
+        title = 'Click để chọn';
+      } else {
+        bg2='var(--bg2,#f8fafc)'; textColor='var(--muted)'; border='1px dashed #ddd'; cursor='default';
+        title = 'Chưa có báo giá';
+      }
+
+      const onclick = hasPrice
+        ? `onclick="mhSplitSelect('${d.id}','${ncc.replace(/'/g,"\\'")}'${isSelected?',true':''})"` : '';
+
+      return `<td style="padding:6px 10px;text-align:right;background:${bg2};color:${textColor};border:${border};border-radius:5px;${cursor!=='default'?'cursor:pointer;':''}"
+        ${onclick} title="${esc(title)}">
+        ${hasPrice ? `<div style="font-size:12px;font-weight:${isSelected?'700':'500'};">${fmt(p)} ₫</div>
+          ${isSelected?'<div style="font-size:9px;font-weight:600;margin-top:1px;">✓ ĐÃ CHỌN</div>':''}
+          ${isCheapest&&!isSelected?'<div style="font-size:9px;color:#b45309;">↓ rẻ nhất</div>':''}` : '<span style="opacity:.35;">—</span>'}
+      </td>`;
+    }).join('');
+
+    const evenRow = idx%2===1 ? 'background:var(--bg2,#f8fafc)' : '';
+    return `<tr style="${evenRow}">
+      <td style="padding:7px 10px;font-size:11px;font-weight:600;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${esc(d.tenHang)}">${idx+1}. ${esc(d.tenHang||'—')}</td>
+      <td style="padding:7px 8px;text-align:center;font-size:11px;color:var(--muted);white-space:nowrap;">${d.soLuong||1} ${esc(d.donViTinh||'')}</td>
+      ${cells}
+      <td style="padding:7px 8px;text-align:center;font-size:11px;">
+        ${selectedNcc
+          ? `<span style="background:#EAF3DE;color:#27500A;border-radius:20px;padding:2px 8px;font-size:10px;white-space:nowrap;">✓ ${esc(selectedNcc)}</span>`
+          : `<span style="background:#FEF2F2;color:#991b1b;border-radius:20px;padding:2px 8px;font-size:10px;">Chưa chọn</span>`}
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<div style="overflow-x:auto;">
+  <table style="width:100%;border-collapse:separate;border-spacing:0 3px;font-size:12px;">
+    <thead><tr style="border-bottom:2px solid var(--border);">
+      <th style="padding:8px 10px;text-align:left;font-size:11px;min-width:200px;background:#1e3a5f;color:#fff;">Mặt hàng</th>
+      <th style="padding:8px 8px;text-align:center;font-size:11px;white-space:nowrap;background:#1e3a5f;color:#fff;">SL</th>
+      ${thNcc}
+      <th style="padding:8px 10px;text-align:center;font-size:11px;white-space:nowrap;background:#1e3a5f;color:#fff;">Đã chọn</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function mhSplitSelect(itemId, nccName, toggle=false){
+  if(toggle || _mhSplitMap.get(itemId)===nccName){
+    _mhSplitMap.delete(itemId); // bỏ chọn nếu click lại
+  } else {
+    _mhSplitMap.set(itemId, nccName);
+  }
+  mhRenderSplitMatrix();
+  mhRenderSplitSummary();
+}
+
+function mhSplitAutoSelect(){
+  const items = _mhSplitItems();
+  items.forEach(d=>{
+    const qty = parseFloat(d.soLuong)||1;
+    const bg  = (d.baoGia||[]).filter(b=>b.ncc&&b.gia);
+    if(!bg.length) return;
+    let best = null, bestTotal = Infinity;
+    bg.forEach(b=>{
+      const sub = b.gia*qty, vat = b.vat>0?sub*b.vat/100:0;
+      const total = sub+vat;
+      if(total < bestTotal){ bestTotal=total; best=b; }
+    });
+    if(best) _mhSplitMap.set(d.id, best.ncc.trim());
+  });
+  mhRenderSplitMatrix();
+  mhRenderSplitSummary();
+  toast('✅ Đã tự động chọn giá rẻ nhất cho '+items.length+' mặt hàng','ok');
+}
+
+function mhSplitClearAll(){
+  _mhSplitMap.clear();
+  mhRenderSplitMatrix();
+  mhRenderSplitSummary();
+}
+
+function mhRenderSplitSummary(){
+  const wrap = document.getElementById('mh-split-summary'); if(!wrap) return;
+  const fmt = n => n>0 ? Number(Math.round(n)).toLocaleString('vi-VN')+' ₫' : '—';
+  const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const items = _mhSplitItems();
+
+  // Nhóm theo NCC
+  const groups = new Map(); // nccName → [{item, price}]
+  let grandTotal = 0;
+  let unchosenCount = 0;
+
+  items.forEach(d=>{
+    const nccName = _mhSplitMap.get(d.id);
+    if(!nccName){ unchosenCount++; return; }
+    const qty = parseFloat(d.soLuong)||1;
+    const b = (d.baoGia||[]).find(x=>(x.ncc||'').trim()===nccName);
+    const sub  = b ? b.gia*qty : 0;
+    const vat  = (b&&b.vat>0) ? sub*b.vat/100 : 0;
+    const total = sub+vat;
+    grandTotal += total;
+    if(!groups.has(nccName)) groups.set(nccName,[]);
+    groups.get(nccName).push({d, total});
+  });
+
+  let html = '';
+
+  if(!groups.size && !unchosenCount){
+    html = `<div style="text-align:center;padding:24px 8px;color:var(--muted);font-size:11px;">Chưa chọn NCC nào</div>`;
+  } else {
+    [...groups.entries()].forEach(([ncc, entries])=>{
+      const nccTotal = entries.reduce((s,e)=>s+e.total,0);
+      html += `<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;background:var(--card-bg,#fff);">
+        <div style="padding:8px 10px;background:#EEF2FF;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;font-weight:700;color:#4338CA;"><i class="ph ph-storefront"></i> ${esc(ncc)}</span>
+          <span style="font-size:10px;background:#C7D2FE;color:#3730A3;border-radius:12px;padding:1px 7px;">${entries.length} mặt hàng</span>
+        </div>
+        <div style="padding:6px 10px;">
+          ${entries.map(({d,total})=>`
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;border-bottom:1px dashed var(--border);gap:6px;">
+            <div style="font-size:10px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="${esc(d.tenHang)}">${esc(d.tenHang||'—')}</div>
+            <div style="font-size:10px;font-weight:600;white-space:nowrap;color:#1e3a5f;">${fmt(total)}</div>
+          </div>`).join('')}
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;padding-top:4px;">
+            <span style="font-size:10px;font-weight:700;color:var(--muted);">Tổng</span>
+            <span style="font-size:12px;font-weight:800;color:#4338CA;">${fmt(nccTotal)}</span>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    if(unchosenCount){
+      html += `<div style="text-align:center;padding:8px;background:#FEF2F2;border-radius:8px;font-size:11px;color:#991b1b;margin-bottom:8px;">
+        ⚠️ ${unchosenCount} mặt hàng chưa chọn NCC
+      </div>`;
+    }
+
+    html += `<div style="border-top:2px solid var(--border);padding:8px 4px;display:flex;justify-content:space-between;align-items:baseline;">
+      <span style="font-size:11px;font-weight:700;">Tổng đặt hàng</span>
+      <span style="font-size:14px;font-weight:800;color:#27500A;">${fmt(grandTotal)}</span>
+    </div>`;
+  }
+
+  wrap.innerHTML = html;
+}
+
+function mhPrintSplit(){
+  const items = _mhSplitItems();
+  const fmt  = n => n>0 ? Number(Math.round(n)).toLocaleString('vi-VN')+' ₫' : '—';
+  const esc  = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const today = new Date().toLocaleDateString('vi-VN');
+  const nccNames = _mhSplitNccs(items);
+
+  // Tính giá mỗi ô
+  const getPrice = (d, nccName)=>{
+    const qty = parseFloat(d.soLuong)||1;
+    const b = (d.baoGia||[]).find(x=>(x.ncc||'').trim()===nccName);
+    if(!b||!b.gia) return 0;
+    const sub = b.gia*qty, vat = b.vat>0?sub*b.vat/100:0;
+    return sub+vat;
+  };
+
+  // Ma trận so sánh
+  const thNcc = nccNames.map(n=>`<th style="text-align:right;background:#1e3a5f;color:#fff;padding:8px 10px;font-size:11px;min-width:120px;">${esc(n)}</th>`).join('');
+  const nccTotals = new Array(nccNames.length).fill(0);
+
+  const matrixRows = items.map((d,idx)=>{
+    const selectedNcc = _mhSplitMap.get(d.id)||null;
+    const prices = nccNames.map(n=>getPrice(d,n));
+    const validP = prices.filter(p=>p>0);
+    const minP   = validP.length ? Math.min(...validP) : 0;
+    prices.forEach((p,i)=>{ nccTotals[i]+=p; });
+
+    const cells = prices.map((p,i)=>{
+      const ncc = nccNames[i];
+      const isSelected = selectedNcc===ncc;
+      const isCheapest = p>0 && p===minP && validP.length>1;
+      let style = 'text-align:right;padding:6px 10px;font-size:11px;';
+      if(isSelected) style += 'background:#C0DD97;font-weight:700;';
+      else if(isCheapest) style += 'background:#FFF9C4;';
+      return `<td style="${style}">${p>0 ? fmt(p)+(isSelected?' ✓':'') : '—'}</td>`;
+    });
+
+    return `<tr style="${idx%2===1?'background:#fafafa':''}">
+      <td style="padding:6px 8px;text-align:center;color:#888;font-size:10px;">${idx+1}</td>
+      <td style="padding:6px 10px;font-weight:600;font-size:11px;">${esc(d.tenHang||'—')}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:10px;">${d.soLuong||1} ${esc(d.donViTinh||'')}</td>
+      ${cells.join('')}
+      <td style="padding:6px 10px;font-size:10px;text-align:center;">
+        ${selectedNcc ? `<span style="background:#EAF3DE;color:#166534;padding:2px 7px;border-radius:12px;font-size:10px;font-weight:700;">${esc(selectedNcc)}</span>` : '<span style="color:#dc2626;">Chưa chọn</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+
+  const totalRow = `<tr style="background:#f0f4f8;font-weight:700;">
+    <td colspan="3" style="padding:7px 10px;text-align:right;font-size:12px;border-top:2px solid #1e3a5f;">TỔNG CỘNG</td>
+    ${nccTotals.map(t=>`<td style="padding:7px 10px;text-align:right;font-size:12px;border-top:2px solid #1e3a5f;">${fmt(t)}</td>`).join('')}
+    <td style="border-top:2px solid #1e3a5f;"></td>
+  </tr>`;
+
+  // Phần tổng hợp theo NCC
+  const groups = new Map();
+  let grandTotal = 0;
+  items.forEach(d=>{
+    const nccName = _mhSplitMap.get(d.id); if(!nccName) return;
+    const p = getPrice(d, nccName);
+    grandTotal += p;
+    if(!groups.has(nccName)) groups.set(nccName,[]);
+    groups.get(nccName).push({d,p});
+  });
+
+  let summaryHtml = '';
+  [...groups.entries()].forEach(([ncc,entries])=>{
+    const nccTotal = entries.reduce((s,e)=>s+e.p,0);
+    summaryHtml += `<div style="margin-bottom:16px;break-inside:avoid;">
+      <div style="font-size:13px;font-weight:700;background:#1e3a5f;color:#fff;padding:7px 12px;border-radius:6px 6px 0 0;">${esc(ncc)}</div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #ccc;border-top:none;">
+        <thead><tr style="background:#f0f4f8;font-size:11px;">
+          <th style="padding:5px 10px;text-align:left;border:1px solid #ddd;">STT</th>
+          <th style="padding:5px 10px;text-align:left;border:1px solid #ddd;">Tên hàng</th>
+          <th style="padding:5px 10px;text-align:center;border:1px solid #ddd;">SL</th>
+          <th style="padding:5px 10px;text-align:right;border:1px solid #ddd;">Thành tiền</th>
+        </tr></thead>
+        <tbody>
+          ${entries.map(({d,p},i)=>`<tr>
+            <td style="padding:5px 10px;border:1px solid #ddd;font-size:11px;">${i+1}</td>
+            <td style="padding:5px 10px;border:1px solid #ddd;font-size:11px;font-weight:600;">${esc(d.tenHang||'')}</td>
+            <td style="padding:5px 10px;border:1px solid #ddd;text-align:center;font-size:11px;">${d.soLuong||1} ${esc(d.donViTinh||'')}</td>
+            <td style="padding:5px 10px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:700;">${fmt(p)}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot><tr style="background:#E8FDF2;font-weight:700;">
+          <td colspan="3" style="padding:6px 10px;border:1px solid #ccc;text-align:right;font-size:12px;">Tổng đơn hàng ${esc(ncc)}</td>
+          <td style="padding:6px 10px;border:1px solid #ccc;text-align:right;font-size:13px;color:#166534;">${fmt(nccTotal)}</td>
+        </tr></tfoot>
+      </table>
+    </div>`;
+  });
+
+  const fullHtml = `<!DOCTYPE html><html lang="vi"><head>
+  <meta charset="UTF-8"><title>Phân chia đặt hàng theo NCC</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;padding:20px 28px;}
+    h1{font-size:17px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+    h2{font-size:14px;font-weight:700;margin:24px 0 10px;padding-bottom:4px;border-bottom:2px solid #1e3a5f;}
+    .sub{text-align:center;font-size:11px;color:#555;margin-bottom:18px;}
+    table{width:100%;border-collapse:collapse;}
+    th,td{border:1px solid #ccc;vertical-align:middle;}
+    .sig{display:flex;margin-top:32px;}
+    .sig-box{flex:1;text-align:center;font-size:11px;padding:8px 4px;border-top:1px solid #aaa;}
+    @media print{@page{size:A3 landscape;margin:12mm;} .page-break{page-break-before:always;} body{padding:0;}}
+  </style></head><body>
+  <h1>Bảng phân chia đặt hàng theo NCC</h1>
+  <div class="sub">Ngày in: ${today} &nbsp;·&nbsp; Giá đã bao gồm VAT &nbsp;·&nbsp; Ô xanh = đã chọn mua &nbsp;·&nbsp; Ô vàng = rẻ nhất</div>
+
+  <h2>1. Bảng so sánh báo giá</h2>
+  <table>
+    <thead><tr>
+      <th style="padding:7px 8px;text-align:center;background:#1e3a5f;color:#fff;width:32px;">STT</th>
+      <th style="padding:7px 10px;text-align:left;background:#1e3a5f;color:#fff;min-width:160px;">Tên mặt hàng</th>
+      <th style="padding:7px 8px;text-align:center;background:#1e3a5f;color:#fff;width:60px;">SL</th>
+      ${thNcc}
+      <th style="padding:7px 10px;text-align:center;background:#1e3a5f;color:#fff;white-space:nowrap;">Chọn mua từ</th>
+    </tr></thead>
+    <tbody>${matrixRows}${totalRow}</tbody>
+  </table>
+
+  <div class="page-break"></div>
+  <h2>2. Tổng hợp đặt hàng theo từng NCC</h2>
+  ${summaryHtml || '<p style="color:#888;font-size:12px;">Chưa có mặt hàng nào được chọn NCC.</p>'}
+  <div style="margin-top:12px;text-align:right;font-size:14px;font-weight:800;border-top:2px solid #1e3a5f;padding-top:8px;">
+    Tổng cộng tất cả NCC: ${fmt(grandTotal)}
+  </div>
+
+  <div class="sig">
+    <div class="sig-box"><b>Người yêu cầu</b><br><br><br>(Ký & ghi rõ họ tên)</div>
+    <div class="sig-box"><b>Người mua hàng</b><br><br><br>(Ký & ghi rõ họ tên)</div>
+    <div class="sig-box"><b>Người phê duyệt</b><br><br><br>(Ký & ghi rõ họ tên)</div>
+  </div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const w = window.open('','_blank','width=1200,height=800');
+  if(!w){ toast('⚠️ Trình duyệt chặn popup!','bad'); return; }
+  w.document.open(); w.document.write(fullHtml); w.document.close();
+}
+// ── End phân chia đặt hàng ─────────────────────────────────────
+
 // ── Checkbox selection & multi-print ───────────────────────────
 function mhToggleCheck(id, checked){
   if(checked) _mhSelected.add(id); else _mhSelected.delete(id);
@@ -23950,8 +24423,17 @@ function mhBuildNccCol(i, totalCount){
         <span class="best-tag" id="mh-best-tag-${i}" style="display:none;">Rẻ nhất</span>
       </span>${rmBtn}
     </div>
-    <div class="field" style="margin-bottom:5px;">
-      <input type="text" id="mh-ncc${i}-ten" class="finput" placeholder="Tên nhà cung cấp" style="font-size:12px;font-weight:600;" oninput="mhLiveUpdate()">
+    <div class="field" style="margin-bottom:5px;position:relative;">
+      <input type="text" id="mh-ncc${i}-ten" class="finput" placeholder="Tên nhà cung cấp"
+        style="font-size:12px;font-weight:600;" autocomplete="off"
+        oninput="mhLiveUpdate();mhShowNccDrop(this,${i})"
+        onfocus="mhShowNccDrop(this,${i})"
+        onblur="setTimeout(()=>mhHideNccDrop(${i}),160)">
+      <div id="mh-ncc-drop-${i}"
+        style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;
+          background:var(--card-bg,#fff);border:1px solid var(--border);border-radius:8px;
+          box-shadow:0 6px 20px rgba(0,0,0,.13);z-index:9999;max-height:200px;overflow-y:auto;font-size:12px;">
+      </div>
     </div>
     <div class="field" style="margin-bottom:5px;">
       <label style="font-size:10px;color:var(--muted);">Đơn giá (VNĐ)</label>
@@ -24405,6 +24887,8 @@ function mhSaveBaoGia(){
     isChon: (()=>{ const b=document.getElementById('mh-chon-badge-'+i); return b&&b.style.display!=='none'; })(),
     createdAt: (d.baoGia&&d.baoGia[i]?.createdAt)||new Date().toISOString()
   })).filter(b=>b.ncc||b.gia);
+  // Lưu tên NCC vào history autocomplete
+  d.baoGia.forEach(b=>{ if(b.ncc) mhAddNccToHistory(b.ncc); });
   mhSave();
   closeModal('modal-mh-detail');
   hcqtRenderMuaHang();
