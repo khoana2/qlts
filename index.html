@@ -4331,6 +4331,23 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 </div><!-- end .app -->
 
 <!-- ══════════════ MODAL: MUA HÀNG — SO SÁNH BÁO GIÁ 3 NCC ══════════════ -->
+<!-- Floating action bar — xuất hiện khi có checkbox được chọn trong mua hàng -->
+<div id="mh-float-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;
+  background:#1e293b;color:#fff;border-radius:14px;padding:10px 18px;
+  display:none;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.35);
+  font-size:13px;white-space:nowrap;animation:slideUp .2s ease;">
+  <span id="mh-float-count" style="font-weight:700;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;"></span>
+  <button onclick="mhPrintSelectedMatrix()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+    <i class="ph ph-printer"></i> In bảng báo giá
+  </button>
+  <button onclick="mhClearSelected()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">
+    ✕ Bỏ chọn
+  </button>
+</div>
+<style>
+@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(12px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+</style>
+
 <!-- Modal Import Excel Mua Hàng -->
 <div class="modal-backdrop" id="modal-mh-import" style="display:none;">
   <div class="modal" style="max-width:780px;width:96vw;max-height:92vh;display:flex;flex-direction:column;">
@@ -23442,7 +23459,8 @@ document.addEventListener('keydown',e=>{
 // ═══════════════════════════════════════════════════════════════════
 const MH_STORE_KEY = 'hcqt_muahang_v1';
 let _muaHangData = [];
-let _mhNccCount  = 3; // số cột NCC hiện tại trong modal so sánh báo giá
+let _mhNccCount  = 3;    // số cột NCC hiện tại trong modal so sánh báo giá
+let _mhSelected  = new Set(); // IDs đang được tick checkbox để in
 
 function mhSave(){ try{ localStorage.setItem(MH_STORE_KEY, JSON.stringify(_muaHangData)); }catch(e){} }
 function mhLoad(){ try{ const d=localStorage.getItem(MH_STORE_KEY); if(d) _muaHangData=JSON.parse(d); }catch(e){} }
@@ -23544,9 +23562,16 @@ function _mhRenderTable(){
     return;
   }
 
+  const allIds = list.map(d=>d.id);
+  const allChecked = allIds.length>0 && allIds.every(id=>_mhSelected.has(id));
+
   wrap.innerHTML=`<div style="overflow-x:auto">
   <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:12px;overflow:hidden;">
     <thead><tr style="background:var(--surface2,#f8fafc);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border,#e2e8f0);">
+      <th style="padding:9px 10px;text-align:center;width:36px;">
+        <input type="checkbox" id="mh-chk-all" ${allChecked?'checked':''} title="Chọn tất cả"
+          onchange="mhToggleAllCheck(this.checked,${JSON.stringify(allIds)})">
+      </th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;white-space:nowrap;">Mã YC</th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;">Ngày YC</th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;">Người yêu cầu</th>
@@ -23558,31 +23583,41 @@ function _mhRenderTable(){
       <th style="padding:9px 12px;text-align:center;font-weight:600;">Thao tác</th>
     </tr></thead>
     <tbody>
-    ${list.map(d=>`<tr style="border-top:1px solid var(--border,#e2e8f0);" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
-      <td style="padding:9px 12px;font-family:monospace;font-weight:700;color:#6366f1;white-space:nowrap;">${hcqtEsc(d.soYC||'—')}</td>
-      <td style="padding:9px 12px;white-space:nowrap;color:var(--muted);">${hcqtFmtDate(d.ngayYC)}</td>
-      <td style="padding:9px 12px;">
-        <div style="font-weight:600">${hcqtEsc(d.nguoiYC||'—')}</div>
-        <div style="font-size:11px;color:var(--muted)">${hcqtEsc(d.phongBan||'')}</div>
-      </td>
-      <td style="padding:9px 12px;max-width:220px;overflow:hidden;">
-        <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.tenHang||'')}">${hcqtEsc(d.tenHang||'—')}</div>
-        ${d.moTa?`<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.moTa)}">${hcqtEsc(d.moTa)}</div>`:''}
-      </td>
-      <td style="padding:9px 12px;text-align:right;">${d.soLuong||'—'} ${hcqtEsc(d.donViTinh||'')}</td>
-      <td style="padding:9px 12px;font-size:11px;">${hcqtEsc(d.ncc||'—')}</td>
-      <td style="padding:9px 12px;text-align:right;font-weight:600;color:#0369a1;">${mhFmt(d.giaUocTinh)}</td>
-      <td style="padding:9px 12px;text-align:center;">${mhBadge(d.trangThai)}</td>
-      <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
-        ${_mhNextActionBtn(d)}
-        <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE;margin-right:2px;" title="So sánh báo giá" onclick="mhOpenDetail('${d.id}')"><i class="ph ph-chart-bar"></i>${(d.baoGia&&d.baoGia.length)?` (${d.baoGia.length})`:''}</button>
-        <button class="btn btn-icon-ph" style="padding:3px 7px;font-size:11px;" title="Chỉnh sửa" onclick="mhOpenForm('${d.id}')"><i class="ph ph-pencil-simple"></i></button>
-        <button class="btn danger btn-icon-ph" style="padding:3px 7px;font-size:11px;" title="Xóa" onclick="mhDelete('${d.id}')"><i class="ph ph-trash"></i></button>
-      </td>
-    </tr>`).join('')}
+    ${list.map(d=>{
+      const chk = _mhSelected.has(d.id);
+      return `<tr style="border-top:1px solid var(--border,#e2e8f0);${chk?'background:#EEF2FF;':''}" id="mh-tr-${d.id}"
+        onmouseenter="if(!document.getElementById('mh-chk-${d.id}').checked)this.style.background='#f8fafc'"
+        onmouseleave="this.style.background=document.getElementById('mh-chk-${d.id}').checked?'#EEF2FF':''">
+        <td style="padding:9px 10px;text-align:center;">
+          <input type="checkbox" id="mh-chk-${d.id}" ${chk?'checked':''} onchange="mhToggleCheck('${d.id}',this.checked)">
+        </td>
+        <td style="padding:9px 12px;font-family:monospace;font-weight:700;color:#6366f1;white-space:nowrap;">${hcqtEsc(d.soYC||'—')}</td>
+        <td style="padding:9px 12px;white-space:nowrap;color:var(--muted);">${hcqtFmtDate(d.ngayYC)}</td>
+        <td style="padding:9px 12px;">
+          <div style="font-weight:600">${hcqtEsc(d.nguoiYC||'—')}</div>
+          <div style="font-size:11px;color:var(--muted)">${hcqtEsc(d.phongBan||'')}</div>
+        </td>
+        <td style="padding:9px 12px;max-width:220px;overflow:hidden;">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.tenHang||'')}">${hcqtEsc(d.tenHang||'—')}</div>
+          ${d.moTa?`<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.moTa)}">${hcqtEsc(d.moTa)}</div>`:''}
+        </td>
+        <td style="padding:9px 12px;text-align:right;">${d.soLuong||'—'} ${hcqtEsc(d.donViTinh||'')}</td>
+        <td style="padding:9px 12px;font-size:11px;">${hcqtEsc(d.ncc||'—')}</td>
+        <td style="padding:9px 12px;text-align:right;font-weight:600;color:#0369a1;">${mhFmt(d.giaUocTinh)}</td>
+        <td style="padding:9px 12px;text-align:center;">${mhBadge(d.trangThai)}</td>
+        <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
+          ${_mhNextActionBtn(d)}
+          <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE;margin-right:2px;" title="So sánh báo giá" onclick="mhOpenDetail('${d.id}')"><i class="ph ph-chart-bar"></i>${(d.baoGia&&d.baoGia.length)?` (${d.baoGia.length})`:''}</button>
+          <button class="btn btn-icon-ph" style="padding:3px 7px;font-size:11px;" title="Chỉnh sửa" onclick="mhOpenForm('${d.id}')"><i class="ph ph-pencil-simple"></i></button>
+          <button class="btn danger btn-icon-ph" style="padding:3px 7px;font-size:11px;" title="Xóa" onclick="mhDelete('${d.id}')"><i class="ph ph-trash"></i></button>
+        </td>
+      </tr>`;
+    }).join('')}
     </tbody>
   </table></div>
   <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:right;">${list.length} yêu cầu${list.length<_muaHangData.length?' (đang lọc từ '+_muaHangData.length+')':''}</div>`;
+
+  mhUpdateFloatBar();
 }
 
 function _mhNextActionBtn(d){
@@ -23691,6 +23726,179 @@ function mhSaveForm(){
 
 // ── So sánh báo giá 3 NCC ──────────────────────────────────────
 // ── In bảng so sánh báo giá (mua hàng HCQT) ─────────────────────────────────
+// ── Checkbox selection & multi-print ───────────────────────────
+function mhToggleCheck(id, checked){
+  if(checked) _mhSelected.add(id); else _mhSelected.delete(id);
+  const tr = document.getElementById('mh-tr-'+id);
+  if(tr) tr.style.background = checked ? '#EEF2FF' : '';
+  mhUpdateFloatBar();
+  // Cập nhật trạng thái checkbox "chọn tất cả"
+  const allChk = document.getElementById('mh-chk-all');
+  if(allChk){
+    const allTrs = document.querySelectorAll('[id^="mh-tr-"]');
+    const allChecked = [...allTrs].every(tr=> _mhSelected.has(tr.id.replace('mh-tr-','')));
+    allChk.checked = allChecked;
+    allChk.indeterminate = !allChecked && _mhSelected.size > 0;
+  }
+}
+
+function mhToggleAllCheck(checked, ids){
+  ids.forEach(id=>{ if(checked) _mhSelected.add(id); else _mhSelected.delete(id); });
+  ids.forEach(id=>{
+    const tr = document.getElementById('mh-tr-'+id);
+    if(tr) tr.style.background = checked ? '#EEF2FF' : '';
+  });
+  mhUpdateFloatBar();
+}
+
+function mhClearSelected(){
+  _mhSelected.clear();
+  mhUpdateFloatBar();
+  _mhRenderTable(); // re-render để bỏ highlight
+}
+
+function mhUpdateFloatBar(){
+  const bar = document.getElementById('mh-float-bar');
+  const cnt = document.getElementById('mh-float-count');
+  if(!bar) return;
+  if(_mhSelected.size === 0){
+    bar.style.display = 'none';
+  } else {
+    bar.style.display = 'flex';
+    if(cnt) cnt.textContent = _mhSelected.size + ' mục đã chọn';
+  }
+}
+
+function mhPrintSelectedMatrix(){
+  if(!_mhSelected.size){ toast('Chưa chọn mục nào để in','warn'); return; }
+
+  const items = [..._mhSelected]
+    .map(id => _muaHangData.find(x=>x.id===id))
+    .filter(Boolean);
+
+  if(!items.length){ toast('Không tìm thấy dữ liệu','warn'); return; }
+
+  const fmt  = n => n>0 ? Number(Math.round(n)).toLocaleString('vi-VN') : '';
+  const esc  = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const today = new Date().toLocaleDateString('vi-VN');
+
+  // Thu thập tên NCC duy nhất (giữ thứ tự xuất hiện đầu tiên)
+  const nccMap = new Map(); // nccName → index
+  items.forEach(d=>{
+    (d.baoGia||[]).forEach(b=>{
+      const name = (b.ncc||'').trim();
+      if(name && !nccMap.has(name)) nccMap.set(name, nccMap.size);
+    });
+  });
+  const nccNames = [...nccMap.keys()];
+
+  if(!nccNames.length){ toast('⚠️ Chưa có thông tin báo giá NCC nào để in','warn'); return; }
+
+  // Tính tổng mỗi NCC (dùng để TỔNG CỘNG dòng cuối)
+  const nccTotals = new Array(nccNames.length).fill(0);
+
+  // Build rows
+  const rows = items.map((d, idx)=>{
+    const qty = parseFloat(d.soLuong)||1;
+    const bg  = d.baoGia||[];
+
+    // Giá mỗi NCC cho item này (đã nhân SL + VAT)
+    const prices = nccNames.map(name=>{
+      const b = bg.find(x=>(x.ncc||'').trim()===name);
+      if(!b||!b.gia) return 0;
+      const sub = b.gia * qty;
+      const vat = b.vat>0 ? sub*b.vat/100 : 0;
+      return sub + vat;
+    });
+
+    const validPrices = prices.filter(p=>p>0);
+    const minPrice    = validPrices.length ? Math.min(...validPrices) : 0;
+
+    prices.forEach((p,i)=>{ nccTotals[i] += p; });
+
+    const cells = prices.map((p,i)=>{
+      const b = bg.find(x=>(x.ncc||'').trim()===nccNames[i]);
+      const isBest = p>0 && p===minPrice && validPrices.length>1;
+      const isChon = b?.isChon;
+      return `<td style="text-align:right;padding:6px 10px;font-size:11px;${isBest?'background:#FFF9C4;font-weight:700;':''}${isChon?'outline:2px solid #10b981;outline-offset:-2px;':''}">${p>0?fmt(p)+' ₫':'—'}</td>`;
+    });
+
+    const luuY = (d.ghiChu||'').trim();
+    return `<tr style="${idx%2===1?'background:#fafafa':''}">
+      <td style="padding:6px 8px;text-align:center;color:#888;font-size:11px;">${idx+1}</td>
+      <td style="padding:6px 10px;font-weight:600;font-size:11px;">${esc(d.tenHang||'—')}</td>
+      <td style="padding:6px 10px;font-size:10px;color:#555;">${esc(d.moTa||'')}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:11px;">${esc(d.donViTinh||'')}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:11px;">${d.soLuong||1}</td>
+      <td style="padding:6px 8px;font-size:10px;color:#555;">${esc(luuY)}</td>
+      ${cells.join('')}
+    </tr>`;
+  }).join('');
+
+  // Dòng TỔNG CỘNG
+  const totalCells = nccTotals.map((t,i)=>{
+    const maxT = Math.max(...nccTotals.filter(x=>x>0));
+    const minT = Math.min(...nccTotals.filter(x=>x>0));
+    const isBest = t>0 && t===minT && nccTotals.filter(x=>x>0).length>1;
+    return `<td style="padding:7px 10px;text-align:right;font-weight:700;font-size:12px;${isBest?'background:#C8F7C5;color:#166534;':''}">${t>0?fmt(t)+' ₫':'—'}</td>`;
+  });
+
+  const thNcc = nccNames.map(n=>`<th style="padding:8px 10px;text-align:right;background:#1e3a5f;color:#fff;font-size:11px;min-width:130px;">${esc(n)}</th>`).join('');
+
+  const fullHtml = `<!DOCTYPE html><html lang="vi"><head>
+  <meta charset="UTF-8">
+  <title>Bảng báo giá tổng hợp</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;padding:20px 28px;}
+    h1{font-size:17px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+    .sub{text-align:center;font-size:11px;color:#555;margin-bottom:16px;}
+    table{width:100%;border-collapse:collapse;}
+    th,td{border:1px solid #ccc;vertical-align:middle;}
+    thead th{font-weight:700;}
+    tfoot td{border-top:2px solid #1e3a5f;}
+    .sig{display:flex;margin-top:32px;gap:0;}
+    .sig-box{flex:1;text-align:center;font-size:11px;color:#333;padding:8px 4px;border-top:1px solid #aaa;}
+    .note{font-size:10px;color:#888;margin-top:6px;text-align:center;}
+    @media print{@page{size:A3 landscape;margin:12mm;} body{padding:0;}}
+  </style></head><body>
+  <h1>Bảng so sánh báo giá</h1>
+  <div class="sub">Ngày in: ${today} &nbsp;·&nbsp; Giá đã bao gồm VAT &nbsp;·&nbsp; Ô vàng = giá thấp nhất</div>
+  <table>
+    <thead>
+      <tr style="background:#1e3a5f;color:#fff;">
+        <th style="padding:8px;text-align:center;width:32px;">STT</th>
+        <th style="padding:8px 10px;text-align:left;min-width:160px;">Tên mặt hàng</th>
+        <th style="padding:8px 10px;text-align:left;min-width:120px;">Mô tả / Model</th>
+        <th style="padding:8px;text-align:center;width:48px;">ĐVT</th>
+        <th style="padding:8px;text-align:center;width:40px;">SL</th>
+        <th style="padding:8px;text-align:left;min-width:80px;">Lưu ý</th>
+        ${thNcc}
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+    <tfoot>
+      <tr style="background:#f0f4f8;">
+        <td colspan="6" style="padding:8px 12px;font-weight:700;font-size:12px;text-align:right;">TỔNG CỘNG</td>
+        ${totalCells.join('')}
+      </tr>
+    </tfoot>
+  </table>
+  <div class="sig">
+    <div class="sig-box"><b>Người yêu cầu</b><br><br><br>(Ký & ghi rõ họ tên)</div>
+    <div class="sig-box"><b>Người mua hàng</b><br><br><br>(Ký & ghi rõ họ tên)</div>
+    <div class="sig-box"><b>Người phê duyệt</b><br><br><br>(Ký & ghi rõ họ tên)</div>
+  </div>
+  <div class="note">Tài liệu nội bộ — Trung Thủy Group &nbsp;·&nbsp; In ngày ${today}</div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const w = window.open('','_blank','width=1200,height=800');
+  if(!w){ toast('⚠️ Trình duyệt chặn popup!','bad'); return; }
+  w.document.open(); w.document.write(fullHtml); w.document.close();
+}
+// ── End multi-print ─────────────────────────────────────────────
+
 // ── Dynamic NCC grid helpers ────────────────────────────────────
 function mhGetNccData(i){
   const gv = eid => (document.getElementById(eid)?.value||'').trim();
@@ -23928,9 +24136,9 @@ function mhPrintBaoGia(){
     </tbody>
   </table>
   <div class="sig">
-    <div class="sig-box"><b>Người lập</b><br>${d.nguoiYC||''}</div>
-    <div class="sig-box"><b>Trưởng bộ phận</b></div>
-    <div class="sig-box"><b>Ban Giám đốc phê duyệt</b></div>
+    <div class="sig-box"><b>Người yêu cầu</b><br>${d.nguoiYC||''}</div>
+    <div class="sig-box"><b>Người mua hàng</b></div>
+    <div class="sig-box"><b>Người phê duyệt</b></div>
   </div>
   <div class="footer">In ngày ${today} &nbsp;·&nbsp; QLTS CNTT — Trung Thủy Group &nbsp;·&nbsp; Tài liệu nội bộ</div>
   <script>window.onload=function(){window.print();}<\/script>
