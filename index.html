@@ -24304,7 +24304,7 @@ function spItemToMh(item){
 
 async function msalSpProvisionMuaHangList(){
   const site = HCQT_SITE;
-  const listTitle = 'DanhSachMuaHang_HCQT';
+  const listTitle = MSAL_CONFIG.spMuaHangList;
   // Ensure list exists (create if missing)
   try{
     await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')`);
@@ -24331,7 +24331,7 @@ async function msalSpProvisionMuaHangList(){
 async function msalSpPushMuaHang(id, _retried){
   const d = _muaHangData.find(x=>x.id===id); if(!d) return;
   const site = HCQT_SITE;
-  const listTitle = 'DanhSachMuaHang_HCQT';
+  const listTitle = MSAL_CONFIG.spMuaHangList;
   const body = mhToSpItem(d); // no __metadata — odata=nometadata
   try{
     if(d._spId){
@@ -24360,7 +24360,7 @@ async function msalSpDeleteMuaHang(id){
 async function msalSpDeleteMuaHangById(spId){
   if(!spId) return;
   try{
-    await msalSpReq(`${HCQT_SITE}/_api/web/lists/getbytitle('DanhSachMuaHang_HCQT')/items(${spId})`,{
+    await msalSpReq(`${HCQT_SITE}/_api/web/lists/getbytitle('${MSAL_CONFIG.spMuaHangList}')/items(${spId})`,{
       method:'DELETE',
       headers:{'IF-MATCH':'*','X-HTTP-Method':'DELETE'}
     });
@@ -24382,7 +24382,7 @@ async function mhSyncSP(btn){
 }
 
 async function msalSpLoadMuaHang(){
-  const site=HCQT_SITE, listTitle='DanhSachMuaHang_HCQT';
+  const site=HCQT_SITE, listTitle=MSAL_CONFIG.spMuaHangList;
   try{
     const sel='Id,'+_MH_SP_FIELDS.map(f=>f.name).join(',');
     const res=await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items?$select=${sel}&$top=2000&$orderby=Id desc`);
@@ -24393,7 +24393,7 @@ async function msalSpLoadMuaHang(){
   }catch(e){
     const msg = (e&&e.message)||'';
     if(msg.includes('does not exist')||msg.includes('does not exist')){
-      console.log('[MH] List/field chưa có → provision DanhSachMuaHang_HCQT...');
+      console.log('[MH] List/field chưa có → provision',MSAL_CONFIG.spMuaHangList,'...');
       try{
         await msalSpProvisionMuaHangList();
         console.log('[MH] Provision xong ✅ — thử load lại...');
