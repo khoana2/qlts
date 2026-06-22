@@ -23727,6 +23727,9 @@ function _mhRenderTable(){
         <td style="padding:9px 12px;text-align:center;">${mhBadge(d.trangThai)}</td>
         <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
           ${_mhNextActionBtn(d)}
+          ${['da_nhan_hang','da_ban_giao'].includes(d.trangThai)
+            ? `<button class="btn btn-icon-ph" style="padding:3px 9px;font-size:11px;background:#F0FDF4;color:#166534;border-color:#86EFAC;margin-right:2px;font-weight:700;" title="Tạo tài sản từ đơn mua này" onclick="mhToAsset('${d.id}')"><i class="ph ph-package"></i> → TS</button>`
+            : ''}
           <button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE;margin-right:2px;" title="So sánh báo giá" onclick="mhOpenDetail('${d.id}')"><i class="ph ph-chart-bar"></i>${(d.baoGia&&d.baoGia.length)?` (${d.baoGia.length})`:''}</button>
           <button class="btn btn-icon-ph" style="padding:3px 7px;font-size:11px;" title="Chỉnh sửa" onclick="mhOpenForm('${d.id}')"><i class="ph ph-pencil-simple"></i></button>
           <button class="btn danger btn-icon-ph" style="padding:3px 7px;font-size:11px;" title="Xóa" onclick="mhDelete('${d.id}')"><i class="ph ph-trash"></i></button>
@@ -23748,6 +23751,116 @@ function _mhNextActionBtn(d){
   const s = MH_STATUS[next];
   return `<button class="btn btn-icon-ph" style="padding:3px 8px;font-size:11px;background:${s.bg};color:${s.color};border-color:${s.color};margin-right:3px;" onclick="mhAdvance('${d.id}','${next}')" title="Chuyển sang: ${s.label}"><i class="ph ph-arrow-right"></i> ${s.label}</button>`;
 }
+
+// ── Chuyển đơn mua hàng → Tài sản HCQT ────────────────────────
+function _mhParseBaoHanh(text){
+  if(!text) return '';
+  const s = text.toLowerCase();
+  const mNam  = s.match(/(\d+(?:\.\d+)?)\s*n[aă]m/);
+  const mThang= s.match(/(\d+)\s*th[aá]ng|(\d+)\s*m(?:onth)?s?/);
+  if(mNam)   return String(Math.round(parseFloat(mNam[1])*12));
+  if(mThang) return mThang[1]||mThang[2]||'';
+  const mNum = s.match(/^\s*(\d+)\s*$/);
+  if(mNum)   return mNum[1];
+  return '';
+}
+
+function _mhMapHcqtLoai(tenHang){
+  const s = (tenHang||'').toLowerCase();
+  if(s.includes('điều hòa')||s.includes('dieu hoa')||s.includes('tủ lạnh')||s.includes('lò vi sóng')||s.includes('máy giặt')) return 'Thiết bị điện lạnh';
+  if(s.includes('bàn')||s.includes('ghế')||s.includes('tủ')||s.includes('kệ')||s.includes('sofa')||s.includes('rèm')||s.includes('thảm')||s.includes('cây cảnh')) return 'Nội thất văn phòng';
+  if(s.includes('camera')||s.includes('khóa')||s.includes('thẻ từ')||s.includes('kiểm soát')) return 'Thiết bị an ninh';
+  if(s.includes('xe ')||s.includes('ô tô')||s.includes('xe máy')) return 'Phương tiện';
+  if(s.includes('bếp')||s.includes('cà phê')||s.includes('pantry')) return 'Thiết bị bếp Pantry';
+  if(s.includes('tivi')||s.includes('màn hình')||s.includes('máy chiếu')||s.includes('loa')||s.includes('micro')) return 'Thiết bị nghe nhìn';
+  return 'Thiết bị văn phòng';
+}
+
+function _mhMapHcqtNhom(tenHang){
+  const s = (tenHang||'').toLowerCase();
+  if(s.includes('điều hòa'))                              return 'Điều hòa';
+  if(s.includes('tủ lạnh'))                               return 'Tủ lạnh Lò vi sóng';
+  if(s.includes('lò vi sóng'))                            return 'Tủ lạnh Lò vi sóng';
+  if(s.includes('cà phê'))                                return 'Máy pha cà phê Nước';
+  if(s.includes('máy in')||s.includes('photocopy'))       return 'Máy in Máy photocopy';
+  if(s.includes('máy chiếu'))                             return 'Máy chiếu Màn chiếu';
+  if(s.includes('tivi')||s.includes('màn hình'))          return 'Tivi Màn hình';
+  if(s.includes('điện thoại'))                            return 'Điện thoại cố định';
+  if(s.includes('camera'))                                return 'Camera an ninh';
+  if(s.includes('khóa')||s.includes('thẻ từ'))            return 'Khóa tủ Thẻ từ';
+  if(s.includes('xe ')||s.includes('ô tô'))               return 'Xe ô tô';
+  if(s.includes('bàn làm việc')||s.includes('bàn văn phòng')) return 'Bàn làm việc';
+  if(s.includes('bàn họp')||s.includes('bàn hội'))        return 'Bàn ghế phòng họp';
+  if(s.includes('ghế họp'))                               return 'Bàn ghế phòng họp';
+  if(s.includes('ghế'))                                   return 'Ghế văn phòng';
+  if(s.includes('tủ')||s.includes('kệ'))                  return 'Tủ Kệ Giá';
+  if(s.includes('sofa'))                                  return 'Sofa Ghế tiếp khách';
+  if(s.includes('rèm')||s.includes('thảm')||s.includes('mành')) return 'Rèm Mành Thảm';
+  if(s.includes('cây cảnh')||s.includes('vật trang trí')) return 'Cây cảnh Vật trang trí';
+  return 'Khác';
+}
+
+function mhToAsset(id){
+  const d = _muaHangData.find(x=>x.id===id); if(!d) return;
+
+  // Baogia được chọn hoặc baoGia đầu tiên có giá
+  const chosenBg = (d.baoGia||[]).find(b=>b.isChon)
+                || (d.baoGia||[]).find(b=>b.gia)
+                || null;
+
+  // Tính giá 1 đơn vị (đã VAT)
+  let donGia = 0;
+  if(chosenBg?.gia){
+    const sub = chosenBg.gia;
+    donGia = sub + (chosenBg.vat>0 ? sub*chosenBg.vat/100 : 0);
+  } else if(d.giaUocTinh){
+    donGia = parseFloat(d.giaUocTinh)||0;
+  }
+
+  const today   = new Date().toISOString().slice(0,10);
+  const ngayMua = d.ngayBanGiao || d.ngayNhanHang || today;
+  const bhMonths= _mhParseBaoHanh(chosenBg?.baoHanh||'');
+
+  // Mở form HCQT và điền dữ liệu
+  hcqtOpenAdd();                               // mở modal trắng
+
+  const sv = (fid, val)=>{
+    if(val==null||val==='') return;
+    const el = document.getElementById('hcqt-f-'+fid);
+    if(el) el.value = String(val);
+  };
+
+  sv('Title',           d.tenHang||'');
+  sv('Model',           d.moTa||'');
+  sv('HangSanXuat',     chosenBg?.ncc || d.ncc || '');
+  sv('SoLuong',         d.soLuong || '1');
+  sv('NguoiPhuTrach',   d.nguoiYC || '');
+  sv('BoPhanSuDung',    d.phongBan || '');
+  sv('NgayMua',         ngayMua);
+  if(donGia) sv('NguyenGia', Math.round(donGia));
+  if(bhMonths) sv('ThoiGianKhauHao', bhMonths);
+  sv('GhiChu', `Từ đơn mua hàng ${d.soYC||d.id}${d.nguoiYC?' — YC: '+d.nguoiYC:''}`);
+
+  // Loại / Nhóm tài sản — map tự động
+  const loai = _mhMapHcqtLoai(d.tenHang);
+  const nhom = _mhMapHcqtNhom(d.tenHang);
+  sv('LoaiTaiSan', loai);
+  sv('NhomTaiSan', nhom);
+  _hcqtToggleVatTuSection(loai);
+
+  // Tình trạng → Chờ cấp phát; Nguồn mua → Mua mới
+  sv('TinhTrang', 'Chờ cấp phát');
+  sv('NguonMua',  'Mua mới');
+
+  // Tiêu đề modal
+  const titleEl = document.getElementById('hcqt-form-title');
+  if(titleEl) titleEl.textContent = '📦 Tài sản từ đơn ' + (d.soYC||id);
+
+  setTimeout(()=>{
+    toast(`📦 Đã điền sẵn từ đơn ${d.soYC||''}. Nhập thêm Mã TS, Số serial, Tòa nhà/Phòng trước khi lưu.`,'ok', 7000);
+  }, 300);
+}
+// ── End chuyển đơn mua → Tài sản HCQT ─────────────────────────
 
 function mhAdvance(id, next){
   const d = _muaHangData.find(x=>x.id===id); if(!d) return;
