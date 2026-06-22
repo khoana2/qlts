@@ -4360,12 +4360,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <input type="text" id="mh-ncc0-ten" class="finput" placeholder="Tên nhà cung cấp" style="font-size:12px;font-weight:600;" oninput="mhLiveUpdate()">
           </div>
           <div class="field" style="margin-bottom:5px;">
-            <input type="text" id="mh-ncc0-model" class="finput" placeholder="Tên hàng / Model" style="font-size:12px;">
-          </div>
-          <div class="field" style="margin-bottom:5px;">
-            <textarea id="mh-ncc0-mota" class="finput" placeholder="Mô tả / Thông số kỹ thuật" style="font-size:12px;min-height:52px;resize:vertical;"></textarea>
-          </div>
-          <div class="field" style="margin-bottom:5px;">
             <label style="font-size:10px;color:var(--muted);">Đơn giá (VNĐ)</label>
             <input type="number" id="mh-ncc0-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="mhLiveUpdate()">
           </div>
@@ -4382,7 +4376,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <input type="text" id="mh-ncc0-giao" class="finput" placeholder="Thời gian giao hàng" style="font-size:12px;">
           </div>
           <div class="field" style="margin-bottom:5px;">
-            <input type="url" id="mh-ncc0-fileurl" class="finput" placeholder="Link file báo giá (https://...)" style="font-size:12px;">
+            <div style="display:flex;gap:4px;align-items:center;">
+              <input type="url" id="mh-ncc0-fileurl" class="finput" placeholder="Link file báo giá (https://...)" style="font-size:12px;flex:1;" oninput="mhSyncFileLink(this,'mh-ncc0-filelink')">
+              <a id="mh-ncc0-filelink" href="#" target="_blank" rel="noopener noreferrer" style="display:none;padding:5px 8px;border-radius:7px;background:#EFF6FF;border:1px solid #BFDBFE;color:#2563EB;font-size:12px;white-space:nowrap;text-decoration:none;" title="Mở link"><i class="ph ph-arrow-square-out"></i></a>
+            </div>
           </div>
           <div class="field" style="margin-bottom:6px;">
             <input type="text" id="mh-ncc0-ghichu" class="finput" placeholder="Ghi chú thêm…" style="font-size:12px;">
@@ -4405,12 +4402,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <input type="text" id="mh-ncc1-ten" class="finput" placeholder="Tên nhà cung cấp" style="font-size:12px;font-weight:600;" oninput="mhLiveUpdate()">
           </div>
           <div class="field" style="margin-bottom:5px;">
-            <input type="text" id="mh-ncc1-model" class="finput" placeholder="Tên hàng / Model" style="font-size:12px;">
-          </div>
-          <div class="field" style="margin-bottom:5px;">
-            <textarea id="mh-ncc1-mota" class="finput" placeholder="Mô tả / Thông số kỹ thuật" style="font-size:12px;min-height:52px;resize:vertical;"></textarea>
-          </div>
-          <div class="field" style="margin-bottom:5px;">
             <label style="font-size:10px;color:var(--muted);">Đơn giá (VNĐ)</label>
             <input type="number" id="mh-ncc1-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="mhLiveUpdate()">
           </div>
@@ -4427,7 +4418,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <input type="text" id="mh-ncc1-giao" class="finput" placeholder="Thời gian giao hàng" style="font-size:12px;">
           </div>
           <div class="field" style="margin-bottom:5px;">
-            <input type="url" id="mh-ncc1-fileurl" class="finput" placeholder="Link file báo giá (https://...)" style="font-size:12px;">
+            <div style="display:flex;gap:4px;align-items:center;">
+              <input type="url" id="mh-ncc1-fileurl" class="finput" placeholder="Link file báo giá (https://...)" style="font-size:12px;flex:1;" oninput="mhSyncFileLink(this,'mh-ncc1-filelink')">
+              <a id="mh-ncc1-filelink" href="#" target="_blank" rel="noopener noreferrer" style="display:none;padding:5px 8px;border-radius:7px;background:#EFF6FF;border:1px solid #BFDBFE;color:#2563EB;font-size:12px;white-space:nowrap;text-decoration:none;" title="Mở link"><i class="ph ph-arrow-square-out"></i></a>
+            </div>
           </div>
           <div class="field" style="margin-bottom:6px;">
             <input type="text" id="mh-ncc1-ghichu" class="finput" placeholder="Ghi chú thêm…" style="font-size:12px;">
@@ -4450,12 +4444,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <input type="text" id="mh-ncc2-ten" class="finput" placeholder="Tên nhà cung cấp" style="font-size:12px;font-weight:600;" oninput="mhLiveUpdate()">
           </div>
           <div class="field" style="margin-bottom:5px;">
-            <input type="text" id="mh-ncc2-model" class="finput" placeholder="Tên hàng / Model" style="font-size:12px;">
-          </div>
-          <div class="field" style="margin-bottom:5px;">
-            <textarea id="mh-ncc2-mota" class="finput" placeholder="Mô tả / Thông số kỹ thuật" style="font-size:12px;min-height:52px;resize:vertical;"></textarea>
-          </div>
-          <div class="field" style="margin-bottom:5px;">
             <label style="font-size:10px;color:var(--muted);">Đơn giá (VNĐ)</label>
             <input type="number" id="mh-ncc2-gia" class="finput" placeholder="0" min="0" style="font-size:12px;" oninput="mhLiveUpdate()">
           </div>
@@ -4472,7 +4460,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <input type="text" id="mh-ncc2-giao" class="finput" placeholder="Thời gian giao hàng" style="font-size:12px;">
           </div>
           <div class="field" style="margin-bottom:5px;">
-            <input type="url" id="mh-ncc2-fileurl" class="finput" placeholder="Link file báo giá (https://...)" style="font-size:12px;">
+            <div style="display:flex;gap:4px;align-items:center;">
+              <input type="url" id="mh-ncc2-fileurl" class="finput" placeholder="Link file báo giá (https://...)" style="font-size:12px;flex:1;" oninput="mhSyncFileLink(this,'mh-ncc2-filelink')">
+              <a id="mh-ncc2-filelink" href="#" target="_blank" rel="noopener noreferrer" style="display:none;padding:5px 8px;border-radius:7px;background:#EFF6FF;border:1px solid #BFDBFE;color:#2563EB;font-size:12px;white-space:nowrap;text-decoration:none;" title="Mở link"><i class="ph ph-arrow-square-out"></i></a>
+            </div>
           </div>
           <div class="field" style="margin-bottom:6px;">
             <input type="text" id="mh-ncc2-ghichu" class="finput" placeholder="Ghi chú thêm…" style="font-size:12px;">
@@ -23620,9 +23611,9 @@ function _mhRenderTable(){
         <div style="font-weight:600">${hcqtEsc(d.nguoiYC||'—')}</div>
         <div style="font-size:11px;color:var(--muted)">${hcqtEsc(d.phongBan||'')}</div>
       </td>
-      <td style="padding:9px 12px;max-width:200px;">
-        <div style="font-weight:600">${hcqtEsc(d.tenHang||'—')}</div>
-        ${d.moTa?`<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;" title="${hcqtEsc(d.moTa)}">${hcqtEsc(d.moTa)}</div>`:''}
+      <td style="padding:9px 12px;max-width:220px;overflow:hidden;">
+        <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.tenHang||'')}">${hcqtEsc(d.tenHang||'—')}</div>
+        ${d.moTa?`<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.moTa)}">${hcqtEsc(d.moTa)}</div>`:''}
       </td>
       <td style="padding:9px 12px;text-align:right;">${d.soLuong||'—'} ${hcqtEsc(d.donViTinh||'')}</td>
       <td style="padding:9px 12px;font-size:11px;">${hcqtEsc(d.ncc||'—')}</td>
@@ -23773,6 +23764,8 @@ function mhOpenDetail(id){
     sv(pfx+'-giao',  b.tggh||'');
     sv(pfx+'-fileurl',b.fileUrl||'');
     sv(pfx+'-ghichu',b.ghichu||'');
+    // Sync hyperlink button
+    mhSyncFileLink(document.getElementById(pfx+'-fileurl')||{value:''},pfx+'-filelink');
     // Reset chosen state
     const btnEl = document.getElementById('mh-chon-btn-'+i);
     const badgeEl = document.getElementById('mh-chon-badge-'+i);
@@ -23784,6 +23777,14 @@ function mhOpenDetail(id){
   }
   mhLiveUpdate();
   openModal('modal-mh-detail');
+}
+
+function mhSyncFileLink(inputEl, linkId){
+  const a = document.getElementById(linkId);
+  if(!a) return;
+  const url = (inputEl.value||'').trim();
+  if(url){ a.href=url; a.style.display=''; }
+  else { a.href='#'; a.style.display='none'; }
 }
 
 function mhLiveUpdate(){
@@ -23830,8 +23831,8 @@ function mhSaveBaoGia(){
   const gv = eid=>document.getElementById(eid)?.value?.trim()||'';
   d.baoGia = [0,1,2].map(i=>({
     ncc:       gv('mh-ncc'+i+'-ten'),
-    model:     gv('mh-ncc'+i+'-model'),
-    mota:      gv('mh-ncc'+i+'-mota'),
+    model:     d.tenHang||'',   // lấy từ yêu cầu gốc, không nhập lại
+    mota:      d.moTa||'',      // lấy từ yêu cầu gốc, không nhập lại
     gia:       parseFloat(gv('mh-ncc'+i+'-gia'))||0,
     baoHanh:   gv('mh-ncc'+i+'-baohiem'),
     khuyenMai: gv('mh-ncc'+i+'-khuyenmai'),
@@ -23856,8 +23857,8 @@ function mhChonNCC(colIdx){
   // Save current data first
   const bgs = [0,1,2].map(i=>({
     ncc:       gv('mh-ncc'+i+'-ten'),
-    model:     gv('mh-ncc'+i+'-model'),
-    mota:      gv('mh-ncc'+i+'-mota'),
+    model:     d.tenHang||'',
+    mota:      d.moTa||'',
     gia:       parseFloat(gv('mh-ncc'+i+'-gia'))||0,
     baoHanh:   gv('mh-ncc'+i+'-baohiem'),
     khuyenMai: gv('mh-ncc'+i+'-khuyenmai'),
