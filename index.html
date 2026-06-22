@@ -9791,6 +9791,9 @@ document.addEventListener('DOMContentLoaded', function(){
   _empAutocomplete(document.getElementById('mh-f-nguoiYC'),{
     deptField:'mh-f-phongBan'
   });
+  _empAutocomplete(document.getElementById('mhi-nguoiYC'),{
+    deptField:'mhi-phongBan'
+  });
   // HCQT: Role modal — tìm theo tên → điền email + họ tên
   _empAutocomplete(document.getElementById('hcqt-role-email'),{
     fillEmail: true,
@@ -23954,7 +23957,10 @@ function mhTriggerImport(){
   document.getElementById('mhi-ngayYC').value = new Date().toISOString().slice(0,10);
   // Pre-fill từ currentUser nếu có
   const cu = typeof currentUser!=='undefined' ? currentUser : null;
-  if(cu) document.getElementById('mhi-nguoiYC').value = cu.displayName||cu.username||'';
+  if(cu){
+    document.getElementById('mhi-nguoiYC').value = cu.displayName||cu.username||'';
+    if(cu.department) document.getElementById('mhi-phongBan').value = cu.department;
+  }
   // Reset file input
   const fi = document.getElementById('mh-import-file');
   fi.value='';
