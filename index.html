@@ -4330,6 +4330,68 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 </div><!-- end .app -->
 
 <!-- ══════════════ MODAL: MUA HÀNG — SO SÁNH BÁO GIÁ 3 NCC ══════════════ -->
+<!-- Modal Import Excel Mua Hàng -->
+<div class="modal-backdrop" id="modal-mh-import" style="display:none;">
+  <div class="modal" style="max-width:780px;width:96vw;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-head">
+      <div style="font-size:14px;font-weight:700;"><i class="ph ph-upload-simple"></i> Nhập danh sách từ Excel</div>
+      <button class="btn icon-only" onclick="closeModal('modal-mh-import')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;flex:1;padding:16px 20px;">
+      <!-- Thông tin chung áp cho tất cả dòng -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;padding:12px;background:#F8FAFC;border-radius:10px;border:1px solid var(--border);">
+        <div class="field">
+          <label>Người yêu cầu <span style="color:var(--red)">*</span></label>
+          <input type="text" id="mhi-nguoiYC" class="finput" placeholder="Tên người yêu cầu">
+        </div>
+        <div class="field">
+          <label>Phòng ban</label>
+          <input type="text" id="mhi-phongBan" class="finput" placeholder="Phòng ban / Bộ phận">
+        </div>
+        <div class="field">
+          <label>Ngày yêu cầu</label>
+          <input type="date" id="mhi-ngayYC" class="finput">
+        </div>
+        <div class="field">
+          <label>Trạng thái ban đầu</label>
+          <select id="mhi-trangThai" class="fsel" style="width:100%;">
+            <option value="cho_duyet">⏳ Chờ duyệt</option>
+            <option value="draft">⬜ Nháp</option>
+            <option value="da_duyet">✅ Đã duyệt</option>
+          </select>
+        </div>
+      </div>
+      <!-- Preview table -->
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;" id="mhi-preview-label">Chọn file Excel để xem trước danh sách</div>
+      <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;" id="mhi-preview-table">
+          <thead><tr style="background:#F8FAFC;">
+            <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;">Tên hàng</th>
+            <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);">Mô tả</th>
+            <th style="padding:7px 10px;text-align:center;border-bottom:1px solid var(--border);">SL</th>
+            <th style="padding:7px 10px;text-align:center;border-bottom:1px solid var(--border);">ĐVT</th>
+            <th style="padding:7px 10px;text-align:right;border-bottom:1px solid var(--border);">Giá ước tính</th>
+            <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);">Ghi chú</th>
+          </tr></thead>
+          <tbody id="mhi-preview-body">
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">Chưa có dữ liệu</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-foot" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="font-size:11px;color:var(--muted);">
+        <i class="ph ph-info"></i> Cột cần có: <b>Tên hàng</b> (bắt buộc), Mô tả, Số lượng, ĐVT, Giá ước tính, Ghi chú
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-icon-ph" onclick="document.getElementById('mh-import-file').click()"><i class="ph ph-folder-open"></i> Chọn file</button>
+        <button class="btn" onclick="closeModal('modal-mh-import')">Hủy</button>
+        <button class="btn primary btn-icon-ph" id="mhi-confirm-btn" onclick="mhConfirmImport()" disabled><i class="ph ph-check"></i> Nhập <span id="mhi-count"></span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-mh-detail" style="display:none;">
   <div class="modal" style="max-width:940px;width:97vw;max-height:94vh;display:flex;flex-direction:column;">
     <div class="modal-head">
@@ -11609,7 +11671,7 @@ function closeModal(id){
 const _FORM_MODALS = new Set([
   'modal-form', 'modal-transfer', 'modal-license', 'modal-dntt-form',
   'modal-import', 'modal-xfer-company', 'modal-supplement',
-  'modal-procurement', 'modal-mh-form', 'modal-mh-detail',
+  'modal-procurement', 'modal-mh-form', 'modal-mh-detail', 'modal-mh-import',
 ]);
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')){
@@ -23570,6 +23632,9 @@ function hcqtRenderMuaHang(){
       placeholder="Tìm mã YC, tên hàng, người yêu cầu…"
       style="flex:1;min-width:200px;font-size:12px;padding:6px 10px;"
       oninput="_mhFilterQ=this.value;_mhRenderTable()">
+    <button class="btn btn-icon-ph" style="padding:6px 12px;font-size:12px;" onclick="mhDownloadImportTemplate()" title="Tải file Excel mẫu để nhập danh sách"><i class="ph ph-file-xls"></i> Tải template</button>
+    <button class="btn btn-icon-ph" style="padding:6px 12px;font-size:12px;background:#F0FDF4;color:#166534;border-color:#86EFAC;" onclick="mhTriggerImport()" title="Nhập danh sách từ file Excel"><i class="ph ph-upload-simple"></i> Nhập Excel</button>
+    <input type="file" id="mh-import-file" accept=".xlsx,.xls" style="display:none" onchange="mhHandleImportFile(this)">
     <button class="btn primary btn-icon-ph" style="padding:6px 14px;font-size:12px;" onclick="mhOpenForm()"><i class="ph ph-plus"></i> Thêm yêu cầu</button>
     ${_msalAccount ? `<button class="btn btn-icon-ph" style="padding:6px 12px;font-size:12px;" id="mh-sp-sync-btn" onclick="mhSyncSP(this)"><i class="ph ph-arrows-clockwise"></i> Sync SP</button>` : ''}
   </div>
@@ -23748,6 +23813,153 @@ function mhSaveForm(){
 }
 
 // ── So sánh báo giá 3 NCC ──────────────────────────────────────
+// ── Import Excel ──────────────────────────────────────────────────────────────
+let _mhImportRows = []; // rows parsed, pending confirm
+
+function mhTriggerImport(){
+  // Reset state
+  _mhImportRows = [];
+  document.getElementById('mhi-preview-body').innerHTML =
+    '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">Chưa có dữ liệu — nhấn "Chọn file" để tải lên</td></tr>';
+  document.getElementById('mhi-preview-label').textContent = 'Chọn file Excel để xem trước danh sách';
+  document.getElementById('mhi-confirm-btn').disabled = true;
+  document.getElementById('mhi-count').textContent = '';
+  document.getElementById('mhi-ngayYC').value = new Date().toISOString().slice(0,10);
+  // Pre-fill từ currentUser nếu có
+  const cu = typeof currentUser!=='undefined' ? currentUser : null;
+  if(cu) document.getElementById('mhi-nguoiYC').value = cu.displayName||cu.username||'';
+  // Reset file input
+  const fi = document.getElementById('mh-import-file');
+  fi.value='';
+  openModal('modal-mh-import');
+}
+
+async function mhHandleImportFile(inp){
+  const file = inp.files[0]; if(!file) return;
+  await _ensureXLSX();
+  const label = document.getElementById('mhi-preview-label');
+  label.textContent = '⏳ Đang đọc file…';
+  try{
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, {type:'array'});
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws, {defval:''});
+    if(!raw.length){ label.textContent='⚠️ File không có dữ liệu'; return; }
+
+    // Nhận diện cột linh hoạt
+    const norm = s => String(s||'').toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g,'')
+      .replace(/[_\s\/\-]/g,'');
+    const findCol = (aliases) => {
+      const keys = Object.keys(raw[0]);
+      for(const a of aliases){
+        const k = keys.find(k => norm(k).includes(norm(a)));
+        if(k) return k;
+      }
+      return null;
+    };
+    const C_TEN    = findCol(['tenhang','ten','name','hang','thietbi','sanpham']);
+    const C_MOTA   = findCol(['mota','mota','thongso','mô','description','chitiet','dac']);
+    const C_SL     = findCol(['soluong','quantity','sl','qty','so','luong']);
+    const C_DVT    = findCol(['donvitinh','dvt','unit','donvi']);
+    const C_GIA    = findCol(['giaUocTinh','gia','price','uoctinh','dutinh','giadukien']);
+    const C_NCC    = findCol(['ncc','nhacungcap','supplier','nhacc']);
+    const C_GHICHU = findCol(['ghichu','note','ghichu','remark','chichu']);
+
+    if(!C_TEN){
+      label.textContent = '⚠️ Không tìm thấy cột "Tên hàng". Hãy dùng file template.';
+      document.getElementById('mhi-confirm-btn').disabled = true;
+      return;
+    }
+
+    // Parse rows
+    _mhImportRows = raw
+      .filter(r => String(r[C_TEN]||'').trim())
+      .map((r,i) => ({
+        tenHang:    String(r[C_TEN]||'').trim(),
+        moTa:       String(r[C_MOTA]   ? r[C_MOTA]   : '').trim(),
+        soLuong:    String(r[C_SL]     ? r[C_SL]     : '1').trim() || '1',
+        donViTinh:  String(r[C_DVT]    ? r[C_DVT]    : 'cái').trim() || 'cái',
+        giaUocTinh: parseFloat(String(r[C_GIA]||'0').replace(/[^\d.]/g,''))||0,
+        ncc:        String(r[C_NCC]    ? r[C_NCC]    : '').trim(),
+        ghiChu:     String(r[C_GHICHU] ? r[C_GHICHU] : '').trim(),
+      }));
+
+    if(!_mhImportRows.length){
+      label.textContent = '⚠️ Không có dòng hợp lệ (cần cột Tên hàng có giá trị)';
+      document.getElementById('mhi-confirm-btn').disabled = true;
+      return;
+    }
+
+    // Render preview
+    const fmtN = n => n>0 ? Number(n).toLocaleString('vi-VN')+' ₫' : '—';
+    const esc2 = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    document.getElementById('mhi-preview-body').innerHTML = _mhImportRows.map((r,i)=>`
+      <tr style="border-top:1px solid var(--border);${i%2?'background:#fafafa':''}">
+        <td style="padding:6px 10px;font-weight:600;">${esc2(r.tenHang)}</td>
+        <td style="padding:6px 10px;font-size:11px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc2(r.moTa)}">${esc2(r.moTa)||'—'}</td>
+        <td style="padding:6px 10px;text-align:center;">${esc2(r.soLuong)}</td>
+        <td style="padding:6px 10px;text-align:center;">${esc2(r.donViTinh)}</td>
+        <td style="padding:6px 10px;text-align:right;">${fmtN(r.giaUocTinh)}</td>
+        <td style="padding:6px 10px;font-size:11px;color:var(--muted);">${esc2(r.ghiChu)||'—'}</td>
+      </tr>`).join('');
+
+    label.textContent = `✅ Đọc thành công ${_mhImportRows.length} dòng từ "${file.name}"`;
+    document.getElementById('mhi-count').textContent = `(${_mhImportRows.length} yêu cầu)`;
+    document.getElementById('mhi-confirm-btn').disabled = false;
+  }catch(err){
+    label.textContent = '❌ Lỗi đọc file: ' + err.message;
+    console.error('[mhImport]', err);
+  }
+}
+
+function mhConfirmImport(){
+  if(!_mhImportRows.length) return;
+  const nguoiYC  = document.getElementById('mhi-nguoiYC')?.value.trim()||'';
+  const phongBan = document.getElementById('mhi-phongBan')?.value.trim()||'';
+  const ngayYC   = document.getElementById('mhi-ngayYC')?.value||new Date().toISOString().slice(0,10);
+  const trangThai= document.getElementById('mhi-trangThai')?.value||'cho_duyet';
+  const now      = new Date().toISOString();
+  const year     = new Date().getFullYear();
+
+  const newRecs = _mhImportRows.map((r,i) => ({
+    id: (Date.now()+i).toString(36)+Math.random().toString(36).slice(2,5),
+    soYC: 'MH-'+year+'-'+String(Math.floor(Math.random()*8000)+1000+i).padStart(4,'0'),
+    ngayYC, nguoiYC, phongBan,
+    tenHang:    r.tenHang,
+    soLuong:    r.soLuong,
+    donViTinh:  r.donViTinh,
+    moTa:       r.moTa,
+    ncc:        r.ncc,
+    giaUocTinh: r.giaUocTinh,
+    ghiChu:     r.ghiChu,
+    trangThai,
+    baoGia:[], createdAt: now
+  }));
+
+  _muaHangData.unshift(...newRecs);
+  mhSave();
+  closeModal('modal-mh-import');
+  hcqtRenderMuaHang();
+  _mhImportRows = [];
+  toast(`✅ Đã nhập ${newRecs.length} yêu cầu từ Excel`, 'ok');
+}
+
+async function mhDownloadImportTemplate(){
+  await _ensureXLSX();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Tên hàng *','Mô tả / Thông số kỹ thuật','Số lượng','Đơn vị tính','Giá ước tính (VNĐ)','NCC dự kiến','Ghi chú'],
+    ['Máy hút bụi Kärcher WD3','Công suất 1000W, dung tích 17L, kèm phụ kiện','1','Cái','3500000','Kärcher VN','Ưu tiên chính hãng'],
+    ['Chổi lau sàn inox','Cán inox dài 1.4m, đầu thay được','5','Cái','120000','',''],
+    ['Túi đựng rác','Loại 90L, màu đen, hộp 50 túi','10','Hộp','85000','',''],
+  ]);
+  ws['!cols'] = [{wch:32},{wch:40},{wch:12},{wch:14},{wch:20},{wch:20},{wch:25}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Danh sách mua hàng');
+  XLSX.writeFile(wb, 'Template_Import_MuaHang.xlsx');
+  toast('📥 Đã tải template — điền vào rồi nhấn "Nhập Excel"', 'ok');
+}
+
 function mhOpenDetail(id){
   const d = _muaHangData.find(x=>x.id===id); if(!d) return;
   document.getElementById('mh-detail-id').value = id;
