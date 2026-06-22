@@ -4565,9 +4565,14 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     </div>
     <div class="modal-foot" style="justify-content:space-between;">
       <button class="btn" onclick="closeModal('modal-mh-detail')">Đóng</button>
-      <button class="btn success btn-icon-ph" onclick="mhSaveBaoGia()">
-        <i class="ph ph-floppy-disk"></i> Lưu báo giá
-      </button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-icon-ph" onclick="mhPrintBaoGia()" title="In bảng so sánh báo giá">
+          <i class="ph ph-printer"></i> In báo giá
+        </button>
+        <button class="btn success btn-icon-ph" onclick="mhSaveBaoGia()">
+          <i class="ph ph-floppy-disk"></i> Lưu báo giá
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -23813,6 +23818,128 @@ function mhSaveForm(){
 }
 
 // ── So sánh báo giá 3 NCC ──────────────────────────────────────
+// ── In bảng so sánh báo giá (mua hàng HCQT) ─────────────────────────────────
+function mhPrintBaoGia(){
+  const id = document.getElementById('mh-detail-id')?.value; if(!id) return;
+  const d  = _muaHangData.find(x=>x.id===id); if(!d) return;
+
+  const gv  = eid => document.getElementById(eid)?.value?.trim()||'';
+  const fmt = n => n>0 ? Number(Math.round(n)).toLocaleString('vi-VN')+' ₫' : '—';
+  const today = new Date().toLocaleDateString('vi-VN');
+  const qty   = parseFloat(d.soLuong)||1;
+
+  // Lấy dữ liệu trực tiếp từ form (đang mở)
+  const nccs = [0,1,2].map(i=>({
+    ten:       gv('mh-ncc'+i+'-ten'),
+    gia:       parseFloat(gv('mh-ncc'+i+'-gia'))||0,
+    vat:       parseFloat(gv('mh-ncc'+i+'-vat'))||0,
+    baoHanh:   gv('mh-ncc'+i+'-baohiem'),
+    khuyenMai: gv('mh-ncc'+i+'-khuyenmai'),
+    dieuKhoan: gv('mh-ncc'+i+'-thanhtoan'),
+    tggh:      gv('mh-ncc'+i+'-giao'),
+    fileUrl:   gv('mh-ncc'+i+'-fileurl'),
+    ghichu:    gv('mh-ncc'+i+'-ghichu'),
+    isChon:    document.getElementById('mh-chon-badge-'+i)?.style.display !== 'none',
+  }));
+
+  const validNCCs = nccs.filter(n=>n.ten||n.gia>0);
+  if(!validNCCs.length){ toast('⚠️ Chưa có thông tin nhà cung cấp nào để in','warn'); return; }
+
+  const totals = nccs.map(n=>{
+    const sub = n.gia * qty;
+    const vat = n.vat>0 ? sub*n.vat/100 : 0;
+    return sub+vat;
+  });
+  const validTotals = totals.filter(t=>t>0);
+  const minTotal = validTotals.length ? Math.min(...validTotals) : 0;
+
+  const thCols = nccs.map((n,i)=>
+    `<th style="text-align:center;background:#1e3a5f;color:#fff;min-width:150px;padding:9px 12px;">
+      ${n.ten||('NCC '+(i+1))}${n.isChon?' ✅':''}
+    </th>`).join('');
+
+  const infoRows = [
+    {label:'Bảo hành',    key:'baoHanh'},
+    {label:'Khuyến mãi',  key:'khuyenMai'},
+    {label:'Thanh toán',  key:'dieuKhoan'},
+    {label:'Giao hàng',   key:'tggh'},
+    {label:'Ghi chú',     key:'ghichu'},
+  ].map(({label,key})=>{
+    const vals = nccs.map(n=>n[key]||'');
+    if(vals.every(v=>!v)) return '';
+    return `<tr><td colspan="2" style="padding:6px 10px;font-weight:600;background:#f0f4f8;">${label}</td>
+      ${vals.map(v=>`<td style="padding:6px 10px;text-align:center;">${v||'—'}</td>`).join('')}</tr>`;
+  }).join('');
+
+  const totalCells = totals.map((t,i)=>{
+    const n = nccs[i];
+    const sub = n.gia*qty;
+    const vatAmt = n.vat>0 ? sub*n.vat/100 : 0;
+    const isBest = t>0 && t===minTotal && validTotals.length>1;
+    const pct = (!isBest&&t>0&&minTotal>0) ? `<div style="color:#c00;font-size:10px;">+${((t-minTotal)/minTotal*100).toFixed(1)}%</div>` : '';
+    const bestTag = (isBest&&validTotals.length>1) ? `<div style="color:#059669;font-size:10px;font-weight:700;">✓ Rẻ nhất</div>` : '';
+    let detail = '';
+    if(qty>1) detail += `<div style="font-size:10px;color:#555;">${fmt(n.gia)} × ${qty} = ${fmt(sub)}</div>`;
+    if(n.vat>0) detail += `<div style="font-size:10px;color:#555;">VAT ${n.vat}%: +${fmt(vatAmt)}</div>`;
+    return `<td style="text-align:center;padding:8px 10px;font-weight:700;${isBest?'background:#e8fdf2;':''}">
+      ${detail}${t>0?`<strong style="font-size:13px;">${fmt(t)}</strong>`:'—'}${bestTag}${pct}
+    </td>`;
+  }).join('');
+
+  const fullHtml = `<!DOCTYPE html><html lang="vi"><head>
+  <meta charset="UTF-8"><title>Báo giá — ${d.tenHang}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;padding:24px 32px;}
+    h1{font-size:18px;font-weight:800;margin:6px 0 2px;}
+    .meta{font-size:11px;color:#444;line-height:1.8;margin-bottom:16px;padding:8px 12px;
+      background:#f8fafc;border-left:3px solid #1e3a5f;border-radius:4px;}
+    table{width:100%;border-collapse:collapse;margin-top:8px;}
+    th,td{border:1px solid #ccc;vertical-align:top;}
+    th{font-size:11px;letter-spacing:.03em;}
+    tr:nth-child(even) td:not([style*="background"]){background:#fafafa;}
+    .sig{display:flex;gap:0;margin-top:36px;border-top:2px solid #1e3a5f;padding-top:4px;}
+    .sig-box{flex:1;padding:8px 12px;border-right:1px solid #ddd;font-size:11px;color:#333;}
+    .sig-box:last-child{border-right:none;}
+    .footer{margin-top:18px;font-size:10px;color:#888;text-align:center;}
+    @media print{@page{margin:15mm;}}
+  </style></head><body>
+  <h1>BẢNG SO SÁNH BÁO GIÁ</h1>
+  <div style="font-size:13px;color:#333;margin-bottom:10px;">${d.tenHang||''}</div>
+  <div class="meta">
+    <b>Mã YC:</b> ${d.soYC||'—'} &nbsp;·&nbsp;
+    <b>Người YC:</b> ${d.nguoiYC||'—'} &nbsp;·&nbsp;
+    <b>Phòng ban:</b> ${d.phongBan||'—'} &nbsp;·&nbsp;
+    <b>Ngày:</b> ${d.ngayYC||'—'}${d.moTa?`<br><b>Mô tả:</b> ${d.moTa}`:''}
+    &nbsp;·&nbsp; <b>SL:</b> ${qty} ${d.donViTinh||''}
+  </div>
+  <table>
+    <thead><tr>
+      <th colspan="2" style="padding:9px 12px;background:#1e3a5f;color:#fff;">Thông tin</th>
+      ${thCols}
+    </tr></thead>
+    <tbody>
+      <tr style="background:#f0f4f8;border-top:2px solid #1e3a5f;">
+        <td colspan="2" style="padding:8px 10px;font-weight:700;">TỔNG CỘNG</td>
+        ${totalCells}
+      </tr>
+      ${infoRows}
+    </tbody>
+  </table>
+  <div class="sig">
+    <div class="sig-box"><b>Người lập</b><br>${d.nguoiYC||''}</div>
+    <div class="sig-box"><b>Trưởng bộ phận</b></div>
+    <div class="sig-box"><b>Ban Giám đốc phê duyệt</b></div>
+  </div>
+  <div class="footer">In ngày ${today} &nbsp;·&nbsp; QLTS CNTT — Trung Thủy Group &nbsp;·&nbsp; Tài liệu nội bộ</div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const w = window.open('','_blank','width=960,height=720');
+  if(!w){ toast('⚠️ Trình duyệt chặn popup!','bad'); return; }
+  w.document.open(); w.document.write(fullHtml); w.document.close();
+}
+
 // ── Import Excel ──────────────────────────────────────────────────────────────
 let _mhImportRows = []; // rows parsed, pending confirm
 
