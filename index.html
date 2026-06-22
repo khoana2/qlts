@@ -13447,7 +13447,11 @@ async function confirmTransfer(){
   if(!transfers[id]) transfers[id] = [];
   const checkedAcc = _trGetCheckedAcc();
   const newRec = {
-    from: a.nguoiDung || '',
+    from: a.nguoiDung || (() => {
+      // Nếu nguoiDung rỗng, xem transfer gần nhất có đến Kho không → ghi "Kho"
+      const prevTx = (transfers[id]||[]).slice(-1)[0];
+      return (prevTx && /^kho$/i.test((prevTx.to||'').trim())) ? 'Kho' : '';
+    })(),
     fromDept: a.boPhan || '',
     to: newUser,
     toDept: document.getElementById('tr-new-dept').value,
@@ -16095,7 +16099,8 @@ function renderRepairs(){
       // Dùng _today (midnight) để nhất quán với card render bên dưới
       const _expDate = new Date(_r.bhExpiry); _expDate.setHours(0,0,0,0);
       const _days = Math.round((_expDate - _today)/86400000);
-      if(_days<=30) _bhAlerts.push({a:_a,r:_r,aid:_aid,days:_days});
+      // Chỉ cảnh báo khi SẮP hết (0–30 ngày), đã hết rồi thì bỏ qua
+      if(_days>=0 && _days<=30) _bhAlerts.push({a:_a,r:_r,aid:_aid,days:_days});
     });
   }
   const _nExpired = _bhAlerts.filter(x=>x.days<0).length;
