@@ -24399,7 +24399,19 @@ function mhPrintSelectedMatrix(){
 
   // ── Phần 1: bảng so sánh ──
   const nccTotals = new Array(nccNames.length).fill(0);
-  const thNcc = nccNames.map(n=>`<th style="text-align:center;background:#1e3a5f;color:#fff;padding:8px 10px;font-size:11px;min-width:130px;text-transform:uppercase;">${esc(n)}</th>`).join('');
+  // Thu thập ảnh đại diện cho từng NCC (lấy từ baoGia item đầu tiên có ảnh)
+  const nccImgMap = {};
+  items.forEach(d=>(d.baoGia||[]).forEach(b=>{
+    const n=(b.ncc||'').trim();
+    if(n && b.anhUrl && !nccImgMap[n]) nccImgMap[n]=b.anhUrl;
+  }));
+
+  const thNcc = nccNames.map(n=>{
+    const img = nccImgMap[n]
+      ? `<img src="${nccImgMap[n]}" style="margin-top:5px;width:100%;max-height:80px;object-fit:cover;border-radius:5px;border:1px solid rgba(255,255,255,.25);" onerror="this.style.display='none'">`
+      : '';
+    return `<th style="text-align:center;background:#1e3a5f;color:#fff;padding:8px 10px;font-size:11px;min-width:130px;text-transform:uppercase;vertical-align:top;"><div>${esc(n)}</div>${img}</th>`;
+  }).join('');
 
   const matrixRows = items.map((d,idx)=>{
     const prices  = nccNames.map(n=>getPrice(d,n));
@@ -24544,6 +24556,53 @@ function mhPrintSelectedMatrix(){
 }
 // ── End multi-print ─────────────────────────────────────────────
 
+// ── Hình ảnh báo giá NCC ───────────────────────────────────────
+function mhPreviewNccImg(idx, url){
+  const wrap = document.getElementById('mh-ncc'+idx+'-img-wrap');
+  const img  = document.getElementById('mh-ncc'+idx+'-img');
+  if(!url||url.trim()===''){
+    if(wrap) wrap.style.display='none';
+    if(img)  img.src='';
+    return;
+  }
+  if(img)  img.src = url.trim();
+  if(wrap) wrap.style.display='block';
+}
+
+function mhUploadNccImg(idx, input){
+  const file = input.files[0]; if(!file) return;
+  if(file.size > 5*1024*1024){ toast('⚠️ Ảnh quá lớn (tối đa 5 MB)','warn'); return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const dataUrl = e.target.result;
+    const urlEl = document.getElementById('mh-ncc'+idx+'-anhurl');
+    if(urlEl) urlEl.value = dataUrl;
+    mhPreviewNccImg(idx, dataUrl);
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function mhClearNccImg(idx){
+  const wrap  = document.getElementById('mh-ncc'+idx+'-img-wrap');
+  const img   = document.getElementById('mh-ncc'+idx+'-img');
+  const urlEl = document.getElementById('mh-ncc'+idx+'-anhurl');
+  if(wrap)  wrap.style.display='none';
+  if(img)   img.src='';
+  if(urlEl) urlEl.value='';
+}
+
+function mhImgZoom(src){
+  if(!src) return;
+  const ov = document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;animation:fadeIn .15s ease;';
+  ov.innerHTML=`<img src="${src}" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:10px;box-shadow:0 12px 60px rgba(0,0,0,.6);">
+    <button onclick="this.parentElement.remove()" style="position:fixed;top:16px;right:20px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:22px;line-height:1;border-radius:50%;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>`;
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  document.body.appendChild(ov);
+}
+// ── End hình ảnh báo giá ────────────────────────────────────────
+
 // ── Dynamic NCC grid helpers ────────────────────────────────────
 function mhGetNccData(i){
   const gv = eid => (document.getElementById(eid)?.value||'').trim();
@@ -24558,6 +24617,7 @@ function mhGetNccData(i){
     dieuKhoan: gv(pfx+'-thanhtoan'),
     tggh:      gv(pfx+'-giao'),
     fileUrl:   gv(pfx+'-fileurl'),
+    anhUrl:    gv(pfx+'-anhurl'),
     ghichu:    gv(pfx+'-ghichu'),
     isChon:    badge ? badge.style.display!=='none' : false
   };
@@ -24574,8 +24634,10 @@ function mhFillNccData(i, b){
   sv(pfx+'-thanhtoan',b.dieuKhoan||'');
   sv(pfx+'-giao',     b.tggh||'');
   sv(pfx+'-fileurl',  b.fileUrl||'');
+  sv(pfx+'-anhurl',   b.anhUrl||'');
   sv(pfx+'-ghichu',   b.ghichu||'');
   mhSyncFileLink(document.getElementById(pfx+'-fileurl')||{value:''}, pfx+'-filelink');
+  if(b.anhUrl) mhPreviewNccImg(i, b.anhUrl); else mhClearNccImg(i);
   const btnEl   = document.getElementById('mh-chon-btn-'+i);
   const badgeEl = document.getElementById('mh-chon-badge-'+i);
   if(btnEl)   btnEl.style.display   = 'none';
@@ -24634,6 +24696,26 @@ function mhBuildNccCol(i, totalCount){
            style="display:none;padding:5px 8px;border-radius:7px;background:#EFF6FF;border:1px solid #BFDBFE;color:#2563EB;font-size:12px;white-space:nowrap;text-decoration:none;" title="Mở link">
           <i class="ph ph-arrow-square-out"></i>
         </a>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:6px;">
+      <label style="font-size:10px;color:var(--muted);">Hình ảnh báo giá</label>
+      <!-- Thumbnail preview -->
+      <div id="mh-ncc${i}-img-wrap" style="display:none;margin-bottom:5px;position:relative;">
+        <img id="mh-ncc${i}-img" src="" alt="Ảnh báo giá"
+          style="width:100%;max-height:110px;object-fit:cover;border-radius:7px;border:1px solid var(--border);cursor:zoom-in;display:block;"
+          onclick="mhImgZoom(this.src)" title="Nhấp để phóng to">
+        <button onclick="mhClearNccImg(${i})" title="Xóa ảnh"
+          style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:13px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+      <!-- URL paste + Upload button -->
+      <div style="display:flex;gap:4px;align-items:center;">
+        <input type="text" id="mh-ncc${i}-anhurl" class="finput" placeholder="Dán URL ảnh…"
+          style="font-size:11px;flex:1;" oninput="mhPreviewNccImg(${i},this.value)">
+        <label style="cursor:pointer;padding:5px 9px;border-radius:7px;background:#F0F9FF;border:1px solid #BAE6FD;color:#0369A1;font-size:12px;white-space:nowrap;display:flex;align-items:center;gap:3px;flex-shrink:0;" title="Tải ảnh lên từ máy tính">
+          <i class="ph ph-image"></i>
+          <input type="file" accept="image/*" style="display:none;" onchange="mhUploadNccImg(${i},this)">
+        </label>
       </div>
     </div>
     <div class="field" style="margin-bottom:6px;">
@@ -24701,6 +24783,7 @@ function mhPrintBaoGia(){
     dieuKhoan: gv('mh-ncc'+i+'-thanhtoan'),
     tggh:      gv('mh-ncc'+i+'-giao'),
     fileUrl:   gv('mh-ncc'+i+'-fileurl'),
+    anhUrl:    gv('mh-ncc'+i+'-anhurl'),
     ghichu:    gv('mh-ncc'+i+'-ghichu'),
     isChon:    document.getElementById('mh-chon-badge-'+i)?.style.display !== 'none',
   }));
@@ -24717,8 +24800,9 @@ function mhPrintBaoGia(){
   const minTotal = validTotals.length ? Math.min(...validTotals) : 0;
 
   const thCols = nccs.map((n,i)=>
-    `<th style="text-align:center;background:#1e3a5f;color:#fff;min-width:150px;padding:9px 12px;">
-      ${n.ten||('NCC '+(i+1))}${n.isChon?' ✅':''}
+    `<th style="text-align:center;background:#1e3a5f;color:#fff;min-width:150px;padding:9px 12px;vertical-align:top;">
+      <div style="font-size:12px;font-weight:700;">${n.ten||('NCC '+(i+1))}${n.isChon?' ✅':''}</div>
+      ${n.anhUrl?`<img src="${n.anhUrl}" style="margin-top:6px;width:100%;max-height:90px;object-fit:cover;border-radius:5px;border:1px solid rgba(255,255,255,.25);" onerror="this.style.display='none'">`:``}
     </th>`).join('');
 
   const infoRows = [
@@ -25062,6 +25146,7 @@ function mhSaveBaoGia(){
     dieuKhoan: gv('mh-ncc'+i+'-thanhtoan'),
     tggh:      gv('mh-ncc'+i+'-giao'),
     fileUrl:   gv('mh-ncc'+i+'-fileurl'),
+    anhUrl:    gv('mh-ncc'+i+'-anhurl'),
     ghichu:    gv('mh-ncc'+i+'-ghichu'),
     isChon: (()=>{ const b=document.getElementById('mh-chon-badge-'+i); return b&&b.style.display!=='none'; })(),
     createdAt: (d.baoGia&&d.baoGia[i]?.createdAt)||new Date().toISOString()
