@@ -25358,7 +25358,9 @@ async function msalSpPushMuaHang(id, _retried){
   try{
     if(d._spId){
       await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items(${d._spId})`,{
-        method:'PATCH', body: JSON.stringify(body)
+        method:'PATCH',
+        headers:{'IF-MATCH':'*','X-HTTP-Method':'MERGE'},
+        body: JSON.stringify(body)
       });
     } else {
       const res = await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items`,{
