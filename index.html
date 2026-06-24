@@ -23722,7 +23722,6 @@ function _mhRenderTable(){
       <th style="padding:9px 12px;text-align:left;font-weight:600;">Ngày YC</th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;">Người yêu cầu</th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;">Tên hàng</th>
-      <th style="padding:9px 12px;text-align:center;font-weight:600;width:72px;">Hình ảnh</th>
       <th style="padding:9px 12px;text-align:right;font-weight:600;">SL</th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;">NCC</th>
       <th style="padding:9px 12px;text-align:right;font-weight:600;">Giá ước tính</th>
@@ -23755,11 +23754,6 @@ function _mhRenderTable(){
         <td style="padding:9px 12px;max-width:220px;overflow:hidden;">
           <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.tenHang||'')}">${hcqtEsc(d.tenHang||'—')}</div>
           ${d.moTa?`<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.moTa)}">${hcqtEsc(d.moTa)}</div>`:''}
-        </td>
-        <td style="padding:6px 8px;text-align:center;width:72px;">
-          ${d.anhUrl
-            ? `<img src="${hcqtEsc(d.anhUrl)}" style="height:44px;max-width:60px;object-fit:cover;border-radius:5px;border:1px solid var(--border,#e2e8f0);cursor:zoom-in;" onclick="mhImgZoom(this.src)" title="Nhấn để phóng to">`
-            : `<span style="color:var(--muted);font-size:18px;">—</span>`}
         </td>
         <td style="padding:9px 12px;text-align:right;">${d.soLuong||'—'} ${hcqtEsc(d.donViTinh||'')}</td>
         <td style="padding:9px 12px;font-size:11px;">${hcqtEsc(d.ncc||'—')}</td>
