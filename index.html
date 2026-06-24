@@ -23728,7 +23728,8 @@ function _mhRenderTable(){
     <tbody>
     ${list.map(d=>{
       const chk = _mhSelected.has(d.id);
-      return `<tr style="border-top:1px solid var(--border,#e2e8f0);${chk?'background:#EEF2FF;':''}" id="mh-tr-${d.id}"
+      return `<tr style="border-top:1px solid var(--border,#e2e8f0);${chk?'background:#EEF2FF;':''}cursor:pointer;" id="mh-tr-${d.id}"
+        ondblclick="mhOpenForm('${d.id}')"
         onmouseenter="if(!document.getElementById('mh-chk-${d.id}').checked)this.style.background='#f8fafc'"
         onmouseleave="this.style.background=document.getElementById('mh-chk-${d.id}').checked?'#EEF2FF':''">
         <td style="padding:9px 10px;text-align:center;">
@@ -24399,8 +24400,10 @@ function mhToggleCheck(id, checked){
 }
 
 function mhToggleAllCheck(checked, ids){
-  ids.forEach(id=>{ if(checked) _mhSelected.add(id); else _mhSelected.delete(id); });
   ids.forEach(id=>{
+    if(checked) _mhSelected.add(id); else _mhSelected.delete(id);
+    const chk = document.getElementById('mh-chk-'+id);
+    if(chk) chk.checked = checked;
     const tr = document.getElementById('mh-tr-'+id);
     if(tr) tr.style.background = checked ? '#EEF2FF' : '';
   });
@@ -25282,7 +25285,12 @@ function mhToSpItem(rec){
     NgayNhanHang:rec.ngayNhanHang||null,
     NgayBanGiao: rec.ngayBanGiao||null,
     GhiChu:      rec.ghiChu||'',
-    BaoGia:      rec.baoGia&&rec.baoGia.length?JSON.stringify(rec.baoGia):null,
+    BaoGia:      (()=>{
+      if(!rec.baoGia||!rec.baoGia.length) return null;
+      // Strip base64 data URLs trước khi gửi lên SP (Note field giới hạn ~64K ký tự)
+      const safe = rec.baoGia.map(b=>({...b, anhUrl:(b.anhUrl&&b.anhUrl.startsWith('data:'))?'[base64_local]':(b.anhUrl||'')}));
+      return JSON.stringify(safe);
+    })(),
     LocalId:     rec.id||'',
     CreatedAt:   rec.createdAt||new Date().toISOString(),
   };
@@ -25361,8 +25369,9 @@ async function msalSpPushMuaHang(id, _retried){
       try{ await msalSpProvisionMuaHangList(); }catch(e2){}
       return msalSpPushMuaHang(id, true);
     }
+    const errMsg = (e&&e.message)||'Lỗi không xác định';
     console.warn('msalSpPushMuaHang error',e);
-    toast('⚠️ Không sync được yêu cầu lên SharePoint. Nhấn "Sync SP" để thử lại.','warn');
+    toast('⚠️ Không sync được lên SP: '+errMsg+'. Nhấn "Sync SP" để thử lại.','warn');
     hcqtRenderMuaHang(); // refresh icon ⚠
   }
 }
