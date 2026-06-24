@@ -23712,7 +23712,7 @@ function _mhRenderTable(){
     <thead><tr style="background:var(--surface2,#f8fafc);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border,#e2e8f0);">
       <th style="padding:9px 10px;text-align:center;width:36px;">
         <input type="checkbox" id="mh-chk-all" ${allChecked?'checked':''} title="Chọn tất cả"
-          onchange="mhToggleAllCheck(this.checked,${JSON.stringify(allIds)})">
+          onchange="mhToggleAllCheck(this.checked)">
       </th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;white-space:nowrap;">Mã YC</th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;">Ngày YC</th>
@@ -24399,7 +24399,9 @@ function mhToggleCheck(id, checked){
   }
 }
 
-function mhToggleAllCheck(checked, ids){
+function mhToggleAllCheck(checked){
+  // Đọc IDs từ DOM thay vì nhúng vào HTML attribute (tránh lỗi dấu " trong JSON)
+  const ids = [...document.querySelectorAll('[id^="mh-tr-"]')].map(el=>el.id.replace('mh-tr-',''));
   ids.forEach(id=>{
     if(checked) _mhSelected.add(id); else _mhSelected.delete(id);
     const chk = document.getElementById('mh-chk-'+id);
