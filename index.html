@@ -24592,11 +24592,13 @@ function mhPrintSelectedMatrix(){
     const prices  = nccNames.map(n=>getPrice(d,n));
     const validP  = prices.filter(p=>p>0);
     const minP    = validP.length ? Math.min(...validP) : 0;
-    prices.forEach((p,i)=>{ nccTotals[i]+=p; });
 
     // NCC được chọn = isChon trong baoGia
     const chosenBg = (d.baoGia||[]).find(b=>b.isChon);
     const chosenNcc = (chosenBg?.ncc||'').trim();
+
+    // Chỉ cộng vào tổng cột NCC nào được chọn mua
+    prices.forEach((p,i)=>{ if(chosenNcc && nccNames[i]===chosenNcc) nccTotals[i]+=p; });
 
     const cells = prices.map((p,i)=>{
       const ncc = nccNames[i];
