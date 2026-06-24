@@ -23734,7 +23734,14 @@ function _mhRenderTable(){
         <td style="padding:9px 10px;text-align:center;">
           <input type="checkbox" id="mh-chk-${d.id}" ${chk?'checked':''} onchange="mhToggleCheck('${d.id}',this.checked)">
         </td>
-        <td style="padding:9px 12px;font-family:monospace;font-weight:700;color:#6366f1;white-space:nowrap;">${hcqtEsc(d.soYC||'—')}</td>
+        <td style="padding:9px 12px;font-family:monospace;font-weight:700;color:#6366f1;white-space:nowrap;">
+          ${hcqtEsc(d.soYC||'—')}
+          ${_msalAccount
+            ? (d._spId
+                ? `<span title="Đã đồng bộ SharePoint (ID: ${d._spId})" style="color:#22c55e;font-size:13px;margin-left:4px;cursor:default;">☁</span>`
+                : `<span title="Chưa đồng bộ lên SharePoint — nhấn Sync SP để đẩy" style="color:#f59e0b;font-size:13px;margin-left:4px;cursor:pointer;" onclick="mhSyncSP()">⚠</span>`)
+            : ''}
+        </td>
         <td style="padding:9px 12px;white-space:nowrap;color:var(--muted);">${hcqtFmtDate(d.ngayYC)}</td>
         <td style="padding:9px 12px;">
           <div style="font-weight:600">${hcqtEsc(d.nguoiYC||'—')}</div>
@@ -25355,6 +25362,8 @@ async function msalSpPushMuaHang(id, _retried){
       return msalSpPushMuaHang(id, true);
     }
     console.warn('msalSpPushMuaHang error',e);
+    toast('⚠️ Không sync được yêu cầu lên SharePoint. Nhấn "Sync SP" để thử lại.','warn');
+    hcqtRenderMuaHang(); // refresh icon ⚠
   }
 }
 
