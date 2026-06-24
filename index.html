@@ -24097,6 +24097,8 @@ function mhPrintList(mode){
 }
 
 // ── Hình ảnh sản phẩm trong form yêu cầu mua hàng ─────────────
+const _MH_IMG_FOLDER = 'HCQT_Anh_MuaHang'; // thư mục trong SP Shared Documents
+
 function mhFormPreviewImg(url){
   const wrap = document.getElementById('mh-f-img-wrap');
   const img  = document.getElementById('mh-f-img-preview');
@@ -24104,12 +24106,77 @@ function mhFormPreviewImg(url){
   if(url){ img.src = url; wrap.style.display = 'flex'; }
   else   { img.src = ''; wrap.style.display = 'none'; }
 }
-function mhFormUploadImg(input){
+
+async function mhUploadImgToSP(file){
+  const token = await msalGetToken();
+  const site = HCQT_SITE;
+  // Server-relative URL của folder ảnh
+  const siteRelPath = new URL(site).pathname; // /teams/Department_Administration
+  const folderRel = siteRelPath + '/Shared Documents/' + _MH_IMG_FOLDER;
+
+  // Đảm bảo folder tồn tại
+  try{
+    const chk = await fetch(`${site}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderRel)}')`,{
+      headers:{'Accept':'application/json;odata=nometadata','Authorization':'Bearer '+token}
+    });
+    if(!chk.ok){
+      // Tạo folder
+      await fetch(`${site}/_api/web/folders`,{
+        method:'POST',
+        headers:{'Accept':'application/json;odata=nometadata','Content-Type':'application/json;odata=nometadata','Authorization':'Bearer '+token},
+        body: JSON.stringify({ServerRelativeUrl: folderRel})
+      });
+    }
+  }catch(e){ console.warn('[MH IMG] Kiểm tra folder:',e); }
+
+  // Tên file unique
+  const ext = (file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const fname = `mh_${Date.now()}_${Math.random().toString(36).slice(2,5)}.${ext}`;
+
+  // Upload file
+  const buf = await file.arrayBuffer();
+  const uploadUrl = `${site}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderRel)}')/Files/add(url='${encodeURIComponent(fname)}',overwrite=true)`;
+  const r = await fetch(uploadUrl,{
+    method:'POST',
+    headers:{'Accept':'application/json;odata=nometadata','Authorization':'Bearer '+token},
+    body: buf
+  });
+  if(!r.ok){ const t=await r.text(); throw new Error('HTTP '+r.status+': '+t.substring(0,120)); }
+  const data = await r.json();
+  // Trả về absolute URL
+  const origin = new URL(site).origin;
+  return origin + (data.ServerRelativeUrl||'').replace(/ /g,'%20');
+}
+
+async function mhFormUploadImg(input){
   if(!input || !input.files || !input.files[0]) return;
-  if(input.files[0].size > 15*1024*1024){ toast('Ảnh quá lớn (tối đa 15 MB)','warn'); return; }
+  const file = input.files[0];
+  if(file.size > 30*1024*1024){ toast('Ảnh quá lớn (tối đa 30 MB)','warn'); return; }
+
+  if(_msalAccount){
+    // Upload lên SharePoint → lưu URL thật
+    toast('⏳ Đang upload ảnh lên SharePoint...','info');
+    try{
+      const url = await mhUploadImgToSP(file);
+      document.getElementById('mh-f-anhUrl').value = url;
+      mhFormPreviewImg(url);
+      toast('✅ Upload ảnh thành công — URL đã lưu','ok');
+    }catch(e){
+      console.warn('[MH IMG] SP upload lỗi:',e);
+      toast('⚠️ Upload SP thất bại: '+e.message+'. Dùng ảnh nén local.','warn');
+      _mhCompressAndPreview(file);
+    }
+  } else {
+    // Chưa đăng nhập → nén base64 local
+    toast('ℹ️ Chưa đăng nhập Microsoft — ảnh lưu local (chỉ thấy trên máy này)','info');
+    _mhCompressAndPreview(file);
+  }
+  input.value = '';
+}
+
+function _mhCompressAndPreview(file){
   const reader = new FileReader();
   reader.onload = e => {
-    // Nén ảnh về max 600px, JPEG 80% để vừa localStorage (~30-80KB)
     const imgEl = new Image();
     imgEl.onload = () => {
       const MAX = 600;
@@ -24127,8 +24194,9 @@ function mhFormUploadImg(input){
     };
     imgEl.src = e.target.result;
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
 }
+
 function mhFormClearImg(){
   document.getElementById('mh-f-anhUrl').value = '';
   const f = document.getElementById('mh-f-img-file'); if(f) f.value='';
