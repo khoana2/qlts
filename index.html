@@ -24709,14 +24709,6 @@ function mhPrintSelectedMatrix(){
     <tfoot>${totalRow}</tfoot>
   </table>
 
-  <div style="margin-top:8px;font-size:10.5px;color:#555;display:flex;gap:18px;flex-wrap:wrap;">
-    <span><span style="display:inline-block;width:14px;height:14px;background:#C0DD97;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Ô xanh = NCC được chọn mua</span>
-    <span><span style="display:inline-block;width:14px;height:14px;background:#FFF9C4;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Ô vàng = Giá rẻ nhất</span>
-    ${[...groups.entries()].map(([ncc,entries])=>{
-      const t=entries.reduce((s,e)=>s+e.p,0);
-      return `<span style="font-weight:600;color:#1e3a5f;">${esc(ncc)}: ${fmtN(t)}</span>`;
-    }).join(' &nbsp;|&nbsp; ')}
-  </div>
   <div class="grand">Tổng cộng tất cả NCC: ${fmtN(grandTotal)}</div>
 
   <div class="sig">
