@@ -4319,6 +4319,21 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <label style="font-size:11px;color:var(--muted);">Ghi chú</label>
         <textarea id="mh-f-ghichu" class="finput" rows="2" style="width:100%;resize:vertical;" placeholder="Ghi chú thêm…"></textarea>
       </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-size:11px;color:var(--muted);">Hình ảnh sản phẩm</label>
+        <div id="mh-f-img-wrap" style="display:none;align-items:center;gap:8px;margin-bottom:6px;position:relative;">
+          <img id="mh-f-img-preview" style="height:64px;max-width:120px;object-fit:cover;border-radius:6px;border:1px solid var(--border,#e2e8f0);cursor:zoom-in;" onclick="mhImgZoom(this.src)" title="Nhấn để phóng to">
+          <button type="button" onclick="mhFormClearImg()" style="position:absolute;top:-7px;left:112px;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:18px;text-align:center;padding:0;">×</button>
+          <span style="font-size:11px;color:var(--muted);">Nhấn ảnh để phóng to</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="mh-f-anhUrl" class="finput" style="flex:1;font-size:12px;" placeholder="Dán URL hình ảnh..." oninput="mhFormPreviewImg(this.value)">
+          <label class="btn btn-icon-ph" style="padding:6px 10px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin:0;" title="Tải ảnh từ máy tính">
+            <i class="ph ph-image"></i> Chọn ảnh
+            <input type="file" id="mh-f-img-file" accept="image/*" style="display:none" onchange="mhFormUploadImg(this)">
+          </label>
+        </div>
+      </div>
       <input type="hidden" id="mh-f-id">
     </div>
     <div class="modal-foot" style="gap:10px;justify-content:flex-end;">
@@ -23703,6 +23718,7 @@ function _mhRenderTable(){
       <th style="padding:9px 12px;text-align:left;font-weight:600;">Ngày YC</th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;">Người yêu cầu</th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;">Tên hàng</th>
+      <th style="padding:9px 12px;text-align:center;font-weight:600;width:72px;">Hình ảnh</th>
       <th style="padding:9px 12px;text-align:right;font-weight:600;">SL</th>
       <th style="padding:9px 12px;text-align:left;font-weight:600;">NCC</th>
       <th style="padding:9px 12px;text-align:right;font-weight:600;">Giá ước tính</th>
@@ -23727,6 +23743,11 @@ function _mhRenderTable(){
         <td style="padding:9px 12px;max-width:220px;overflow:hidden;">
           <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.tenHang||'')}">${hcqtEsc(d.tenHang||'—')}</div>
           ${d.moTa?`<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${hcqtEsc(d.moTa)}">${hcqtEsc(d.moTa)}</div>`:''}
+        </td>
+        <td style="padding:6px 8px;text-align:center;width:72px;">
+          ${d.anhUrl
+            ? `<img src="${hcqtEsc(d.anhUrl)}" style="height:44px;max-width:60px;object-fit:cover;border-radius:5px;border:1px solid var(--border,#e2e8f0);cursor:zoom-in;" onclick="mhImgZoom('${hcqtEsc(d.anhUrl)}')" title="Nhấn để phóng to">`
+            : `<span style="color:var(--muted);font-size:18px;">—</span>`}
         </td>
         <td style="padding:9px 12px;text-align:right;">${d.soLuong||'—'} ${hcqtEsc(d.donViTinh||'')}</td>
         <td style="padding:9px 12px;font-size:11px;">${hcqtEsc(d.ncc||'—')}</td>
@@ -23921,6 +23942,9 @@ function mhOpenForm(id){
   g('mh-f-trangThai',d.trangThai||'cho_duyet');
   g('mh-f-nguoiDuyet',d.nguoiDuyet||'');
   g('mh-f-ghichu',  d.ghiChu||'');
+  g('mh-f-anhUrl',  d.anhUrl||'');
+  mhFormPreviewImg(d.anhUrl||'');
+  const imgFile = document.getElementById('mh-f-img-file'); if(imgFile) imgFile.value='';
   openModal('modal-mh-form');
 }
 
@@ -23941,6 +23965,7 @@ function mhSaveForm(){
       ncc: g('mh-f-ncc'), giaUocTinh: parseFloat(g('mh-f-giaUocTinh'))||0,
       trangThai: g('mh-f-trangThai')||'cho_duyet',
       nguoiDuyet: g('mh-f-nguoiDuyet'), ghiChu: g('mh-f-ghichu'),
+      anhUrl: g('mh-f-anhUrl'),
       baoGia: [], createdAt: now
     };
     _muaHangData.unshift(newRec);
@@ -23956,12 +23981,36 @@ function mhSaveForm(){
       moTa: g('mh-f-moTa'), ncc: g('mh-f-ncc'),
       giaUocTinh: parseFloat(g('mh-f-giaUocTinh'))||d.giaUocTinh||0,
       trangThai: g('mh-f-trangThai'), nguoiDuyet: g('mh-f-nguoiDuyet'),
-      ghiChu: g('mh-f-ghichu')
+      ghiChu: g('mh-f-ghichu'), anhUrl: g('mh-f-anhUrl')
     });
     mhSave(); closeModal('modal-mh-form'); hcqtRenderMuaHang();
     msalSpPushMuaHang(id);
     toast('✅ Đã cập nhật yêu cầu','ok');
   }
+}
+
+// ── Hình ảnh sản phẩm trong form yêu cầu mua hàng ─────────────
+function mhFormPreviewImg(url){
+  const wrap = document.getElementById('mh-f-img-wrap');
+  const img  = document.getElementById('mh-f-img-preview');
+  if(!wrap || !img) return;
+  if(url){ img.src = url; wrap.style.display = 'flex'; }
+  else   { img.src = ''; wrap.style.display = 'none'; }
+}
+function mhFormUploadImg(input){
+  if(!input || !input.files || !input.files[0]) return;
+  if(input.files[0].size > 5*1024*1024){ toast('Ảnh quá lớn (tối đa 5 MB)','warn'); return; }
+  const r = new FileReader();
+  r.onload = e => {
+    document.getElementById('mh-f-anhUrl').value = e.target.result;
+    mhFormPreviewImg(e.target.result);
+  };
+  r.readAsDataURL(input.files[0]);
+}
+function mhFormClearImg(){
+  document.getElementById('mh-f-anhUrl').value = '';
+  const f = document.getElementById('mh-f-img-file'); if(f) f.value='';
+  mhFormPreviewImg('');
 }
 
 // ── So sánh báo giá 3 NCC ──────────────────────────────────────
