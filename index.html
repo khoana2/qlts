@@ -4358,6 +4358,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   <button onclick="mhPrintSelectedMatrix()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;">
     <i class="ph ph-printer"></i> In so sánh
   </button>
+  <button onclick="mhPrintList('selected')" style="background:rgba(255,165,0,.25);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;">
+    <i class="ph ph-list"></i> In danh sách
+  </button>
   <button onclick="mhClearSelected()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">
     ✕ Bỏ chọn
   </button>
@@ -23999,15 +24002,21 @@ function mhSaveForm(){
 }
 
 // ── In danh sách yêu cầu mua hàng ──────────────────────────────
-function mhPrintList(){
-  const list = _muaHangData.filter(d=>{
-    if(_mhFilterTT && d.trangThai !== _mhFilterTT) return false;
-    if(_mhFilterQ){
-      const q=_mhFilterQ.toLowerCase();
-      if(!((d.soYC||'').toLowerCase().includes(q)||(d.tenHang||'').toLowerCase().includes(q)||(d.nguoiYC||'').toLowerCase().includes(q)||(d.phongBan||'').toLowerCase().includes(q)||(d.ncc||'').toLowerCase().includes(q))) return false;
-    }
-    return true;
-  }).slice().reverse();
+function mhPrintList(mode){
+  // mode = 'selected' → chỉ in các row đang được tick
+  let list;
+  if(mode==='selected' && _mhSelected.size>0){
+    list = [..._mhSelected].map(id=>_muaHangData.find(x=>x.id===id)).filter(Boolean);
+  } else {
+    list = _muaHangData.filter(d=>{
+      if(_mhFilterTT && d.trangThai !== _mhFilterTT) return false;
+      if(_mhFilterQ){
+        const q=_mhFilterQ.toLowerCase();
+        if(!((d.soYC||'').toLowerCase().includes(q)||(d.tenHang||'').toLowerCase().includes(q)||(d.nguoiYC||'').toLowerCase().includes(q)||(d.phongBan||'').toLowerCase().includes(q)||(d.ncc||'').toLowerCase().includes(q))) return false;
+      }
+      return true;
+    }).slice().reverse();
+  }
 
   if(!list.length){ toast('Không có dữ liệu để in','warn'); return; }
 
@@ -24016,7 +24025,9 @@ function mhPrintList(){
   const fmtDate = s => { if(!s) return '—'; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString('vi-VN'); };
   const statusLabel = tt => (MH_STATUS[tt]||{label:tt}).label;
   const today = new Date().toLocaleDateString('vi-VN');
-  const filterLabel = _mhFilterTT ? (' — '+statusLabel(_mhFilterTT)) : (_mhFilterQ?' — Tìm: "'+_mhFilterQ+'"':'');
+  const filterLabel = (mode==='selected'&&_mhSelected.size>0)
+    ? (' — '+list.length+' mục đã chọn')
+    : (_mhFilterTT ? (' — '+statusLabel(_mhFilterTT)) : (_mhFilterQ?' — Tìm: "'+_mhFilterQ+'"':''));
   const totalGia = list.reduce((s,d)=>s+(parseFloat(d.giaUocTinh)||0),0);
 
   const rows = list.map((d,i)=>`
