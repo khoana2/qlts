@@ -23758,7 +23758,7 @@ function _mhRenderTable(){
         </td>
         <td style="padding:6px 8px;text-align:center;width:72px;">
           ${d.anhUrl
-            ? `<img src="${hcqtEsc(d.anhUrl)}" style="height:44px;max-width:60px;object-fit:cover;border-radius:5px;border:1px solid var(--border,#e2e8f0);cursor:zoom-in;" onclick="mhImgZoom('${hcqtEsc(d.anhUrl)}')" title="Nhấn để phóng to">`
+            ? `<img src="${hcqtEsc(d.anhUrl)}" style="height:44px;max-width:60px;object-fit:cover;border-radius:5px;border:1px solid var(--border,#e2e8f0);cursor:zoom-in;" onclick="mhImgZoom(this.src)" title="Nhấn để phóng to">`
             : `<span style="color:var(--muted);font-size:18px;">—</span>`}
         </td>
         <td style="padding:9px 12px;text-align:right;">${d.soLuong||'—'} ${hcqtEsc(d.donViTinh||'')}</td>
@@ -24106,13 +24106,28 @@ function mhFormPreviewImg(url){
 }
 function mhFormUploadImg(input){
   if(!input || !input.files || !input.files[0]) return;
-  if(input.files[0].size > 5*1024*1024){ toast('Ảnh quá lớn (tối đa 5 MB)','warn'); return; }
-  const r = new FileReader();
-  r.onload = e => {
-    document.getElementById('mh-f-anhUrl').value = e.target.result;
-    mhFormPreviewImg(e.target.result);
+  if(input.files[0].size > 15*1024*1024){ toast('Ảnh quá lớn (tối đa 15 MB)','warn'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    // Nén ảnh về max 600px, JPEG 80% để vừa localStorage (~30-80KB)
+    const imgEl = new Image();
+    imgEl.onload = () => {
+      const MAX = 600;
+      let w = imgEl.width, h = imgEl.height;
+      if(w > MAX || h > MAX){
+        if(w >= h){ h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.80);
+      document.getElementById('mh-f-anhUrl').value = compressed;
+      mhFormPreviewImg(compressed);
+    };
+    imgEl.src = e.target.result;
   };
-  r.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(input.files[0]);
 }
 function mhFormClearImg(){
   document.getElementById('mh-f-anhUrl').value = '';
@@ -25547,6 +25562,9 @@ async function msalSpLoadMuaHang(){
     const res=await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items?$select=${sel}&$top=2000&$orderby=Id desc`);
     const items=(res.value||[]).map(spItemToMh);
     const spIds=new Set(items.map(x=>x.id));
+    // Giữ lại anhUrl từ local (SP không lưu base64 ảnh)
+    const localAnhUrl=Object.fromEntries(_muaHangData.filter(d=>d.anhUrl).map(d=>[d.id,d.anhUrl]));
+    items.forEach(d=>{ if(localAnhUrl[d.id]) d.anhUrl=localAnhUrl[d.id]; });
     _muaHangData=[...items,..._muaHangData.filter(x=>!spIds.has(x.id))];
     _fixOrphanSpIds(items);
     mhSave(); return items.length;
@@ -25562,6 +25580,8 @@ async function msalSpLoadMuaHang(){
           const res2=await msalSpReq(`${site}/_api/web/lists/getbytitle('${listTitle}')/items?$select=${sel2}&$top=2000&$orderby=Id desc`);
           const items2=(res2.value||[]).map(spItemToMh);
           const spIds2=new Set(items2.map(x=>x.id));
+          const localAnhUrl2=Object.fromEntries(_muaHangData.filter(d=>d.anhUrl).map(d=>[d.id,d.anhUrl]));
+          items2.forEach(d=>{ if(localAnhUrl2[d.id]) d.anhUrl=localAnhUrl2[d.id]; });
           _muaHangData=[...items2,..._muaHangData.filter(x=>!spIds2.has(x.id))];
           _fixOrphanSpIds(items2);
           mhSave(); return items2.length;
