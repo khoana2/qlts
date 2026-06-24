@@ -25324,16 +25324,37 @@ async function msalSpDeleteMuaHangById(spId){
 }
 
 async function mhSyncSP(btn){
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Đang sync...'; }
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-arrows-clockwise"></i> Đang sync...'; }
   try{
     await msalSpProvisionMuaHangList();
     const count = await msalSpLoadMuaHang();
     hcqtRenderMuaHang();
-    toast('✅ Sync xong: '+count+' yêu cầu mua hàng','ok');
+
+    // Push all local items that have no _spId (never synced or failed previously)
+    const unsynced = _muaHangData.filter(d => !d._spId);
+    if(unsynced.length > 0){
+      toast('⏳ Đang đẩy '+unsynced.length+' yêu cầu chưa sync lên SharePoint...','info');
+      let pushed = 0, failed = 0;
+      for(const d of unsynced){
+        try{
+          await msalSpPushMuaHang(d.id);
+          pushed++;
+        }catch(e2){
+          console.warn('[MH] Push thất bại id='+d.id, e2);
+          failed++;
+        }
+      }
+      hcqtRenderMuaHang();
+      const msg = '✅ Sync xong: '+count+' từ SP, đẩy lên '+pushed+' yêu cầu mới'
+        +(failed>0?' ('+failed+' lỗi)':'');
+      toast(msg, failed>0?'warn':'ok');
+    } else {
+      toast('✅ Sync xong: '+count+' yêu cầu mua hàng','ok');
+    }
   }catch(e){
     toast('❌ Sync lỗi: '+e.message,'error');
   }finally{
-    if(btn){ btn.disabled=false; btn.textContent='☁ Sync SP'; }
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-arrows-clockwise"></i> Sync SP'; }
   }
 }
 
