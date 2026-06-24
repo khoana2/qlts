@@ -23669,6 +23669,7 @@ function hcqtRenderMuaHang(){
       placeholder="Tìm mã YC, tên hàng, người yêu cầu…"
       style="flex:1;min-width:200px;font-size:12px;padding:6px 10px;"
       oninput="_mhFilterQ=this.value;_mhRenderTable()">
+    <button class="btn btn-icon-ph" style="padding:6px 12px;font-size:12px;background:#FFF7ED;color:#9A3412;border-color:#FDBA74;" onclick="mhPrintList()" title="In danh sách yêu cầu mua hàng"><i class="ph ph-printer"></i> In danh sách</button>
     <button class="btn btn-icon-ph" style="padding:6px 12px;font-size:12px;" onclick="mhDownloadImportTemplate()" title="Tải file Excel mẫu để nhập danh sách"><i class="ph ph-file-xls"></i> Tải template</button>
     <button class="btn btn-icon-ph" style="padding:6px 12px;font-size:12px;background:#F0FDF4;color:#166534;border-color:#86EFAC;" onclick="mhTriggerImport()" title="Nhập danh sách từ file Excel"><i class="ph ph-upload-simple"></i> Nhập Excel</button>
     <input type="file" id="mh-import-file" accept=".xlsx,.xls" style="display:none" onchange="mhHandleImportFile(this)">
@@ -23995,6 +23996,93 @@ function mhSaveForm(){
     msalSpPushMuaHang(id);
     toast('✅ Đã cập nhật yêu cầu','ok');
   }
+}
+
+// ── In danh sách yêu cầu mua hàng ──────────────────────────────
+function mhPrintList(){
+  const list = _muaHangData.filter(d=>{
+    if(_mhFilterTT && d.trangThai !== _mhFilterTT) return false;
+    if(_mhFilterQ){
+      const q=_mhFilterQ.toLowerCase();
+      if(!((d.soYC||'').toLowerCase().includes(q)||(d.tenHang||'').toLowerCase().includes(q)||(d.nguoiYC||'').toLowerCase().includes(q)||(d.phongBan||'').toLowerCase().includes(q)||(d.ncc||'').toLowerCase().includes(q))) return false;
+    }
+    return true;
+  }).slice().reverse();
+
+  if(!list.length){ toast('Không có dữ liệu để in','warn'); return; }
+
+  const fmt = n => n>0 ? Number(Math.round(n)).toLocaleString('vi-VN')+' ₫' : '—';
+  const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fmtDate = s => { if(!s) return '—'; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString('vi-VN'); };
+  const statusLabel = tt => (MH_STATUS[tt]||{label:tt}).label;
+  const today = new Date().toLocaleDateString('vi-VN');
+  const filterLabel = _mhFilterTT ? (' — '+statusLabel(_mhFilterTT)) : (_mhFilterQ?' — Tìm: "'+_mhFilterQ+'"':'');
+  const totalGia = list.reduce((s,d)=>s+(parseFloat(d.giaUocTinh)||0),0);
+
+  const rows = list.map((d,i)=>`
+    <tr>
+      <td style="text-align:center">${i+1}</td>
+      <td style="font-family:monospace;font-weight:700;color:#6366f1;white-space:nowrap">${esc(d.soYC||'—')}</td>
+      <td style="white-space:nowrap">${fmtDate(d.ngayYC)}</td>
+      <td>${esc(d.nguoiYC||'—')}<br><span style="font-size:10px;color:#64748b">${esc(d.phongBan||'')}</span></td>
+      <td>${esc(d.tenHang||'—')}${d.moTa?'<br><span style="font-size:10px;color:#64748b">'+esc(d.moTa)+'</span>':''}</td>
+      <td style="text-align:center;padding:4px">${d.anhUrl?`<img src="${esc(d.anhUrl)}" style="height:52px;max-width:72px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0">`:'—'}</td>
+      <td style="text-align:center">${esc(String(d.soLuong||'—'))} ${esc(d.donViTinh||'')}</td>
+      <td>${esc(d.ncc||'—')}</td>
+      <td style="text-align:right;white-space:nowrap">${fmt(d.giaUocTinh)}</td>
+      <td style="text-align:center">${statusLabel(d.trangThai)}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+  <title>Danh sách yêu cầu mua hàng</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1e293b;padding:20px 28px}
+    h2{font-size:16px;font-weight:800;text-align:center;letter-spacing:.04em;margin-bottom:2px}
+    .sub{text-align:center;font-size:11px;color:#64748b;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:11.5px}
+    th{background:#1e3a5f;color:#fff;padding:7px 9px;font-weight:600;text-align:left;white-space:nowrap}
+    td{padding:6px 9px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+    tr:nth-child(even) td{background:#f8fafc}
+    .total-row td{font-weight:700;background:#EEF2FF;border-top:2px solid #6366f1}
+    .sig{display:flex;justify-content:flex-end;margin-top:24px;gap:60px}
+    .sig-box{text-align:center;width:150px}
+    .sig-box .title{font-weight:700;font-size:11px;margin-bottom:40px}
+    .sig-box .name{font-size:11px;border-top:1px solid #1e293b;padding-top:4px}
+    @media print{#_ptb{display:none!important}}
+  </style></head><body>
+  <div id="_ptb" style="position:sticky;top:0;z-index:9999;background:#1e3a5f;color:#fff;padding:8px 16px;display:flex;align-items:center;gap:12px;margin:-20px -28px 16px;">
+    <span style="flex:1;font-size:13px;font-weight:600">📄 Xem trước danh sách in</span>
+    <button onclick="window.print()" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:6px 18px;font-size:13px;font-weight:700;cursor:pointer">🖨️ In ngay</button>
+    <button onclick="window.close()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer">✕ Đóng</button>
+  </div>
+  <h2>DANH SÁCH YÊU CẦU MUA HÀNG${filterLabel}</h2>
+  <div class="sub">Ngày in: ${today} &nbsp;|&nbsp; Tổng: ${list.length} yêu cầu</div>
+  <table>
+    <thead><tr>
+      <th style="width:28px;text-align:center">STT</th>
+      <th>Mã YC</th><th>Ngày YC</th><th>Người yêu cầu</th>
+      <th>Tên hàng / Mô tả</th><th style="text-align:center;width:80px">Hình ảnh</th>
+      <th style="text-align:center">SL</th>
+      <th>Nhà cung cấp</th><th style="text-align:right">Giá ước tính</th>
+      <th style="text-align:center">Trạng thái</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr class="total-row">
+      <td colspan="8" style="text-align:right;padding-right:12px">Tổng cộng</td>
+      <td style="text-align:right;white-space:nowrap">${fmt(totalGia)}</td>
+      <td></td>
+    </tr></tfoot>
+  </table>
+  <div class="sig">
+    <div class="sig-box"><div class="title">NGƯỜI LẬP</div><div class="name">&nbsp;</div></div>
+    <div class="sig-box"><div class="title">NGƯỜI DUYỆT</div><div class="name">&nbsp;</div></div>
+  </div>
+  </body></html>`;
+
+  const w = window.open('','_blank','width=1050,height=750');
+  w.document.write(html);
+  w.document.close();
 }
 
 // ── Hình ảnh sản phẩm trong form yêu cầu mua hàng ─────────────
