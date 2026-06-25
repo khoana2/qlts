@@ -4355,6 +4355,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   <button onclick="mhOpenSplit()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
     <i class="ph ph-arrows-split"></i> Phân chia đặt hàng
   </button>
+  <button onclick="dhCreateFromSelected()" style="background:#059669;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+    <i class="ph ph-file-text"></i> Tạo đơn hàng
+  </button>
   <button onclick="mhPrintSelectedMatrix()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;">
     <i class="ph ph-printer"></i> In so sánh
   </button>
@@ -4368,6 +4371,63 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 <style>
 @keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(12px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 </style>
+
+<!-- ══════════════ MODAL: TẠO / SỬA ĐƠN HÀNG ══════════════ -->
+<div class="modal-backdrop" id="modal-dh-form" style="display:none;">
+  <div class="modal" style="max-width:960px;width:96vw;max-height:94vh;display:flex;flex-direction:column;">
+    <div class="modal-head">
+      <div>
+        <div id="dh-form-title" style="font-size:14px;font-weight:700;">📋 Tạo đơn hàng mới</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Thêm mặt hàng từ yêu cầu mua hàng hoặc nhập thủ công</div>
+      </div>
+      <button class="btn icon-only" onclick="closeModal('modal-dh-form')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body" style="flex:1;overflow-y:auto;padding:16px 20px;">
+      <!-- Header fields -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Mã đơn hàng</label>
+          <input type="text" id="dh-f-maDH" class="finput" readonly style="background:var(--bg2,#f8fafc);color:var(--muted);font-weight:700;font-size:13px;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Ngày đặt hàng</label>
+          <input type="date" id="dh-f-ngayDat" class="finput">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Trạng thái</label>
+          <select id="dh-f-trangThai" class="fsel"></select>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Ghi chú</label>
+          <input type="text" id="dh-f-ghiChu" class="finput" placeholder="Ghi chú đơn hàng…">
+        </div>
+      </div>
+
+      <!-- Items section -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <span style="font-size:13px;font-weight:700;">Danh sách hàng hóa</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <select id="dh-f-picker" class="fsel" style="font-size:12px;max-width:300px;" onchange="dhPickFromMH(this)">
+            <option value="">↗ Chọn từ yêu cầu mua hàng…</option>
+          </select>
+          <button class="btn btn-icon-ph" style="font-size:12px;padding:5px 12px;" onclick="dhAddFormItem()">
+            <i class="ph ph-plus"></i> Thêm hàng mới
+          </button>
+        </div>
+      </div>
+
+      <div id="dh-f-items" style="margin-bottom:12px;"></div>
+
+      <div style="text-align:right;font-size:15px;font-weight:800;padding:12px 0 4px;border-top:2px solid var(--border,#e2e8f0);">
+        Tổng tiền: <span id="dh-f-total" style="color:#6366f1;">0 ₫</span>
+      </div>
+    </div>
+    <div class="modal-foot" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;">
+      <button class="btn" onclick="closeModal('modal-dh-form')">Hủy</button>
+      <button class="btn success btn-icon-ph" onclick="dhSaveForm()"><i class="ph ph-floppy-disk"></i> Lưu đơn hàng</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal Phân chia đặt hàng theo NCC -->
 <div class="modal-backdrop" id="modal-mh-split" style="display:none;">
@@ -4417,7 +4477,10 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <button class="btn" onclick="closeModal('modal-mh-split')">Đóng</button>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-icon-ph" onclick="mhPrintSplit()" style="background:#6366f1;color:#fff;border-color:#6366f1;">
-          <i class="ph ph-printer"></i> In đơn đặt hàng
+          <i class="ph ph-printer"></i> In so sánh
+        </button>
+        <button class="btn btn-icon-ph" onclick="closeModal('modal-mh-split');dhCreateFromSplit()" style="background:#059669;color:#fff;border-color:#059669;">
+          <i class="ph ph-file-text"></i> Tạo đơn hàng
         </button>
       </div>
     </div>
@@ -23549,6 +23612,61 @@ let _mhSelected  = new Set(); // IDs đang được tick checkbox để in
 let _mhSplitMap  = new Map(); // itemId → nccName: NCC được chọn cho từng mặt hàng
 let _mhNccHistory = [];       // danh sách NCC đã nhập, lưu localStorage
 
+// ── ĐƠN HÀNG ─────────────────────────────────────────────────────
+const DH_STORE_KEY = 'hcqt_donhang_v1';
+let _donHangData  = [];
+let _mhActiveTab  = 'yeucau'; // 'yeucau' | 'donhang'
+let _dhEditId     = null;
+let _dhFormItems  = [];       // [{uid, tenHang, soLuong, donVi, ncc, donGia, thanhTien, muaHangId, anhUrl}]
+let _dhFilterQ    = '';
+let _dhFilterTT   = '';
+
+const DH_STATUS = {
+  nhap:        { label:'Nháp',         bg:'#F1F5F9', color:'#475569', icon:'📝' },
+  da_xac_nhan: { label:'Đã xác nhận',  bg:'#EFF6FF', color:'#1D4ED8', icon:'✅' },
+  da_dat_hang: { label:'Đã đặt hàng',  bg:'#F3E8FF', color:'#6D28D9', icon:'📦' },
+  da_nhan:     { label:'Đã nhận hàng', bg:'#ECFDF5', color:'#065F46', icon:'📬' },
+  hoan_thanh:  { label:'Hoàn thành',   bg:'#DCFCE7', color:'#166534', icon:'🎯' },
+  huy:         { label:'Đã hủy',       bg:'#FEF2F2', color:'#991B1B', icon:'❌' },
+};
+
+function dhSave(){ try{ localStorage.setItem(DH_STORE_KEY, JSON.stringify(_donHangData)); }catch(e){} }
+function dhLoad(){ try{ const d=localStorage.getItem(DH_STORE_KEY); if(d) _donHangData=JSON.parse(d); }catch(e){} }
+
+function dhGenId(){
+  const year = new Date().getFullYear();
+  const prefix = `DH-${year}-`;
+  const existing = _donHangData
+    .map(d=>d.maDH||'')
+    .filter(m=>m.startsWith(prefix))
+    .map(m=>parseInt(m.replace(prefix,''))||0);
+  const next = existing.length ? Math.max(...existing)+1 : 1;
+  return prefix + String(next).padStart(3,'0');
+}
+
+function dhFmt(n){ return n?Number(Math.round(n)).toLocaleString('vi-VN')+' ₫':'—'; }
+
+function dhBadge(tt){
+  const s=DH_STATUS[tt]||{label:tt,bg:'#f1f5f9',color:'#64748b'};
+  return `<span style="background:${s.bg};color:${s.color};padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;">${s.icon||''} ${s.label}</span>`;
+}
+
+function _dhTabsHtml(){
+  const yc = _muaHangData.length;
+  const dh = _donHangData.length;
+  const base = 'padding:9px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s;margin-bottom:-2px;';
+  const act = 'border-bottom-color:#6366f1;color:#6366f1;';
+  const off = 'color:var(--muted,#94a3b8);';
+  return `<div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border,#e2e8f0);">
+    <button style="${base}${_mhActiveTab==='yeucau'?act:off}" onclick="_mhActiveTab='yeucau';hcqtRenderMuaHang()">
+      <i class="ph ph-clipboard-text" style="margin-right:4px;"></i>Yêu cầu mua hàng <span style="font-size:11px;opacity:.7;">(${yc})</span>
+    </button>
+    <button style="${base}${_mhActiveTab==='donhang'?act:off}" onclick="_mhActiveTab='donhang';dhRender()">
+      <i class="ph ph-file-text" style="margin-right:4px;"></i>Đơn hàng <span style="font-size:11px;opacity:.7;">(${dh})</span>
+    </button>
+  </div>`;
+}
+
 const _MH_NCC_KEY = 'qlts_ncc_history';
 
 function mhLoadNccHistory(){
@@ -23629,8 +23747,87 @@ function mhFmt(n){ return n?Number(n).toLocaleString('vi-VN')+' ₫':'—'; }
 let _mhFilterTT = '';
 let _mhFilterQ  = '';
 
+function dhRender(){
+  dhLoad(); mhLoad();
+  const el = document.getElementById('hcqt-view-muahang'); if(!el) return;
+
+  let list = [..._donHangData];
+  if(_dhFilterTT) list = list.filter(d=>d.trangThai===_dhFilterTT);
+  if(_dhFilterQ){
+    const q = _dhFilterQ.toLowerCase();
+    list = list.filter(d=>
+      (d.maDH||'').toLowerCase().includes(q) ||
+      (d.ghiChu||'').toLowerCase().includes(q) ||
+      (d.danhSachHang||[]).some(h=>(h.tenHang||'').toLowerCase().includes(q)||(h.ncc||'').toLowerCase().includes(q))
+    );
+  }
+  list = list.slice().reverse();
+
+  const dhTotal = dh => (dh.danhSachHang||[]).reduce((s,h)=>s+(parseFloat(h.thanhTien)||0),0);
+
+  el.innerHTML = _dhTabsHtml() + `
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+    <select class="fsel" style="font-size:12px;min-width:150px;" onchange="_dhFilterTT=this.value;dhRender()">
+      <option value="">Tất cả trạng thái</option>
+      ${Object.entries(DH_STATUS).map(([k,s])=>`<option value="${k}"${_dhFilterTT===k?' selected':''}>${s.icon} ${s.label}</option>`).join('')}
+    </select>
+    <input type="search" class="finput" value="${hcqtEsc(_dhFilterQ)}"
+      placeholder="Tìm mã đơn, tên hàng, NCC…"
+      style="flex:1;min-width:200px;font-size:12px;padding:6px 10px;"
+      oninput="_dhFilterQ=this.value;dhRender()">
+    <button class="btn primary btn-icon-ph" style="padding:6px 14px;font-size:12px;" onclick="dhOpenForm()">
+      <i class="ph ph-plus"></i> Tạo đơn hàng
+    </button>
+  </div>
+
+  ${list.length===0
+    ? `<div style="text-align:center;padding:48px 20px;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:12px;">
+        <div style="font-size:36px;margin-bottom:8px;">📋</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">Chưa có đơn hàng nào</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Nhấn "+ Tạo đơn hàng" hoặc chọn yêu cầu rồi tạo đơn từ float bar</div>
+      </div>`
+    : `<div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:12px;overflow:hidden;">
+      <thead><tr style="background:var(--surface2,#f8fafc);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border,#e2e8f0);">
+        <th style="padding:9px 12px;text-align:left;font-weight:600;">Mã đơn</th>
+        <th style="padding:9px 12px;text-align:left;font-weight:600;">Ngày đặt</th>
+        <th style="padding:9px 12px;text-align:center;font-weight:600;">Số món</th>
+        <th style="padding:9px 12px;text-align:left;font-weight:600;">Nhà cung cấp</th>
+        <th style="padding:9px 12px;text-align:right;font-weight:600;">Tổng tiền</th>
+        <th style="padding:9px 12px;text-align:center;font-weight:600;">Trạng thái</th>
+        <th style="padding:9px 12px;text-align:center;font-weight:600;">Thao tác</th>
+      </tr></thead>
+      <tbody>
+        ${list.map(d=>{
+          const nccs = [...new Set((d.danhSachHang||[]).map(h=>h.ncc).filter(Boolean))];
+          const total = dhTotal(d);
+          const soMon = (d.danhSachHang||[]).length;
+          return `<tr style="border-top:1px solid var(--border,#e2e8f0);cursor:pointer;"
+            ondblclick="dhOpenForm('${d.id}')"
+            onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+            <td style="padding:9px 12px;font-weight:700;color:#6366f1;">${hcqtEsc(d.maDH||d.id)}</td>
+            <td style="padding:9px 12px;">${d.ngayDat||'—'}</td>
+            <td style="padding:9px 12px;text-align:center;">${soMon}</td>
+            <td style="padding:9px 12px;">
+              ${nccs.length ? nccs.map(n=>`<span style="background:#F0F4FF;color:#3730A3;padding:1px 7px;border-radius:10px;font-size:11px;margin-right:3px;">${hcqtEsc(n)}</span>`).join('') : '<span style="color:var(--muted);">—</span>'}
+            </td>
+            <td style="padding:9px 12px;text-align:right;font-weight:700;">${total>0?Number(total).toLocaleString('vi-VN')+' ₫':'—'}</td>
+            <td style="padding:9px 12px;text-align:center;">${dhBadge(d.trangThai||'nhap')}</td>
+            <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
+              <button class="btn btn-icon-ph" style="padding:4px 8px;font-size:11px;" onclick="dhOpenForm('${d.id}')" title="Sửa"><i class="ph ph-pencil-simple"></i></button>
+              <button class="btn btn-icon-ph" style="padding:4px 8px;font-size:11px;" onclick="dhPrint('${d.id}')" title="In"><i class="ph ph-printer"></i></button>
+              <button class="btn btn-icon-ph" style="padding:4px 8px;font-size:11px;color:#dc2626;border-color:#fca5a5;" onclick="dhDelete('${d.id}')" title="Xóa"><i class="ph ph-trash"></i></button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>`
+  }`;
+}
+
 function hcqtRenderMuaHang(){
-  mhLoad();
+  mhLoad(); dhLoad();
+  if(_mhActiveTab === 'donhang'){ dhRender(); return; }
   const el=document.getElementById('hcqt-view-muahang'); if(!el) return;
 
   const list = _muaHangData.filter(d=>{
@@ -23648,7 +23845,7 @@ function hcqtRenderMuaHang(){
 
   const kpiStyle='background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px;cursor:pointer;transition:box-shadow .15s;display:flex;align-items:center;gap:10px;';
 
-  el.innerHTML=`
+  el.innerHTML=_dhTabsHtml()+`
   <!-- KPI -->
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px">
     <div style="${kpiStyle}" onclick="_mhFilterTT='';hcqtRenderMuaHang()">
@@ -24798,6 +24995,368 @@ function mhPrintSelectedMatrix(){
   if(!w){ toast('⚠️ Trình duyệt chặn popup!','bad'); return; }
   w.document.open(); w.document.write(fullHtml); w.document.close();
 }
+// ══════════════════════════════════════════════════════════════════
+// ĐƠN HÀNG — Quản lý đơn đặt mua
+// ══════════════════════════════════════════════════════════════════
+
+function dhOpenForm(id, preItems){
+  dhLoad(); mhLoad();
+  _dhEditId = id || null;
+  const existing = id ? _donHangData.find(x=>x.id===id) : null;
+
+  // Populate trạng thái select
+  const ttSel = document.getElementById('dh-f-trangThai');
+  if(ttSel) ttSel.innerHTML = Object.entries(DH_STATUS)
+    .map(([k,s])=>`<option value="${k}">${s.icon} ${s.label}</option>`).join('');
+
+  // Populate picker
+  const picker = document.getElementById('dh-f-picker');
+  if(picker){
+    picker.innerHTML = '<option value="">↗ Chọn từ yêu cầu mua hàng…</option>' +
+      _muaHangData.map(d=>`<option value="${d.id}">[${hcqtEsc(d.soYC||d.id.slice(-6))}] ${hcqtEsc(d.tenHang||'(chưa đặt tên)')} — SL:${d.soLuong||1}</option>`).join('');
+  }
+
+  if(existing){
+    document.getElementById('dh-form-title').textContent = '✏️ Sửa đơn hàng';
+    document.getElementById('dh-f-maDH').value   = existing.maDH||'';
+    document.getElementById('dh-f-ngayDat').value = existing.ngayDat||'';
+    document.getElementById('dh-f-ghiChu').value  = existing.ghiChu||'';
+    if(ttSel) ttSel.value = existing.trangThai||'nhap';
+    _dhFormItems = (existing.danhSachHang||[]).map(h=>({...h, uid: h.uid||(_dhFormItems.length+Math.random()).toString(36)}));
+  } else {
+    document.getElementById('dh-form-title').textContent = '📋 Tạo đơn hàng mới';
+    document.getElementById('dh-f-maDH').value   = dhGenId();
+    document.getElementById('dh-f-ngayDat').value = new Date().toISOString().slice(0,10);
+    document.getElementById('dh-f-ghiChu').value  = '';
+    if(ttSel) ttSel.value = 'nhap';
+    _dhFormItems = preItems ? preItems.map((h,i)=>({...h, uid: 'pi'+i})) : [];
+  }
+
+  dhRenderFormTable();
+  openModal('modal-dh-form');
+}
+
+function dhRenderFormTable(){
+  const wrap = document.getElementById('dh-f-items'); if(!wrap) return;
+  if(!_dhFormItems.length){
+    wrap.innerHTML = `<div style="text-align:center;padding:24px;background:var(--bg2,#f8fafc);border-radius:8px;border:1px dashed var(--border,#e2e8f0);color:var(--muted);">
+      Chưa có hàng hóa. Chọn từ yêu cầu mua hàng hoặc nhấn "+ Thêm hàng mới".
+    </div>`;
+    document.getElementById('dh-f-total').textContent = '0 ₫';
+    return;
+  }
+  const esc = s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  wrap.innerHTML = `<div style="overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;font-size:12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;overflow:hidden;">
+    <thead><tr style="background:var(--surface2,#f8fafc);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">
+      <th style="padding:7px 8px;text-align:left;font-weight:600;min-width:180px;">Tên hàng</th>
+      <th style="padding:7px 8px;text-align:center;font-weight:600;width:60px;">SL</th>
+      <th style="padding:7px 8px;text-align:left;font-weight:600;width:70px;">ĐVT</th>
+      <th style="padding:7px 8px;text-align:left;font-weight:600;min-width:130px;">NCC</th>
+      <th style="padding:7px 8px;text-align:right;font-weight:600;width:120px;">Đơn giá (₫)</th>
+      <th style="padding:7px 8px;text-align:right;font-weight:600;width:120px;">Thành tiền</th>
+      <th style="padding:7px 8px;width:32px;"></th>
+    </tr></thead>
+    <tbody>
+    ${_dhFormItems.map((h,i)=>`
+    <tr style="${i%2?'background:#fafafa':''}">
+      <td style="padding:5px 6px;border-top:1px solid var(--border,#e2e8f0);">
+        <input class="finput" style="font-size:12px;padding:5px 7px;width:100%;" placeholder="Tên mặt hàng…"
+          value="${esc(h.tenHang||'')}" oninput="_dhFormItems[${i}].tenHang=this.value">
+      </td>
+      <td style="padding:5px 6px;border-top:1px solid var(--border,#e2e8f0);">
+        <input class="finput" type="number" min="1" style="font-size:12px;padding:5px 7px;width:100%;text-align:center;"
+          value="${h.soLuong||1}" oninput="_dhFormItems[${i}].soLuong=parseFloat(this.value)||1;dhCalcRow(${i})">
+      </td>
+      <td style="padding:5px 6px;border-top:1px solid var(--border,#e2e8f0);">
+        <input class="finput" style="font-size:12px;padding:5px 7px;width:100%;"
+          value="${esc(h.donVi||h.donViTinh||'')}" oninput="_dhFormItems[${i}].donVi=this.value">
+      </td>
+      <td style="padding:5px 6px;border-top:1px solid var(--border,#e2e8f0);">
+        <input class="finput" style="font-size:12px;padding:5px 7px;width:100%;" placeholder="Nhà cung cấp…"
+          value="${esc(h.ncc||'')}" oninput="_dhFormItems[${i}].ncc=this.value">
+      </td>
+      <td style="padding:5px 6px;border-top:1px solid var(--border,#e2e8f0);">
+        <input class="finput" type="number" min="0" style="font-size:12px;padding:5px 7px;width:100%;text-align:right;"
+          value="${h.donGia||''}" placeholder="0" oninput="_dhFormItems[${i}].donGia=parseFloat(this.value)||0;dhCalcRow(${i})">
+      </td>
+      <td style="padding:5px 8px;border-top:1px solid var(--border,#e2e8f0);text-align:right;font-weight:600;" id="dh-row-tt-${i}">
+        ${h.thanhTien>0?Number(h.thanhTien).toLocaleString('vi-VN')+' ₫':'—'}
+      </td>
+      <td style="padding:5px 4px;border-top:1px solid var(--border,#e2e8f0);text-align:center;">
+        <button onclick="dhRemoveFormItem(${i})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:14px;padding:2px 4px;" title="Xóa dòng">✕</button>
+      </td>
+    </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+  dhCalcTotal();
+}
+
+function dhCalcRow(i){
+  const h = _dhFormItems[i];
+  h.thanhTien = (parseFloat(h.soLuong)||1) * (parseFloat(h.donGia)||0);
+  const el = document.getElementById('dh-row-tt-'+i);
+  if(el) el.textContent = h.thanhTien>0 ? Number(h.thanhTien).toLocaleString('vi-VN')+' ₫' : '—';
+  dhCalcTotal();
+}
+
+function dhCalcTotal(){
+  const total = _dhFormItems.reduce((s,h)=>s+(parseFloat(h.thanhTien)||0),0);
+  const el = document.getElementById('dh-f-total');
+  if(el) el.textContent = total>0 ? Number(total).toLocaleString('vi-VN')+' ₫' : '0 ₫';
+}
+
+function dhAddFormItem(){
+  _dhFormItems.push({ uid: Date.now().toString(36), tenHang:'', soLuong:1, donVi:'', ncc:'', donGia:0, thanhTien:0 });
+  dhRenderFormTable();
+  // Focus vào input tên hàng cuối
+  setTimeout(()=>{
+    const inputs = document.querySelectorAll('#dh-f-items input[placeholder="Tên mặt hàng…"]');
+    if(inputs.length) inputs[inputs.length-1].focus();
+  },50);
+}
+
+function dhRemoveFormItem(i){
+  _dhFormItems.splice(i,1);
+  dhRenderFormTable();
+}
+
+function dhPickFromMH(sel){
+  const id = sel.value; if(!id){ return; }
+  // Kiểm tra xem đã có trong form chưa
+  if(_dhFormItems.some(h=>h.muaHangId===id)){
+    toast('Yêu cầu này đã có trong đơn','warn');
+    sel.value=''; return;
+  }
+  const d = _muaHangData.find(x=>x.id===id);
+  if(!d){ sel.value=''; return; }
+  // Lấy NCC và giá từ baoGia isChon, hoặc NCC đầu tiên
+  const chosen = (d.baoGia||[]).find(b=>b.isChon);
+  const ncc = (chosen?.ncc||d.ncc||'').trim();
+  const qty = parseFloat(d.soLuong)||1;
+  let donGia = 0;
+  if(chosen?.gia) donGia = parseFloat(chosen.gia)||0;
+  else if(d.giaUocTinh) donGia = parseFloat(d.giaUocTinh)||0;
+  _dhFormItems.push({
+    uid: Date.now().toString(36),
+    muaHangId: d.id,
+    tenHang: d.tenHang||'',
+    soLuong: qty,
+    donVi: d.donViTinh||d.donVi||'',
+    ncc: ncc,
+    donGia: donGia,
+    thanhTien: donGia * qty,
+    anhUrl: d.anhUrl||''
+  });
+  sel.value = '';
+  dhRenderFormTable();
+}
+
+function dhSaveForm(){
+  const maDH      = (document.getElementById('dh-f-maDH')?.value||'').trim();
+  const ngayDat   = document.getElementById('dh-f-ngayDat')?.value||'';
+  const ghiChu    = document.getElementById('dh-f-ghiChu')?.value||'';
+  const trangThai = document.getElementById('dh-f-trangThai')?.value||'nhap';
+
+  if(!maDH){ toast('Mã đơn hàng không được để trống','warn'); return; }
+  if(!_dhFormItems.length){ toast('Đơn hàng chưa có mặt hàng nào','warn'); return; }
+  if(_dhFormItems.some(h=>!h.tenHang?.trim())){ toast('Còn hàng chưa có tên — vui lòng điền đầy đủ','warn'); return; }
+
+  const tongTien = _dhFormItems.reduce((s,h)=>s+(parseFloat(h.thanhTien)||0),0);
+
+  if(_dhEditId){
+    const idx = _donHangData.findIndex(x=>x.id===_dhEditId);
+    if(idx>=0){
+      _donHangData[idx] = { ..._donHangData[idx], maDH, ngayDat, ghiChu, trangThai,
+        danhSachHang: _dhFormItems.map(h=>({...h})), tongTien };
+    }
+  } else {
+    const account = _msalAccount;
+    _donHangData.unshift({
+      id: 'dh_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      maDH, ngayDat, ghiChu, trangThai,
+      nguoiTao: account?.username||account?.name||'',
+      ngayTao: new Date().toISOString().slice(0,10),
+      danhSachHang: _dhFormItems.map(h=>({...h})),
+      tongTien
+    });
+    // Cập nhật trạng thái các yêu cầu liên kết → "Đã đặt hàng"
+    _dhFormItems.forEach(h=>{
+      if(h.muaHangId){
+        const mh = _muaHangData.find(x=>x.id===h.muaHangId);
+        if(mh && mh.trangThai !== 'da_nhan_hang' && mh.trangThai !== 'da_ban_giao'){
+          mh.trangThai = 'da_dat_hang';
+          mh.donHangId = maDH;
+        }
+      }
+    });
+    mhSave();
+  }
+  dhSave();
+  closeModal('modal-dh-form');
+  toast('✅ Đã lưu đơn hàng '+maDH,'ok');
+  _mhActiveTab = 'donhang';
+  dhRender();
+}
+
+function dhDelete(id){
+  const d = _donHangData.find(x=>x.id===id);
+  if(!d) return;
+  if(!confirm(`Xóa đơn hàng ${d.maDH||id}?\nThao tác này không thể hoàn tác.`)) return;
+  _donHangData = _donHangData.filter(x=>x.id!==id);
+  dhSave();
+  toast('Đã xóa đơn hàng','ok');
+  dhRender();
+}
+
+function dhCreateFromSelected(){
+  if(!_mhSelected.size){ toast('Chưa chọn yêu cầu nào','warn'); return; }
+  mhLoad();
+  const preItems = [..._mhSelected].map(id=>{
+    const d = _muaHangData.find(x=>x.id===id);
+    if(!d) return null;
+    const chosen = (d.baoGia||[]).find(b=>b.isChon);
+    const ncc = (chosen?.ncc||d.ncc||'').trim();
+    const qty = parseFloat(d.soLuong)||1;
+    let donGia = 0;
+    if(chosen?.gia) donGia = parseFloat(chosen.gia)||0;
+    else if(d.giaUocTinh) donGia = parseFloat(d.giaUocTinh)||0;
+    return { muaHangId:d.id, tenHang:d.tenHang||'', soLuong:qty,
+      donVi:d.donViTinh||d.donVi||'', ncc, donGia, thanhTien:donGia*qty, anhUrl:d.anhUrl||'' };
+  }).filter(Boolean);
+  _dhEditId = null;
+  dhLoad();
+  dhOpenForm(null, preItems);
+}
+
+function dhCreateFromSplit(){
+  mhLoad();
+  if(!_mhSplitMap.size){ toast('Chưa chọn NCC cho mặt hàng nào','warn'); return; }
+  const preItems = [];
+  _mhSplitMap.forEach((ncc, mhId)=>{
+    const d = _muaHangData.find(x=>x.id===mhId); if(!d) return;
+    const bg = (d.baoGia||[]).find(b=>(b.ncc||'').trim()===ncc);
+    const qty = parseFloat(d.soLuong)||1;
+    const donGia = bg?.gia ? parseFloat(bg.gia)||0 : (parseFloat(d.giaUocTinh)||0);
+    preItems.push({ muaHangId:d.id, tenHang:d.tenHang||'', soLuong:qty,
+      donVi:d.donViTinh||d.donVi||'', ncc, donGia, thanhTien:donGia*qty, anhUrl:d.anhUrl||'' });
+  });
+  _dhEditId = null;
+  dhLoad();
+  dhOpenForm(null, preItems);
+}
+
+function dhPrint(id){
+  dhLoad();
+  const d = _donHangData.find(x=>x.id===id);
+  if(!d){ toast('Không tìm thấy đơn hàng','warn'); return; }
+  const esc = s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fmt = n=>n>0?Number(Math.round(n)).toLocaleString('vi-VN')+' ₫':'—';
+  const today = new Date().toLocaleDateString('vi-VN');
+  const tongTien = (d.danhSachHang||[]).reduce((s,h)=>s+(parseFloat(h.thanhTien)||0),0);
+
+  // Gom theo NCC
+  const nccGroups = new Map();
+  (d.danhSachHang||[]).forEach(h=>{
+    const ncc = (h.ncc||'Chưa xác định').trim();
+    if(!nccGroups.has(ncc)) nccGroups.set(ncc,[]);
+    nccGroups.get(ncc).push(h);
+  });
+
+  const rows = (d.danhSachHang||[]).map((h,i)=>`
+    <tr>
+      <td style="padding:7px 8px;border:1px solid #ddd;text-align:center;">${i+1}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd;font-weight:600;">${esc(h.tenHang||'')}</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;text-align:center;">${h.soLuong||1}</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;text-align:center;">${esc(h.donVi||h.donViTinh||'')}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd;">${esc(h.ncc||'—')}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd;text-align:right;">${fmt(h.donGia)}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd;text-align:right;font-weight:700;">${fmt(h.thanhTien)}</td>
+      ${h.anhUrl?`<td style="padding:4px 6px;border:1px solid #ddd;text-align:center;"><img src="${esc(h.anhUrl)}" style="height:44px;max-width:60px;object-fit:cover;border-radius:4px;" onerror="this.style.display='none'"></td>`:'<td style="padding:4px 6px;border:1px solid #ddd;text-align:center;color:#ccc;">—</td>'}
+    </tr>`).join('');
+
+  const nccSummaryRows = [...nccGroups.entries()].map(([ncc,items])=>{
+    const sub = items.reduce((s,h)=>s+(parseFloat(h.thanhTien)||0),0);
+    return `<tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:600;">${esc(ncc)}</td>
+      <td style="padding:6px 10px;border:1px solid #ddd;text-align:center;">${items.length} món</td>
+      <td style="padding:6px 10px;border:1px solid #ddd;text-align:right;font-weight:700;">${fmt(sub)}</td></tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="vi"><head>
+  <meta charset="UTF-8"><title>Đơn hàng ${esc(d.maDH||d.id)}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;padding:22px 30px;}
+    h1{font-size:20px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+    .sub{text-align:center;font-size:11px;color:#555;margin-bottom:20px;}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #ccc;border-radius:6px;overflow:hidden;margin-bottom:20px;}
+    .info-cell{padding:8px 14px;border-bottom:1px solid #eee;font-size:12px;}
+    .info-cell:nth-child(odd){background:#f8fafc;font-weight:600;border-right:1px solid #eee;}
+    .info-cell:nth-last-child(-n+2){border-bottom:none;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#1e3a5f;color:#fff;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+    h2{font-size:13px;font-weight:700;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #1e3a5f;}
+    .grand{text-align:right;font-size:15px;font-weight:800;border-top:3px solid #1e3a5f;padding-top:10px;margin-top:4px;}
+    .sig{display:flex;margin-top:36px;gap:0;}
+    .sig-box{flex:1;text-align:center;font-size:11px;color:#333;padding:8px 4px;border-top:1px solid #aaa;}
+    @media print{@page{size:A4 portrait;margin:12mm;} #_ptb{display:none!important}}
+  </style></head><body>
+  <div id="_ptb" style="position:sticky;top:0;z-index:9999;background:#1e3a5f;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;margin:-22px -30px 20px -30px;">
+    <span style="color:#fff;font-size:13px;font-weight:600;">📋 Xem trước đơn hàng</span>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="background:#fff;color:#1e3a5f;border:none;border-radius:6px;padding:6px 20px;font-size:13px;font-weight:700;cursor:pointer;">🖨️ In ngay</button>
+      <button onclick="window.close()" style="background:transparent;color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;">✕ Đóng</button>
+    </div>
+  </div>
+
+  <h1>Đơn đặt hàng</h1>
+  <div class="sub">${esc(d.maDH||d.id)} &nbsp;·&nbsp; Ngày in: ${today}</div>
+
+  <div class="info-grid">
+    <div class="info-cell">Mã đơn hàng</div><div class="info-cell">${esc(d.maDH||d.id)}</div>
+    <div class="info-cell">Ngày đặt hàng</div><div class="info-cell">${d.ngayDat||'—'}</div>
+    <div class="info-cell">Trạng thái</div><div class="info-cell">${(DH_STATUS[d.trangThai]?.label)||d.trangThai||'—'}</div>
+    <div class="info-cell">Người tạo</div><div class="info-cell">${esc(d.nguoiTao||'—')}</div>
+    ${d.ghiChu?`<div class="info-cell">Ghi chú</div><div class="info-cell">${esc(d.ghiChu)}</div>`:''}
+  </div>
+
+  <h2>Chi tiết hàng hóa</h2>
+  <table>
+    <thead><tr>
+      <th style="width:36px;">STT</th>
+      <th style="text-align:left;">Tên mặt hàng</th>
+      <th style="width:40px;">SL</th>
+      <th style="width:50px;">ĐVT</th>
+      <th style="text-align:left;min-width:110px;">NCC</th>
+      <th style="text-align:right;min-width:100px;">Đơn giá</th>
+      <th style="text-align:right;min-width:110px;">Thành tiền</th>
+      <th style="width:70px;">Hình ảnh</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <div class="grand">Tổng cộng: ${fmt(tongTien)}</div>
+
+  ${nccGroups.size>1?`<h2>Tổng hợp theo NCC</h2>
+  <table><thead><tr>
+    <th style="text-align:left;">Nhà cung cấp</th>
+    <th style="text-align:center;width:80px;">Số món</th>
+    <th style="text-align:right;min-width:110px;">Tổng tiền</th>
+  </tr></thead><tbody>${nccSummaryRows}</tbody></table>`:''}
+
+  <div class="sig">
+    <div class="sig-box"><b>Người đặt hàng</b><br><span style="font-size:10px;">${esc(d.nguoiTao||'')}</span><br><br>(Ký & ghi rõ họ tên)</div>
+    <div class="sig-box"><b>Người phê duyệt</b><br><br><br>(Ký & ghi rõ họ tên)</div>
+    <div class="sig-box"><b>Kế toán xác nhận</b><br><br><br>(Ký & ghi rõ họ tên)</div>
+  </div>
+  </body></html>`;
+
+  const w = window.open('','_blank','width=900,height=840');
+  if(!w){ toast('⚠️ Trình duyệt chặn popup!','bad'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+// ── End đơn hàng ─────────────────────────────────────────────────
 // ── End multi-print ─────────────────────────────────────────────
 
 // ── Hình ảnh báo giá NCC ───────────────────────────────────────
