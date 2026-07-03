@@ -16145,6 +16145,16 @@ function _repStatusLabel(s){
 }
 
 // ── Render danh sách sửa chữa ──
+// Tra phòng ban THẬT của một người theo tên (từ danh bạ nhân viên HubIT).
+// Dùng cho card sửa chữa: người "khi hỏng" có thể khác phòng ban của tài sản.
+function _deptOfPersonName(name){
+  if(!name) return '';
+  const key = String(name).trim().toLowerCase();
+  const emps = window._qltsEmployees || [];
+  const hit = emps.find(e => (e.name||'').trim().toLowerCase() === key);
+  return hit ? (hit.dept||'') : '';
+}
+
 function renderRepairs(){
   const statusF = document.getElementById('rep-f-status')?.value||'';
   const q = (document.getElementById('rep-search')?.value||'').toLowerCase().trim();
@@ -16269,7 +16279,8 @@ function renderRepairs(){
             ${assetName?`<span style="color:var(--muted);font-size:12px;">— ${esc(assetName)}</span>`:''}
           </div>
           ${rec.nguoiSuDungKhiHong
-            ?`<div class="rep-card-user"><i class="ph ph-user" style="font-size:11px;color:#EA580C;"></i> <span style="color:#EA580C;font-weight:600;">Khi hỏng:</span> ${esc(rec.nguoiSuDungKhiHong)}${asset?.boPhan?` · <span style="color:var(--muted)">${esc(asset.boPhan)}</span>`:''}</div>`
+            ?(()=>{ const _khDept=_deptOfPersonName(rec.nguoiSuDungKhiHong);
+              return `<div class="rep-card-user"><i class="ph ph-user" style="font-size:11px;color:#EA580C;"></i> <span style="color:#EA580C;font-weight:600;">Khi hỏng:</span> ${esc(rec.nguoiSuDungKhiHong)}${_khDept?` · <span style="color:var(--muted)">${esc(_khDept)}</span>`:''}</div>`; })()
             :(asset?.nguoiDung?`<div class="rep-card-user" title="Người dùng hiện tại (có thể đã thay đổi)"><i class="ph ph-user" style="font-size:11px;"></i> ${esc(asset.nguoiDung)}${asset.boPhan?` · ${esc(asset.boPhan)}`:''}</div>`:'')}
           ${rec.nguoiBanGiaoSau?`<div class="rep-card-user"><i class="ph ph-check-circle" style="font-size:11px;color:#059669;"></i> <span style="color:#059669;font-weight:600;">Bàn giao:</span> ${esc(rec.nguoiBanGiaoSau)}</div>`:''}
           ${rec.issue?`<div class="rep-card-issue">${esc(rec.issue)}</div>`:''}
