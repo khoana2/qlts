@@ -6562,6 +6562,7 @@ async function msalSpLoad(){
     if(dnttBtn) dnttBtn.style.display = can('sync') ? 'inline-flex' : 'none';
     await msalSpLoadDNTT();
     if(typeof msalSpLoadMuaHang === 'function') await msalSpLoadMuaHang();
+    if(typeof msalSpLoadProc === 'function') await msalSpLoadProc();
     // Load employee directory nền (localStorage cache trước, fetch HubIT nếu không có)
     _loadEmployees(false);
     // Hiện nút đồng bộ NV trên topbar sau khi đã login
@@ -11888,6 +11889,7 @@ async function _flushSpQueue(){
   for(const q of items){
     try{
       if(q.type === 'dntt')  await msalSpPushDNTT(q.id);
+      else if(q.type === 'proc') await msalSpPushProc(q.id);
       // thêm type khác ở đây nếu cần
       _dequeueSpPush(q.type, q.id);
       ok++;
@@ -12879,6 +12881,7 @@ function saveProcurement(status){
     procList.unshift(rec);
   }
   saveProc();
+  if(typeof msalSpPushProc==='function' && _msalAccount){ msalSpPushProc(rec.id).then(()=>renderProcurement()).catch(e=>console.warn('[Proc-SP]',e)); }
   closeModal('modal-procurement');
   renderProcurement();
   toast(`✅ Đã lưu: ${tieuDe}`,'ok');
@@ -13425,6 +13428,7 @@ function _linkProcToDNTT(dnttId){
   if(!_pendingProcLink) return;
   const p = procList.find(x=>x.id===_pendingProcLink);
   if(p){ p.dnttId = dnttId; p.trangThai = 'da_mua'; saveProc(); }
+  if(typeof msalSpPushProc==='function' && _msalAccount) msalSpPushProc(p.id).catch(()=>{});
   _pendingProcLink = null;
 }
 
@@ -13501,6 +13505,7 @@ function procMarkBought(id){
   if(!p) return;
   p.trangThai = 'da_mua';
   saveProc();
+  if(typeof msalSpPushProc==='function' && _msalAccount) msalSpPushProc(id).catch(()=>{});
   renderProcurement();
   toast('✅ Đã đánh dấu hoàn tất mua sắm','ok');
 }
@@ -13509,6 +13514,7 @@ function procChangeStatus(id, newStatus, sel){
   if(!p) return;
   p.trangThai = newStatus;
   saveProc();
+  if(typeof msalSpPushProc==='function' && _msalAccount) msalSpPushProc(id).catch(()=>{});
   renderProcurement();
   toast(`✅ Chuyển sang: ${_PROC_STATUS_LABEL[newStatus]||newStatus}`,'ok');
 }
@@ -13518,11 +13524,13 @@ function deleteProc(id, btn){
   if(!saved) return;
   procList = procList.filter(x=>x.id!==id);
   saveProc();
+  if((saved._spId||saved.spId) && typeof msalSpDeleteProc==='function'){ msalSpDeleteProc(saved._spId||saved.spId); saved._spId=null; saved.spId=null; }
   renderProcurement();
   toastUndo('🗑 Đã xóa yêu cầu mua sắm', {
     onUndo: ()=>{
       procList.push(saved);
       saveProc();
+      if(typeof msalSpPushProc==='function' && _msalAccount) msalSpPushProc(saved.id).catch(()=>{});
       renderProcurement();
       toast('↩ Đã hoàn tác', 'ok');
     }
@@ -17845,6 +17853,155 @@ async function syncAllDNTTToSP(){
   }finally{
     if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-cloud-arrow-up"></i> Sync SP'; }
   }
+}
+
+
+// ══════════════════ ĐỒNG BỘ MUA SẮM (Procurement) LÊN SHAREPOINT ══════════════════
+// Lưu toàn bộ record dạng JSON blob (DataJson) + vài cột phẳng để xem nhanh trên SP.
+const _PROC_SP_FIELDS = [
+  { name:'DataJson',    type:'Note' },
+  { name:'TrangThai',   type:'Text' },
+  { name:'NguoiDeXuat', type:'Text' },
+  { name:'BoPhan',      type:'Text' },
+  { name:'NgayDeXuat',  type:'Text' },
+  { name:'LocalId',     type:'Text' },
+];
+
+function procToSpItem(rec){
+  const clean = { ...rec };
+  delete clean._spId; delete clean._spModified; delete clean.spId;
+  return {
+    Title:       rec.tieuDe || rec.id || '',
+    DataJson:    JSON.stringify(clean),
+    TrangThai:   rec.trangThai || '',
+    NguoiDeXuat: rec.nguoiDeXuat || '',
+    BoPhan:      rec.boPhan || '',
+    NgayDeXuat:  rec.ngayDeXuat || '',
+    LocalId:     rec.id || '',
+  };
+}
+
+function spItemToProc(item){
+  let rec = {};
+  if(item.DataJson){ try{ rec = JSON.parse(item.DataJson); }catch(e){ rec = {}; } }
+  rec.id          = item.LocalId || rec.id || ('sp_'+item.ID);
+  rec._spId       = item.ID;
+  rec._spModified = item.Modified || null;
+  rec.spId        = item.ID;            // để tính năng đính kèm file dùng chung SP item
+  if(!rec.tieuDe)    rec.tieuDe    = item.Title || '';
+  if(!rec.trangThai) rec.trangThai = item.TrangThai || 'draft';
+  if(!Array.isArray(rec.nhaCC)) rec.nhaCC = rec.nhaCC || [];
+  if(!Array.isArray(rec.items)) rec.items = rec.items || [];
+  return rec;
+}
+
+async function msalSpProvisionProcList(){
+  const site = MSAL_CONFIG.spSite;
+  const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
+  const base = `${site}/_api/web/lists`;
+  const fieldBase = `${base}/getbytitle('${listName}')/fields`;
+  const typeMap = { Text: 2, Note: 3, Number: 9 };
+  let listExists = false;
+  try{ await msalSpReq(`${base}/getbytitle('${listName}')?$select=Title,Id`); listExists = true; }
+  catch(e){ console.log('[Proc-SP] List chưa tồn tại, tạo mới:', listName); }
+  if(!listExists){
+    await msalSpReq(base, { method:'POST', body: JSON.stringify({
+      Title: listName, BaseTemplate: 100, Description: 'Danh sách Mua Sắm CNTT', OnQuickLaunch: true }) });
+  }
+  const existingFields = new Set();
+  try{
+    const fdata = await msalSpReq(`${fieldBase}?$select=Title&$top=200`);
+    (fdata?.value||[]).forEach(f => existingFields.add(f.Title));
+  }catch(e){ console.warn('[Proc-SP] Không đọc được cột:', e.message); }
+  let added = 0;
+  for(const f of _PROC_SP_FIELDS){
+    if(existingFields.has(f.name)) continue;
+    try{
+      await msalSpReq(fieldBase, { method:'POST', body: JSON.stringify({ Title: f.name, FieldTypeKind: typeMap[f.type]||2 }) });
+      added++;
+    }catch(fe){ console.warn('[Proc-SP] Bỏ qua cột lỗi:', f.name, fe.message); }
+  }
+  if(added > 0){
+    const viewUrl = `${base}/getbytitle('${listName}')/DefaultView/ViewFields`;
+    for(const f of _PROC_SP_FIELDS){
+      if(!existingFields.has(f.name)){
+        try{ await msalSpReq(`${viewUrl}/addViewField('${f.name}')`, { method:'POST', body:'{}' }); }catch(_){}
+      }
+    }
+  }
+  console.log('[Proc-SP] Provision xong, thêm', added, 'cột');
+}
+
+async function msalSpLoadProc(){
+  if(!_msalAccount) return 0;
+  const site = MSAL_CONFIG.spSite;
+  const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
+  try{
+    const url = `${site}/_api/web/lists/getbytitle('${listName}')/items?$top=500&$orderby=ID desc`;
+    const data = await msalSpReq(url);
+    const items = data?.value || [];
+    const spRecs = items.map(spItemToProc);
+    const localOnly = procList.filter(loc => !loc._spId && !spRecs.find(sp => sp.id === loc.id));
+    procList = [...spRecs, ...localOnly];
+    saveProc();
+    if(typeof renderProcurement === 'function') renderProcurement();
+    console.log(`[Proc-SP] Đã tải ${spRecs.length} phiếu mua sắm từ SharePoint`);
+    return spRecs.length;
+  }catch(e){
+    console.warn('[Proc-SP] Load lỗi:', e.message);
+    return 0;
+  }
+}
+
+async function msalSpPushProc(id, _retried){
+  const rec = procList.find(x=>x.id===id);
+  if(!rec || !_msalAccount) return;
+  const site = MSAL_CONFIG.spSite;
+  const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
+  const base = `${site}/_api/web/lists/getbytitle('${listName}')/items`;
+  const existingSpId = rec._spId || rec.spId;
+  try{
+    const body = procToSpItem(rec);
+    if(existingSpId){
+      await msalSpReq(`${base}(${existingSpId})`, {
+        method:'POST', headers:{ 'X-HTTP-Method':'MERGE', 'IF-MATCH':'*' }, body: JSON.stringify(body) });
+      rec._spId = existingSpId; rec.spId = existingSpId;
+      try{ const u = await msalSpReq(`${base}(${existingSpId})?$select=Modified`); if(u?.Modified){ rec._spModified = u.Modified; saveProc(); } }catch(_){}
+    } else {
+      const res = await msalSpReq(base, { method:'POST', body: JSON.stringify(body) });
+      if(res?.ID){ rec._spId = res.ID; rec.spId = res.ID; rec._spModified = res.Modified || null; saveProc(); }
+    }
+    console.log('[Proc-SP] ✅ Đã đồng bộ:', rec.tieuDe||rec.id);
+  }catch(e){
+    if(!_retried && e.message && e.message.includes('does not exist on type')){
+      console.warn('[Proc-SP] Cột thiếu, provision rồi retry…');
+      await msalSpProvisionProcList();
+      return msalSpPushProc(id, true);
+    }
+    const isNetworkErr = !navigator.onLine || (e.message && (e.message.includes('Failed to fetch')||e.message.includes('NetworkError')||e.message.includes('network')));
+    if(isNetworkErr && typeof _enqueueSpPush==='function'){ _enqueueSpPush('proc', id); console.warn('[Proc-SP] Offline — vào queue:', id); return; }
+    console.warn('[Proc-SP] Push lỗi:', e.message);
+  }
+}
+
+async function msalSpDeleteProc(spId){
+  if(!spId || !_msalAccount) return;
+  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spProcList||'Quan_Ly_Mua_Sam'}')/items(${spId})`;
+  try{
+    await msalSpReq(url, { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
+    console.log('[Proc-SP] 🗑️ Đã xóa SP item:', spId);
+  }catch(e){ if(typeof _spIsGone!=='function' || !_spIsGone(e)) console.warn('[Proc-SP] Delete lỗi:', e.message); }
+}
+
+async function syncAllProcToSP(){
+  if(!_msalAccount){ toast('Chưa đăng nhập Microsoft','warn'); return; }
+  try{
+    await msalSpProvisionProcList();
+    let count=0;
+    for(const rec of procList){ await msalSpPushProc(rec.id); count++; }
+    toast(`☁️ Đã sync ${count} phiếu mua sắm lên SharePoint`, 'ok');
+    renderProcurement();
+  }catch(e){ toast('❌ Sync lỗi: '+e.message, 'bad'); }
 }
 
 // ══════════════════ SỔ ĐỊA CHỈ NCC (Vendor Address Book) ══════════════════
