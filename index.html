@@ -5128,7 +5128,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <thead>
               <tr style="background:#eef2ff;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#4338ca;">
                 <th style="padding:7px 6px;text-align:center;border-bottom:2px solid #c7d2fe;border-right:1px solid #e0e7ff;">#</th>
-                <th style="padding:7px 10px;text-align:left;border-bottom:2px solid #c7d2fe;border-right:1px solid #e0e7ff;">Tên hàng &amp; Thông số</th>
+                <th style="padding:7px 10px;text-align:left;border-bottom:2px solid #c7d2fe;border-right:1px solid #e0e7ff;">Vị trí · Model · Cấu hình · Hãng · Ghi chú</th>
                 <th style="padding:7px 4px;text-align:center;border-bottom:2px solid #c7d2fe;border-right:1px solid #e0e7ff;">SL</th>
                 <th style="padding:7px 4px;text-align:center;border-bottom:2px solid #c7d2fe;border-right:1px solid #e0e7ff;">ĐVT</th>
                 <th id="proc-items-th-0" style="padding:7px 8px;text-align:right;border-bottom:2px solid #c7d2fe;border-right:1px solid #e0e7ff;">NCC 1</th>
@@ -6562,7 +6562,6 @@ async function msalSpLoad(){
     if(dnttBtn) dnttBtn.style.display = can('sync') ? 'inline-flex' : 'none';
     await msalSpLoadDNTT();
     if(typeof msalSpLoadMuaHang === 'function') await msalSpLoadMuaHang();
-    if(typeof msalSpLoadProc === 'function') await msalSpLoadProc();
     // Load employee directory nền (localStorage cache trước, fetch HubIT nếu không có)
     _loadEmployees(false);
     // Hiện nút đồng bộ NV trên topbar sau khi đã login
@@ -11889,7 +11888,6 @@ async function _flushSpQueue(){
   for(const q of items){
     try{
       if(q.type === 'dntt')  await msalSpPushDNTT(q.id);
-      else if(q.type === 'proc') await msalSpPushProc(q.id);
       // thêm type khác ở đây nếu cần
       _dequeueSpPush(q.type, q.id);
       ok++;
@@ -12335,15 +12333,23 @@ function procLiveUpdate(){
 let _procItemsData = [];
 
 function _procRenderItemsTable(items){
-  _procItemsData = items.length ? items : [{id:'item_new_0',tenHang:'',thongSo:'',soLuong:1,donViTinh:'cái',gia:[0,0,0]}];
+  _procItemsData = items.length ? items : [{id:'item_new_0',viTri:'',tenHang:'',thongSo:'',hang:'',soLuong:1,donViTinh:'cái',gia:[0,0,0],ghiChu:''}];
   const tbody = document.getElementById('proc-items-body');
   if(!tbody) return;
   const BD='border-right:1px solid #e0e7ff;';
+  const _subStyle="display:block;width:100%;font-size:11px;color:#64748b;margin-top:2px;box-sizing:border-box;border:1px solid transparent;background:transparent;";
+  const _subFocus="this.style.borderColor='#c7d2fe';this.style.background='#fff'";
+  const _subBlur="this.style.borderColor='transparent';this.style.background='transparent'";
   tbody.innerHTML = _procItemsData.map((it,idx) => `<tr id="proc-item-row-${idx}" style="border-bottom:1px solid #e0e7ff;">
   <td style="padding:5px 4px;text-align:center;font-size:11px;color:#94a3b8;${BD}">${idx+1}</td>
   <td style="padding:4px 6px;${BD}">
-    <input id="proc-item-${idx}-ten" class="finput" value="${(it.tenHang||'').replace(/"/g,'&quot;')}" placeholder="Tên hàng / SKU" style="display:block;width:100%;font-size:12px;font-weight:500;box-sizing:border-box;border:1px solid transparent;background:transparent;" onfocus="this.style.borderColor='#c7d2fe';this.style.background='#fff'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="procLiveUpdate()">
-    <input id="proc-item-${idx}-thongso" class="finput" value="${(it.thongSo||'').replace(/"/g,'&quot;')}" placeholder="Thông số kỹ thuật…" style="display:block;width:100%;font-size:11px;color:#64748b;margin-top:2px;box-sizing:border-box;border:1px solid transparent;background:transparent;" onfocus="this.style.borderColor='#c7d2fe';this.style.background='#fff'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="procLiveUpdate()">
+    <input id="proc-item-${idx}-vitri" class="finput" value="${(it.viTri||'').replace(/"/g,'&quot;')}" placeholder="Vị trí / Người dùng (tuỳ chọn)" style="${_subStyle}margin-top:0;color:#7c3aed;font-weight:500;" onfocus="${_subFocus}" onblur="${_subBlur}">
+    <input id="proc-item-${idx}-ten" class="finput" value="${(it.tenHang||'').replace(/"/g,'&quot;')}" placeholder="Model / Tên hàng" style="display:block;width:100%;font-size:12px;font-weight:500;margin-top:2px;box-sizing:border-box;border:1px solid transparent;background:transparent;" onfocus="${_subFocus}" onblur="${_subBlur}" oninput="procLiveUpdate()">
+    <input id="proc-item-${idx}-thongso" class="finput" value="${(it.thongSo||'').replace(/"/g,'&quot;')}" placeholder="Cấu hình / Thông số kỹ thuật…" style="${_subStyle}" onfocus="${_subFocus}" onblur="${_subBlur}" oninput="procLiveUpdate()">
+    <div style="display:flex;gap:4px;">
+      <input id="proc-item-${idx}-hang" class="finput" value="${(it.hang||'').replace(/"/g,'&quot;')}" placeholder="Hãng" style="${_subStyle}width:32%;" onfocus="${_subFocus}" onblur="${_subBlur}">
+      <input id="proc-item-${idx}-ghichu" class="finput" value="${(it.ghiChu||'').replace(/"/g,'&quot;')}" placeholder="Ghi chú" style="${_subStyle}flex:1;" onfocus="${_subFocus}" onblur="${_subBlur}">
+    </div>
   </td>
   <td style="padding:4px;text-align:center;${BD}"><input id="proc-item-${idx}-soluong" class="finput" type="number" value="${it.soLuong||1}" min="1" style="width:48px;font-size:12px;text-align:center;box-sizing:border-box;" oninput="procLiveUpdate()"></td>
   <td style="padding:4px;text-align:center;${BD}"><input id="proc-item-${idx}-donvi" class="finput" value="${(it.donViTinh||'cái').replace(/"/g,'&quot;')}" placeholder="cái" style="width:44px;font-size:11px;text-align:center;box-sizing:border-box;" list="proc-donvi-list"></td>
@@ -12363,11 +12369,14 @@ function _procReadItemsFromDOM(){
   rows.forEach((_,idx)=>{
     items.push({
       id: _procItemsData[idx]?.id || ('item_'+Date.now()+'_'+idx),
+      viTri:     document.getElementById(`proc-item-${idx}-vitri`)?.value||'',
       tenHang:   document.getElementById(`proc-item-${idx}-ten`)?.value||'',
       thongSo:   document.getElementById(`proc-item-${idx}-thongso`)?.value||'',
+      hang:      document.getElementById(`proc-item-${idx}-hang`)?.value||'',
       soLuong:   parseFloat(document.getElementById(`proc-item-${idx}-soluong`)?.value)||1,
       donViTinh: document.getElementById(`proc-item-${idx}-donvi`)?.value||'cái',
       gia: [0,1,2].map(i=>parseFloat(document.getElementById(`proc-item-${idx}-gia${i}`)?.value)||0),
+      ghiChu:    document.getElementById(`proc-item-${idx}-ghichu`)?.value||'',
     });
   });
   return items;
@@ -12375,7 +12384,7 @@ function _procReadItemsFromDOM(){
 
 function procAddItem(){
   const current = _procReadItemsFromDOM();
-  current.push({id:'item_new_'+Date.now(),tenHang:'',thongSo:'',soLuong:1,donViTinh:'cái',gia:[0,0,0]});
+  current.push({id:'item_new_'+Date.now(),viTri:'',tenHang:'',thongSo:'',hang:'',soLuong:1,donViTinh:'cái',gia:[0,0,0],ghiChu:''});
   _procRenderItemsTable(current);
   // focus the new row's name input
   const newIdx = current.length-1;
@@ -12833,12 +12842,15 @@ function saveProcurement(status){
   const rowCount = document.getElementById('proc-items-body')?.querySelectorAll('tr[id^="proc-item-row-"]').length||0;
   const items = [];
   for(let r=0; r<rowCount; r++){
+    const viTri = document.getElementById(`proc-item-${r}-vitri`)?.value.trim()||'';
     const ten = document.getElementById(`proc-item-${r}-ten`)?.value.trim()||'';
     const thongSo = document.getElementById(`proc-item-${r}-thongso`)?.value.trim()||'';
+    const hang = document.getElementById(`proc-item-${r}-hang`)?.value.trim()||'';
     const soLuong = parseFloat(document.getElementById(`proc-item-${r}-soluong`)?.value)||1;
     const donViTinh = document.getElementById(`proc-item-${r}-donvi`)?.value.trim()||'cái';
     const gia = [0,1,2].map(i=>parseFloat(document.getElementById(`proc-item-${r}-gia${i}`)?.value)||0);
-    if(ten || gia.some(g=>g>0)) items.push({id:'item_'+Date.now()+'_'+r, tenHang:ten, thongSo, soLuong, donViTinh, gia});
+    const ghiChuItem = document.getElementById(`proc-item-${r}-ghichu`)?.value.trim()||'';
+    if(ten || gia.some(g=>g>0)) items.push({id:'item_'+Date.now()+'_'+r, viTri, tenHang:ten, thongSo, hang, soLuong, donViTinh, gia, ghiChu:ghiChuItem});
   }
 
   const nhaCC = [0,1,2].map(i => ({
@@ -12881,7 +12893,6 @@ function saveProcurement(status){
     procList.unshift(rec);
   }
   saveProc();
-  if(typeof msalSpPushProc==='function' && _msalAccount){ msalSpPushProc(rec.id).then(()=>renderProcurement()).catch(e=>console.warn('[Proc-SP]',e)); }
   closeModal('modal-procurement');
   renderProcurement();
   toast(`✅ Đã lưu: ${tieuDe}`,'ok');
@@ -12943,15 +12954,20 @@ function renderProcurement(){
     const fmt2 = n=>n>0?Number(n).toLocaleString('vi-VN')+'đ':'—';
     const hasNCCBtn = _items.length>0 || p.nhaCC.some(n=>n.ten);
     const nccRowsWithBtn = !_items.length ? '' : (() => {
-      const itemRows = _items.map((it,ii)=>`<tr>
+      const itemRows = _items.map((it,ii)=>{
+        const _rowPrices=[0,1,2].map(ni=>it.gia[ni]||0).filter(g=>g>0);
+        const _rowMin=_rowPrices.length?Math.min(..._rowPrices):0;
+        return `<tr>
     <td style="font-size:11px;color:#aaa;text-align:center;padding:6px 8px;white-space:nowrap;vertical-align:top">${ii+1}</td>
     <td style="padding:6px 10px;vertical-align:top">
-      <div style="font-weight:600;font-size:13px">${esc(it.tenHang||'—')}</div>
+      ${it.viTri?`<div style="font-size:11px;color:#7c3aed;font-weight:600;margin-bottom:1px">${esc(it.viTri)}</div>`:''}
+      <div style="font-weight:600;font-size:13px">${esc(it.tenHang||'—')}${it.hang?` <span style="font-size:10px;font-weight:600;color:#475569;background:#f1f5f9;border-radius:4px;padding:1px 6px;vertical-align:middle">${esc(it.hang)}</span>`:''}</div>
       ${it.thongSo?`<div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4">${esc(it.thongSo)}</div>`:''}
+      ${it.ghiChu?`<div style="font-size:10.5px;color:#94a3b8;margin-top:2px;font-style:italic">${esc(it.ghiChu)}</div>`:''}
     </td>
     <td style="padding:6px 8px;text-align:center;white-space:nowrap;vertical-align:top;font-size:12px">${it.soLuong||1}<br><span style="font-size:10px;color:var(--muted)">${esc(it.donViTinh||'cái')}</span></td>
-    ${[0,1,2].map(ni=>{const g=it.gia[ni]||0;return `<td style="padding:6px 10px;text-align:right;vertical-align:top;font-size:12px">${g>0?Number(g).toLocaleString('vi-VN')+'đ':'<span style=\"color:var(--muted)\">—</span>'}</td>`;}).join('')}
-  </tr>`).join('');
+    ${[0,1,2].map(ni=>{const g=it.gia[ni]||0;const isMin=g>0&&g===_rowMin&&_rowPrices.length>1;return `<td style="padding:6px 10px;text-align:right;vertical-align:top;font-size:12px;${isMin?'background:#e8fdf2;font-weight:700;color:#059669;':''}">${g>0?Number(g).toLocaleString('vi-VN')+'đ':'<span style=\"color:var(--muted)\">—</span>'}</td>`;}).join('')}
+  </tr>`;}).join('');
       // ── Hàng TỔNG CỘNG — gọn, không lặp tên NCC ─────────────────────
       const totalRow = `<tr class="proc-total-row" style="border-top:2px solid var(--border,#e2e8f0)">
         <td colspan="3" style="padding:8px 10px;font-size:12px;letter-spacing:.02em">TỔNG CỘNG</td>
@@ -13061,17 +13077,24 @@ function printProcurement(id){
 
   // ── Item rows ────────────────────────────────────────────────────────────
   const itemBodyRows = items.map((it,ii) => {
+    const rowPrices = [0,1,2].map(ni=>it.gia[ni]||0).filter(g=>g>0);
+    const rowMin = rowPrices.length?Math.min(...rowPrices):0;
     const cells = [0,1,2].map(ni => {
       const g = it.gia[ni]||0;
+      const isMin = g>0 && g===rowMin && rowPrices.length>1;
       const sub = g>0 ? `<div style="font-size:10px;color:#555">${fmt(g*((it.soLuong||1)))}</div>` : '';
-      return `<td style="text-align:center;padding:7px 10px;">${g>0?fmt(g):'—'}${sub}</td>`;
+      return `<td style="text-align:right;padding:7px 10px;${isMin?'background:#e8fdf2;font-weight:700;color:#059669;':''}">${g>0?fmt(g):'—'}${sub}</td>`;
     }).join('');
     return `<tr>
       <td style="padding:7px 10px;text-align:center;color:#666;font-size:11px;">${ii+1}</td>
+      <td style="padding:7px 10px;font-size:11px;color:#7c3aed;font-weight:600;">${it.viTri||''}</td>
       <td style="padding:7px 10px;font-weight:600;">${it.tenHang||'—'}</td>
       <td style="padding:7px 10px;font-size:11px;color:#555;white-space:pre-wrap;">${it.thongSo||''}</td>
+      <td style="padding:7px 10px;text-align:center;font-size:11px;">${it.hang||''}</td>
       <td style="padding:7px 10px;text-align:center;">${it.soLuong||1} ${it.donViTinh||'cái'}</td>
       ${cells}
+      <td style="text-align:right;padding:7px 10px;font-weight:700;color:#059669;">${rowMin>0?fmt(rowMin):'—'}</td>
+      <td style="padding:7px 10px;font-size:10.5px;color:#666;white-space:pre-wrap;">${it.ghiChu||''}</td>
     </tr>`;
   }).join('');
 
@@ -13095,7 +13118,7 @@ function printProcurement(id){
   const nccInfoRows = nccInfoDefs.map(({key,label})=>{
     const vals = p.nhaCC.map(n=>n[key]||'');
     if(vals.every(v=>!v)) return '';
-    return `<tr><td colspan="4" style="padding:6px 10px;font-weight:600;background:#f0f4f8;border-right:2px solid #ddd;">${label}</td>${vals.map(v=>`<td style="padding:6px 10px;text-align:center;">${v||'—'}</td>`).join('')}</tr>`;
+    return `<tr><td colspan="6" style="padding:6px 10px;font-weight:600;background:#f0f4f8;border-right:2px solid #ddd;">${label}</td>${vals.map(v=>`<td style="padding:6px 10px;text-align:center;">${v||'—'}</td>`).join('')}<td colspan="2"></td></tr>`;
   }).join('');
 
   // ── Full HTML document ─────────────────────────────────────────────────────
@@ -13137,16 +13160,22 @@ function printProcurement(id){
   <table>
     <thead><tr>
       <th style="background:#1e3a5f;color:#fff;width:28px;padding:9px 8px;text-align:center;">#</th>
-      <th style="background:#1e3a5f;color:#fff;min-width:120px;padding:9px 12px;text-align:left;">Tên hàng / SKU</th>
-      <th style="background:#1e3a5f;color:#fff;min-width:140px;padding:9px 12px;text-align:left;">Thông số kỹ thuật</th>
+      <th style="background:#1e3a5f;color:#fff;min-width:90px;padding:9px 12px;text-align:left;">Vị trí / Người dùng</th>
+      <th style="background:#1e3a5f;color:#fff;min-width:110px;padding:9px 12px;text-align:left;">Model / Tên hàng</th>
+      <th style="background:#1e3a5f;color:#fff;min-width:140px;padding:9px 12px;text-align:left;">Cấu hình / Thông số</th>
+      <th style="background:#1e3a5f;color:#fff;padding:9px 12px;text-align:center;">Hãng</th>
       <th style="background:#1e3a5f;color:#fff;padding:9px 12px;text-align:center;">SL / ĐVT</th>
       ${thCols}
+      <th style="background:#0f766e;color:#fff;padding:9px 12px;text-align:right;min-width:100px;">Giá thấp nhất</th>
+      <th style="background:#1e3a5f;color:#fff;min-width:120px;padding:9px 12px;text-align:left;">Ghi chú</th>
     </tr></thead>
     <tbody>
       ${itemBodyRows}
       <tr style="background:#f0f4f8;border-top:2px solid #1e3a5f;">
-        <td colspan="4" style="padding:8px 10px;font-weight:700;font-size:12px;">TỔNG CỘNG</td>
+        <td colspan="6" style="padding:8px 10px;font-weight:700;font-size:12px;">TỔNG CỘNG (chưa VAT)</td>
         ${totalCells}
+        <td style="text-align:right;padding:8px 10px;font-weight:800;color:#059669;">${minTotal>0?fmt(minTotal):'—'}</td>
+        <td></td>
       </tr>
       ${nccInfoRows}
     </tbody>
@@ -13182,99 +13211,68 @@ async function downloadProcTemplate(){
   await _ensureXLSX();
   const wb = XLSX.utils.book_new();
 
-  // ── Cấu trúc template ────────────────────────────────────────────────────
+  // ── Cấu trúc template khảo giá (11 cột A–K) ──────────────────────────────
+  // Cột: A STT | B Vị trí/Người dùng | C Phòng ban | D Model đề xuất | E Cấu hình
+  //      F Hãng | G Giá NCC1 | H Giá NCC2 | I Giá NCC3 | J Giá thấp nhất | K Ghi chú
   const rows = [
-    // Tiêu đề
-    ['BẢNG SO SÁNH BÁO GIÁ'],
+    ['BẢNG KHẢO GIÁ / SO SÁNH BÁO GIÁ'],
+    ['Công ty Trung Thủy Group (TTG)  •  Nhà cung cấp điền giá vào các cột G, H, I  •  Cột "Giá thấp nhất" & "Tổng cộng" tự tính'],
     [],
-    ['Tiêu đề / Tên thiết bị:', ''],
-    ['Loại tài sản:', ''],
-    ['Bộ phận đề xuất:', ''],
-    ['Người đề xuất:', ''],
-    ['Ngày đề xuất:', ''],
-    ['Mục đích sử dụng:', ''],
-    [],
-    // NCC header
-    ['', '', '', '', '', 'NHÀ CUNG CẤP 1', '', 'NHÀ CUNG CẤP 2', '', 'NHÀ CUNG CẤP 3'],
-    ['', '', '', '', '', '(Tên NCC)', '', '(Tên NCC)', '', '(Tên NCC)'],
-    ['', 'Bảo hành', '', '', '', '', '', '', '', ''],
-    ['', 'Hình thức thanh toán', '', '', '', '', '', '', '', ''],
-    ['', 'Thời gian giao hàng', '', '', '', '', '', '', '', ''],
-    [],
-    // Items header
-    ['STT', 'Tên hàng hóa / Dịch vụ', 'Thông số kỹ thuật', 'Số lượng', 'ĐVT',
-      'Đơn giá NCC1', 'Thành tiền NCC1',
-      'Đơn giá NCC2', 'Thành tiền NCC2',
-      'Đơn giá NCC3', 'Thành tiền NCC3'],
+    ['STT','Vị trí / Người dùng','Phòng ban','Model đề xuất','Cấu hình','Hãng',
+      'Giá NCC 1','Giá NCC 2','Giá NCC 3','Giá thấp nhất','Ghi chú'],
   ];
 
-  // 15 dòng item trống với công thức
-  // Dòng đầu tiên ở row 18 (index 17, 1-based = 18)
-  const ITEM_START_ROW = 18;
-  for(let i=0;i<15;i++){
+  // 12 dòng trống, cột J tự tính MIN(G:I) bỏ qua ô trống
+  const ITEM_START_ROW = 5; // 1-based (sau 2 dòng tiêu đề + 1 trống + header)
+  const N_ROWS = 12;
+  for(let i=0;i<N_ROWS;i++){
     const r = ITEM_START_ROW + i;
     rows.push([
-      i+1, '', '', '', '',
-      0, {f:`F${r}*D${r}`},
-      0, {f:`H${r}*D${r}`},
-      0, {f:`J${r}*D${r}`},
+      i+1,'','','','','',
+      '','','',
+      {f:`IF(COUNT(G${r}:I${r})=0,"",MIN(G${r}:I${r}))`},
+      '',
     ]);
   }
+  const LAST_ITEM = ITEM_START_ROW + N_ROWS - 1;
+  rows.push([
+    '','TỔNG CỘNG (chưa VAT)','','','','',
+    {f:`SUM(G${ITEM_START_ROW}:G${LAST_ITEM})`},
+    {f:`SUM(H${ITEM_START_ROW}:H${LAST_ITEM})`},
+    {f:`SUM(I${ITEM_START_ROW}:I${LAST_ITEM})`},
+    {f:`SUM(J${ITEM_START_ROW}:J${LAST_ITEM})`},
+    'Chưa gồm VAT',
+  ]);
 
-  const TOTAL_ROW = ITEM_START_ROW + 15;
-  const LAST_ITEM = ITEM_START_ROW + 14;
-
-  rows.push([]); // blank
-  rows.push([
-    '', 'TỔNG CỘNG (chưa VAT)', '', '', '',
-    '', {f:`SUM(G${ITEM_START_ROW}:G${LAST_ITEM})`},
-    '', {f:`SUM(I${ITEM_START_ROW}:I${LAST_ITEM})`},
-    '', {f:`SUM(K${ITEM_START_ROW}:K${LAST_ITEM})`},
-  ]);
-  rows.push([
-    '', 'VAT 8%', '', '', '',
-    '', {f:`G${TOTAL_ROW+1}*0.08`},
-    '', {f:`I${TOTAL_ROW+1}*0.08`},
-    '', {f:`K${TOTAL_ROW+1}*0.08`},
-  ]);
-  rows.push([
-    '', 'TỔNG SAU VAT', '', '', '',
-    '', {f:`G${TOTAL_ROW+1}+G${TOTAL_ROW+2}`},
-    '', {f:`I${TOTAL_ROW+1}+I${TOTAL_ROW+2}`},
-    '', {f:`K${TOTAL_ROW+1}+K${TOTAL_ROW+2}`},
-  ]);
   rows.push([]);
-  rows.push(['', '→ NCC ĐỀ XUẤT CHỌN:', '']);
-  rows.push(['', 'Lý do:', '']);
+  rows.push(['THÔNG TIN NHÀ CUNG CẤP (điền khi gửi khảo giá):']);
+  rows.push(['NCC 1 (cột G):','......................................  (Tên NCC / người liên hệ / SĐT)']);
+  rows.push(['NCC 2 (cột H):','......................................  (Tên NCC / người liên hệ / SĐT)']);
+  rows.push(['NCC 3 (cột I):','......................................  (Tên NCC / người liên hệ / SĐT)']);
+  rows.push([]);
+  rows.push(['GHI CHÚ CHUNG:']);
+  rows.push(['1. Nhà cung cấp điền đơn giá vào cột G, H, I. Cột "Giá thấp nhất" và "Tổng cộng" tự động tính.']);
+  rows.push(['2. Model đề xuất chỉ mang tính định hướng cấu hình; NCC có thể chào model tương đương cùng cấu hình, ghi rõ ở cột Ghi chú.']);
+  rows.push(['3. Giá đề nghị chưa bao gồm VAT — NCC vui lòng ghi rõ VAT khi báo giá chính thức.']);
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
 
-  // Độ rộng cột
   ws['!cols'] = [
-    {wch:5},{wch:30},{wch:35},{wch:8},{wch:7},
-    {wch:16},{wch:18},{wch:16},{wch:18},{wch:16},{wch:18}
+    {wch:5},{wch:24},{wch:18},{wch:26},{wch:34},{wch:12},
+    {wch:15},{wch:15},{wch:15},{wch:15},{wch:34}
   ];
 
-  // Merge tiêu đề
+  const HDR = ITEM_START_ROW - 1;         // dòng header (1-based)
+  const TOTAL = LAST_ITEM + 1;            // dòng tổng cộng (1-based)
   ws['!merges'] = [
-    {s:{r:0,c:0},e:{r:0,c:10}}, // "BẢNG SO SÁNH BÁO GIÁ"
-    {s:{r:2,c:1},e:{r:2,c:10}}, // Tiêu đề value
-    {s:{r:3,c:1},e:{r:3,c:4}},
-    {s:{r:4,c:1},e:{r:4,c:4}},
-    {s:{r:5,c:1},e:{r:5,c:4}},
-    {s:{r:6,c:1},e:{r:6,c:4}},
-    {s:{r:7,c:1},e:{r:7,c:4}},
-    {s:{r:9,c:5},e:{r:9,c:6}},  // NCC1 header
-    {s:{r:9,c:7},e:{r:9,c:8}},  // NCC2 header
-    {s:{r:9,c:9},e:{r:9,c:10}}, // NCC3 header
-    {s:{r:10,c:5},e:{r:10,c:6}},
-    {s:{r:10,c:7},e:{r:10,c:8}},
-    {s:{r:10,c:9},e:{r:10,c:10}},
+    {s:{r:0,c:0},e:{r:0,c:10}}, // tiêu đề
+    {s:{r:1,c:0},e:{r:1,c:10}}, // phụ đề
+    {s:{r:TOTAL-1,c:1},e:{r:TOTAL-1,c:5}}, // "TỔNG CỘNG" trải B..F
   ];
 
-  XLSX.utils.book_append_sheet(wb, ws, 'Báo giá');
-  XLSX.writeFile(wb, 'Template_MuaSam_BaoGia.xlsx');
-  toast('📥 Đã tải template Excel mua sắm!', 'ok');
+  XLSX.utils.book_append_sheet(wb, ws, 'Khảo giá');
+  XLSX.writeFile(wb, 'Template_KhaoGia_MuaSam.xlsx');
+  toast('📥 Đã tải template khảo giá Excel!', 'ok');
 }
 
 async function exportProcExcel(){
@@ -13330,31 +13328,35 @@ async function exportProcExcel(){
     if(p.mucDich) rows.push(['Mục đích:', p.mucDich]);
     rows.push([]); // blank
 
-    // Header
+    // Header — layout khảo giá: STT, Vị trí, Model, Cấu hình, Hãng, SL, ĐVT, Giá NCC1/2/3, Giá thấp nhất, Ghi chú
     rows.push([
-      'STT','Tên hàng','Thông số','SL','ĐVT',
-      'Đơn giá '+nccNames[0], 'Thành tiền '+nccNames[0],
-      'Đơn giá '+nccNames[1], 'Thành tiền '+nccNames[1],
-      'Đơn giá '+nccNames[2], 'Thành tiền '+nccNames[2],
+      'STT','Vị trí / Người dùng','Model đề xuất','Cấu hình','Hãng','SL','ĐVT',
+      'Giá '+nccNames[0], 'Giá '+nccNames[1], 'Giá '+nccNames[2],
+      'Giá thấp nhất','Ghi chú',
     ]);
 
     // Items
     items.forEach((it, ii) => {
       const sl = it.soLuong||1;
+      const rowPrices = [0,1,2].map(ni=>it.gia[ni]||0).filter(g=>g>0);
+      const rowMin = rowPrices.length?Math.min(...rowPrices):0;
       rows.push([
-        ii+1, it.tenHang||'', it.thongSo||'', sl, it.donViTinh||'cái',
-        it.gia[0]||0, (it.gia[0]||0)*sl,
-        it.gia[1]||0, (it.gia[1]||0)*sl,
-        it.gia[2]||0, (it.gia[2]||0)*sl,
+        ii+1, it.viTri||'', it.tenHang||'', it.thongSo||'', it.hang||'', sl, it.donViTinh||'cái',
+        it.gia[0]||'', it.gia[1]||'', it.gia[2]||'',
+        rowMin||'', it.ghiChu||'',
       ]);
     });
 
-    // Total row
+    // Total row — tổng theo từng NCC (đơn giá × SL) + tổng theo giá thấp nhất
     const totals = [0,1,2].map(ni => items.reduce((s,it) => s+(it.gia[ni]||0)*(it.soLuong||1), 0));
-    rows.push(['','TỔNG CỘNG','','','','',totals[0],'',totals[1],'',totals[2]]);
+    const totalMin = items.reduce((s,it)=>{
+      const rp=[0,1,2].map(ni=>it.gia[ni]||0).filter(g=>g>0);
+      return s + (rp.length?Math.min(...rp):0)*(it.soLuong||1);
+    },0);
+    rows.push(['','TỔNG CỘNG (chưa VAT)','','','','','', totals[0], totals[1], totals[2], totalMin, '']);
     rows.push([]);
 
-    // NCC info
+    // NCC info (bảo hành, giao hàng…) — đặt dưới 3 cột giá NCC
     const infoFields = [
       ['Bảo hành',   'baoHanh'],
       ['Khuyến mãi', 'khuyenMai'],
@@ -13364,15 +13366,15 @@ async function exportProcExcel(){
     ];
     infoFields.forEach(([label, key]) => {
       const vals = p.nhaCC.map(n => n[key]||'');
-      if(vals.some(v=>v)) rows.push(['',label,'','','','',vals[0],'',vals[1],'',vals[2]]);
+      if(vals.some(v=>v)) rows.push(['',label,'','','','','', vals[0], vals[1], vals[2], '', '']);
     });
 
     // Append sheet (tên sheet giới hạn 31 ký tự, bỏ ký tự đặc biệt)
     const sheetName = (p.tieuDe||'YC').replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31);
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [
-      {wch:5},{wch:28},{wch:30},{wch:5},{wch:7},
-      {wch:16},{wch:18},{wch:16},{wch:18},{wch:16},{wch:18}
+      {wch:5},{wch:24},{wch:26},{wch:34},{wch:12},{wch:5},{wch:6},
+      {wch:16},{wch:16},{wch:16},{wch:16},{wch:30}
     ];
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
@@ -13428,7 +13430,6 @@ function _linkProcToDNTT(dnttId){
   if(!_pendingProcLink) return;
   const p = procList.find(x=>x.id===_pendingProcLink);
   if(p){ p.dnttId = dnttId; p.trangThai = 'da_mua'; saveProc(); }
-  if(typeof msalSpPushProc==='function' && _msalAccount) msalSpPushProc(p.id).catch(()=>{});
   _pendingProcLink = null;
 }
 
@@ -13505,7 +13506,6 @@ function procMarkBought(id){
   if(!p) return;
   p.trangThai = 'da_mua';
   saveProc();
-  if(typeof msalSpPushProc==='function' && _msalAccount) msalSpPushProc(id).catch(()=>{});
   renderProcurement();
   toast('✅ Đã đánh dấu hoàn tất mua sắm','ok');
 }
@@ -13514,7 +13514,6 @@ function procChangeStatus(id, newStatus, sel){
   if(!p) return;
   p.trangThai = newStatus;
   saveProc();
-  if(typeof msalSpPushProc==='function' && _msalAccount) msalSpPushProc(id).catch(()=>{});
   renderProcurement();
   toast(`✅ Chuyển sang: ${_PROC_STATUS_LABEL[newStatus]||newStatus}`,'ok');
 }
@@ -13524,13 +13523,11 @@ function deleteProc(id, btn){
   if(!saved) return;
   procList = procList.filter(x=>x.id!==id);
   saveProc();
-  if((saved._spId||saved.spId) && typeof msalSpDeleteProc==='function'){ msalSpDeleteProc(saved._spId||saved.spId); saved._spId=null; saved.spId=null; }
   renderProcurement();
   toastUndo('🗑 Đã xóa yêu cầu mua sắm', {
     onUndo: ()=>{
       procList.push(saved);
       saveProc();
-      if(typeof msalSpPushProc==='function' && _msalAccount) msalSpPushProc(saved.id).catch(()=>{});
       renderProcurement();
       toast('↩ Đã hoàn tác', 'ok');
     }
@@ -17853,155 +17850,6 @@ async function syncAllDNTTToSP(){
   }finally{
     if(btn){ btn.disabled=false; btn.innerHTML='<i class="ph ph-cloud-arrow-up"></i> Sync SP'; }
   }
-}
-
-
-// ══════════════════ ĐỒNG BỘ MUA SẮM (Procurement) LÊN SHAREPOINT ══════════════════
-// Lưu toàn bộ record dạng JSON blob (DataJson) + vài cột phẳng để xem nhanh trên SP.
-const _PROC_SP_FIELDS = [
-  { name:'DataJson',    type:'Note' },
-  { name:'TrangThai',   type:'Text' },
-  { name:'NguoiDeXuat', type:'Text' },
-  { name:'BoPhan',      type:'Text' },
-  { name:'NgayDeXuat',  type:'Text' },
-  { name:'LocalId',     type:'Text' },
-];
-
-function procToSpItem(rec){
-  const clean = { ...rec };
-  delete clean._spId; delete clean._spModified; delete clean.spId;
-  return {
-    Title:       rec.tieuDe || rec.id || '',
-    DataJson:    JSON.stringify(clean),
-    TrangThai:   rec.trangThai || '',
-    NguoiDeXuat: rec.nguoiDeXuat || '',
-    BoPhan:      rec.boPhan || '',
-    NgayDeXuat:  rec.ngayDeXuat || '',
-    LocalId:     rec.id || '',
-  };
-}
-
-function spItemToProc(item){
-  let rec = {};
-  if(item.DataJson){ try{ rec = JSON.parse(item.DataJson); }catch(e){ rec = {}; } }
-  rec.id          = item.LocalId || rec.id || ('sp_'+item.ID);
-  rec._spId       = item.ID;
-  rec._spModified = item.Modified || null;
-  rec.spId        = item.ID;            // để tính năng đính kèm file dùng chung SP item
-  if(!rec.tieuDe)    rec.tieuDe    = item.Title || '';
-  if(!rec.trangThai) rec.trangThai = item.TrangThai || 'draft';
-  if(!Array.isArray(rec.nhaCC)) rec.nhaCC = rec.nhaCC || [];
-  if(!Array.isArray(rec.items)) rec.items = rec.items || [];
-  return rec;
-}
-
-async function msalSpProvisionProcList(){
-  const site = MSAL_CONFIG.spSite;
-  const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
-  const base = `${site}/_api/web/lists`;
-  const fieldBase = `${base}/getbytitle('${listName}')/fields`;
-  const typeMap = { Text: 2, Note: 3, Number: 9 };
-  let listExists = false;
-  try{ await msalSpReq(`${base}/getbytitle('${listName}')?$select=Title,Id`); listExists = true; }
-  catch(e){ console.log('[Proc-SP] List chưa tồn tại, tạo mới:', listName); }
-  if(!listExists){
-    await msalSpReq(base, { method:'POST', body: JSON.stringify({
-      Title: listName, BaseTemplate: 100, Description: 'Danh sách Mua Sắm CNTT', OnQuickLaunch: true }) });
-  }
-  const existingFields = new Set();
-  try{
-    const fdata = await msalSpReq(`${fieldBase}?$select=Title&$top=200`);
-    (fdata?.value||[]).forEach(f => existingFields.add(f.Title));
-  }catch(e){ console.warn('[Proc-SP] Không đọc được cột:', e.message); }
-  let added = 0;
-  for(const f of _PROC_SP_FIELDS){
-    if(existingFields.has(f.name)) continue;
-    try{
-      await msalSpReq(fieldBase, { method:'POST', body: JSON.stringify({ Title: f.name, FieldTypeKind: typeMap[f.type]||2 }) });
-      added++;
-    }catch(fe){ console.warn('[Proc-SP] Bỏ qua cột lỗi:', f.name, fe.message); }
-  }
-  if(added > 0){
-    const viewUrl = `${base}/getbytitle('${listName}')/DefaultView/ViewFields`;
-    for(const f of _PROC_SP_FIELDS){
-      if(!existingFields.has(f.name)){
-        try{ await msalSpReq(`${viewUrl}/addViewField('${f.name}')`, { method:'POST', body:'{}' }); }catch(_){}
-      }
-    }
-  }
-  console.log('[Proc-SP] Provision xong, thêm', added, 'cột');
-}
-
-async function msalSpLoadProc(){
-  if(!_msalAccount) return 0;
-  const site = MSAL_CONFIG.spSite;
-  const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
-  try{
-    const url = `${site}/_api/web/lists/getbytitle('${listName}')/items?$top=500&$orderby=ID desc`;
-    const data = await msalSpReq(url);
-    const items = data?.value || [];
-    const spRecs = items.map(spItemToProc);
-    const localOnly = procList.filter(loc => !loc._spId && !spRecs.find(sp => sp.id === loc.id));
-    procList = [...spRecs, ...localOnly];
-    saveProc();
-    if(typeof renderProcurement === 'function') renderProcurement();
-    console.log(`[Proc-SP] Đã tải ${spRecs.length} phiếu mua sắm từ SharePoint`);
-    return spRecs.length;
-  }catch(e){
-    console.warn('[Proc-SP] Load lỗi:', e.message);
-    return 0;
-  }
-}
-
-async function msalSpPushProc(id, _retried){
-  const rec = procList.find(x=>x.id===id);
-  if(!rec || !_msalAccount) return;
-  const site = MSAL_CONFIG.spSite;
-  const listName = MSAL_CONFIG.spProcList || 'Quan_Ly_Mua_Sam';
-  const base = `${site}/_api/web/lists/getbytitle('${listName}')/items`;
-  const existingSpId = rec._spId || rec.spId;
-  try{
-    const body = procToSpItem(rec);
-    if(existingSpId){
-      await msalSpReq(`${base}(${existingSpId})`, {
-        method:'POST', headers:{ 'X-HTTP-Method':'MERGE', 'IF-MATCH':'*' }, body: JSON.stringify(body) });
-      rec._spId = existingSpId; rec.spId = existingSpId;
-      try{ const u = await msalSpReq(`${base}(${existingSpId})?$select=Modified`); if(u?.Modified){ rec._spModified = u.Modified; saveProc(); } }catch(_){}
-    } else {
-      const res = await msalSpReq(base, { method:'POST', body: JSON.stringify(body) });
-      if(res?.ID){ rec._spId = res.ID; rec.spId = res.ID; rec._spModified = res.Modified || null; saveProc(); }
-    }
-    console.log('[Proc-SP] ✅ Đã đồng bộ:', rec.tieuDe||rec.id);
-  }catch(e){
-    if(!_retried && e.message && e.message.includes('does not exist on type')){
-      console.warn('[Proc-SP] Cột thiếu, provision rồi retry…');
-      await msalSpProvisionProcList();
-      return msalSpPushProc(id, true);
-    }
-    const isNetworkErr = !navigator.onLine || (e.message && (e.message.includes('Failed to fetch')||e.message.includes('NetworkError')||e.message.includes('network')));
-    if(isNetworkErr && typeof _enqueueSpPush==='function'){ _enqueueSpPush('proc', id); console.warn('[Proc-SP] Offline — vào queue:', id); return; }
-    console.warn('[Proc-SP] Push lỗi:', e.message);
-  }
-}
-
-async function msalSpDeleteProc(spId){
-  if(!spId || !_msalAccount) return;
-  const url = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spProcList||'Quan_Ly_Mua_Sam'}')/items(${spId})`;
-  try{
-    await msalSpReq(url, { method:'POST', headers:{'X-HTTP-Method':'DELETE','IF-MATCH':'*'}, body:'' });
-    console.log('[Proc-SP] 🗑️ Đã xóa SP item:', spId);
-  }catch(e){ if(typeof _spIsGone!=='function' || !_spIsGone(e)) console.warn('[Proc-SP] Delete lỗi:', e.message); }
-}
-
-async function syncAllProcToSP(){
-  if(!_msalAccount){ toast('Chưa đăng nhập Microsoft','warn'); return; }
-  try{
-    await msalSpProvisionProcList();
-    let count=0;
-    for(const rec of procList){ await msalSpPushProc(rec.id); count++; }
-    toast(`☁️ Đã sync ${count} phiếu mua sắm lên SharePoint`, 'ok');
-    renderProcurement();
-  }catch(e){ toast('❌ Sync lỗi: '+e.message, 'bad'); }
 }
 
 // ══════════════════ SỔ ĐỊA CHỈ NCC (Vendor Address Book) ══════════════════
