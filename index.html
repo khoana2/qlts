@@ -15482,7 +15482,9 @@ function parseTextTransferHistory(text){
   if(!text) return [];
   const result = [];
   const _khoVariants = /^(\(kho\)|\(lưu kho\)|kho|lưu kho|trong kho)$/i;
-  const _normKho = v => _khoVariants.test((v||'').trim()) ? '' : (v||'').trim();
+  // Giữ nguyên chữ "Kho" (trước đây đổi thành '' → hiển thị sai "Chưa có người dùng",
+  // và làm lệch khóa dedupe so với bản ghi trên Quan_Ly_TransferHistory).
+  const _normKho = v => _khoVariants.test((v||'').trim()) ? 'Kho' : (v||'').trim();
 
   // Mỗi dòng có dạng: "dd/mm/yyyy: from → to"
   const lines = text.split(/\n|;/).map(s=>s.trim()).filter(Boolean);
@@ -15562,7 +15564,9 @@ async function msalSpPushTransfer(assetId, rec){
 // ─── Dọn dẹp duplicate transfer records trên SharePoint ─────────────────────
 async function deduplicateSpTransfers(){
   if(!_msalAccount){ toast('Cần đăng nhập SharePoint trước.','warn'); return; }
-  if(!confirm('Hàm này sẽ tải toàn bộ lịch sử bàn giao từ SharePoint, tìm các bản ghi trùng lặp (cùng tài sản + cùng thời gian ±1s) và xóa bản thừa. Tiếp tục?')) return;
+  if(!confirm('Hàm này sẽ tải toàn bộ lịch sử bàn giao từ SharePoint, tìm các bản ghi trùng lặp '
+    + '(cùng tài sản + cùng người giao/người nhận + cùng ngày bàn giao) và xóa bản thừa, '
+    + 'giữ lại bản đầy đủ thông tin nhất.\n\nDanh sách sẽ được in ra Console (F12) để bạn xem trước khi xác nhận xóa.\n\nTiếp tục?')) return;
 
   const btn = document.querySelector('button[onclick="deduplicateSpTransfers()"]');
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="ph ph-spinner" style="animation:spin 1s linear infinite;display:inline-block;"></i> Đang xử lý…'; }
@@ -15571,7 +15575,7 @@ async function deduplicateSpTransfers(){
   try{
     const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')/items`;
     // Load tất cả, phân trang 500 items
-    let allItems = [], url = `${base}?$select=Id,Title,TuNguoi,DenNguoi,ThoiGian&$top=500&$orderby=ThoiGian asc`;
+    let allItems = [], url = `${base}?$select=Id,Title,TuNguoi,DenNguoi,NgayBanGiao,TinhTrang,GhiChu,ThoiGian&$top=500&$orderby=Id asc`;
     while(url){
       const data = await msalSpReq(url);
       allItems = allItems.concat(data.value || []);
@@ -15579,22 +15583,37 @@ async function deduplicateSpTransfers(){
     }
     console.log('[DEDUP] Tổng items SP:', allItems.length);
 
-    // Nhóm theo assetId (Title) + ts truncate về giây
-    const _sec = ts => { try{ return Math.floor(new Date(ts).getTime()/1000); }catch(e){ return 0; } };
+    // Nhóm theo assetId (Title) + from|to|ngày — KHÔNG dùng timestamp.
+    // (Bản cũ nhóm theo giây: 2 lần bấm cách nhau vài giây thì không nhận ra là trùng,
+    //  ngược lại mọi bản ghi thiếu ThoiGian đều rơi chung nhóm "0" → xóa nhầm.)
+    const _pName = v => {
+      const s = (v||'').trim().toLowerCase();
+      return /^(\(?kho\)?|\(?lưu kho\)?|trong kho|chưa có người dùng|n\/a|-)$/.test(s) ? '' : s;
+    };
+    const _day = d => { try{ return d ? new Date(d).toISOString().slice(0,10) : ''; }catch(e){ return ''; } };
+
     const groups = {};
     for(const item of allItems){
-      const key = `${item.Title||''}__${_sec(item.ThoiGian)}`;
+      const aid = item.Title || '';
+      if(!aid) continue;                              // thiếu assetId → bỏ qua, không đụng tới
+      const sig = `${_pName(item.TuNguoi)}|${_pName(item.DenNguoi)}|${_day(item.NgayBanGiao)}`;
+      if(sig === '||') continue;                      // rỗng hoàn toàn → không gộp, tránh xóa nhầm
+      const key = `${aid}__${sig}`;
       if(!groups[key]) groups[key] = [];
       groups[key].push(item);
     }
 
-    // Tìm nhóm có >= 2 items → giữ item có ID nhỏ nhất (tạo trước), xóa phần còn lại
+    // Nhóm >= 2 items → giữ bản ĐẦY ĐỦ NHẤT (hòa thì giữ ID nhỏ nhất = tạo trước)
+    const _rich = it => (it.TinhTrang ? 4 : 0) + (it.GhiChu ? 2 : 0) + (it.ThoiGian ? 1 : 0);
     const toDelete = [];
+    const preview  = [];
     for(const [key, items] of Object.entries(groups)){
       if(items.length < 2) continue;
-      items.sort((a,b) => a.Id - b.Id); // giữ bản cũ nhất
+      items.sort((a,b) => (_rich(b) - _rich(a)) || (a.Id - b.Id));
+      preview.push(`${key} → giữ #${items[0].Id}, xóa ${items.slice(1).map(i=>'#'+i.Id).join(', ')}`);
       for(let i=1; i<items.length; i++) toDelete.push(items[i].Id);
     }
+    if(preview.length) console.log('[DEDUP] Chi tiết:\n' + preview.join('\n'));
 
     console.log('[DEDUP] Cần xóa:', toDelete.length, 'items');
     if(!toDelete.length){
@@ -15602,18 +15621,21 @@ async function deduplicateSpTransfers(){
       return;
     }
 
-    if(!confirm(`Tìm thấy ${toDelete.length} bản ghi trùng lặp. Xóa ngay?`)) return;
+    if(!confirm(`Tìm thấy ${toDelete.length} bản ghi trùng lặp.\n`
+      + `Danh sách chi tiết đã in ở Console (F12) — nên xem trước khi xóa.\n\nXóa ngay?`)) return;
 
     // Xóa từng item (SP không hỗ trợ batch delete đơn giản)
+    // Dùng POST + X-HTTP-Method:DELETE cho đồng nhất với phần còn lại của app
+    // (verb DELETE thuần hay bị proxy/firewall chặn).
     let deleted = 0, failed = 0;
     for(const spId of toDelete){
       try{
-        await msalSpReq(
-          `${base}(${spId})`,
-          { method:'DELETE', headers:{ 'IF-MATCH':'*' } }
-        );
+        await msalSpReq(`${base}(${spId})`, {
+          method:'POST', headers:{ 'X-HTTP-Method':'DELETE', 'IF-MATCH':'*' }, body:''
+        });
         deleted++;
       }catch(e){
+        if(_spIsGone(e)){ deleted++; continue; }   // vốn đã không còn → coi như xong
         console.warn('[DEDUP] Xóa lỗi ID', spId, e.message);
         failed++;
       }
@@ -15718,8 +15740,15 @@ async function msalSpLoadTransfers(){
     }
     // Merge: SP là nguồn chính, nhưng giữ lại local record chưa có trên SP
     const _normTs = ts => { try{ return Math.floor(new Date(ts).getTime()/1000); }catch(e){ return null; } };
+    // Chuẩn hoá tên người: "Kho" / "Lưu kho" / "Trong kho" / "Chưa có người dùng" ≡ rỗng.
+    // Bắt buộc — vì parseTextTransferHistory() đổi "Kho" thành '' còn bản ghi thật
+    // trên Quan_Ly_TransferHistory giữ nguyên "Kho" → 2 khóa khác nhau → sinh dòng lặp.
+    const _pName = v => {
+      const s = (v||'').trim().toLowerCase();
+      return /^(\(?kho\)?|\(?lưu kho\)?|trong kho|chưa có người dùng|n\/a|-)$/.test(s) ? '' : s;
+    };
     // Khóa phụ: from|to|date — fallback khi ts lệch hoặc ThoiGian rỗng
-    const _tKey  = r => `${(r.from||'').trim().toLowerCase()}|${(r.to||'').trim().toLowerCase()}|${r.date||''}`;
+    const _tKey  = r => `${_pName(r.from)}|${_pName(r.to)}|${r.date||''}`;
 
     for(const [aid, spRecs] of Object.entries(loaded)){
       const localRecs = transfers[aid] || [];
@@ -15755,8 +15784,29 @@ async function msalSpLoadTransfers(){
       });
 
       const merged = [...spRecs, ...localOnly];
-      merged.sort((a,b) => (a.ts||a.date||'') < (b.ts||b.date||'') ? -1 : 1);
-      transfers[aid] = merged;
+
+      // ── Chốt chặn cuối: gom bản trùng cùng (from|to|date), giữ bản ĐẦY ĐỦ NHẤT ──
+      // Xử lý cả trường hợp trùng ngay trong SP list (push 2 lần do double-click/retry).
+      const _rich = r => (r._spId ? 8 : 0)
+                       + (r.condition ? 4 : 0)
+                       + (r.accessories?.length ? 2 : 0)
+                       + (r.notes ? 1 : 0)
+                       + ((r.fromDept || r.toDept || r.toEmail) ? 1 : 0);
+      const _best = new Map();
+      const _keepAsIs = [];
+      for(const r of merged){
+        const k = _tKey(r);
+        if(k === '||'){ _keepAsIs.push(r); continue; }  // khóa rỗng hoàn toàn → không gộp
+        const cur = _best.get(k);
+        if(!cur || _rich(r) > _rich(cur)) _best.set(k, r);
+      }
+      const _final = [..._best.values(), ..._keepAsIs];
+      if(_final.length < merged.length){
+        console.log(`[TRANSFER] ${aid}: gộp ${merged.length - _final.length} dòng lặp`);
+      }
+
+      _final.sort((a,b) => (a.ts||a.date||'') < (b.ts||b.date||'') ? -1 : 1);
+      transfers[aid] = _final;
     }
     saveTransfers();
     console.log('[TRANSFER] Loaded', Object.keys(loaded).length, 'assets from SP');
