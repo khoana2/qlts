@@ -4681,9 +4681,37 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           <label>GPU</label>
           <input type="text" id="f-gpu" placeholder="VD: NVIDIA GTX 1650"/>
         </div>
-        <div class="field">
-          <label>Màn hình</label>
-          <input type="text" id="f-manHinh" placeholder="VD: Dell 24inch FHD"/>
+        <div class="field span3" style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:10px;padding:10px 12px;">
+          <label for="f-mh-on" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin:0;">
+            <input type="checkbox" id="f-mh-on" onchange="toggleManHinhFields()"
+                   style="width:17px;height:17px;cursor:pointer;accent-color:#0EA5E9;margin:0;"/>
+            <span style="font-weight:600;color:#0369A1;"><i class="ph ph-monitor"></i> Có cấp màn hình rời</span>
+          </label>
+          <div id="f-mh-detail" style="display:none;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-top:10px;">
+            <div>
+              <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Model</label>
+              <input type="text" id="f-mh-model" list="mh-model-list" autocomplete="off"
+                     placeholder="Chọn hoặc gõ model mới"/>
+              <datalist id="mh-model-list"></datalist>
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Kích thước (inch)</label>
+              <input type="text" id="f-mh-size" list="mh-size-list" autocomplete="off" placeholder="VD: 24"/>
+              <datalist id="mh-size-list">
+                <option value="19"></option><option value="21.5"></option><option value="22"></option>
+                <option value="23.8"></option><option value="24"></option><option value="25"></option>
+                <option value="27"></option><option value="29"></option><option value="32"></option>
+                <option value="34"></option>
+              </datalist>
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Số lượng</label>
+              <select id="f-mh-qty">
+                <option value="1">1</option><option value="2">2</option>
+                <option value="3">3</option><option value="4">4</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div class="section-divider span3"><span><i class="ph ph-shopping-cart"></i> Mua sắm / Bảo hành</span><hr/></div>
@@ -9152,11 +9180,15 @@ function updateDashboard(){
   if(suaSubEl) suaSubEl.textContent = suaByRepair > 0 ? `${suaByRepair} có phiếu SC` : 'Có phiếu SC';
   document.getElementById('kpi-dept').textContent = depts;
   document.getElementById('kpi-warranty').textContent = expiringSoon;
-  const monitors = _assets.filter(a => a.manHinh && a.manHinh.trim()).length;
+  // Đếm theo TỔNG SỐ màn hình đã tick (1 người có thể được cấp 2–4 cái)
+  const monUsers = _assets.filter(a => _mhCount(a) > 0).length;
+  const monitors = _assets.reduce((s, a) => s + _mhCount(a), 0);
   const monEl = document.getElementById('kpi-monitors');
   const monSub = document.getElementById('kpi-monitors-sub');
   if(monEl) monEl.textContent = monitors;
-  if(monSub) monSub.textContent = monitors > 0 ? `${monitors} người dùng` : 'Chưa có';
+  if(monSub) monSub.textContent = monitors > 0
+    ? `${monUsers} người dùng${monitors > monUsers ? ` · ${monitors - monUsers} cái thứ 2+` : ''}`
+    : 'Chưa có';
   document.getElementById('kpi-warranty-sub').textContent =
     expired ? `${expired} đã hết · ${expiringSoon} sắp hết` : `${expiringSoon} sắp hết trong 90 ngày`;
 
@@ -10349,13 +10381,113 @@ async function resyncDetail(){
   }
 }
 
+// ══════════════ MÀN HÌNH RỜI ══════════════
+// Vẫn lưu gộp vào 1 field `manHinh` (khớp cột "Màn hình" trên SharePoint).
+// Định dạng chuẩn: "Dell P2422H — 24 inch × 2"  (phần "× N" chỉ có khi N ≥ 2)
+// Parser đọc được cả dữ liệu cũ nhập tay tự do: "Dell 24inch FHD", 'LG 27"'…
+function _mhParse(raw){
+  const s = (raw||'').trim();
+  if(!s) return { on:false, model:'', size:'', qty:1 };
+  let rest = s, qty = 1, size = '';
+  // Số lượng ở cuối: "… × 2" / "… x2"
+  const mq = rest.match(/[x×]\s*(\d+)\s*$/i);
+  if(mq){ qty = Math.max(1, parseInt(mq[1],10) || 1); rest = rest.slice(0, mq.index).trim(); }
+  // Kích thước: 24 inch / 23.8in / 27"
+  const ms = rest.match(/(\d{2}(?:[.,]\d)?)\s*(?:inches|inch|in\b|"|”|'')/i);
+  if(ms){
+    size = ms[1].replace(',', '.');
+    rest = (rest.slice(0, ms.index) + rest.slice(ms.index + ms[0].length)).trim();
+  }
+  // Dọn dấu nối thừa hai đầu
+  rest = rest.replace(/[—–\-·|,]+\s*$/, '').replace(/^\s*[—–\-·|,]+/, '').trim();
+  return { on:true, model:rest, size, qty };
+}
+function _mhFormat(o){
+  if(!o || !o.on) return '';
+  const parts = [];
+  if(o.model) parts.push(String(o.model).trim());
+  if(o.size)  parts.push(String(o.size).trim().replace(',', '.') + ' inch');
+  let s = parts.join(' — ');
+  if(!s) s = 'Màn hình';                       // tick nhưng chưa điền gì → vẫn đếm được
+  const q = Math.max(1, parseInt(o.qty, 10) || 1);
+  if(q > 1) s += ' × ' + q;
+  return s;
+}
+// Số màn hình của 1 tài sản (0 nếu không cấp)
+function _mhCount(a){ const p = _mhParse(a?.manHinh); return p.on ? p.qty : 0; }
+
+// Gom model đã dùng trong dữ liệu → đổ vào dropdown gợi ý
+function _mhBuildDatalists(){
+  const dl = document.getElementById('mh-model-list');
+  if(!dl) return;
+  const models = new Set(), sizes = new Set();
+  assets.forEach(a => {
+    const p = _mhParse(a.manHinh);
+    if(!p.on) return;
+    if(p.model) models.add(p.model);
+    if(p.size)  sizes.add(p.size);
+  });
+  dl.innerHTML = [...models].sort((x,y)=>x.localeCompare(y,'vi'))
+    .map(m => `<option value="${esc(m)}"></option>`).join('');
+  // Bổ sung kích thước lạ đã có trong dữ liệu vào danh sách chuẩn
+  const sdl = document.getElementById('mh-size-list');
+  if(sdl){
+    const std = new Set(['19','21.5','22','23.8','24','25','27','29','32','34']);
+    [...sizes].filter(s => !std.has(s)).forEach(s => {
+      sdl.insertAdjacentHTML('beforeend', `<option value="${esc(s)}"></option>`);
+    });
+  }
+}
+
+function toggleManHinhFields(){
+  const on = !!document.getElementById('f-mh-on')?.checked;
+  const d  = document.getElementById('f-mh-detail');
+  if(d) d.style.display = on ? 'grid' : 'none';
+  if(on){
+    _mhBuildDatalists();
+    const q = document.getElementById('f-mh-qty');
+    if(q && !q.value) q.value = '1';
+  }
+}
+
+// Đọc trạng thái 3 ô trong form → chuỗi lưu vào asset.manHinh
+function _mhReadForm(){
+  const on = !!document.getElementById('f-mh-on')?.checked;
+  if(!on) return '';
+  return _mhFormat({
+    on:    true,
+    model: document.getElementById('f-mh-model')?.value || '',
+    size:  document.getElementById('f-mh-size')?.value  || '',
+    qty:   document.getElementById('f-mh-qty')?.value    || 1,
+  });
+}
+// Đổ chuỗi asset.manHinh ngược vào 3 ô trong form
+function _mhFillForm(raw){
+  const p  = _mhParse(raw);
+  const cb = document.getElementById('f-mh-on');
+  if(cb) cb.checked = p.on;
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v; };
+  set('f-mh-model', p.model);
+  set('f-mh-size',  p.size);
+  // Dữ liệu cũ có thể ghi số lượng > 4 → thêm option cho khỏi mất giá trị
+  const qs = document.getElementById('f-mh-qty');
+  if(qs){
+    if(!Array.from(qs.options).some(o => o.value === String(p.qty))){
+      qs.insertAdjacentHTML('beforeend', `<option value="${p.qty}">${p.qty}</option>`);
+    }
+    qs.value = String(p.qty);
+  }
+  toggleManHinhFields();
+}
+
 function clearForm(){
   ['f-id','f-maTaiSan','f-model','f-serial','f-nguoiDung','f-email',
-   'f-cpu','f-ram','f-ssd','f-gpu','f-manHinh','f-noiDung','f-ketQua','f-suaChua','f-ghiChu',
+   'f-cpu','f-ram','f-ssd','f-gpu','f-noiDung','f-ketQua','f-suaChua','f-ghiChu',
    'f-ngaySuKien','f-ngayMua','f-thoiHanBH','f-ngayHetBH','f-congTy','f-ncc','f-congTyNguon','f-soHoaDon','f-giaTri']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const ws = document.getElementById('f-warranty-status');
   if(ws){ ws.textContent='—'; ws.style.color='var(--muted)'; }
+  _mhFillForm('');   // reset ô tick màn hình + 3 trường con
   ['f-tenTaiSan','f-boPhan','f-tinhTrang','f-trangThaiHienTai']
     .forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
   // Tự điền sẵn công ty nếu user thuộc company group
@@ -10376,7 +10508,7 @@ function fillForm(a){
   document.getElementById('f-ram').value = a.ram||'';
   document.getElementById('f-ssd').value = a.ssd||'';
   document.getElementById('f-gpu').value = a.gpu||'';
-  document.getElementById('f-manHinh').value = a.manHinh||'';
+  _mhFillForm(a.manHinh||'');
   document.getElementById('f-noiDung').value = a.noiDung||'';
   document.getElementById('f-ketQua').value = a.ketQua||'';
   document.getElementById('f-suaChua').value = a.suaChua||'';
@@ -10463,7 +10595,7 @@ async function saveAsset(){
     ram:document.getElementById('f-ram').value,
     ssd:document.getElementById('f-ssd').value,
     gpu:document.getElementById('f-gpu').value,
-    manHinh:document.getElementById('f-manHinh').value,
+    manHinh: _mhReadForm(),
     tinhTrang:document.getElementById('f-tinhTrang').value,
     ngaySuKien:document.getElementById('f-ngaySuKien').value,
     ngayMua:document.getElementById('f-ngayMua').value,
@@ -13509,16 +13641,16 @@ function showManHinhReport(){
 
   const esc2 = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const rows = withMonitor.map(a => {
-    const alreadyHas = existingOwners.has((a.nguoiDung||'').toLowerCase().trim());
+    const p = _mhParse(a.manHinh);
     return `<tr style="border-bottom:1px solid #e2e8f0;">
       <td style="padding:8px 10px;font-size:13px;font-weight:600">${esc2(a.nguoiDung||'—')}</td>
       <td style="padding:8px 10px;font-size:12px;color:#64748b">${esc2(a.boPhan||'—')}</td>
       <td style="padding:8px 10px;font-size:12px">${esc2(a.tenTaiSan||'')} ${esc2(a.model||'')}</td>
-      <td style="padding:8px 10px;font-size:12px;color:#0EA5E9;font-weight:600">${esc2(a.manHinh)}</td>
+      <td style="padding:8px 10px;font-size:12px;color:#0EA5E9;font-weight:600">${esc2(p.model||'—')}</td>
+      <td style="padding:8px 10px;font-size:12px;text-align:center">${p.size ? esc2(p.size)+'"' : '—'}</td>
+      <td style="padding:8px 10px;font-size:12px;text-align:center;font-weight:700;${p.qty>1?'color:#C2410C':''}">${p.qty}</td>
       <td style="padding:8px 10px;text-align:center">
-        ${alreadyHas
-          ? '<span style="color:#10B981;font-size:12px;">✓ Đã có</span>'
-          : `<button onclick="autoCreateManHinh('${a.id}')" style="padding:3px 10px;border:1px solid #1D4ED8;color:#1D4ED8;background:#EFF6FF;border-radius:6px;cursor:pointer;font-size:12px;">+ Tạo TS</button>`}
+        <button onclick="openEdit('${a.id}')" style="padding:3px 10px;border:1px solid #1D4ED8;color:#1D4ED8;background:#EFF6FF;border-radius:6px;cursor:pointer;font-size:12px;">Sửa</button>
       </td>
     </tr>`;
   }).join('');
@@ -13526,14 +13658,16 @@ function showManHinhReport(){
   const html = `<div style="max-height:60vh;overflow-y:auto;">
     ${!withMonitor.length
       ? '<div style="text-align:center;padding:40px;color:#64748b;"><i class="ph ph-monitor" style="font-size:36px;display:block;margin-bottom:8px;opacity:.3"></i>Không có tài sản nào ghi nhận màn hình kèm</div>'
-      : `<div style="font-size:12px;color:#64748b;margin-bottom:10px;">Tìm thấy <strong>${withMonitor.length}</strong> tài sản có màn hình kèm · <strong>${withMonitor.length - withMonitor.filter(a=>existingOwners.has((a.nguoiDung||'').toLowerCase())).length}</strong> chưa có TS màn hình</div>
+      : `<div style="font-size:12px;color:#64748b;margin-bottom:10px;"><strong>${withMonitor.reduce((s,a)=>s+_mhCount(a),0)}</strong> màn hình đang cấp cho <strong>${withMonitor.length}</strong> người</div>
       <table style="width:100%;border-collapse:collapse;">
         <thead><tr style="background:#EFF6FF;font-size:11px;color:#1D4ED8;font-weight:700;text-transform:uppercase;">
           <th style="padding:8px 10px;text-align:left">Người dùng</th>
           <th style="padding:8px 10px;text-align:left">Bộ phận</th>
           <th style="padding:8px 10px;text-align:left">Thiết bị kèm</th>
-          <th style="padding:8px 10px;text-align:left">Màn hình</th>
-          <th style="padding:8px 10px;text-align:center">Tình trạng</th>
+          <th style="padding:8px 10px;text-align:left">Model màn hình</th>
+          <th style="padding:8px 10px;text-align:center">Kích thước</th>
+          <th style="padding:8px 10px;text-align:center">SL</th>
+          <th style="padding:8px 10px;text-align:center"></th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>`}
@@ -13542,9 +13676,9 @@ function showManHinhReport(){
   // Mở modal chung
   const m = document.createElement('div');
   m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:800;display:flex;align-items:center;justify-content:center';
-  m.innerHTML=`<div style="background:#fff;border-radius:14px;width:760px;max-width:96vw;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden">
+  m.innerHTML=`<div style="background:#fff;border-radius:14px;width:940px;max-width:96vw;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden">
     <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:15px;font-weight:700"><i class="ph ph-monitor" style="color:#0EA5E9"></i> Danh sách màn hình kèm tài sản</div>
+      <div style="font-size:15px;font-weight:700"><i class="ph ph-monitor" style="color:#0EA5E9"></i> Màn hình đang cấp cho nhân viên</div>
       <button onclick="this.closest('[style*=fixed]').remove()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#94a3b8">✕</button>
     </div>
     <div style="padding:16px 20px">${html}</div>
@@ -13561,8 +13695,9 @@ function autoCreateManHinh(assetId){
   setTimeout(()=>{
     const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val; };
     set('f-tenTaiSan','Màn hình');
-    set('f-manHinh', a.manHinh||'');
-    set('f-model',   a.manHinh||'');
+    const _p = _mhParse(a.manHinh||'');
+    set('f-model',   [_p.model, _p.size ? _p.size+' inch' : ''].filter(Boolean).join(' — '));
+    _mhFillForm('');            // tài sản màn hình thì bản thân nó không "kèm màn hình"
     set('f-nguoiDung', a.nguoiDung||'');
     set('f-boPhan',  a.boPhan||'');
     set('f-tinhTrang','Đang dùng');
