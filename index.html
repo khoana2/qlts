@@ -5552,8 +5552,8 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       <input type="hidden" id="dntt-f-repair-ref">
 
       <!-- Loại mẫu -->
-      <!-- loaiMau hidden: always PR (du an) -->
-      <input type="hidden" name="dntt-f-sheet" id="dntt-f-sheet-hidden" value="PR (du an)">
+      <!-- loaiMau hidden: ĐNTT của IT dùng mẫu vận hành [BM]_KT_QT02 -->
+      <input type="hidden" name="dntt-f-sheet" id="dntt-f-sheet-hidden" value="PR (van hanh)">
 
       <!-- Thông tin chung -->
       <div style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px;">
@@ -5574,8 +5574,8 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <datalist id="dntt-dept-list"></datalist>
           </div>
           <div>
-            <label style="font-size:11px;color:var(--muted);">Phòng ban</label>
-            <input type="text" id="dntt-f-phongban" class="finput" placeholder="Tự điền khi chọn mã đơn vị" style="width:100%;">
+            <label style="font-size:11px;color:var(--muted);">Đơn vị</label>
+            <input type="text" id="dntt-f-phongban" class="finput" placeholder="Tự điền theo mã đơn vị" style="width:100%;">
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);">Công ty <span style="color:var(--red)">*</span></label>
@@ -5585,7 +5585,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);">Tên dự án</label>
-            <input type="text" id="dntt-f-tenda" class="finput" placeholder="Tự điền khi chọn mã đơn vị" style="width:100%;">
+            <input type="text" id="dntt-f-tenda" class="finput" placeholder="Nhập nếu có" style="width:100%;">
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);">Mã dự án</label>
@@ -16697,6 +16697,7 @@ const DEPT_MAP = {
 };
 // Danh sách công ty không gắn với đơn vị cụ thể
 const EXTRA_COMPANIES = [
+  'CÔNG TY TNHH CỔ PHẦN NEW FRONTIER',   // có trong bảng [BM]_KT_QT02 nhưng thiếu ở DEPT_MAP
   'CÔNG TY TNHH ĐẦU TƯ THƯƠNG MẠI PHÚ MỸ',
   'CÔNG TY TNHH DỊCH VỤ SEN SPA',
   'CÔNG TY TNHH TRUNG THỦY SÀI GÒN',
@@ -16713,19 +16714,19 @@ function _buildDeptDatalist(){
   const dl = document.getElementById('dntt-dept-list');
   if(!dl) return;
   dl.innerHTML = Object.entries(DEPT_MAP)
-    .map(([code,d]) => `<option value="${code}">${code} – ${d.ten} (${d.congTy})</option>`)
+    .map(([code,d]) => `<option value="${code}">${code} – ${d.ten}</option>`)
     .join('');
 }
 
+// Mã đơn vị CHỈ tra ra TÊN ĐƠN VỊ — giống công thức VLOOKUP(G7:H31) trong biểu mẫu gốc.
+// Công ty / Tên dự án / Mã dự án KHÔNG tự điền: cột công ty trong biểu mẫu chỉ là
+// danh sách để chọn, không gắn với mã đơn vị. Người lập phiếu tự chọn trong dropdown.
 function dnttDonViLookup(val){
   const v = (val||'').trim().toUpperCase();
   const d = DEPT_MAP[v];
   if(!d) return;
-  const setV = (id,value) => { const el=document.getElementById(id); if(el) el.value=value; };
-  setV('dntt-f-phongban', d.ten);
-  setV('dntt-f-congty',   d.congTy);
-  setV('dntt-f-tenda',    d.tenDA);
-  setV('dntt-f-mada',     d.maDA);
+  const el = document.getElementById('dntt-f-phongban');
+  if(el) el.value = d.ten;
 }
 
 function _buildCongtyDatalist(){
@@ -17302,7 +17303,7 @@ async function saveDNTTForm(draftOnly){
     congTy:   congty,
     phongBan: v('dntt-f-phongban'),
     nguoiLap: v('dntt-f-nguoilap'),
-    loaiMau:  'PR (du an)',
+    loaiMau:  'PR (van hanh)',   // ĐNTT của IT là phiếu vận hành, không phải phiếu dự án
     noidung,
     ncc:      v('dntt-f-ncc'),
     soHD:     v('dntt-f-sohd'),
@@ -17477,16 +17478,24 @@ function _buildDNTTPrintHTML(d){
   const ckMark  = hinhThuc==='CK'?'☑':'☐';
   const tmMark  = hinhThuc==='TM'?'☑':'☐';
   const ngay    = fmtD(d.ngayLap);
+  // Logo Trung Thủy — nếu đã nạp (data URL) thì dùng ảnh thật, không thì dùng chữ
+  const _logo = localStorage.getItem(DNTT_LOGO_KEY) || '';
+  const logoHTML = _logo
+    ? `<img src="${_logo}" alt="" style="max-height:38px;max-width:100%;">`
+    : `<div style="line-height:1.15;">
+         <div style="font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:12pt;letter-spacing:1px;">TRUNG THUY</div>
+         <div style="font-family:Arial,Helvetica,sans-serif;font-size:6pt;color:#666;letter-spacing:.3px;">Crafting Life Worth Living</div>
+       </div>`;
   // Nhãn (label) — regular weight, màu xám nhẹ để phân biệt với data
   const L  = s => `<span style="color:#444;font-weight:400;">${e(s)}</span>`;
   // Giá trị thường — regular
-  const td  = (val,sty='') => `<td style="border:1px solid #999;padding:3px 7px;${sty}">${val}</td>`;
+  const td  = (val,sty='') => `<td style="border:1px solid #000;padding:3px 7px;${sty}">${val}</td>`;
   const tdC = (val,sty='') => td(val, 'text-align:center;'+sty);
   const tdL = (val,sty='') => td(val, sty);
-  // Ô nhãn (cột trái) — nền xám nhẹ, chữ regular
-  const tdLbl = (val,sty='') => `<td style="border:1px solid #999;padding:3px 7px;background:#f7f7f7;${sty}">${L(val)}</td>`;
-  // Table header xanh
-  const thH = (val,sty='') => `<th style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-size:8.5pt;font-weight:600;${sty}">${val}</th>`;
+  // Ô nhãn (cột trái) — chữ đậm nhẹ như biểu mẫu gốc
+  const tdLbl = (val,sty='') => `<td style="border:1px solid #000;padding:3px 7px;font-weight:600;${sty}">${e(val)}</td>`;
+  // Table header — xám nhạt, chữ đen (khớp biểu mẫu KT-QT-02)
+  const thH = (val,sty='') => `<th style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;${sty}">${val}</th>`;
 
   // Chứng từ
   const _cts = d.chungTu||[];
@@ -17507,107 +17516,103 @@ function _buildDNTTPrintHTML(d){
 
   return `
 <!-- ═══ HEADER ═══ -->
-<table style="width:100%;border-collapse:collapse;margin-bottom:4px;border:1.5px solid #222;">
+<table style="width:100%;border-collapse:collapse;border:1px solid #000;">
   <tr>
-    <td style="width:28%;vertical-align:middle;font-size:9.5pt;line-height:1.7;font-weight:700;text-transform:uppercase;border-right:1.5px solid #222;padding:6px 8px;">
-      Công ty TNHH Đầu Tư<br>BĐS T.N.T Trung Thủy
+    <td style="width:22%;vertical-align:middle;border-right:1px solid #000;padding:6px 8px;">
+      ${logoHTML}
     </td>
-    <td style="width:44%;text-align:center;vertical-align:middle;border-right:1.5px solid #222;padding:7px 4px;">
-      <div style="font-weight:700;font-size:13.5pt;text-transform:uppercase;letter-spacing:.5px;">Phiếu Đề Nghị Thanh Toán</div>
+    <td style="width:50%;text-align:center;vertical-align:middle;border-right:1px solid #000;padding:8px 4px;">
+      <div style="font-weight:700;font-size:13pt;text-transform:uppercase;letter-spacing:.5px;">Phiếu Đề Nghị Thanh Toán</div>
     </td>
-    <td style="width:28%;text-align:left;vertical-align:middle;font-size:8pt;line-height:1.75;padding:6px 8px 6px 12px;color:#555;font-weight:400;">
+    <td style="width:28%;text-align:left;vertical-align:middle;font-size:6.5pt;line-height:1.6;padding:6px 8px;color:#555;font-weight:400;">
       F12 Miss Ao Dai Building,<br>
-      21 Nguyen Trung Ngan St, Dist 1, HCMC<br>
-      (+84) 28 7309 9966 &nbsp;|&nbsp; www.trungthuy.com
+      21 Nguyen Trung Ngan St, Dist 1, HCMC, Vietnam<br>
+      (+84) 28 7309 9966 &nbsp;&nbsp; www.trungthuy.com
     </td>
   </tr>
 </table>
-<div style="font-size:9.5pt;margin:2px 0 6px;color:#333;">
-  Số: &nbsp;<b style="color:#000;">${e(d.soPhieu)}</b>
-</div>
 
 <!-- ═══ THÔNG TIN PHIẾU ═══ -->
 <table style="width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:0;">
-  <colgroup><col style="width:34%"><col style="width:66%"></colgroup>
+  <colgroup>
+    <col style="width:26%"><col style="width:22%"><col style="width:26%"><col style="width:26%">
+  </colgroup>
+  <tr>
+    <td style="border:1px solid #000;border-top:none;padding:3px 7px;" colspan="4">
+      ${L('Số:')}&nbsp;<b>${e(d.soPhieu) || '.........................'}</b>
+    </td>
+  </tr>
   <tr>
     ${tdLbl('Người đề nghị thanh toán:')}
-    ${tdL(e(d.nguoiLap),'background:#FAFFF0;')}
+    <td style="border:1px solid #000;padding:3px 7px;text-align:center;" colspan="3"><b>${e(d.nguoiLap)}</b></td>
   </tr>
   <tr>
     ${tdLbl('Công ty:')}
-    ${tdL(`<b>${e((d.congTy||'').toUpperCase())}</b>`,'background:#FAFFF0;')}
+    <td style="border:1px solid #000;padding:3px 7px;text-align:center;background:#FCE4D6;" colspan="3"><b>${e((d.congTy||'').toUpperCase())}</b></td>
   </tr>
   <tr>
-    ${tdLbl('Phòng ban sử dụng ngân sách:')}
-    ${tdL(e(d.phongBan),'background:#FAFFF0;')}
+    ${tdLbl('Mã phòng ban sử dụng ngân sách:')}
+    ${tdC(e(d.maDonVi||''),'background:#FCE4D6;')}
+    <td style="border:1px solid #000;padding:3px 7px;text-align:center;background:#FCE4D6;" colspan="2">${e(d.phongBan||'')}</td>
   </tr>
   <tr>
     ${tdLbl('Nội dung thanh toán:')}
-    ${tdL(e(d.noidung),'background:#FAFFF0;')}
+    <td style="border:1px solid #000;padding:3px 7px;text-align:center;" colspan="3"><b>${e(d.noidung)}</b></td>
   </tr>
   <tr>
-    <td style="border:1px solid #999;padding:3px 7px;background:#f7f7f7;">
-      ${L('Ngày đề nghị:')}&nbsp;&nbsp;<span style="font-weight:400;">${ngay}</span>
-    </td>
-    <td style="border:1px solid #999;padding:3px 7px;background:#FAFFF0;">
-      ${L('Thời hạn thanh toán:')}&nbsp;&nbsp;
-    </td>
+    ${tdLbl('Ngày đề nghị:')}
+    ${tdC(ngay)}
+    ${tdLbl('Thời hạn thanh toán:')}
+    ${tdC('')}
   </tr>
   <tr>
     ${tdLbl('Hình thức thanh toán:')}
-    <td style="border:1px solid #999;padding:4px 7px;background:#FAFFF0;">
-      <span style="margin-right:28px;${hinhThuc==='CK'?'font-weight:700;color:#155724;background:#C6EFCE;padding:2px 10px;border-radius:3px;':'color:#888;'}">${ckMark}&nbsp;Chuyển khoản</span>
-      <span style="${hinhThuc==='TM'?'font-weight:700;color:#155724;background:#C6EFCE;padding:2px 10px;border-radius:3px;':'color:#888;'}">${tmMark}&nbsp;Tiền mặt</span>
+    <td style="border:1px solid #000;padding:4px 7px;" colspan="3">
+      <span style="display:inline-block;width:46%;text-align:center;${hinhThuc==='CK'?'font-weight:700;':'color:#555;'}">${ckMark}&nbsp;&nbsp;Chuyển khoản</span>
+      <span style="display:inline-block;width:46%;text-align:center;${hinhThuc==='TM'?'font-weight:700;':'color:#555;'}">${tmMark}&nbsp;&nbsp;Tiền mặt</span>
     </td>
   </tr>
   <tr>
     ${tdLbl('Số tiền đề nghị thanh toán:')}
-    <td style="border:1px solid #999;padding:3px 7px;background:#FAFFF0;">
-      <b style="font-size:11pt;">${fmtMoney(d.soTien,d.tienTe)}</b>
-    </td>
+    <td style="border:1px solid #000;padding:3px 7px;text-align:right;" colspan="2"><b style="font-size:11pt;">${d.soTien?Number(d.soTien).toLocaleString('vi-VN'):''}</b></td>
+    ${tdL(`<b>${e(d.tienTe||'VND')}</b>`)}
   </tr>
   <tr>
     ${tdLbl('Bằng chữ:')}
-    ${tdL(`<i style="color:#333;">${e(bangChu)}</i>`,'background:#FAFFF0;')}
+    <td style="border:1px solid #000;padding:3px 7px;" colspan="3"><i>${e(bangChu)}</i></td>
   </tr>
 </table>
 
 <!-- ═══ PHẦN CHUYỂN KHOẢN ═══ -->
-<div style="font-style:italic;font-size:9pt;margin:6px 0 2px;color:#555;">
-  Phần dành cho thanh toán chuyển khoản:
-</div>
 <table style="width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:0;">
   <colgroup>
-    <col style="width:22%"><col style="width:28%"><col style="width:18%"><col style="width:32%">
+    <col style="width:26%"><col style="width:22%"><col style="width:26%"><col style="width:26%">
   </colgroup>
+  <tr><td style="border:1px solid #000;border-top:none;padding:3px 7px;font-style:italic;font-weight:700;" colspan="4">Phần dành cho thanh toán chuyển khoản:</td></tr>
   <tr>
     ${tdLbl('Chủ tài khoản:')}
-    ${tdL(e(d.tenTKNH),'background:#FAFFF0;')}
+    ${tdL(e(d.tenTKNH))}
     ${tdLbl('Số tài khoản:')}
-    ${tdL(e(d.soTKNH),'background:#FAFFF0;')}
+    ${tdL(e(d.soTKNH))}
   </tr>
   <tr>
     ${tdLbl('Tên ngân hàng:')}
-    <td style="border:1px solid #999;padding:3px 7px;background:#FAFFF0;" colspan="3">${e(d.nganHang)}</td>
+    <td style="border:1px solid #000;padding:3px 7px;" colspan="3">${e(d.nganHang)}</td>
   </tr>
+  <tr><td style="border:1px solid #000;padding:3px 7px;font-style:italic;font-weight:700;" colspan="4">Phần dành cho kiểm tra ngân sách:</td></tr>
 </table>
-
-<!-- ═══ NGÂN SÁCH ═══ -->
-<div style="font-style:italic;font-size:9pt;margin:6px 0 2px;color:#555;">
-  Phần dành cho kiểm tra ngân sách:
-</div>
 <table style="width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:0;">
   <thead>
     <tr>
-      <th rowspan="2" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;width:22%;">Tên Headcode</th>
-      <th rowspan="2" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;width:11%;">Headcode</th>
-      <th colspan="3" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;">Số ngân sách (theo KH ngân sách tháng)</th>
-      <th colspan="3" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;">Ngân sách thanh toán</th>
-      <th rowspan="2" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;">Ghi chú</th>
+      <th rowspan="2" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;width:22%;">Tên Headcode</th>
+      <th rowspan="2" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;width:11%;">Headcode</th>
+      <th colspan="3" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;">Số ngân sách (theo KH ngân sách tháng)</th>
+      <th colspan="3" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;">Ngân sách thanh toán</th>
+      <th rowspan="2" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;width:9%;">Ghi chú</th>
     </tr>
     <tr>
-      ${thH('Số NS','width:8%;')}${thH('Đã SD','width:8%;')}${thH('Còn lại','width:9%;')}
-      ${thH('Số TT','width:9%;')}${thH('PS','width:8%;')}${thH('Bổ sung','width:8%;')}
+      ${thH('Số ngân sách','width:8%;')}${thH('Đã sử dụng','width:8%;')}${thH('Còn lại (chưa gồm lần này)','width:10%;')}
+      ${thH('Số tiền đề nghị thanh toán','width:10%;')}${thH('Số phát sinh','width:8%;')}${thH('Số bổ sung','width:8%;')}
     </tr>
   </thead>
   <tbody>
@@ -17624,20 +17629,17 @@ function _buildDNTTPrintHTML(d){
 </table>
 
 <!-- ═══ CHỨNG TỪ ═══ -->
-<div style="font-style:italic;font-size:9pt;margin:6px 0 2px;color:#555;">
-  Chứng từ kèm theo:
-</div>
-<table style="width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:0;">
+<table style="width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:0;margin-top:4px;">
   <thead>
     <tr>
-      <th rowspan="2" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;width:11%;">Headcode</th>
-      <th colspan="2" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;">Chứng từ kèm theo gồm:</th>
-      <th rowspan="2" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;width:24%;">Đơn vị cấp</th>
-      <th colspan="2" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;">Hình thức</th>
-      <th rowspan="2" style="background:#2E75B6;color:#fff;border:1px solid #999;padding:4px 5px;font-weight:600;width:10%;">Số tiền</th>
+      <th rowspan="2" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;width:12%;">Headcode</th>
+      <th colspan="2" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;">Chứng từ kèm theo gồm:</th>
+      <th rowspan="2" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;width:24%;">Đơn vị</th>
+      <th colspan="2" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;">Hình thức</th>
+      <th rowspan="2" style="background:#D9D9D9;color:#000;border:1px solid #000;padding:4px 5px;font-size:8.5pt;font-weight:700;width:13%;">Số tiền<br>(nếu có)</th>
     </tr>
     <tr>
-      ${thH('Loại CT','width:18%;')}${thH('Ngày cấp','width:12%;')}
+      ${thH('Loại CT','width:18%;')}${thH('Ngày','width:11%;')}
       ${thH('Gốc','width:7%;')}${thH('Sao','width:7%;')}
     </tr>
   </thead>
@@ -17645,42 +17647,64 @@ function _buildDNTTPrintHTML(d){
 </table>
 
 <!-- ═══ QUYẾT TOÁN TẠM ỨNG ═══ -->
-<div style="margin-top:5px;font-size:9pt;color:#444;">
-  ☐ &nbsp;<i>Phần Quyết toán tạm ứng (nếu có tạm ứng)</i>
-</div>
-<table style="width:100%;border-collapse:collapse;font-size:9pt;margin-top:2px;">
+<table style="width:100%;border-collapse:collapse;font-size:9pt;margin-top:4px;">
   <tr>
-    <td style="border:1px solid #999;padding:3px 7px;width:70%;color:#444;">1.&nbsp; Số tiền đã tạm ứng</td>
-    <td style="border:1px solid #999;padding:3px 7px;height:18px;"></td>
+    <td style="border:1px solid #000;padding:3px 7px;" colspan="3">
+      <b>☐&nbsp; Phần Quyết toán tạm ứng (nếu có tạm ứng)</b>
+    </td>
   </tr>
   <tr>
-    <td style="border:1px solid #999;padding:3px 7px;color:#444;">2.&nbsp; Số tiền quyết toán (hoàn ứng / chi thêm)</td>
-    <td style="border:1px solid #999;padding:3px 7px;height:18px;"></td>
+    <td style="border:1px solid #000;padding:3px 7px;width:6%;text-align:center;">1</td>
+    <td style="border:1px solid #000;padding:3px 7px;width:71%;">Số tiền đã tạm ứng</td>
+    <td style="border:1px solid #000;padding:3px 7px;height:18px;text-align:right;"></td>
+  </tr>
+  <tr>
+    <td style="border:1px solid #000;padding:3px 7px;text-align:center;">2</td>
+    <td style="border:1px solid #000;padding:3px 7px;">Số tiền quyết toán (hoàn ứng)</td>
+    <td style="border:1px solid #000;padding:3px 7px;height:18px;text-align:right;"></td>
   </tr>
 </table>
 
-<!-- ═══ KÝ TÊN ═══ -->
-<div style="text-align:right;font-size:9pt;color:#444;margin-top:7px;margin-bottom:3px;">
-  Ngày&nbsp;${ngay}
+<!-- ═══ KÝ TÊN — 5 ô theo biểu mẫu KT-QT-02 ═══ -->
+<div style="text-align:right;font-size:9pt;margin-top:6px;margin-bottom:3px;">
+  Ngày ......./....../20.....
 </div>
-<table style="width:100%;border-collapse:collapse;font-size:9pt;text-align:center;margin-top:2px;">
+<table style="width:100%;border-collapse:collapse;font-size:9pt;text-align:center;">
   <tr>
-    <td style="width:33.33%;padding:4px;font-weight:600;">Người đề nghị</td>
-    <td style="width:33.33%;padding:4px;font-weight:600;">Phê duyệt</td>
-    <td style="width:33.33%;padding:4px;font-weight:600;">Kế toán trưởng</td>
+    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">Người đề nghị</td>
+    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">Trưởng đơn vị</td>
+    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">[Đơn vị..]</td>
+    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">Kế toán trưởng</td>
+    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">Phê duyệt</td>
+  </tr>
+  <tr style="height:66px;">
+    <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.nguoiLap||'')}</td>
+    <td style="border:1px solid #000;"></td>
+    <td style="border:1px solid #000;"></td>
+    <td style="border:1px solid #000;"></td>
+    <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.approvedBy||'')}</td>
+  </tr>
+</table>
+
+<!-- ═══ PHẦN KIỂM DUYỆT THANH TOÁN ═══ -->
+<table style="width:100%;border-collapse:collapse;font-size:9pt;margin-top:8px;">
+  <tr>
+    <td style="border:1px solid #000;padding:4px 7px;font-weight:700;" colspan="2">PHẦN KIỂM DUYỆT THANH TOÁN</td>
   </tr>
   <tr>
-    <td style="padding:1px 4px;font-size:8pt;color:#777;font-weight:400;">(ký, ghi rõ họ tên)</td>
-    <td style="padding:1px 4px;font-size:8pt;color:#777;font-weight:400;">(ký, ghi rõ họ tên)</td>
-    <td style="padding:1px 4px;font-size:8pt;color:#777;font-weight:400;">(ký, ghi rõ họ tên)</td>
+    <td style="border:1px solid #000;padding:4px 7px;width:66%;vertical-align:top;height:92px;">Ý kiến:</td>
+    <td style="border:1px solid #000;padding:4px 7px;width:34%;vertical-align:top;">
+      <div style="text-align:center;font-weight:700;">KTT Tập đoàn</div>
+      <div style="height:48px;"></div>
+      <div style="font-size:8.5pt;">Họ tên: ................................</div>
+      <div style="font-size:8.5pt;">Ngày: ....../...../.................</div>
+    </td>
   </tr>
-  <tr style="height:52px;"><td></td><td></td><td></td></tr>
-  <tr>
-    <td style="border-top:1px solid #555;padding:3px 4px;font-weight:600;">${e(d.nguoiLap||'')}</td>
-    <td style="border-top:1px solid #555;padding:3px 4px;font-weight:600;">${e(d.approvedBy||'')}</td>
-    <td style="border-top:1px solid #555;padding:3px 4px;"></td>
-  </tr>
-</table>`;
+</table>
+
+<div style="font-size:7.5pt;color:#555;margin-top:6px;">
+  Form No: KT-QT-02/M02_Ver: 06_Date: 21/8/2025
+</div>`;
 }
 
 function printDNTT(id){
@@ -18308,6 +18332,28 @@ async function dnttDeleteVendor(){
 // ══════════════════ TEMPLATE UPLOAD ══════════════════
 const DNTT_TPL_KEY     = 'qlts_dntt_tpl_v1';
 const DNTT_TPL_MAP_KEY = 'qlts_dntt_tpl_map_v1';
+// Logo Trung Thủy cho phiếu in — lưu dạng data URL. Chưa nạp thì phiếu dùng chữ thay ảnh.
+const DNTT_LOGO_KEY    = 'qlts_dntt_logo_v1';
+
+// Nạp logo từ file ảnh (PNG/JPG) — gọi dnttUploadLogo() rồi chọn file
+function dnttUploadLogo(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => {
+    const f = inp.files?.[0]; if(!f) return;
+    if(f.size > 400*1024){ toast('⚠️ Ảnh quá lớn (>400KB) — hãy nén nhỏ lại','warn'); return; }
+    const fr = new FileReader();
+    fr.onload = () => {
+      try{
+        localStorage.setItem(DNTT_LOGO_KEY, fr.result);
+        toast('✅ Đã nạp logo vào phiếu ĐNTT','ok');
+      }catch(err){ toast('❌ Không lưu được logo: '+err.message,'bad'); }
+    };
+    fr.readAsDataURL(f);
+  };
+  inp.click();
+}
+function dnttClearLogo(){ localStorage.removeItem(DNTT_LOGO_KEY); toast('Đã gỡ logo khỏi phiếu','warn'); }
 
 // Mapping mặc định: tên trường → địa chỉ ô trong template
 // (khớp với bố cục chuẩn phiếu ĐNTT vận hành 9 cột A–I)
@@ -18315,8 +18361,12 @@ const _TPL_DEFAULT_MAP = {
   soPhieu:     'A2',   // "Số: ..." — ô merge A2:K2
   nguoiLap:    'D3',   // Người đề nghị — merge D3:K3
   congTy:      'D4',   // Công ty — merge D4:K4
-  phongBan:    'D5',   // Mã phòng ban — merge D5:F5
-  phongBanTen: 'I5',   // Tên phòng ban — merge I5:K5
+  phongBan:    'D5',   // Mã đơn vị (VD: CNC) — merge D5:F5
+  // KHÔNG map G5: ô đó là công thức tự tra tên đơn vị từ sheet HƯỚNG DẪN
+  //   =IFERROR(VLOOKUP($D5,'HƯỚNG DẪN'!$G$7:$H$25,2,0),"")
+  // Ghi đè lên G5 sẽ phá công thức → chỉ điền D5, tên đơn vị tự hiện.
+  phongBanTen: '',
+  phongBanKhoi:'',
   noidung:     'D6',   // Nội dung thanh toán — merge D6:K6
   ngayLap:     'D7',   // Ngày đề nghị — merge D7:F7
   hinhThuc:    'D8',   // Hình thức TT — merge D8:K8 (một ô gộp cả CK & TM)
@@ -18341,7 +18391,7 @@ const _TPL_DEFAULT_MAP = {
 
 const _TPL_FIELD_LABELS = {
   soPhieu:'Số phiếu', nguoiLap:'Người đề nghị', congTy:'Công ty',
-  phongBan:'Mã phòng ban', phongBanTen:'Tên phòng ban', noidung:'Nội dung',
+  phongBan:'Mã đơn vị (G5 tự tra tên)', phongBanTen:'Tên đơn vị (để trống)', phongBanKhoi:'(không dùng)', noidung:'Nội dung',
   ngayLap:'Ngày đề nghị', hinhThuc:'Hình thức TT (ô CK)', hinhThucTM:'Hình thức TT (ô TM)', soTien:'Số tiền',
   tienTe:'Tiền tệ', bangChu:'Bằng chữ', tenTKNH:'Chủ tài khoản',
   soTKNH:'Số tài khoản', nganHang:'Ngân hàng',
@@ -18351,7 +18401,16 @@ const _TPL_FIELD_LABELS = {
 };
 
 function _getTplMap(){
-  try{ return Object.assign({}, _TPL_DEFAULT_MAP, JSON.parse(localStorage.getItem(DNTT_TPL_MAP_KEY)||'{}')); }
+  try{
+    const saved = JSON.parse(localStorage.getItem(DNTT_TPL_MAP_KEY)||'{}');
+    // Cấu hình cũ từng trỏ phongBanTen→I5. Ô đó nay nằm trong vùng merge G5:K5
+    // chứa công thức VLOOKUP tra tên đơn vị → phải bỏ, nếu không sẽ phá công thức.
+    if(saved.phongBanTen || saved.phongBanKhoi){
+      delete saved.phongBanTen; delete saved.phongBanKhoi;
+      console.log('[TPL] Bỏ mapping tên đơn vị — ô G5 là công thức tự tra');
+    }
+    return Object.assign({}, _TPL_DEFAULT_MAP, saved);
+  }
   catch(e){ return {..._TPL_DEFAULT_MAP}; }
 }
 
@@ -18538,23 +18597,38 @@ async function _generateFromTemplate(d, tplBase64){
     // Template có thể có nhiều sheet (danh mục headcode, form ĐNTT, v.v.)
     // Tìm sheet có tiêu đề "PHIẾU ĐỀ NGHỊ" hoặc "THANH TOÁN" trong 5 dòng đầu
     let ws = wb.worksheets[0];
-    for(const sheet of wb.worksheets){
-      let found = false;
-      try{
-        sheet.eachRow((row, rIdx) => {
-          if(rIdx > 5 || found) return;
-          row.eachCell({ includeEmpty:false }, (cell) => {
-            const v = typeof cell.value === 'string' ? cell.value.toUpperCase()
-                    : (cell.value?.result && typeof cell.value.result === 'string'
-                       ? cell.value.result.toUpperCase() : '');
-            if(v.includes('PH') && v.includes('NGH') || v.includes('THANH TO')){
-              found = true;
-            }
+    // Ưu tiên khớp TÊN sheet trước — mẫu chuẩn [BM]_KT_QT02 có 5 sheet
+    // (HƯỚNG DẪN / PR (van hanh) / PR (du an) / PR (du an_Song ngu) / Sheet1),
+    // sheet HƯỚNG DẪN cũng chứa chữ "thanh toán" nên quét tiêu đề dễ chọn nhầm.
+    // Bảng ô (_TPL_DEFAULT_MAP) được dựng theo bố cục PHIẾU VẬN HÀNH (D3/D4/D5…),
+    // nên luôn ưu tiên sheet "PR (van hanh)". Sheet dự án có bố cục khác hẳn.
+    const byName = wb.worksheets.find(s =>
+      /van\s*hanh|vận\s*hành/i.test(s.name||'') && !/song\s*ngu/i.test(s.name||''));
+    if(byName){
+      ws = byName;
+      console.log('[TPL] Dùng sheet theo tên:', byName.name);
+    } else {
+      for(const sheet of wb.worksheets){
+        if(/hướng dẫn|huong dan/i.test(sheet.name||'')) continue;   // bỏ qua sheet hướng dẫn
+        let found = false;
+        try{
+          sheet.eachRow((row, rIdx) => {
+            if(rIdx > 5 || found) return;
+            row.eachCell({ includeEmpty:false }, (cell) => {
+              const v = typeof cell.value === 'string' ? cell.value.toUpperCase()
+                      : (cell.value?.result && typeof cell.value.result === 'string'
+                         ? cell.value.result.toUpperCase() : '');
+              if(v.includes('PH') && v.includes('NGH') || v.includes('THANH TO')){
+                found = true;
+              }
+            });
           });
-        });
-      }catch(e){}
-      if(found){ ws = sheet; console.log('[TPL] Dùng sheet:', sheet.name); break; }
+        }catch(e){}
+        if(found){ ws = sheet; console.log('[TPL] Dùng sheet:', sheet.name); break; }
+      }
     }
+    // KHÔNG xóa sheet khác: ô G5 dùng VLOOKUP sang sheet 'HƯỚNG DẪN'
+    // (tra mã đơn vị → tên đơn vị). Xóa sheet đó là phiếu hỏng công thức.
     if(!ws) throw new Error('Không tìm thấy sheet trong template');
 
     const map = _getTplMap();
@@ -18587,10 +18661,13 @@ async function _generateFromTemplate(d, tplBase64){
     set(map.soPhieu, d.soPhieu ? 'Số:  ' + d.soPhieu : 'Số: …....................');
     set(map.nguoiLap,    d.nguoiLap||'');
     set(map.congTy,      (d.congTy||'').toUpperCase());
-    set(map.phongBan,    d.phongBan||'');
-    set(map.phongBanTen, d.phongBan||'');
+    // Chỉ điền D5 (mã đơn vị). G5 tự tra tên đơn vị bằng VLOOKUP sang sheet HƯỚNG DẪN
+    // nên TUYỆT ĐỐI không ghi vào G5/I5 — ghi là mất công thức.
+    set(map.phongBan, d.maDonVi || '');
     set(map.noidung,     d.noidung||'');
-    set(map.ngayLap,     d.ngayLap||'');
+    // Ghi ngày dạng dd/mm/yyyy cho khớp biểu mẫu (tránh ghi chuỗi ISO 2026-09-19)
+    const _ngayVN = (iso => { const p=(iso||'').split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:(iso||''); })(d.ngayLap);
+    set(map.ngayLap,     _ngayVN);
     // Hình thức thanh toán: nếu có 2 ô riêng → dùng 2 ô; nếu chỉ có 1 ô (map.hinhThucTM rỗng) → ghi gộp
     const _applyHinhThucCell = (addr, mark, label, isSelected) => {
       if(!addr) return;
