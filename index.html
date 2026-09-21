@@ -3437,6 +3437,14 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <button class="btn success btn-icon-ph" onclick="dnttUploadTemplate()"><i class="ph ph-upload-simple"></i> Upload template (.xlsx)</button>
         <button class="btn btn-icon-ph" id="dntt-tpl-clear-btn" onclick="dnttClearTemplate()" style="display:none;color:var(--red);"><i class="ph ph-trash"></i> Xóa template</button>
       </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">
+        <div style="font-size:12px;color:var(--muted);flex:1;">
+          <b>Logo trên phiếu in</b> — nạp ảnh logo (PNG/JPG &lt; 400KB) để phiếu in ra có logo thật thay vì chữ.
+          <span id="dntt-logo-status" style="margin-left:6px;"></span>
+        </div>
+        <button class="btn btn-icon-ph" onclick="dnttUploadLogo()"><i class="ph ph-image"></i> Nạp logo</button>
+        <button class="btn btn-icon-ph" id="dntt-logo-clear-btn" onclick="dnttClearLogo()" style="display:none;color:var(--red);"><i class="ph ph-trash"></i> Gỡ logo</button>
+      </div>
       <div id="dntt-tpl-mapping" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
         <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;">Cấu hình ô điền (tùy chỉnh nếu template có layout khác)</div>
         <div style="background:#FFF3CD;border:1px solid #FFC107;border-radius:6px;padding:8px 10px;font-size:11px;color:#856404;margin-bottom:8px;">
@@ -18347,13 +18355,27 @@ function dnttUploadLogo(){
       try{
         localStorage.setItem(DNTT_LOGO_KEY, fr.result);
         toast('✅ Đã nạp logo vào phiếu ĐNTT','ok');
+        _dnttUpdateLogoUI();
       }catch(err){ toast('❌ Không lưu được logo: '+err.message,'bad'); }
     };
     fr.readAsDataURL(f);
   };
   inp.click();
 }
-function dnttClearLogo(){ localStorage.removeItem(DNTT_LOGO_KEY); toast('Đã gỡ logo khỏi phiếu','warn'); }
+function dnttClearLogo(){
+  localStorage.removeItem(DNTT_LOGO_KEY);
+  toast('Đã gỡ logo khỏi phiếu','warn');
+  _dnttUpdateLogoUI();
+}
+function _dnttUpdateLogoUI(){
+  const has = !!localStorage.getItem(DNTT_LOGO_KEY);
+  const st  = document.getElementById('dntt-logo-status');
+  const btn = document.getElementById('dntt-logo-clear-btn');
+  if(st)  st.innerHTML = has
+    ? '<span style="color:var(--green);font-weight:700;">✓ Đã có logo</span>'
+    : '<span style="color:var(--yellow);font-weight:700;">Chưa nạp — phiếu in ra dùng chữ</span>';
+  if(btn) btn.style.display = has ? '' : 'none';
+}
 
 // Mapping mặc định: tên trường → địa chỉ ô trong template
 // (khớp với bố cục chuẩn phiếu ĐNTT vận hành 9 cột A–I)
@@ -18418,6 +18440,7 @@ function openDNTTTemplatePanel(){
   const panel = document.getElementById('dntt-tpl-panel');
   panel.style.display = panel.style.display==='none' ? '' : 'none';
   _dnttUpdateTplUI();
+  _dnttUpdateLogoUI();
 }
 
 function _dnttUpdateTplUI(){
