@@ -17673,24 +17673,20 @@ function _buildDNTTPrintHTML(d){
   </tr>
 </table>
 
-<!-- ═══ KÝ TÊN — 5 ô theo biểu mẫu KT-QT-02 ═══ -->
+<!-- ═══ KÝ TÊN — 3 ô: Người đề nghị · Phê duyệt · Kế toán trưởng ═══ -->
 <div style="text-align:right;font-size:9pt;margin-top:6px;margin-bottom:3px;">
   Ngày ......./....../20.....
 </div>
 <table style="width:100%;border-collapse:collapse;font-size:9pt;text-align:center;">
   <tr>
-    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">Người đề nghị</td>
-    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">Trưởng đơn vị</td>
-    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">[Đơn vị..]</td>
-    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">Kế toán trưởng</td>
-    <td style="border:1px solid #000;width:20%;padding:4px;font-weight:700;">Phê duyệt</td>
+    <td style="border:1px solid #000;width:33.33%;padding:4px;font-weight:700;">Người đề nghị</td>
+    <td style="border:1px solid #000;width:33.33%;padding:4px;font-weight:700;">Phê duyệt</td>
+    <td style="border:1px solid #000;width:33.34%;padding:4px;font-weight:700;">Kế toán trưởng</td>
   </tr>
   <tr style="height:66px;">
     <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.nguoiLap||'')}</td>
-    <td style="border:1px solid #000;"></td>
-    <td style="border:1px solid #000;"></td>
-    <td style="border:1px solid #000;"></td>
     <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.approvedBy||'')}</td>
+    <td style="border:1px solid #000;"></td>
   </tr>
 </table>
 
