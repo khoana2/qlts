@@ -17476,6 +17476,12 @@ async function markPaidDNTT(id){ return dnttMarkPaid(id); }
 
 // ══════════════ ĐNTT PRINT ══════════════
 
+// Người ký cố định trên phiếu ĐNTT — đổi người thì sửa ngay 2 dòng này
+const DNTT_SIGNERS = {
+  pheDuyet:     'Thân Trọng Nhật Quỳnh',
+  keToanTruong: 'Trần Võ Tâm Anh',
+};
+
 // ── Build HTML phiếu ĐNTT (dùng chung cho preview + in) ──
 function _buildDNTTPrintHTML(d){
   const e = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -17685,8 +17691,8 @@ function _buildDNTTPrintHTML(d){
   </tr>
   <tr style="height:66px;">
     <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.nguoiLap||'')}</td>
-    <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.approvedBy||'')}</td>
-    <td style="border:1px solid #000;"></td>
+    <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.approvedBy || DNTT_SIGNERS.pheDuyet)}</td>
+    <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(DNTT_SIGNERS.keToanTruong)}</td>
   </tr>
 </table>
 
