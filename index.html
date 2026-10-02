@@ -5604,6 +5604,17 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <input type="text" id="dntt-f-nguoilap" class="finput" placeholder="Họ tên người lập phiếu" style="width:100%;">
           </div>
           <div>
+            <label style="font-size:11px;color:var(--muted);">Người phê duyệt <span style="opacity:.6">(in trên phiếu)</span></label>
+            <input type="text" id="dntt-f-nguoipheduyet" class="finput" list="dntt-signer-list"
+                   placeholder="Để trống = dùng mặc định" style="width:100%;" autocomplete="off">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">Kế toán trưởng <span style="opacity:.6">(in trên phiếu)</span></label>
+            <input type="text" id="dntt-f-ketoantruong" class="finput" list="dntt-signer-list"
+                   placeholder="Để trống = dùng mặc định" style="width:100%;" autocomplete="off">
+          </div>
+          <datalist id="dntt-signer-list"></datalist>
+          <div>
             <label style="font-size:11px;color:var(--muted);">Trạng thái</label>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div>
@@ -17105,6 +17116,10 @@ function openDNTTForm(prefill){
   setV('dntt-f-mada','');
   setV('dntt-f-headcode','');
   setV('dntt-f-tenheadcode','');
+  // Người ký: phiếu mới điền sẵn người mặc định, vẫn sửa được
+  setV('dntt-f-nguoipheduyet', DNTT_SIGNERS.pheDuyet);
+  setV('dntt-f-ketoantruong',  DNTT_SIGNERS.keToanTruong);
+  _dnttBuildSignerList();
   document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => r.checked = r.value === 'CK');
   dnttUpdateHinhThucUI();
   setV('dntt-f-ghichu','');
@@ -17213,6 +17228,10 @@ function openDNTTEdit(id){
   setV('dntt-f-mada', d.maDA||'');
   setV('dntt-f-headcode', d.headcode);
   setV('dntt-f-tenheadcode', d.tenHeadcode||'');
+  // Phiếu cũ chưa có 2 trường này → lấy người mặc định
+  setV('dntt-f-nguoipheduyet', d.nguoiPheDuyet || DNTT_SIGNERS.pheDuyet);
+  setV('dntt-f-ketoantruong',  d.keToanTruong  || DNTT_SIGNERS.keToanTruong);
+  _dnttBuildSignerList();
   document.querySelectorAll('input[name="dntt-f-hinhthuc"]').forEach(r => r.checked = r.value === (d.hinhThuc||'CK'));
   setTimeout(dnttUpdateHinhThucUI, 0); // after DOM settles
   setV('dntt-f-ghichu', d.ghichu);
@@ -17325,6 +17344,8 @@ async function saveDNTTForm(draftOnly){
     maDA:     v('dntt-f-mada'),
     headcode:    v('dntt-f-headcode'),
     tenHeadcode: v('dntt-f-tenheadcode'),
+    nguoiPheDuyet: v('dntt-f-nguoipheduyet'),
+    keToanTruong:  v('dntt-f-ketoantruong'),
     hinhThuc:    [...document.querySelectorAll('input[name="dntt-f-hinhthuc"]')].find(r=>r.checked)?.value || 'CK',
     ghichu:   v('dntt-f-ghichu'),
     chungTu: [1,2,3].map(i => ({
@@ -17476,11 +17497,25 @@ async function markPaidDNTT(id){ return dnttMarkPaid(id); }
 
 // ══════════════ ĐNTT PRINT ══════════════
 
-// Người ký cố định trên phiếu ĐNTT — đổi người thì sửa ngay 2 dòng này
+// Người ký MẶC ĐỊNH trên phiếu ĐNTT — điền sẵn vào form khi tạo phiếu mới.
+// Mỗi phiếu vẫn sửa được riêng ở 2 ô "Người phê duyệt" / "Kế toán trưởng".
 const DNTT_SIGNERS = {
   pheDuyet:     'Thân Trọng Nhật Quỳnh',
   keToanTruong: 'Trần Võ Tâm Anh',
 };
+
+// Gom tên người ký đã dùng trong các phiếu trước → gợi ý trong ô nhập
+function _dnttBuildSignerList(){
+  const dl = document.getElementById('dntt-signer-list');
+  if(!dl) return;
+  const names = new Set([DNTT_SIGNERS.pheDuyet, DNTT_SIGNERS.keToanTruong]);
+  (typeof dnttList !== 'undefined' ? dnttList : []).forEach(r => {
+    if(r.nguoiPheDuyet) names.add(r.nguoiPheDuyet.trim());
+    if(r.keToanTruong)  names.add(r.keToanTruong.trim());
+  });
+  dl.innerHTML = [...names].filter(Boolean).sort((a,b)=>a.localeCompare(b,'vi'))
+    .map(n => `<option value="${esc(n)}"></option>`).join('');
+}
 
 // ── Build HTML phiếu ĐNTT (dùng chung cho preview + in) ──
 function _buildDNTTPrintHTML(d){
@@ -17691,8 +17726,8 @@ function _buildDNTTPrintHTML(d){
   </tr>
   <tr style="height:66px;">
     <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.nguoiLap||'')}</td>
-    <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.approvedBy || DNTT_SIGNERS.pheDuyet)}</td>
-    <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(DNTT_SIGNERS.keToanTruong)}</td>
+    <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.nguoiPheDuyet || d.approvedBy || DNTT_SIGNERS.pheDuyet)}</td>
+    <td style="border:1px solid #000;vertical-align:bottom;padding:3px 4px;font-weight:600;">${e(d.keToanTruong || DNTT_SIGNERS.keToanTruong)}</td>
   </tr>
 </table>
 
@@ -17867,6 +17902,8 @@ const _DNTT_SP_FIELDS = [
   { name:'ChungTu',          type:'Note'     },  // JSON: [{loai,ngay,donvi,goc,sao}] chứng từ kèm theo
   { name:'TrangThai',        type:'Text'     },  // giữ lại cho backward compat
   { name:'LocalId',          type:'Text'     },
+  { name:'NguoiPheDuyet',    type:'Text'     },  // tên in ở ô "Phê duyệt" trên phiếu
+  { name:'KeToanTruong',     type:'Text'     },  // tên in ở ô "Kế toán trưởng"
 ];
 
 // Chuyển record local → SP item body
@@ -17902,6 +17939,8 @@ function dnttToSpItem(rec){
     ChungTu:          rec.chungTu  ? JSON.stringify(rec.chungTu)   : null,
     TrangThai:        rec.trangThai||'draft',  // backward compat
     LocalId:          rec.id      || '',
+    NguoiPheDuyet:    rec.nguoiPheDuyet || '',
+    KeToanTruong:     rec.keToanTruong  || '',
   };
 }
 
@@ -17940,6 +17979,8 @@ function spItemToDntt(item){
     repairRef:           item.RepairRef ? (()=>{ try{ return JSON.parse(item.RepairRef); }catch(e){ return null; } })() : null,
     chungTu:             item.ChungTu  ? (()=>{ try{ return JSON.parse(item.ChungTu);  }catch(e){ return null; } })() : null,
     trangThai:           item.TrangThai         || 'draft',  // backward compat
+    nguoiPheDuyet:       item.NguoiPheDuyet     || '',
+    keToanTruong:        item.KeToanTruong      || '',
     createdAt:           item.Created           || new Date().toISOString(),
   };
 }
