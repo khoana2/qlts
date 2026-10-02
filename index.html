@@ -18455,7 +18455,7 @@ const _TPL_DEFAULT_MAP = {
   // Hàng chữ ký (dòng 31 = nhãn, dòng 37 = tên người ký)
   kyNguoiDeNghi:  'A37',
   kyPheDuyet:     'E37',
-  kyKeToanTruong: 'G37',
+  kyKeToanTruong: 'H37',
 };
 
 const _TPL_FIELD_LABELS = {
@@ -18782,11 +18782,21 @@ async function _generateFromTemplate(d, tplBase64){
     set(map.ns_tenHC,    d.tenHeadcode||'');
     set(map.ns_hc,       d.headcode ? String(d.headcode) : '', '@');
     set(map.ns_soTien,   soTien, '#,##0');
-    set(map.ct_hc,       d.headcode ? String(d.headcode) : '', '@');
-    set(map.ct_loai,     d.soHD ? 'Hóa đơn' : '');
-    set(map.ct_ngay,     d.ngayLap ? String(d.ngayLap) : '', '@');
-    set(map.ct_donvi,    d.ncc||'');
-    set(map.ct_goc,      'x');
+    // ── Chứng từ kèm theo: ghi đủ CẢ 3 DÒNG (trước đây chỉ ghi dòng đầu
+    //    và lấy cứng từ soHD/ncc, bỏ qua bảng chứng từ người dùng nhập) ──
+    const _shiftRow = (addr, n) => addr ? addr.replace(/(\d+)$/, m => String(parseInt(m,10)+n)) : '';
+    const _dmy = v => { const p=(v||'').split('-'); return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : (v||''); };
+    const _ctList = d.chungTu || [];
+    for(let i=0; i<3; i++){
+      const ct = _ctList[i] || {};
+      const at = a => _shiftRow(a, i);
+      const isFirst = (i === 0);
+      set(at(map.ct_hc),    isFirst && d.headcode ? String(d.headcode) : '', '@');
+      set(at(map.ct_loai),  ct.loai  || (isFirst && d.soHD ? 'Hóa đơn' : ''));
+      set(at(map.ct_ngay),  _dmy(ct.ngay || (isFirst ? d.ngayLap : '')), '@');
+      set(at(map.ct_donvi), ct.donvi || (isFirst ? (d.ncc||'') : ''));
+      set(at(map.ct_goc),   (isFirst ? (ct.goc !== false) : !!ct.goc) ? 'x' : '');
+    }
 
     // ── Helper: lấy giá trị thực từ ô (xử lý cả formula cell) ──
     const getCellNum = (cell) => {
