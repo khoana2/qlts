@@ -18452,6 +18452,10 @@ const _TPL_DEFAULT_MAP = {
   ct_ngay:     'E23',  // Ngày CT — E23
   ct_donvi:    'F23',  // Đơn vị / NCC — merge F23:G23
   ct_goc:      'H23',  // Gốc — H23
+  // Hàng chữ ký (dòng 31 = nhãn, dòng 37 = tên người ký)
+  kyNguoiDeNghi:  'A37',
+  kyPheDuyet:     'E37',
+  kyKeToanTruong: 'G37',
 };
 
 const _TPL_FIELD_LABELS = {
@@ -18460,6 +18464,7 @@ const _TPL_FIELD_LABELS = {
   ngayLap:'Ngày đề nghị', hinhThuc:'Hình thức TT (ô CK)', hinhThucTM:'Hình thức TT (ô TM)', soTien:'Số tiền',
   tienTe:'Tiền tệ', bangChu:'Bằng chữ', tenTKNH:'Chủ tài khoản',
   soTKNH:'Số tài khoản', nganHang:'Ngân hàng',
+  kyNguoiDeNghi:'[Ký] Người đề nghị', kyPheDuyet:'[Ký] Phê duyệt', kyKeToanTruong:'[Ký] Kế toán trưởng',
   ns_tenHC:'[NS] Tên Headcode', ns_hc:'[NS] Headcode', ns_soTien:'[NS] Số tiền',
   ct_hc:'[CT] Headcode', ct_loai:'[CT] Loại CT', ct_ngay:'[CT] Ngày',
   ct_donvi:'[CT] Đơn vị/NCC', ct_goc:'[CT] Gốc',
@@ -18730,6 +18735,11 @@ async function _generateFromTemplate(d, tplBase64){
     // Chỉ điền D5 (mã đơn vị). G5 tự tra tên đơn vị bằng VLOOKUP sang sheet HƯỚNG DẪN
     // nên TUYỆT ĐỐI không ghi vào G5/I5 — ghi là mất công thức.
     set(map.phongBan, d.maDonVi || '');
+
+    // Hàng chữ ký — khớp với bản in: Người đề nghị · Phê duyệt · Kế toán trưởng
+    set(map.kyNguoiDeNghi,  d.nguoiLap      || '');
+    set(map.kyPheDuyet,     d.nguoiPheDuyet || DNTT_SIGNERS.pheDuyet);
+    set(map.kyKeToanTruong, d.keToanTruong  || DNTT_SIGNERS.keToanTruong);
     set(map.noidung,     d.noidung||'');
     // Ghi ngày dạng dd/mm/yyyy cho khớp biểu mẫu (tránh ghi chuỗi ISO 2026-09-19)
     const _ngayVN = (iso => { const p=(iso||'').split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:(iso||''); })(d.ngayLap);
