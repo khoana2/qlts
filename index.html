@@ -18895,10 +18895,22 @@ async function _generateDNTTExcel(d){
     const safeNcc = (d.ncc||'DNTT').replace(/[\\/:\*\?"<>|]/g,'_').replace(/\s+/g,'_');
     const fileName = `${d.soPhieu||'DNTT'}_${safeNcc}_${d.ngayLap||'ngay'}.xlsx`;
 
-    // ── Build từ đầu — không dùng ExcelJS load() để tránh lỗi XML corrupt ──
-    const wb = new ExcelJS.Workbook();
-    wb.creator = 'QLTS CNTT'; wb.created = new Date();
-    await _excelBuildVanHanh(wb, d);
+    // ── Ưu tiên điền vào TEMPLATE công ty đã upload ──
+    // (trước đây luôn bỏ qua template và tự dựng lại phiếu → sai mẫu)
+    let wb = null;
+    const tplRaw = localStorage.getItem(DNTT_TPL_KEY);
+    if(tplRaw){
+      wb = await _generateFromTemplate(d, tplRaw);
+      if(wb) console.log('[ĐNTT] Xuất theo template đã upload');
+      else   console.warn('[ĐNTT] Template lỗi → dùng mẫu tự dựng');
+    } else {
+      console.log('[ĐNTT] Chưa upload template → dùng mẫu tự dựng');
+    }
+    if(!wb){
+      wb = new ExcelJS.Workbook();
+      wb.creator = 'QLTS CNTT'; wb.created = new Date();
+      await _excelBuildVanHanh(wb, d);
+    }
 
     const buf  = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -19001,6 +19013,8 @@ async function _excelBuildVanHanh(wb, d){
   const soTien  = d.soTien ? Number(d.soTien) : null;
   const bangChu = soTienBangChu(d.soTien, d.tienTe);
   const ngay    = d.ngayLap || '';
+  // dd/mm/yyyy cho phiếu in — tránh ghi chuỗi ISO 2026-10-01 vào biểu mẫu
+  const ngayVN  = (p => p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : ngay)(ngay.split('-'));
   const hinhThuc= d.hinhThuc || 'CK';
   const ckMark  = hinhThuc==='CK' ? '☑' : '☐';
   const tmMark  = hinhThuc==='TM' ? '☑' : '☐';
@@ -19046,10 +19060,20 @@ async function _excelBuildVanHanh(wb, d){
   /* ══ ROWS 3–10 – THÔNG TIN PHIẾU ══ */
   rowSimple(3, 'Người đề nghị thanh toán:', d.nguoiLap||'');
   rowSimple(4, 'Công ty:', (d.congTy||'').toUpperCase(), 18, true);
-  rowSplit (5, 'Mã phòng ban sử dụng ngân sách:', d.phongBan||'',
-               'Tên phòng ban sử dụng ngân sách', d.phongBan||'', 22);
+  // Dòng 5: nhãn | MÃ đơn vị | TÊN đơn vị — khớp ô D5/G5 của biểu mẫu gốc.
+  // (trước đây ô giữa in nhầm thành nhãn "Tên phòng ban…" và lặp lại tên đơn vị)
+  ws.getRow(5).height = 22;
+  ws.mergeCells('B5:D5');
+  ws.mergeCells('E5:I5');
+  C('A5', 'Mã phòng ban sử dụng ngân sách:',
+      { font:fN(true,9), align:_EX.align('left','middle',true), border:_EX.border });
+  C('B5', d.maDonVi||'',
+      { fill:fillYellow, font:fN(false,10), align:_EX.align('center','middle'), border:_EX.border });
+  C('E5', d.phongBan||'',
+      { fill:fillYellow, font:fN(false,10), align:_EX.align('center','middle'), border:_EX.border });
+
   rowSimple(6, 'Nội dung thanh toán:', d.noidung||'', 22, true);
-  rowSplit (7, 'Ngày đề nghị:', ngay, 'Thời hạn thanh toán:', '');
+  rowSplit (7, 'Ngày đề nghị:', ngayVN, 'Thời hạn thanh toán:', '');
 
   /* ── Hình thức thanh toán — 2 ô riêng, ô được chọn nền xanh ── */
   ws.getRow(8).height = 20;
@@ -19185,7 +19209,7 @@ async function _excelBuildVanHanh(wb, d){
   };
   ctRow(22, d.headcode||'',
     _ct(0).loai  || (d.soHD ? 'Hóa đơn' : ''),
-    _ct(0).ngay  ? _fmt(_ct(0).ngay) : ngay,
+    _ct(0).ngay  ? _fmt(_ct(0).ngay) : ngayVN,
     _ct(0).donvi || d.ncc || '',
     _ct(0).goc !== false ? 'x' : '',
     _ct(0).sao ? 'x' : '');
@@ -19212,33 +19236,33 @@ async function _excelBuildVanHanh(wb, d){
   /* ══ ROW 28 – NGÀY KÝ ══ */
   ws.getRow(28).height = 16;
   ws.mergeCells('A28:I28');
-  C('A28', `Ngày ${ngay}`, { font:fN(false,10), align:_EX.align('right','middle') });
+  C('A28', 'Ngày ......./....../20.....', { font:fN(false,10), align:_EX.align('right','middle') });
 
-  /* ══ ROW 29 – HEADER CHỮ KÝ ══ */
+  /* ══ ROW 29 – HEADER CHỮ KÝ (3 ô) ══ */
   ws.getRow(29).height = 14;
-  ws.mergeCells('A29:B29'); ws.mergeCells('C29:D29');
-  ws.mergeCells('E29:G29'); ws.mergeCells('H29:I29');
-  [['A29','Người đề nghị'],['C29','Trưởng đơn vị'],
-   ['E29','Kế toán trưởng'],['H29','Phê duyệt']].forEach(([a,v])=>
+  ws.mergeCells('A29:C29'); ws.mergeCells('D29:F29'); ws.mergeCells('G29:I29');
+  [['A29','Người đề nghị'],['D29','Phê duyệt'],['G29','Kế toán trưởng']].forEach(([a,v])=>
     C(a, v, { font:fN(true,9), align:_EX.align('center','middle') })
   );
 
   /* ══ ROW 30–34 – KHOẢNG ĐỂ KÝ ══ */
   for(let r=30;r<=34;r++){
     ws.getRow(r).height = 14;
-    ws.mergeCells(`A${r}:B${r}`); ws.mergeCells(`C${r}:D${r}`);
-    ws.mergeCells(`E${r}:G${r}`); ws.mergeCells(`H${r}:I${r}`);
+    ws.mergeCells(`A${r}:C${r}`); ws.mergeCells(`D${r}:F${r}`); ws.mergeCells(`G${r}:I${r}`);
   }
 
   /* ══ ROW 35 – TÊN NGƯỜI KÝ ══ */
   ws.getRow(35).height = 14;
-  ws.mergeCells('A35:B35'); ws.mergeCells('C35:D35');
-  ws.mergeCells('E35:G35'); ws.mergeCells('H35:I35');
-  C('A35', d.nguoiLap||'', { font:fN(true,9), align:_EX.align('center','middle'), border:_EX.borderB });
-  ['C35','E35','H35'].forEach(a => C(a,'',{ font:fN(false,9), border:_EX.borderB }));
+  ws.mergeCells('A35:C35'); ws.mergeCells('D35:F35'); ws.mergeCells('G35:I35');
+  C('A35', d.nguoiLap||'',
+      { font:fN(true,9), align:_EX.align('center','middle'), border:_EX.borderB });
+  C('D35', d.nguoiPheDuyet || DNTT_SIGNERS.pheDuyet,
+      { font:fN(true,9), align:_EX.align('center','middle'), border:_EX.borderB });
+  C('G35', d.keToanTruong  || DNTT_SIGNERS.keToanTruong,
+      { font:fN(true,9), align:_EX.align('center','middle'), border:_EX.borderB });
 
   /* ── border dưới khu vực ký ── */
-  ['A34','C34','E34','H34'].forEach(a => {
+  ['A34','D34','G34'].forEach(a => {
     const cell = ws.getCell(a);
     cell.border = { bottom:{style:'thin'} };
   });
