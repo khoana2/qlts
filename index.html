@@ -3032,12 +3032,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div class="kpi-label">Cảnh báo BH</div>
         <div class="kpi-sub" id="kpi-warranty-sub">Trong 90 ngày</div>
       </div>
-      <div class="kpi clickable" onclick="showManHinhReport()" title="Xem danh sách màn hình kèm theo">
-        <div class="kpi-icon-wrap" style="background:rgba(14,165,233,.13);color:#0EA5E9;"><i class="ph ph-monitor"></i></div>
-        <div class="kpi-val" id="kpi-monitors">0</div>
-        <div class="kpi-label">Màn hình</div>
-        <div class="kpi-sub" id="kpi-monitors-sub">Tổng số</div>
-      </div>
     </div>
 
     <!-- Charts 3-col -->
@@ -9199,15 +9193,8 @@ function updateDashboard(){
   if(suaSubEl) suaSubEl.textContent = suaByRepair > 0 ? `${suaByRepair} có phiếu SC` : 'Có phiếu SC';
   document.getElementById('kpi-dept').textContent = depts;
   document.getElementById('kpi-warranty').textContent = expiringSoon;
-  // Đếm theo TỔNG SỐ màn hình đã tick (1 người có thể được cấp 2–4 cái)
-  const monUsers = _assets.filter(a => _mhCount(a) > 0).length;
-  const monitors = _assets.reduce((s, a) => s + _mhCount(a), 0);
-  const monEl = document.getElementById('kpi-monitors');
-  const monSub = document.getElementById('kpi-monitors-sub');
-  if(monEl) monEl.textContent = monitors;
-  if(monSub) monSub.textContent = monitors > 0
-    ? `${monUsers} người dùng${monitors > monUsers ? ` · ${monitors - monUsers} cái thứ 2+` : ''}`
-    : 'Chưa có';
+  // KPI "Màn hình" đã gỡ khỏi dashboard — số liệu không còn phản ánh đúng thực tế.
+  // Dữ liệu màn hình vẫn lưu bình thường trong từng tài sản (ô tick trong form).
   document.getElementById('kpi-warranty-sub').textContent =
     expired ? `${expired} đã hết · ${expiringSoon} sắp hết` : `${expiringSoon} sắp hết trong 90 ngày`;
 
