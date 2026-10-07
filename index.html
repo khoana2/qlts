@@ -429,7 +429,8 @@ body{
 .view.active{display:block;}
 
 /* ═══════════════════════════ KPIs ═══════════════════════════ */
-.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:14px;}
+/* 6 ô KPI (đã bỏ ô Màn hình) — chia đều hết chiều ngang */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px;}
 .kpi{
   background:#FFFFFF;border:1px solid var(--border);
   border-radius:var(--radius);padding:14px 16px;
@@ -903,7 +904,8 @@ input[type=checkbox].row-cb{
 .drop-zone small{font-size:11px;color:#94A3B8;}
 
 /* ═══════════════════════════ RESPONSIVE ═══════════════════════════ */
-@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(4,1fr);}.dash-grid{grid-template-columns:1fr 1fr;}.dash-grid-wide{grid-template-columns:1fr;}}
+@media(max-width:1300px){.kpi-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}.dash-grid{grid-template-columns:1fr 1fr;}.dash-grid-wide{grid-template-columns:1fr;}}
 @media(max-width:900px){.grid3{grid-template-columns:1fr 1fr;}.detail-grid{grid-template-columns:1fr 1fr;}}
 @media(max-width:680px){
   .topbar{flex-direction:column;align-items:stretch;}
@@ -4811,6 +4813,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
     <div class="modal-head">
       <h2 id="detail-title">Chi tiết tài sản</h2>
       <div style="display:flex;gap:8px;">
+        <button class="btn btn-icon-ph" id="detail-repair-btn" onclick="repairFromDetail()"
+                style="background:#FFF7ED;border-color:#FB923C;color:#C2410C;"
+                title="Tạo phiếu sửa chữa cho tài sản này"><i class="ph ph-wrench"></i> Tạo phiếu sửa chữa</button>
         <button class="btn btn-icon-ph" id="detail-edit-btn" onclick="editFromDetail()"><i class="ph ph-pencil-simple"></i> Chỉnh sửa</button>
         <button class="btn btn-icon-ph" id="detail-resync-btn" onclick="resyncDetail()" style="display:none" title="Đẩy lại toàn bộ dữ liệu lên SharePoint"><i class="ph ph-arrows-clockwise"></i> Đồng bộ SP</button>
         <button class="btn icon-only" onclick="closeModal('modal-detail')" style="border:none;font-size:18px;">✕</button>
@@ -10368,6 +10373,17 @@ function openEdit(id){
 function editFromDetail(){
   closeModal('modal-detail');
   if(detailId) openEdit(detailId);
+}
+
+// Tạo phiếu sửa chữa thẳng từ màn hình chi tiết tài sản.
+// Form sửa chữa tự khoá sẵn tài sản + điền người đang dùng, chỉ cần nhập mô tả lỗi.
+function repairFromDetail(){
+  if(!detailId){ toast('⚠️ Không có tài sản đang mở','bad'); return; }
+  if(!can('edit')){ toast('🔒 Bạn không có quyền tạo phiếu sửa chữa','bad'); return; }
+  const a = assets.find(x=>x.id===detailId);
+  closeModal('modal-detail');
+  openRepairNew(detailId);
+  if(a) toast(`🔧 Tạo phiếu sửa chữa cho ${a.maTaiSan||a.tenTaiSan||'tài sản'}`,'ok');
 }
 
 async function resyncDetail(){
