@@ -2908,6 +2908,7 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </button>
         <button class="nav-tab" onclick="switchTab('dntt')" id="tab-dntt">
           <span class="tab-icon"><i class="ph ph-receipt"></i></span> Đề Nghị TT
+          <span class="tab-expiry-badge" id="tab-dntt-badge" style="display:none;"></span>
         </button>
         <button class="nav-tab" onclick="switchTab('procurement')" id="tab-procurement">
           <span class="tab-icon"><i class="ph ph-shopping-cart"></i></span> Mua Sắm
@@ -16938,8 +16939,14 @@ function dnttHeadcodeLookup(val){
 let dnttList = [];
 const DNTT_KEY = 'qlts_dntt_v1';
 
-function saveDNTT(){ try{ localStorage.setItem(DNTT_KEY, JSON.stringify(dnttList)); }catch(e){} }
-function loadDNTT(){ try{ dnttList = JSON.parse(localStorage.getItem(DNTT_KEY)||'[]'); }catch(e){ dnttList=[]; } }
+function saveDNTT(){
+  try{ localStorage.setItem(DNTT_KEY, JSON.stringify(dnttList)); }catch(e){}
+  if(typeof _updateDNTTBadge === 'function') _updateDNTTBadge();
+}
+function loadDNTT(){
+  try{ dnttList = JSON.parse(localStorage.getItem(DNTT_KEY)||'[]'); }catch(e){ dnttList=[]; }
+  if(typeof _updateDNTTBadge === 'function') _updateDNTTBadge();
+}
 
 // ── Số phiếu tự sinh ──
 function genDNTTSoPhieu(){
@@ -17011,7 +17018,31 @@ function dnttLoaiLabel(loai){
 }
 
 // ── Render bảng ──
+// Badge trên tab "Đề Nghị TT" — chỉ đếm phiếu ĐANG CHỜ XỬ LÝ:
+//   • Chờ duyệt (đã trình, đợi phê duyệt), hoặc
+//   • Chờ kế toán thanh toán
+// Không tính: nháp chưa trình, đã thanh toán xong, đã bị từ chối.
+function _updateDNTTBadge(){
+  const b = document.getElementById('tab-dntt-badge');
+  if(!b) return;
+  const n = (typeof dnttList !== 'undefined' ? dnttList : []).filter(d => {
+    const signoff = d.trangThaiSignOff || 'chua_trinh';
+    const tt      = d.trangThaiTT      || 'chua_tt';
+    if(signoff === 'tu_choi') return false;   // đã từ chối → đóng
+    if(tt === 'da_tt')        return false;   // đã thanh toán → xong
+    return signoff === 'cho_duyet' || tt === 'cho_tt';
+  }).length;
+  if(n > 0){
+    b.style.display = 'inline-flex';
+    b.textContent   = n;
+    b.style.cssText += ';background:#F97316;color:#fff;';
+  } else {
+    b.style.display = 'none';
+  }
+}
+
 function renderDNTT(){
+  _updateDNTTBadge();
   const tbody = document.getElementById('dntt-tbody');
   if(!tbody) return;
 
@@ -18094,6 +18125,7 @@ async function msalSpLoadDNTT(){
     );
     dnttList = [...spRecs, ...localOnlyRecs];
     saveDNTT(); // cập nhật localStorage
+    _updateDNTTBadge();   // cập nhật số phiếu chưa hoàn tất trên tab
     console.log(`[DNTT-SP] Đã tải ${spRecs.length} phiếu từ SharePoint`);
     return spRecs.length;
   }catch(e){
