@@ -11181,8 +11181,8 @@ function openSmartAction(assetId, triggerEl){
     ${isAdmin ? `<button class="sa-item" onclick="saAct('xfer-co')"><i class="ph ph-buildings" style="background:#F3F0FF;color:#7C3AED;"></i> Chuyển công ty</button>` : ''}
     <div class="sa-divider"></div>
     ${a.tinhTrang !== 'Hỏng' && a.tinhTrang !== 'Sửa chữa'
-      ? `<button class="sa-item" onclick="saAct('report-damage')" style="color:#FF3B30;"><i class="ph ph-warning" style="background:#FFEEEE;color:#FF3B30;"></i> Báo hỏng</button>`
-      : `<button class="sa-item" onclick="saAct('report-damage')" style="color:#059669;"><i class="ph ph-wrench" style="background:#EAF3DE;color:#3B6D11;"></i> Đổi về Đang dùng</button>`}
+      ? `<button class="sa-item" onclick="saAct('repair')" style="color:#C2410C;"><i class="ph ph-wrench" style="background:#FFF7ED;color:#EA580C;"></i> Tạo phiếu sửa chữa</button>`
+      : `<button class="sa-item" onclick="saAct('report-damage')" style="color:#059669;"><i class="ph ph-arrow-counter-clockwise" style="background:#EAF3DE;color:#3B6D11;"></i> Đổi về Đang dùng</button>`}
     ${a.nguoiDung ? `<button class="sa-item" onclick="saAct('recall')" style="color:#B45309;"><i class="ph ph-package" style="background:#FFFBEB;color:#D97706;"></i> Thu hồi về kho</button>` : ''}
     <div class="sa-divider"></div>
     <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash" style="background:#FFEEEE;color:#FF3B30;"></i> Xóa tài sản</button>`;
@@ -11215,6 +11215,7 @@ function saAct(action){
   if(action === 'xfer-co')   openXferCompany(id);
   if(action === 'delete')        openDelete(id);
   if(action === 'report-damage') saReportDamage(id);
+  if(action === 'repair')        saCreateRepair(id);
   if(action === 'recall')        saRecall(id);
   if(action === 'qr')            openQRCode(id);
 }
@@ -11223,6 +11224,16 @@ function closeSmartAction(){
   const menu = document.getElementById('smart-action-menu');
   if(menu){ menu.classList.remove('open'); }
   _saCurrentId = null;
+}
+
+// ── Tạo phiếu sửa chữa từ menu nhanh ─────────────────────────
+// Thay cho "Báo hỏng" cũ (chỉ đổi tình trạng + ghi chú, không tạo phiếu).
+// Lưu phiếu xong, saveRepairRecord() tự đặt tình trạng tài sản = "Sửa chữa".
+function saCreateRepair(id){
+  if(!can('edit')){ toast('🔒 Bạn không có quyền tạo phiếu sửa chữa','bad'); return; }
+  const a = assets.find(x => x.id === id);
+  if(!a){ toast('⚠️ Không tìm thấy tài sản','bad'); return; }
+  openRepairNew(id);
 }
 
 // ── Báo hỏng ─────────────────────────────────────────────────
