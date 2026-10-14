@@ -2992,6 +2992,9 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
     </div>
 
+    <!-- Panel: máy giữ hộ chờ admin site xác nhận (tự ẩn khi không có) -->
+    <div id="giuho-panel" style="display:none;margin-top:14px;"></div>
+
     <!-- KPI cards -->
     <div class="kpi-grid">
       <div class="kpi blue clickable" onclick="goKpiFilter('')" title="Xem tất cả tài sản">
@@ -4947,11 +4950,30 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         </div>
       </div>
 
-      <div style="text-align:center;margin:10px 0;font-size:20px;color:var(--green);">↓ Bàn giao cho</div>
+      <!-- ── Chế độ GIỮ HỘ: nhân sự nghỉ việc, admin site giữ máy ── -->
+      <div style="padding:10px 12px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:10px;margin-bottom:12px;">
+        <label for="tr-giuho" style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;margin:0;">
+          <input type="checkbox" id="tr-giuho" onchange="trToggleGiuHo()"
+                 style="width:16px;height:16px;cursor:pointer;accent-color:#EA580C;margin-top:2px;flex-shrink:0;">
+          <span>
+            <span style="font-weight:700;color:#C2410C;">🔐 Bàn giao giữ hộ — nhân sự nghỉ việc</span>
+            <span style="display:block;font-size:11px;color:#9A3412;margin-top:3px;line-height:1.5;">
+              Dùng khi máy ở site/dự án, IT không trực tiếp thu. Máy chuyển sang <b>admin site giữ hộ</b>,
+              tình trạng ghi "Giữ hộ", và <b>bắt buộc gửi email xác nhận</b> — chưa bấm xác nhận thì phiếu còn treo.
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <div style="text-align:center;margin:10px 0;font-size:20px;color:var(--green);" id="tr-arrow-label">↓ Bàn giao cho</div>
 
       <div class="grid2">
         <div class="field span2">
-          <label>Người nhận mới *</label>
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span id="tr-new-user-label">Người nhận mới *</span>
+            <button type="button" class="btn btn-icon-ph" style="padding:3px 10px;font-size:11px;"
+                    onclick="trPickRecipient()"><i class="ph ph-magnifying-glass"></i> Tìm trong Entra ID</button>
+          </label>
           <input type="text" id="tr-new-user" placeholder="Họ và tên người nhận"/>
         </div>
         <div class="field">
@@ -5021,6 +5043,19 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
                 Hệ thống sẽ gửi email kèm link Microsoft Form đến địa chỉ email người nhận. Họ submit form → dữ liệu lưu vào SharePoint tự động.
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- ── CC: gửi kèm cho người khác nắm thông tin ── -->
+        <div class="field span2" id="tr-cc-row">
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>CC — gửi kèm cho người khác nắm thông tin</span>
+            <button type="button" class="btn btn-icon-ph" style="padding:3px 10px;font-size:11px;"
+                    onclick="trOpenCcPicker()"><i class="ph ph-user-plus"></i> Thêm người CC</button>
+          </label>
+          <div id="tr-cc-chips" style="display:flex;flex-wrap:wrap;gap:6px;padding:9px 12px;
+               background:var(--bg2);border:1px solid var(--border);border-radius:8px;min-height:42px;align-items:center;">
+            <span id="tr-cc-empty" style="font-size:12px;color:var(--muted);">Chưa chọn ai — email chỉ gửi cho người nhận</span>
           </div>
         </div>
       </div>
@@ -6614,6 +6649,7 @@ async function msalSpLoad(){
     const dnttBtn = document.getElementById('dntt-sp-sync-btn');
     if(dnttBtn) dnttBtn.style.display = can('sync') ? 'inline-flex' : 'none';
     await msalSpLoadDNTT();
+    if(typeof renderGiuHoPanel === 'function') renderGiuHoPanel();
     if(typeof msalSpLoadMuaHang === 'function') await msalSpLoadMuaHang();
     if(typeof msalSpLoadProc === 'function') await msalSpLoadProc();
     // Load employee directory nền (localStorage cache trước, fetch HubIT nếu không có)
@@ -9199,6 +9235,7 @@ function updateDashboard(){
   if(suaSubEl) suaSubEl.textContent = suaByRepair > 0 ? `${suaByRepair} có phiếu SC` : 'Có phiếu SC';
   document.getElementById('kpi-dept').textContent = depts;
   document.getElementById('kpi-warranty').textContent = expiringSoon;
+  if(typeof renderGiuHoPanel === 'function') renderGiuHoPanel();
   // KPI "Màn hình" đã gỡ khỏi dashboard — số liệu không còn phản ánh đúng thực tế.
   // Dữ liệu màn hình vẫn lưu bình thường trong từng tài sản (ô tick trong form).
   document.getElementById('kpi-warranty-sub').textContent =
@@ -12230,6 +12267,11 @@ function openTransfer(id){
   document.getElementById('tr-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('tr-notes').value = '';
   document.getElementById('tr-print-btn').style.display = 'none';
+  _trCcList = [];                 // reset danh sách CC mỗi lần mở phiếu bàn giao
+  _trRenderCcChips();
+  const ghEl = document.getElementById('tr-giuho');
+  if(ghEl) ghEl.checked = false;
+  trToggleGiuHo();
   // Build accessories checklist theo loại tài sản
   _trBuildAccPreset(a.tenTaiSan || '');
   // Hiện row màn hình nếu tài sản có màn hình kèm
@@ -13814,6 +13856,13 @@ async function confirmTransfer(){
     notes: document.getElementById('tr-notes').value.trim(),
     ts: new Date().toISOString()
   };
+  // ── Giữ hộ: đánh dấu phiếu + lưu lại tên người nghỉ việc để truy ngược ──
+  const _isGiuHo = !!document.getElementById('tr-giuho')?.checked;
+  if(_isGiuHo){
+    newRec.giuHo        = true;
+    newRec.nguoiNghiViec = a.nguoiDung || '';
+    if(!newRec.notes) newRec.notes = `Giữ hộ sau khi ${a.nguoiDung||'nhân sự'} nghỉ việc`;
+  }
   transfers[id].push(newRec);
   saveTransfers();
   // Sync lên SP nếu đã đăng nhập
@@ -13823,8 +13872,8 @@ async function confirmTransfer(){
   a.nguoiDung = newUser;
   a.email = document.getElementById('tr-new-email').value.trim() || a.email;
   a.boPhan = document.getElementById('tr-new-dept').value || a.boPhan;
-  a.tinhTrang = 'Đang dùng';
-  a.trangThaiHienTai = 'Bàn giao';
+  a.tinhTrang = _isGiuHo ? 'Giữ hộ' : 'Đang dùng';
+  a.trangThaiHienTai = _isGiuHo ? 'Giữ hộ' : 'Bàn giao';
   a.ngaySuKien = date;
   // Nếu có màn hình nhưng không bàn giao kèm → tạo tài sản riêng cho màn hình (trả kho)
   let monitorId = null;
@@ -13863,7 +13912,7 @@ async function confirmTransfer(){
   // Gửi email kèm link xác nhận (confirm.html) nếu đã bật
   const sendForm = document.getElementById('tr-send-form')?.checked;
   if(sendForm && newRec.toEmail){
-    sendHandoverFormEmail(newRec, a);
+    sendHandoverFormEmail(newRec, a, _trCcList);
   } else if(sendForm && !newRec.toEmail){
     toast('⚠️ Chưa có email người nhận — không thể gửi form xác nhận','warn');
   }
@@ -14045,9 +14094,242 @@ function autoCalcNgayHetBH(){
 }
 
 // ═══════════════════════ GỬI EMAIL XÁC NHẬN BÀN GIAO (confirm.html) ═══════
-async function sendHandoverFormEmail(rec, asset){
+// ══════════ THEO DÕI MÁY GIỮ HỘ CHƯA ĐƯỢC XÁC NHẬN ══════════
+const GIUHO_QUA_HAN_NGAY = 7;   // quá bao nhiêu ngày thì tô đỏ
+
+// Trả về [{a, rec, ngay, quaHan}] — phiếu giữ hộ mà admin chưa bấm xác nhận
+function _pendingGiuHo(){
+  const out = [];
+  for(const a of assets){
+    const recs = transfers[a.id] || [];
+    // chỉ xét phiếu giữ hộ MỚI NHẤT của tài sản
+    const rec = [...recs].reverse().find(r => r.giuHo);
+    if(!rec) continue;
+    // đã có phiếu bàn giao khác sau phiếu giữ hộ → coi như đã xử lý xong
+    const idx = recs.lastIndexOf(rec);
+    if(idx < recs.length - 1) continue;
+
+    const xn = _xacNhanMap[a.id] || _xacNhanMap[a.maTaiSan];
+    if(xn && xn.thoiGian){
+      // chỉ tính là đã xác nhận nếu xác nhận SAU thời điểm giao giữ hộ
+      const tXN = new Date(xn.thoiGian).getTime();
+      const tGH = new Date(rec.ts || rec.date || 0).getTime();
+      if(!isNaN(tXN) && tXN >= tGH - 60000) continue;
+    }
+    const base = new Date(rec.ts || rec.date || Date.now()).getTime();
+    const ngay = Math.max(0, Math.floor((Date.now() - base) / 86400000));
+    out.push({ a, rec, ngay, quaHan: ngay >= GIUHO_QUA_HAN_NGAY });
+  }
+  return out.sort((x,y) => y.ngay - x.ngay);
+}
+
+function renderGiuHoPanel(){
+  const el = document.getElementById('giuho-panel');
+  if(!el) return;
+  const list = _pendingGiuHo();
+  if(!list.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  const nLate = list.filter(x => x.quaHan).length;
+  el.style.display = '';
+  el.innerHTML = `
+  <div style="background:#FFF7ED;border:1px solid #FDBA74;border-radius:12px;padding:12px 16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+      <div style="font-size:13px;font-weight:700;color:#C2410C;">
+        🔐 Máy giữ hộ chờ admin site xác nhận — ${list.length} máy
+        ${nLate ? `<span style="color:#B91C1C;"> · ${nLate} quá ${GIUHO_QUA_HAN_NGAY} ngày</span>` : ''}
+      </div>
+      <span style="font-size:11px;color:#9A3412;">Chưa xác nhận = chưa có bằng chứng ai đang giữ máy</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#FFEDD5;color:#9A3412;font-size:11px;text-transform:uppercase;">
+        <th style="padding:6px 8px;text-align:left;">Tài sản</th>
+        <th style="padding:6px 8px;text-align:left;">Người nghỉ việc</th>
+        <th style="padding:6px 8px;text-align:left;">Admin giữ máy</th>
+        <th style="padding:6px 8px;text-align:center;">Chờ</th>
+        <th style="padding:6px 8px;text-align:center;"></th>
+      </tr></thead>
+      <tbody>${list.map(({a,rec,ngay,quaHan}) => `
+        <tr style="border-top:1px solid #FED7AA;">
+          <td style="padding:6px 8px;">
+            <a href="javascript:void(0)" onclick="viewDetail('${a.id}')" style="color:#1D4ED8;font-weight:600;text-decoration:none;">
+              ${esc([a.maTaiSan, a.tenTaiSan, a.model].filter(Boolean).join(' — '))}</a>
+          </td>
+          <td style="padding:6px 8px;">${esc(rec.nguoiNghiViec || rec.from || '—')}</td>
+          <td style="padding:6px 8px;">${esc(rec.to || '—')}<br>
+              <span style="font-size:11px;color:#9A3412;">${esc(rec.toEmail || 'chưa có email')}</span></td>
+          <td style="padding:6px 8px;text-align:center;font-weight:700;${quaHan?'color:#B91C1C;':''}">${ngay} ngày</td>
+          <td style="padding:6px 8px;text-align:center;">
+            <button class="btn btn-icon-ph" style="padding:3px 9px;font-size:11px;"
+              onclick="resendGiuHoEmail('${a.id}')" ${rec.toEmail?'':'disabled'}>
+              <i class="ph ph-paper-plane-right"></i> Gửi lại</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// Gửi lại email xác nhận cho admin đang giữ máy
+async function resendGiuHoEmail(assetId){
+  const a = assets.find(x => x.id === assetId);
+  if(!a){ toast('⚠️ Không tìm thấy tài sản','bad'); return; }
+  const rec = [...(transfers[assetId]||[])].reverse().find(r => r.giuHo);
+  if(!rec){ toast('⚠️ Không tìm thấy phiếu giữ hộ','bad'); return; }
+  if(!rec.toEmail){ toast('⚠️ Admin này chưa có email trong phiếu','bad'); return; }
+  await sendHandoverFormEmail(rec, a, []);
+}
+
+// ══════════ CHẾ ĐỘ GIỮ HỘ (nhân sự nghỉ việc, admin site giữ máy) ══════════
+function trToggleGiuHo(){
+  const on = !!document.getElementById('tr-giuho')?.checked;
+  const lbl = document.getElementById('tr-new-user-label');
+  const arr = document.getElementById('tr-arrow-label');
+  if(lbl) lbl.textContent = on ? 'Admin site giữ máy *' : 'Người nhận mới *';
+  if(arr) arr.textContent = on ? '↓ Giao cho admin giữ hộ' : '↓ Bàn giao cho';
+  const u = document.getElementById('tr-new-user');
+  if(u) u.placeholder = on ? 'Họ tên admin site nhận giữ máy' : 'Họ và tên người nhận';
+  // Giữ hộ thì bắt buộc gửi email xác nhận — đó là cả điểm của tính năng này
+  const sf = document.getElementById('tr-send-form');
+  if(sf && on){ sf.checked = true; }
+  if(sf) sf.disabled = on;
+  const row = document.getElementById('tr-msform-row');
+  if(row && on) row.style.display = '';
+}
+
+// ══════════ CC BÀN GIAO — chọn người nhận bản sao từ Entra ID ══════════
+let _trCcList = [];   // [{name, email}]
+
+function _trRenderCcChips(){
+  const wrap = document.getElementById('tr-cc-chips');
+  if(!wrap) return;
+  if(!_trCcList.length){
+    wrap.innerHTML = '<span style="font-size:12px;color:var(--muted);">Chưa chọn ai — email chỉ gửi cho người nhận</span>';
+    return;
+  }
+  wrap.innerHTML = _trCcList.map(p => `
+    <span style="display:inline-flex;align-items:center;gap:6px;background:#EFF6FF;border:1px solid #BFDBFE;
+          color:#1D4ED8;border-radius:999px;padding:3px 6px 3px 10px;font-size:12px;">
+      <span title="${esc(p.email)}">${esc(p.name||p.email)}</span>
+      <button type="button" onclick="trCcRemove(&quot;${esc(p.email)}&quot;)"
+        style="border:none;background:none;cursor:pointer;color:#1D4ED8;font-size:15px;line-height:1;padding:0 2px;">×</button>
+    </span>`).join('');
+}
+function trCcRemove(email){
+  _trCcList = _trCcList.filter(p => p.email !== email);
+  _trRenderCcChips();
+}
+function trCcAdd(name, email){
+  email = (email||'').trim();
+  if(!email) return;
+  if(_trCcList.some(p => p.email.toLowerCase() === email.toLowerCase())){
+    toast('Người này đã có trong danh sách CC','warn'); return;
+  }
+  _trCcList.push({ name: name || email, email });
+  _trRenderCcChips();
+  toast(`➕ CC: ${name || email}`,'ok');
+}
+
+// mode: 'cc' = thêm nhiều người CC · 'recipient' = chọn 1 người nhận rồi đóng
+let _trPickMode = 'cc';
+function trOpenCcPicker(){ _trOpenEntraPicker('cc'); }
+function trPickRecipient(){ _trOpenEntraPicker('recipient'); }
+
+// Chọn người nhận / admin giữ hộ → điền thẳng vào form bàn giao
+function trPickApply(name, email, dept){
+  const set = (id,v) => { const el=document.getElementById(id); if(el && v!=null) el.value = v; };
+  set('tr-new-user', name || email);
+  set('tr-new-email', email || '');
+  const dEl = document.getElementById('tr-new-dept');
+  if(dEl && dept){
+    const hit = [...dEl.options].find(o => o.value && o.value.toLowerCase() === String(dept).toLowerCase());
+    if(hit) dEl.value = hit.value;
+  }
+  document.getElementById('tr-cc-picker')?.remove();
+  toast(`👤 Người nhận: ${name || email}`,'ok');
+}
+
+function _trOpenEntraPicker(mode){
+  if(document.getElementById('tr-cc-picker')) return;
+  _trPickMode = mode || 'cc';
+  const isCc  = _trPickMode === 'cc';
+  const giuHo = document.getElementById('tr-giuho')?.checked;
+  const title = isCc ? '<i class="ph ph-user-plus"></i> Thêm người CC'
+                     : (giuHo ? '<i class="ph ph-shield-check"></i> Chọn admin site giữ máy'
+                              : '<i class="ph ph-magnifying-glass"></i> Chọn người nhận');
+  const hint  = isCc ? 'Tìm trực tiếp trong danh bạ Entra ID của TTG. Bấm vào tên để thêm — chọn được nhiều người.'
+                     : 'Tìm trong danh bạ Entra ID của TTG. Bấm vào tên để điền vào phiếu bàn giao.';
+  const m = document.createElement('div');
+  m.id = 'tr-cc-picker';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10001;display:flex;align-items:center;justify-content:center;';
+  m.innerHTML = `<div style="background:#fff;border-radius:14px;width:520px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden;">
+    <div style="padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:14px;font-weight:700;">${title}</div>
+      <button type="button" onclick="document.getElementById('tr-cc-picker').remove()"
+        style="border:none;background:none;font-size:18px;cursor:pointer;color:#94a3b8;">✕</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <input id="tr-cc-q" placeholder="Gõ tên hoặc email… (tối thiểu 2 ký tự)" autocomplete="off"
+        style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;">
+      <div style="font-size:11px;color:#64748b;margin-top:6px;">${hint}</div>
+      <div id="tr-cc-results" style="margin-top:10px;max-height:300px;overflow-y:auto;"></div>
+    </div>
+    <div style="padding:10px 18px;border-top:1px solid #e2e8f0;text-align:right;">
+      <button type="button" class="btn" onclick="document.getElementById('tr-cc-picker').remove()">${isCc?'Xong':'Đóng'}</button>
+    </div>
+  </div>`;
+  m.addEventListener('click', e => { if(e.target === m) m.remove(); });
+  document.body.appendChild(m);
+  const q = document.getElementById('tr-cc-q');
+  let t = null;
+  q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => _trCcSearch(q.value.trim()), 350); });
+  q.focus();
+}
+
+async function _trCcSearch(q){
+  const box = document.getElementById('tr-cc-results');
+  if(!box) return;
+  if(q.length < 2){ box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="padding:10px;color:#64748b;font-size:12px;">⏳ Đang tìm trong Entra ID…</div>';
+  try{
+    const token = await _getGraphBearerToken();
+    const qq  = q.replace(/'/g, "''");
+    const flt = `startswith(displayName,'${qq}') or startswith(mail,'${qq}') or startswith(userPrincipalName,'${qq}') or startswith(surname,'${qq}')`;
+    const url = 'https://graph.microsoft.com/v1.0/users?$top=25'
+              + '&$select=displayName,mail,userPrincipalName,jobTitle,department'
+              + '&$filter=' + encodeURIComponent(flt);
+    const r = await fetch(url, { headers:{ Authorization:'Bearer ' + token, ConsistencyLevel:'eventual' } });
+    if(!r.ok){
+      const e = await r.json().catch(()=>({}));
+      throw new Error(e?.error?.message || ('HTTP ' + r.status));
+    }
+    const d    = await r.json();
+    const list = (d.value||[]).filter(u => u.mail || u.userPrincipalName);
+    if(!list.length){
+      box.innerHTML = '<div style="padding:10px;color:#64748b;font-size:12px;">Không tìm thấy ai khớp.</div>';
+      return;
+    }
+    box.innerHTML = list.map(u => {
+      const email = u.mail || u.userPrincipalName;
+      const sub   = [u.jobTitle, u.department].filter(Boolean).join(' · ');
+      const fn    = _trPickMode === 'cc'
+        ? `trCcAdd(&quot;${esc(u.displayName||'')}&quot;,&quot;${esc(email)}&quot;)`
+        : `trPickApply(&quot;${esc(u.displayName||'')}&quot;,&quot;${esc(email)}&quot;,&quot;${esc(u.department||'')}&quot;)`;
+      return `<div onclick="${fn}"
+        style="padding:8px 10px;border-radius:8px;cursor:pointer;"
+        onmouseover="this.style.background='#EFF6FF'" onmouseout="this.style.background=''">
+        <div style="font-size:13px;font-weight:600;">${esc(u.displayName||email)}</div>
+        <div style="font-size:11px;color:#64748b;">${esc(email)}${sub ? ' — ' + esc(sub) : ''}</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    console.warn('[CC] Graph search lỗi:', e);
+    box.innerHTML = `<div style="padding:10px;color:#B91C1C;font-size:12px;">❌ Không tìm được: ${esc(e.message)}</div>`;
+  }
+}
+
+async function sendHandoverFormEmail(rec, asset, ccList){
   if(!_msalToken){ toast('⚠️ Chưa đăng nhập M365 — không thể gửi email','bad'); return; }
   if(!rec.toEmail){ toast('⚠️ Người nhận chưa có email','bad'); return; }
+  const _cc = (ccList || []).filter(p => p && p.email);
 
   const assetLabel = [asset.tenTaiSan, asset.model, asset.maTaiSan ? `[${asset.maTaiSan}]` : ''].filter(Boolean).join(' ');
   const dateStr    = rec.date ? new Date(rec.date).toLocaleDateString('vi-VN') : '';
@@ -14127,13 +14409,14 @@ async function sendHandoverFormEmail(rec, asset){
         message: {
           subject: `[QLTS] Xác nhận bàn giao thiết bị — ${assetLabel}`,
           body:    { contentType: 'HTML', content: htmlBody },
-          toRecipients: [{ emailAddress: { address: rec.toEmail, name: rec.to } }]
+          toRecipients: [{ emailAddress: { address: rec.toEmail, name: rec.to } }],
+          ccRecipients: _cc.map(p => ({ emailAddress: { address: p.email, name: p.name || p.email } }))
         },
         saveToSentItems: true
       })
     });
     if(resp.ok || resp.status === 202){
-      toast(`📧 Đã gửi form xác nhận tới ${rec.toEmail}!`,'ok');
+      toast(`📧 Đã gửi form xác nhận tới ${rec.toEmail}${_cc.length ? ` · CC ${_cc.length} người` : ''}!`,'ok');
       msalSetBar('🔷 ' + (_msalAccount?.name||_msalAccount?.username||''),'s-ok');
     } else {
       const err = await resp.json().catch(()=>({}));
@@ -15691,7 +15974,38 @@ function parseTextTransferHistory(text){
 // Cột: Title(AssetId), MaTaiSan, TuNguoi, DenNguoi, TuBoPhan, DenBoPhan,
 //       ToEmail, NgayBanGiao, TinhTrang, GhiChu, ThoiGian
 
-async function msalSpPushTransfer(assetId, rec){
+// Cột bổ sung cho list bàn giao — phục vụ chế độ GIỮ HỘ.
+// App tự tạo nếu list chưa có, không cần vào SharePoint khai tay.
+const _TRANSFER_SP_FIELDS = [
+  { name:'GiuHo',         type:'Text' },   // 'x' = phiếu giữ hộ (nhân sự nghỉ việc)
+  { name:'NguoiNghiViec', type:'Text' },   // tên người đã nghỉ, để truy ngược
+];
+
+async function msalSpProvisionTransferFields(){
+  const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')`;
+  const existing = new Set();
+  try{
+    const d = await msalSpReq(`${base}/fields?$select=Title&$top=300`);
+    (d?.value||[]).forEach(f => existing.add(f.Title));
+  }catch(e){ console.warn('[TRANSFER-SP] Không đọc được danh sách cột:', e.message); }
+  let added = 0;
+  for(const f of _TRANSFER_SP_FIELDS){
+    if(existing.has(f.name)) continue;
+    try{
+      await msalSpReq(`${base}/fields`, {
+        method:'POST',
+        body: JSON.stringify({ Title: f.name, FieldTypeKind: 2 })   // 2 = Single line of text
+      });
+      try{ await msalSpReq(`${base}/DefaultView/ViewFields/addViewField('${f.name}')`, { method:'POST', body:'{}' }); }catch(ve){}
+      console.log('[TRANSFER-SP] ✅ Đã thêm cột:', f.name);
+      added++;
+    }catch(fe){ console.warn('[TRANSFER-SP] Bỏ qua cột lỗi:', f.name, fe.message); }
+  }
+  if(added) toast(`✅ Đã thêm ${added} cột vào list "${MSAL_CONFIG.spTransferList}"`,'ok');
+  return added;
+}
+
+async function msalSpPushTransfer(assetId, rec, _retried){
   if(!_msalAccount) return;
   const a = assets.find(x=>x.id===assetId);
   const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')/items`;
@@ -15708,6 +16022,8 @@ async function msalSpPushTransfer(assetId, rec){
     TinhTrang:    rec.condition|| '',
     GhiChu:       rec.notes    || '',
     ThoiGian:     rec.ts       || new Date().toISOString(),
+    GiuHo:        rec.giuHo ? 'x' : '',
+    NguoiNghiViec: rec.nguoiNghiViec || '',
   });
   try{
     const res = await fetch(base, {
@@ -15726,7 +16042,16 @@ async function msalSpPushTransfer(assetId, rec){
         rec._spId = json.ID;
         saveTransfers();
       }
+      return;
     }
+    // Cột GiuHo/NguoiNghiViec chưa tồn tại → tạo cột rồi thử lại đúng 1 lần
+    const txt = await res.text().catch(()=> '');
+    if(!_retried && /does not exist on type|column.*does not exist/i.test(txt)){
+      console.warn('[TRANSFER-SP] Thiếu cột, đang tạo rồi thử lại…');
+      await msalSpProvisionTransferFields();
+      return msalSpPushTransfer(assetId, rec, true);
+    }
+    console.warn('[TRANSFER] push HTTP', res.status, txt.slice(0,200));
   }catch(e){ console.warn('[TRANSFER] push error:', e.message); }
 }
 
@@ -15884,9 +16209,17 @@ async function msalSpLoadXacNhan(){
 async function msalSpLoadTransfers(){
   if(!_msalAccount) return;
   const base = `${MSAL_CONFIG.spSite}/_api/web/lists/getbytitle('${MSAL_CONFIG.spTransferList}')/items`;
-  const url  = `${base}?$select=Id,Title,MaTaiSan,TuNguoi,DenNguoi,TuBoPhan,DenBoPhan,ToEmail,NgayBanGiao,TinhTrang,GhiChu,ThoiGian&$top=2000&$orderby=ThoiGian asc`;
+  const COLS      = 'Id,Title,MaTaiSan,TuNguoi,DenNguoi,TuBoPhan,DenBoPhan,ToEmail,NgayBanGiao,TinhTrang,GhiChu,ThoiGian';
+  const COLS_PLUS = COLS + ',GiuHo,NguoiNghiViec';
+  const _q = c => `${base}?$select=${c}&$top=2000&$orderby=ThoiGian asc`;
   try{
-    const data = await msalSpReq(url);
+    // Thử lấy kèm 2 cột giữ hộ; list chưa có cột thì lùi về bộ cột cũ (không làm vỡ load)
+    let data;
+    try{ data = await msalSpReq(_q(COLS_PLUS)); }
+    catch(colErr){
+      console.warn('[TRANSFER] Chưa có cột GiuHo/NguoiNghiViec — đọc theo bộ cột cũ');
+      data = await msalSpReq(_q(COLS));
+    }
     if(!data.value?.length) return;
     // Gộp vào transfers theo assetId (Title)
     const loaded = {};
@@ -15905,6 +16238,8 @@ async function msalSpLoadTransfers(){
         condition: item.TinhTrang  ||'',
         notes:     item.GhiChu     ||'',
         ts:        item.ThoiGian   ||'',
+        ...(String(item.GiuHo||'').trim() ? { giuHo:true } : {}),
+        ...(item.NguoiNghiViec ? { nguoiNghiViec: item.NguoiNghiViec } : {}),
       });
     }
     // Merge: SP là nguồn chính, nhưng giữ lại local record chưa có trên SP
@@ -15937,6 +16272,9 @@ async function msalSpLoadTransfers(){
         if(matched){
           if(matched.accessories?.length) spRec.accessories  = matched.accessories;
           if(matched.pendingConfirm)      spRec.pendingConfirm = matched.pendingConfirm;
+          // Giữ lại cờ giữ hộ từ bản local (phiếu đẩy lên trước khi list có 2 cột này)
+          if(matched.giuHo && !spRec.giuHo)                   spRec.giuHo = true;
+          if(matched.nguoiNghiViec && !spRec.nguoiNghiViec)   spRec.nguoiNghiViec = matched.nguoiNghiViec;
           // Ghi ngược _spId vào local record để lần sau merge bỏ qua đúng
           if(!matched._spId){ matched._spId = spRec._spId; }
         }
@@ -15957,6 +16295,7 @@ async function msalSpLoadTransfers(){
       // ── Chốt chặn cuối: gom bản trùng cùng (from|to|date), giữ bản ĐẦY ĐỦ NHẤT ──
       // Xử lý cả trường hợp trùng ngay trong SP list (push 2 lần do double-click/retry).
       const _rich = r => (r._spId ? 8 : 0)
+                       + (r.giuHo ? 6 : 0)
                        + (r.condition ? 4 : 0)
                        + (r.accessories?.length ? 2 : 0)
                        + (r.notes ? 1 : 0)
