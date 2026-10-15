@@ -429,8 +429,8 @@ body{
 .view.active{display:block;}
 
 /* ═══════════════════════════ KPIs ═══════════════════════════ */
-/* 6 ô KPI (đã bỏ ô Màn hình) — chia đều hết chiều ngang */
-.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px;}
+/* 7 ô KPI — chia đều hết chiều ngang */
+.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:14px;}
 .kpi{
   background:#FFFFFF;border:1px solid var(--border);
   border-radius:var(--radius);padding:14px 16px;
@@ -904,7 +904,7 @@ input[type=checkbox].row-cb{
 .drop-zone small{font-size:11px;color:#94A3B8;}
 
 /* ═══════════════════════════ RESPONSIVE ═══════════════════════════ */
-@media(max-width:1300px){.kpi-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:1400px){.kpi-grid{grid-template-columns:repeat(4,1fr);}}
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}.dash-grid{grid-template-columns:1fr 1fr;}.dash-grid-wide{grid-template-columns:1fr;}}
 @media(max-width:900px){.grid3{grid-template-columns:1fr 1fr;}.detail-grid{grid-template-columns:1fr 1fr;}}
 @media(max-width:680px){
@@ -2992,9 +2992,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
       </div>
     </div>
 
-    <!-- Panel: máy giữ hộ chờ admin site xác nhận (tự ẩn khi không có) -->
-    <div id="giuho-panel" style="display:none;margin-top:14px;"></div>
-
     <!-- KPI cards -->
     <div class="kpi-grid">
       <div class="kpi blue clickable" onclick="goKpiFilter('')" title="Xem tất cả tài sản">
@@ -3037,6 +3034,12 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
         <div class="kpi-val" id="kpi-warranty">0</div>
         <div class="kpi-label">Cảnh báo BH</div>
         <div class="kpi-sub" id="kpi-warranty-sub">Trong 90 ngày</div>
+      </div>
+      <div class="kpi clickable" id="kpi-giuho-card" onclick="showGiuHoReport()" title="Máy do admin site giữ hộ — xem chi tiết">
+        <div class="kpi-icon-wrap" style="background:rgba(249,115,22,.13);color:#EA580C;"><i class="ph ph-lock-key"></i></div>
+        <div class="kpi-val" id="kpi-giuho">0</div>
+        <div class="kpi-label">Giữ hộ</div>
+        <div class="kpi-sub" id="kpi-giuho-sub">Chưa có</div>
       </div>
     </div>
 
@@ -14204,6 +14207,10 @@ function autoCalcNgayHetBH(){
 // ══════════ THEO DÕI MÁY GIỮ HỘ CHƯA ĐƯỢC XÁC NHẬN ══════════
 const GIUHO_QUA_HAN_NGAY = 7;   // quá bao nhiêu ngày thì tô đỏ
 
+// Chỉ kết luận "chưa xác nhận" sau khi đã tải xong list Quan_Ly_XacNhan_BanGiao.
+// Nếu không, lúc mới đăng nhập panel sẽ loé lên báo nhầm rồi tự tắt khi data về.
+let _xacNhanLoaded = false;
+
 // Trả về [{a, rec, ngay, quaHan}] — phiếu giữ hộ mà admin chưa bấm xác nhận
 function _pendingGiuHo(){
   const out = [];
@@ -14230,49 +14237,79 @@ function _pendingGiuHo(){
   return out.sort((x,y) => y.ngay - x.ngay);
 }
 
+// Cập nhật ô KPI "Giữ hộ" trên dashboard
 function renderGiuHoPanel(){
-  const el = document.getElementById('giuho-panel');
-  if(!el) return;
-  const list = _pendingGiuHo();
-  if(!list.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  const valEl = document.getElementById('kpi-giuho');
+  const subEl = document.getElementById('kpi-giuho-sub');
+  const card  = document.getElementById('kpi-giuho-card');
+  if(!valEl) return;
+  // Chưa có dữ liệu xác nhận → chưa kết luận được, để 0 cho khỏi báo nhầm
+  if(_msalAccount && !_xacNhanLoaded){ valEl.textContent='0'; if(subEl) subEl.textContent='Đang tải…'; return; }
+
+  const list  = _pendingGiuHo();
   const nLate = list.filter(x => x.quaHan).length;
-  el.style.display = '';
-  el.innerHTML = `
-  <div style="background:#FFF7ED;border:1px solid #FDBA74;border-radius:12px;padding:12px 16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-      <div style="font-size:13px;font-weight:700;color:#C2410C;">
-        🔐 Máy giữ hộ chờ admin site xác nhận — ${list.length} máy
-        ${nLate ? `<span style="color:#B91C1C;"> · ${nLate} quá ${GIUHO_QUA_HAN_NGAY} ngày</span>` : ''}
-      </div>
-      <span style="font-size:11px;color:#9A3412;">Chưa xác nhận = chưa có bằng chứng ai đang giữ máy</span>
+  valEl.textContent = list.length;
+  if(subEl){
+    subEl.innerHTML = !list.length ? 'Chưa có'
+      : (nLate ? `<span style="color:#B91C1C;font-weight:700;">${nLate} quá ${GIUHO_QUA_HAN_NGAY} ngày</span>`
+               : 'Chờ xác nhận');
+  }
+  if(card) card.style.borderTop = list.length ? '3px solid #F97316' : '';
+}
+
+// Bảng chi tiết — mở khi bấm vào ô KPI
+function showGiuHoReport(){
+  const list  = _pendingGiuHo();
+  const nLate = list.filter(x => x.quaHan).length;
+  const body = !list.length
+    ? `<div style="text-align:center;padding:36px;color:var(--muted);">
+         <i class="ph ph-check-circle" style="font-size:36px;display:block;margin-bottom:8px;color:#10B981;"></i>
+         Không có máy nào đang chờ xác nhận giữ hộ.</div>`
+    : `<div style="font-size:12px;color:#9A3412;margin-bottom:10px;">
+         <b>${list.length}</b> máy do admin site giữ, chưa bấm xác nhận
+         ${nLate ? `· <span style="color:#B91C1C;font-weight:700;">${nLate} máy quá ${GIUHO_QUA_HAN_NGAY} ngày</span>` : ''}
+         <div style="margin-top:3px;">Chưa xác nhận = chưa có bằng chứng ai đang giữ máy.</div>
+       </div>
+       <table style="width:100%;border-collapse:collapse;font-size:12px;">
+         <thead><tr style="background:#FFEDD5;color:#9A3412;font-size:11px;text-transform:uppercase;">
+           <th style="padding:7px 9px;text-align:left;">Tài sản</th>
+           <th style="padding:7px 9px;text-align:left;">Người nghỉ việc</th>
+           <th style="padding:7px 9px;text-align:left;">Admin giữ máy</th>
+           <th style="padding:7px 9px;text-align:center;">Chờ</th>
+           <th style="padding:7px 9px;text-align:center;"></th>
+         </tr></thead>
+         <tbody>${list.map(({a,rec,ngay,quaHan}) => `
+           <tr style="border-top:1px solid #FED7AA;">
+             <td style="padding:7px 9px;">
+               <a href="javascript:void(0)" onclick="document.getElementById('giuho-report')?.remove();viewDetail('${a.id}')"
+                  style="color:#1D4ED8;font-weight:600;text-decoration:none;">
+                 ${esc([a.maTaiSan, a.tenTaiSan, a.model].filter(Boolean).join(' — '))}</a>
+             </td>
+             <td style="padding:7px 9px;">${esc(rec.nguoiNghiViec || rec.from || '—')}</td>
+             <td style="padding:7px 9px;">${esc(rec.to || '—')}<br>
+                 <span style="font-size:11px;color:#9A3412;">${esc(rec.toEmail || 'chưa có email')}</span></td>
+             <td style="padding:7px 9px;text-align:center;font-weight:700;${quaHan?'color:#B91C1C;':''}">${ngay} ngày</td>
+             <td style="padding:7px 9px;text-align:center;">
+               <button class="btn btn-icon-ph" style="padding:3px 9px;font-size:11px;"
+                 onclick="resendGiuHoEmail('${a.id}')" ${rec.toEmail?'':'disabled'}>
+                 <i class="ph ph-paper-plane-right"></i> Gửi lại</button>
+             </td>
+           </tr>`).join('')}
+         </tbody>
+       </table>`;
+
+  const m = document.createElement('div');
+  m.id = 'giuho-report';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:900;display:flex;align-items:center;justify-content:center;';
+  m.innerHTML = `<div style="background:#fff;border-radius:14px;width:880px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;">
+    <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:15px;font-weight:700;"><i class="ph ph-lock-key" style="color:#EA580C;"></i> Máy giữ hộ chờ admin site xác nhận</div>
+      <button onclick="this.closest('#giuho-report').remove()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#94a3b8;">✕</button>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead><tr style="background:#FFEDD5;color:#9A3412;font-size:11px;text-transform:uppercase;">
-        <th style="padding:6px 8px;text-align:left;">Tài sản</th>
-        <th style="padding:6px 8px;text-align:left;">Người nghỉ việc</th>
-        <th style="padding:6px 8px;text-align:left;">Admin giữ máy</th>
-        <th style="padding:6px 8px;text-align:center;">Chờ</th>
-        <th style="padding:6px 8px;text-align:center;"></th>
-      </tr></thead>
-      <tbody>${list.map(({a,rec,ngay,quaHan}) => `
-        <tr style="border-top:1px solid #FED7AA;">
-          <td style="padding:6px 8px;">
-            <a href="javascript:void(0)" onclick="viewDetail('${a.id}')" style="color:#1D4ED8;font-weight:600;text-decoration:none;">
-              ${esc([a.maTaiSan, a.tenTaiSan, a.model].filter(Boolean).join(' — '))}</a>
-          </td>
-          <td style="padding:6px 8px;">${esc(rec.nguoiNghiViec || rec.from || '—')}</td>
-          <td style="padding:6px 8px;">${esc(rec.to || '—')}<br>
-              <span style="font-size:11px;color:#9A3412;">${esc(rec.toEmail || 'chưa có email')}</span></td>
-          <td style="padding:6px 8px;text-align:center;font-weight:700;${quaHan?'color:#B91C1C;':''}">${ngay} ngày</td>
-          <td style="padding:6px 8px;text-align:center;">
-            <button class="btn btn-icon-ph" style="padding:3px 9px;font-size:11px;"
-              onclick="resendGiuHoEmail('${a.id}')" ${rec.toEmail?'':'disabled'}>
-              <i class="ph ph-paper-plane-right"></i> Gửi lại</button>
-          </td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
+    <div style="padding:16px 20px;overflow-y:auto;">${body}</div>
   </div>`;
+  m.addEventListener('click', e => { if(e.target === m) m.remove(); });
+  document.body.appendChild(m);
 }
 
 // Gửi lại email xác nhận cho admin đang giữ máy
@@ -16293,7 +16330,9 @@ async function msalSpLoadXacNhan(){
   }
 
   console.log(`[XACNHAN] Map keys (${Object.keys(_xacNhanMap).length}):`, Object.keys(_xacNhanMap));
+  _xacNhanLoaded = true;            // từ giờ mới đủ dữ liệu để kết luận ai chưa xác nhận
   applyFilters(); // refresh badge trên bảng
+  if(typeof renderGiuHoPanel === 'function') renderGiuHoPanel();
 }
 
 async function msalSpLoadTransfers(){
