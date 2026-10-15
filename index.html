@@ -11564,8 +11564,10 @@ function viewDetail(id){
           const xnHtml = xn
             ? (() => {
                 const d = xn.thoiGian ? new Date(xn.thoiGian).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+                // Phiếu giữ hộ → nói rõ là "xác nhận đang giữ máy", không phải nhận để dùng
+                const _lblXN = t.giuHo ? 'Đã xác nhận đang giữ máy' : 'Đã xác nhận đã nhận máy';
                 return `<div style="margin-top:8px;padding:7px 10px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:7px;font-size:11px;">
-                  <span style="color:#059669;font-weight:700;display:inline-flex;align-items:center;gap:3px;"><i class="ph ph-check-circle"></i> Đã xác nhận</span>
+                  <span style="color:#059669;font-weight:700;display:inline-flex;align-items:center;gap:3px;"><i class="ph ph-check-circle"></i> ${_lblXN}</span>
                   <span style="color:#065F46;margin-left:6px;">${esc(xn.nguoiNhan)}</span>
                   ${d?`<span style="color:var(--muted);margin-left:6px;">· ${d}</span>`:''}
                   ${xn.ghiChu?`<div style="color:#047857;margin-top:3px;font-style:italic;">"${esc(xn.ghiChu)}"</div>`:''}
@@ -11577,7 +11579,7 @@ function viewDetail(id){
                         <span style="color:#059669;font-weight:700;display:inline-flex;align-items:center;gap:4px;"><i class="ph ph-check-circle"></i> Đã thu hồi về kho</span>
                       </div>`
                     : `<div style="margin-top:8px;padding:5px 10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                        <span style="color:#92400E;">⏳ Chờ xác nhận</span>
+                        <span style="color:#92400E;">⏳ ${t.giuHo ? 'Chờ admin xác nhận đang giữ máy' : 'Chờ xác nhận đã nhận máy'}</span>
                         <button class="btn" style="padding:1px 8px;font-size:10px;" onclick="msalSpLoadXacNhan().then(()=>viewDetail('${a.id}'))"><i class="ph ph-arrows-clockwise"></i></button>
                       </div>`)
                 : '');
@@ -11601,11 +11603,14 @@ function viewDetail(id){
               </div>
             </div>
           </div>` : `
-          <div class="transfer-row">
-            <div class="tr-arrow"><i class="ph ph-arrows-left-right"></i></div>
+          <div class="transfer-row"${t.giuHo?' style="background:rgba(249,115,22,.05);border-left:3px solid #F97316;"':''}>
+            <div class="tr-arrow"${t.giuHo?' style="color:#EA580C;"':''}><i class="ph ph-${t.giuHo?'shield-check':'arrows-left-right'}"></i></div>
             <div class="tr-info">
+              ${t.giuHo?`<div style="font-size:11px;font-weight:700;color:#C2410C;margin-bottom:4px;display:inline-flex;align-items:center;gap:4px;">
+                <i class="ph ph-lock-key"></i> Giữ hộ — nhân sự nghỉ việc${t.nguoiNghiViec?` (${esc(t.nguoiNghiViec)})`:''}
+              </div>`:''}
               <div class="from">Từ: <strong>${esc(t.from||'Chưa có người dùng')}</strong> <span style="color:var(--muted);">${t.fromDept?`(${esc(t.fromDept)})`:''}  </span></div>
-              <div class="to">→ ${esc(t.to||'Kho')}</div>
+              <div class="to">→ ${esc(t.to||'Kho')}${t.giuHo?' <span style="font-size:11px;color:#C2410C;font-weight:600;">(giữ hộ)</span>':''}</div>
               <div class="to-dept">${esc(t.toDept||'')} ${t.toEmail?`· <a class="mail-link" href="mailto:${esc(t.toEmail)}">${esc(t.toEmail)}</a>`:''}</div>
               ${t.accessories?.length ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">📦 <b>Phụ kiện:</b> ${t.accessories.map(x=>esc(x)).join(' · ')}</div>` : ''}
               ${t.notes?`<div style="font-size:11px;color:var(--muted);margin-top:3px;">📝 ${esc(t.notes)}</div>`:''}
