@@ -4849,6 +4849,81 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
   </div>
 </div>
 
+<!-- ══════════════ MODAL: THU HỒI TÀI SẢN ══════════════ -->
+<div class="modal-backdrop" id="modal-recall" onclick="if(event.target===this)closeModal('modal-recall')">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-head">
+      <h2><i class="ph ph-package"></i> Thu hồi tài sản</h2>
+      <button class="btn icon-only" onclick="closeModal('modal-recall')" style="border:none;font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rc-asset-id">
+      <div style="padding:10px 12px;background:rgba(144,144,168,.07);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Thu hồi từ</div>
+        <div id="rc-asset-label" style="font-size:14px;font-weight:600;">—</div>
+        <div id="rc-current-user" style="font-size:12px;color:var(--muted);margin-top:2px;">—</div>
+      </div>
+
+      <div class="field" style="margin-bottom:12px;">
+        <label>Ngày thu hồi *</label>
+        <input type="date" id="rc-date" style="width:100%;">
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Máy được cất ở đâu?</div>
+
+      <label for="rc-mode-kho" style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;margin:0 0 8px;
+             padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;">
+        <input type="radio" name="rc-mode" id="rc-mode-kho" value="kho" checked onchange="rcToggleMode()"
+               style="width:16px;height:16px;cursor:pointer;margin-top:2px;flex-shrink:0;">
+        <span>
+          <span style="font-weight:700;">📦 Thu hồi về kho IT</span>
+          <span style="display:block;font-size:11px;color:var(--muted);margin-top:3px;">
+            IT trực tiếp cầm máy. Tình trạng chuyển "Lưu Kho", không còn người dùng.
+          </span>
+        </span>
+      </label>
+
+      <label for="rc-mode-giuho" style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;margin:0;
+             padding:10px 12px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:10px;">
+        <input type="radio" name="rc-mode" id="rc-mode-giuho" value="giuho" onchange="rcToggleMode()"
+               style="width:16px;height:16px;cursor:pointer;accent-color:#EA580C;margin-top:2px;flex-shrink:0;">
+        <span>
+          <span style="font-weight:700;color:#C2410C;">🔐 Admin site giữ hộ — nhân sự nghỉ việc</span>
+          <span style="display:block;font-size:11px;color:#9A3412;margin-top:3px;line-height:1.5;">
+            Máy ở site/dự án, IT không trực tiếp thu. Máy ghi nhận do <b>admin site giữ</b>,
+            và <b>gửi email xác nhận</b> — chưa bấm xác nhận thì còn treo trên Dashboard.
+          </span>
+        </span>
+      </label>
+
+      <div id="rc-giuho-fields" style="display:none;margin-top:12px;padding:12px;background:#FFFBEB;border:1px dashed #FDBA74;border-radius:10px;">
+        <div class="grid2">
+          <div class="field span2">
+            <label style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Admin site giữ máy *</span>
+              <button type="button" class="btn btn-icon-ph" style="padding:3px 10px;font-size:11px;"
+                      onclick="rcPickAdmin()"><i class="ph ph-magnifying-glass"></i> Tìm trong Entra ID</button>
+            </label>
+            <input type="text" id="rc-admin-name" placeholder="Họ tên admin nhận giữ máy" style="width:100%;">
+          </div>
+          <div class="field span2">
+            <label>Email admin * <span style="font-weight:400;color:var(--muted);font-size:11px;">— dùng để gửi link xác nhận</span></label>
+            <input type="email" id="rc-admin-email" placeholder="email@ttgvn.com" style="width:100%;">
+          </div>
+          <div class="field span2">
+            <label>Ghi chú</label>
+            <input type="text" id="rc-notes" placeholder="VD: Máy để tại văn phòng công trường dự án X" style="width:100%;">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-recall')">Hủy</button>
+      <button class="btn primary" id="rc-submit" onclick="confirmRecall()">Xác nhận thu hồi</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════ MODAL: IMPORT ══════════════ -->
 <div class="modal-backdrop" id="modal-import">
   <div class="modal" style="max-width:560px;">
@@ -4948,21 +5023,6 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
             <div id="tr-current-dept" style="font-size:12px;color:var(--muted);margin-top:2px;">—</div>
           </div>
         </div>
-      </div>
-
-      <!-- ── Chế độ GIỮ HỘ: nhân sự nghỉ việc, admin site giữ máy ── -->
-      <div style="padding:10px 12px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:10px;margin-bottom:12px;">
-        <label for="tr-giuho" style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;margin:0;">
-          <input type="checkbox" id="tr-giuho" onchange="trToggleGiuHo()"
-                 style="width:16px;height:16px;cursor:pointer;accent-color:#EA580C;margin-top:2px;flex-shrink:0;">
-          <span>
-            <span style="font-weight:700;color:#C2410C;">🔐 Bàn giao giữ hộ — nhân sự nghỉ việc</span>
-            <span style="display:block;font-size:11px;color:#9A3412;margin-top:3px;line-height:1.5;">
-              Dùng khi máy ở site/dự án, IT không trực tiếp thu. Máy chuyển sang <b>admin site giữ hộ</b>,
-              tình trạng ghi "Giữ hộ", và <b>bắt buộc gửi email xác nhận</b> — chưa bấm xác nhận thì phiếu còn treo.
-            </span>
-          </span>
-        </label>
       </div>
 
       <div style="text-align:center;margin:10px 0;font-size:20px;color:var(--green);" id="tr-arrow-label">↓ Bàn giao cho</div>
@@ -11305,47 +11365,96 @@ async function saReportDamage(id){
 }
 
 // ── Thu hồi về kho ────────────────────────────────────────────
-async function saRecall(id){
-  const idx = assets.findIndex(a => a.id === id);
-  if(idx < 0) return;
-  const a = assets[idx];
-
-  // Kiểm tra tài sản đã được bàn giao chưa
+// Mở modal thu hồi — chọn về kho IT hay giao admin site giữ hộ
+function saRecall(id){
+  const a = assets.find(x => x.id === id);
+  if(!a) return;
   const hasBanGiao = a.trangThaiHienTai === 'Bàn giao'
                    || (transfers[id] && transfers[id].length > 0)
                    || !!a.nguoiDung;
   if(!hasBanGiao){ toast('ℹ️ Tài sản chưa được cấp phát', 'info'); return; }
 
-  const nguoiCu = a.nguoiDung || '—';
+  document.getElementById('rc-asset-id').value   = id;
+  document.getElementById('rc-asset-label').textContent =
+    [a.maTaiSan, a.tenTaiSan, a.model].filter(Boolean).join(' — ');
+  document.getElementById('rc-current-user').textContent =
+    `${a.nguoiDung || 'Chưa có người dùng'}${a.boPhan ? ' · ' + a.boPhan : ''}`;
+  document.getElementById('rc-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('rc-mode-kho').checked = true;
+  ['rc-admin-name','rc-admin-email','rc-notes'].forEach(i => { const el=document.getElementById(i); if(el) el.value=''; });
+  rcToggleMode();
+  openModal('modal-recall');
+}
+
+function rcToggleMode(){
+  const giuHo = document.getElementById('rc-mode-giuho')?.checked;
+  const box   = document.getElementById('rc-giuho-fields');
+  if(box) box.style.display = giuHo ? '' : 'none';
+  const btn = document.getElementById('rc-submit');
+  if(btn) btn.textContent = giuHo ? 'Xác nhận & gửi email' : 'Xác nhận thu hồi';
+}
+
+// Chọn admin site từ Entra ID → điền vào form thu hồi
+function rcPickAdmin(){ _trOpenEntraPicker('recall'); }
+function rcPickApply(name, email){
+  const set=(i,v)=>{ const el=document.getElementById(i); if(el) el.value=v||''; };
+  set('rc-admin-name', name || email);
+  set('rc-admin-email', email);
+  document.getElementById('tr-cc-picker')?.remove();
+  toast(`🔐 Admin giữ máy: ${name || email}`,'ok');
+}
+
+async function confirmRecall(){
+  const id = document.getElementById('rc-asset-id').value;
+  const idx = assets.findIndex(a => a.id === id);
+  if(idx < 0){ toast('⚠️ Không tìm thấy tài sản','bad'); return; }
+  const a = assets[idx];
+
+  const giuHo = document.getElementById('rc-mode-giuho').checked;
+  const now   = document.getElementById('rc-date').value || new Date().toISOString().slice(0,10);
+  const adminName  = document.getElementById('rc-admin-name').value.trim();
+  const adminEmail = document.getElementById('rc-admin-email').value.trim();
+  const rcNotes    = document.getElementById('rc-notes').value.trim();
+
+  if(giuHo && !adminName){  toast('⚠️ Chưa chọn admin giữ máy','bad'); return; }
+  if(giuHo && !adminEmail){ toast('⚠️ Admin chưa có email — không gửi được link xác nhận','bad'); return; }
+
+  const nguoiCu  = a.nguoiDung || '—';
   const boPhanCu = a.boPhan || '—';
-  const ok = await showConfirm(`Thu hồi "${a.tenTaiSan} — ${a.maTaiSan}" từ ${nguoiCu} (${boPhanCu})? Tài sản sẽ chuyển về kho.`,{title:"Thu hồi tài sản",okText:"Thu hồi",icon:"📦"});
-  if(!ok) return;
 
-  const now = new Date().toISOString().slice(0,10);
-
-  // Tạo bản ghi thu hồi trong lịch sử bàn giao
+  // Tạo bản ghi trong lịch sử bàn giao
   if(!transfers[id]) transfers[id] = [];
-  transfers[id].push({
+  const rec = {
     from:     nguoiCu,
     fromDept: boPhanCu,
-    to:       'Kho',
+    to:       giuHo ? adminName : 'Kho',
     toDept:   '',
-    toEmail:  '',
+    toEmail:  giuHo ? adminEmail : '',
     date:     now,
     condition: a.tinhTrang || '',
-    notes:    'Thu hồi về kho',
-  });
+    notes:    rcNotes || (giuHo ? `Giữ hộ sau khi ${nguoiCu} nghỉ việc` : 'Thu hồi về kho'),
+    ts:       new Date().toISOString(),
+  };
+  if(giuHo){ rec.giuHo = true; rec.nguoiNghiViec = nguoiCu; }
+  transfers[id].push(rec);
   saveTransfers();
+  if(_msalAccount) msalSpPushTransfer(id, rec).catch(e=>console.warn('[RECALL] push failed:',e));
 
   // Cập nhật tài sản
-  assets[idx].nguoiDung        = '';
-  assets[idx].email            = '';
+  assets[idx].nguoiDung        = giuHo ? adminName  : '';
+  assets[idx].email            = giuHo ? adminEmail : '';
   assets[idx].boPhan           = '';
-  assets[idx].tinhTrang        = 'Lưu Kho';
-  assets[idx].trangThaiHienTai = 'Thu hồi';
+  assets[idx].tinhTrang        = giuHo ? 'Giữ hộ' : 'Lưu Kho';
+  assets[idx].trangThaiHienTai = giuHo ? 'Giữ hộ' : 'Thu hồi';
   assets[idx].ngaySuKien       = now;
 
+  closeModal('modal-recall');
   saveToStorage();
+
+  // Giữ hộ → gửi email xác nhận cho admin (đây là cả điểm của tính năng)
+  if(giuHo){
+    sendHandoverFormEmail(rec, assets[idx], []);
+  }
   if(_msalAccount){
     try{ await msalSpPushAsset(id); }catch(e){ console.warn('[SA] SP push fail', e); }
   } else if(SP_MODE && assets[idx]._spId){
@@ -11354,7 +11463,10 @@ async function saRecall(id){
   applyFilters(true);
   updateDashboard();
   renderEvents();
-  toast(`📦 Đã thu hồi "${a.maTaiSan}" về kho`, 'ok');
+  if(typeof renderGiuHoPanel === 'function') renderGiuHoPanel();
+  toast(giuHo
+    ? `🔐 Đã ghi nhận "${a.maTaiSan}" do ${adminName} giữ hộ — đang chờ xác nhận`
+    : `📦 Đã thu hồi "${a.maTaiSan}" về kho`, 'ok');
 }
 
 // Đóng khi click ngoài hoặc nhấn Escape
@@ -12269,9 +12381,6 @@ function openTransfer(id){
   document.getElementById('tr-print-btn').style.display = 'none';
   _trCcList = [];                 // reset danh sách CC mỗi lần mở phiếu bàn giao
   _trRenderCcChips();
-  const ghEl = document.getElementById('tr-giuho');
-  if(ghEl) ghEl.checked = false;
-  trToggleGiuHo();
   // Build accessories checklist theo loại tài sản
   _trBuildAccPreset(a.tenTaiSan || '');
   // Hiện row màn hình nếu tài sản có màn hình kèm
@@ -13856,13 +13965,6 @@ async function confirmTransfer(){
     notes: document.getElementById('tr-notes').value.trim(),
     ts: new Date().toISOString()
   };
-  // ── Giữ hộ: đánh dấu phiếu + lưu lại tên người nghỉ việc để truy ngược ──
-  const _isGiuHo = !!document.getElementById('tr-giuho')?.checked;
-  if(_isGiuHo){
-    newRec.giuHo        = true;
-    newRec.nguoiNghiViec = a.nguoiDung || '';
-    if(!newRec.notes) newRec.notes = `Giữ hộ sau khi ${a.nguoiDung||'nhân sự'} nghỉ việc`;
-  }
   transfers[id].push(newRec);
   saveTransfers();
   // Sync lên SP nếu đã đăng nhập
@@ -13872,8 +13974,8 @@ async function confirmTransfer(){
   a.nguoiDung = newUser;
   a.email = document.getElementById('tr-new-email').value.trim() || a.email;
   a.boPhan = document.getElementById('tr-new-dept').value || a.boPhan;
-  a.tinhTrang = _isGiuHo ? 'Giữ hộ' : 'Đang dùng';
-  a.trangThaiHienTai = _isGiuHo ? 'Giữ hộ' : 'Bàn giao';
+  a.tinhTrang = 'Đang dùng';
+  a.trangThaiHienTai = 'Bàn giao';
   a.ngaySuKien = date;
   // Nếu có màn hình nhưng không bàn giao kèm → tạo tài sản riêng cho màn hình (trả kho)
   let monitorId = null;
@@ -14178,23 +14280,6 @@ async function resendGiuHoEmail(assetId){
   await sendHandoverFormEmail(rec, a, []);
 }
 
-// ══════════ CHẾ ĐỘ GIỮ HỘ (nhân sự nghỉ việc, admin site giữ máy) ══════════
-function trToggleGiuHo(){
-  const on = !!document.getElementById('tr-giuho')?.checked;
-  const lbl = document.getElementById('tr-new-user-label');
-  const arr = document.getElementById('tr-arrow-label');
-  if(lbl) lbl.textContent = on ? 'Admin site giữ máy *' : 'Người nhận mới *';
-  if(arr) arr.textContent = on ? '↓ Giao cho admin giữ hộ' : '↓ Bàn giao cho';
-  const u = document.getElementById('tr-new-user');
-  if(u) u.placeholder = on ? 'Họ tên admin site nhận giữ máy' : 'Họ và tên người nhận';
-  // Giữ hộ thì bắt buộc gửi email xác nhận — đó là cả điểm của tính năng này
-  const sf = document.getElementById('tr-send-form');
-  if(sf && on){ sf.checked = true; }
-  if(sf) sf.disabled = on;
-  const row = document.getElementById('tr-msform-row');
-  if(row && on) row.style.display = '';
-}
-
 // ══════════ CC BÀN GIAO — chọn người nhận bản sao từ Entra ID ══════════
 let _trCcList = [];   // [{name, email}]
 
@@ -14251,12 +14336,11 @@ function _trOpenEntraPicker(mode){
   if(document.getElementById('tr-cc-picker')) return;
   _trPickMode = mode || 'cc';
   const isCc  = _trPickMode === 'cc';
-  const giuHo = document.getElementById('tr-giuho')?.checked;
   const title = isCc ? '<i class="ph ph-user-plus"></i> Thêm người CC'
-                     : (giuHo ? '<i class="ph ph-shield-check"></i> Chọn admin site giữ máy'
-                              : '<i class="ph ph-magnifying-glass"></i> Chọn người nhận');
+              : _trPickMode === 'recall' ? '<i class="ph ph-shield-check"></i> Chọn admin site giữ máy'
+              : '<i class="ph ph-magnifying-glass"></i> Chọn người nhận';
   const hint  = isCc ? 'Tìm trực tiếp trong danh bạ Entra ID của TTG. Bấm vào tên để thêm — chọn được nhiều người.'
-                     : 'Tìm trong danh bạ Entra ID của TTG. Bấm vào tên để điền vào phiếu bàn giao.';
+                     : 'Tìm trong danh bạ Entra ID của TTG. Bấm vào tên để điền vào phiếu.';
   const m = document.createElement('div');
   m.id = 'tr-cc-picker';
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10001;display:flex;align-items:center;justify-content:center;';
@@ -14310,9 +14394,10 @@ async function _trCcSearch(q){
     box.innerHTML = list.map(u => {
       const email = u.mail || u.userPrincipalName;
       const sub   = [u.jobTitle, u.department].filter(Boolean).join(' · ');
-      const fn    = _trPickMode === 'cc'
-        ? `trCcAdd(&quot;${esc(u.displayName||'')}&quot;,&quot;${esc(email)}&quot;)`
-        : `trPickApply(&quot;${esc(u.displayName||'')}&quot;,&quot;${esc(email)}&quot;,&quot;${esc(u.department||'')}&quot;)`;
+      const nm = esc(u.displayName||'');
+      const fn = _trPickMode === 'cc'     ? `trCcAdd(&quot;${nm}&quot;,&quot;${esc(email)}&quot;)`
+               : _trPickMode === 'recall' ? `rcPickApply(&quot;${nm}&quot;,&quot;${esc(email)}&quot;)`
+               : `trPickApply(&quot;${nm}&quot;,&quot;${esc(email)}&quot;,&quot;${esc(u.department||'')}&quot;)`;
       return `<div onclick="${fn}"
         style="padding:8px 10px;border-radius:8px;cursor:pointer;"
         onmouseover="this.style.background='#EFF6FF'" onmouseout="this.style.background=''">
