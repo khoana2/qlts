@@ -544,10 +544,9 @@ tbody td{
   padding:10px 9px;font-size:13px;color:#1E293B;
   white-space:nowrap;vertical-align:middle;
 }
-/* Cột tên tài sản / ghi chú được xuống dòng thay vì kéo dài bảng ra ngang */
-#assets-tbody td.cell-wrap{
-  white-space:normal;word-break:break-word;max-width:260px;
-}
+/* ĐÃ GỠ: rule .cell-wrap (max-width + white-space:normal trên <td>).
+   Kết hợp với table-layout auto + min-width:1300px + sticky header gây reflow
+   nặng, làm đơ giao diện dù không có lỗi JS. Không dùng lại cách này. */
 .hcqt-asset-table tbody td{
   white-space:normal!important;
   word-break:break-word!important;
@@ -9687,8 +9686,8 @@ function renderTable(){
         <td class="cb-col"><input type="checkbox" class="row-cb" ${isSel?'checked':''} onchange="toggleSelectRow('${a.id}',this.checked)"/></td>
         <td class="tbl-num sc-num">${start+i+1}</td>
         <td class="sc-ma"><code style="font-size:11px;color:var(--accent2);">${esc(a.maTaiSan||'—')}</code></td>
-        <td class="sc-ten cell-wrap"><span class="type-badge">${esc(a.tenTaiSan||'—')}</span></td>
-        <td data-col="model" class="cell-wrap">${esc(a.model||'—')}</td>
+        <td class="sc-ten"><span class="type-badge">${esc(a.tenTaiSan||'—')}</span></td>
+        <td data-col="model">${esc(a.model||'—')}</td>
         <td data-col="serial"><code style="font-size:11px;">${esc(a.serial||'—')}</code></td>
         <td>
           <div>${esc(a.nguoiDung||'—')}</div>
