@@ -11293,21 +11293,33 @@ function openSmartAction(assetId, triggerEl){
     <div class="sa-divider"></div>
     <button class="sa-item danger" onclick="saAct('delete')"><i class="ph ph-trash" style="background:#FFEEEE;color:#FF3B30;"></i> Xóa tài sản</button>`;
 
-  // ── Vị trí: bung từ nút xuống, canh phải ──
+  // ── Vị trí: bung từ nút xuống, canh phải — luôn nằm trọn trong khung nhìn ──
   menu.classList.add('open');
+  menu.style.right = 'auto';
+  menu.style.left  = '0px';          // reset trước khi đo, tránh lấy nhầm vị trí cũ
   const rect = triggerEl.getBoundingClientRect();
-  const mw   = menu.offsetWidth  || 200;
-  const mh   = menu.offsetHeight || 260;
+  const mRect = menu.getBoundingClientRect();   // đo thật, chính xác hơn offsetWidth
+  const mw   = mRect.width  || 200;
+  const mh   = mRect.height || 260;
   const vw   = window.innerWidth;
   const vh   = window.innerHeight;
-  let top  = rect.bottom + 6;
+  const PAD  = 8;
+
+  // Ngang: canh mép phải nút, nhưng kẹp trong [PAD, vw - mw - PAD]
   let left = rect.right - mw;
-  if(left < 8) left = 8;
-  if(top + mh > vh - 12) top = rect.top - mh - 6;
-  if(top < 8) top = 8;
+  if(left + mw > vw - PAD) left = vw - mw - PAD;   // ← thiếu dòng này nên menu bị cắt bên phải
+  if(left < PAD)           left = PAD;
+
+  // Dọc: thiếu chỗ bên dưới thì lật lên trên; vẫn thiếu thì kẹp và cho cuộn trong menu
+  let top = rect.bottom + 6;
+  if(top + mh > vh - 12){
+    const above = rect.top - mh - 6;
+    top = (above >= PAD) ? above : Math.max(PAD, vh - mh - 12);
+  }
+  menu.style.maxHeight = (vh - 2*PAD) + 'px';
+  menu.style.overflowY = 'auto';
   menu.style.top  = top  + 'px';
   menu.style.left = left + 'px';
-  menu.style.right = 'auto';
 }
 
 function saAct(action){
