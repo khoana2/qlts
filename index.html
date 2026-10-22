@@ -5977,6 +5977,17 @@ tbody tr.selected td{ background:#ede9fe!important; border-bottom-color:#c4b5fd;
 // ═══════════════════════ STATE ═══════════════════════
 const STORE_KEY = 'qlts_v14_data';
 
+// ── Mốc cảnh báo hết hạn (ngày) — đổi ở đây, áp cho toàn app ────────────────
+// Nguyên tắc: mốc = thời gian cần để xử lý xong, không phải con số tròn cho đẹp.
+// Một vòng mua sắm TTG (3 báo giá → tờ trình → duyệt → ĐNTT → thanh toán) ~3–6 tuần.
+const ALERT_DAYS = {
+  baoHanh:        60,   // BH tài sản: hết BH không làm máy ngừng chạy, chỉ là từ đó tự trả phí sửa
+  licenseGap:     30,   // License GẤP: hồ sơ phải nằm trên bàn kế toán — hết hạn là dịch vụ ngừng
+  licenseWarn:    90,   // License cảnh báo sớm: lúc bắt đầu xin báo giá
+  bhLinhKien:     30,   // BH linh kiện sau sửa chữa — sắp hết
+  bhLinhKienVua:  30,   // ...và vừa hết trong bao nhiêu ngày qua (vẫn cần biết khi máy hỏng lại)
+};
+
 // Khai báo sớm để tránh ReferenceError khi HCQT script block chưa parse
 // Chỉ dùng var (không let/const) để tránh redeclaration conflict với script block sau
 var _hcqtHasITAccess = false;
@@ -9274,11 +9285,11 @@ function updateDashboard(){
 
   // Warranty KPI
   const now = new Date();
-  const in90 = new Date(now.getTime() + 90*86400000);
+  const inBH = new Date(now.getTime() + ALERT_DAYS.baoHanh*86400000);
   const expiringSoon = _assets.filter(a=>{
     if(!a.ngayHetBH) return false;
     const exp = new Date(a.ngayHetBH);
-    return exp >= now && exp <= in90;
+    return exp >= now && exp <= inBH;
   }).length;
   const expired = _assets.filter(a=>{
     if(!a.ngayHetBH) return false;
@@ -9307,7 +9318,7 @@ function updateDashboard(){
   // KPI "Màn hình" đã gỡ khỏi dashboard — số liệu không còn phản ánh đúng thực tế.
   // Dữ liệu màn hình vẫn lưu bình thường trong từng tài sản (ô tick trong form).
   document.getElementById('kpi-warranty-sub').textContent =
-    expired ? `${expired} đã hết · ${expiringSoon} sắp hết` : `${expiringSoon} sắp hết trong 90 ngày`;
+    expired ? `${expired} đã hết · ${expiringSoon} sắp hết` : `${expiringSoon} sắp hết trong ${ALERT_DAYS.baoHanh} ngày`;
 
   // Lọc thêm theo trạng thái cho biểu đồ loại tài sản
   // Dùng helper riêng để tránh xung đột tên với normTT ở trên
@@ -10181,7 +10192,7 @@ function warrantyBadge(a){
   if(!a.ngayHetBH) return '';
   const diffD = Math.round((new Date(a.ngayHetBH)-new Date())/86400000);
   if(diffD<0) return '';
-  if(diffD<=90) return `<span class="warn-badge soon" title="Hết BH ${new Date(a.ngayHetBH).toLocaleDateString('vi-VN')}">BH: ${diffD}d</span>`;
+  if(diffD<=ALERT_DAYS.baoHanh) return `<span class="warn-badge soon" title="Hết BH ${new Date(a.ngayHetBH).toLocaleDateString('vi-VN')}">BH: ${diffD}d</span>`;
   return `<span class="warn-badge ok" title="Hết BH ${new Date(a.ngayHetBH).toLocaleDateString('vi-VN')}">BH: ${diffD}d</span>`;
 }
 
@@ -10651,7 +10662,7 @@ function fillForm(a){
   if(ws && a.ngayHetBH){
     const diffD = Math.round((new Date(a.ngayHetBH)-new Date())/(86400000));
     if(diffD<0){ ws.textContent='❌ Đã hết bảo hành '+(Math.abs(diffD))+'d trước'; ws.style.color='var(--red)'; }
-    else if(diffD<=90){ ws.textContent='⚠️ Còn '+diffD+' ngày'; ws.style.color='var(--yellow)'; }
+    else if(diffD<=ALERT_DAYS.baoHanh){ ws.textContent='⚠️ Còn '+diffD+' ngày'; ws.style.color='var(--yellow)'; }
     else { ws.textContent='✅ Còn '+diffD+' ngày'; ws.style.color='var(--green)'; }
   } else if(ws){ ws.textContent='—'; ws.style.color='var(--muted)'; }
   const ctEl = document.getElementById('f-congTy');
@@ -11662,7 +11673,7 @@ function viewDetail(id){
     const diffD = Math.round((new Date(a.ngayHetBH)-new Date())/86400000);
     const bhDate = new Date(a.ngayHetBH).toLocaleDateString('vi-VN');
     if(diffD<0) bhDetailHtml = `<span style="color:var(--red);">❌ Hết BH (${bhDate})</span>`;
-    else if(diffD<=90) bhDetailHtml = `<span style="color:var(--yellow);">⚠️ ${bhDate} (còn ${diffD}d)</span>`;
+    else if(diffD<=ALERT_DAYS.baoHanh) bhDetailHtml = `<span style="color:var(--yellow);">⚠️ ${bhDate} (còn ${diffD}d)</span>`;
     else bhDetailHtml = `<span style="color:var(--green);">✅ ${bhDate} (còn ${diffD}d)</span>`;
   }
 
@@ -14201,7 +14212,7 @@ function updateWarrantyStatus(val){
   const diffD = Math.round((new Date(val)-new Date())/86400000);
   if(diffD<0){ ws.textContent='❌ Đã hết bảo hành '+Math.abs(diffD)+'d trước'; ws.style.color='var(--red)'; }
   else if(diffD<=30){ ws.textContent='🔴 Còn '+diffD+' ngày!'; ws.style.color='var(--orange)'; }
-  else if(diffD<=90){ ws.textContent='⚠️ Còn '+diffD+' ngày'; ws.style.color='var(--yellow)'; }
+  else if(diffD<=ALERT_DAYS.baoHanh){ ws.textContent='⚠️ Còn '+diffD+' ngày'; ws.style.color='var(--yellow)'; }
   else { ws.textContent='✅ Còn '+diffD+' ngày'; ws.style.color='var(--green)'; }
 }
 
@@ -14622,8 +14633,8 @@ function updateExpiryBadge(){
   const badge = document.getElementById('tab-license-badge');
   if(!badge) return;
   const expired  = licenses.filter(l => { const d=licDiff(l.ngayHetHan); return d!==null && d<0; }).length;
-  const critical = licenses.filter(l => { const d=licDiff(l.ngayHetHan); return d!==null && d>=0 && d<=15; }).length;
-  const warning  = licenses.filter(l => { const d=licDiff(l.ngayHetHan); return d!==null && d>15 && d<=90; }).length;
+  const critical = licenses.filter(l => { const d=licDiff(l.ngayHetHan); return d!==null && d>=0 && d<=ALERT_DAYS.licenseGap; }).length;
+  const warning  = licenses.filter(l => { const d=licDiff(l.ngayHetHan); return d!==null && d>ALERT_DAYS.licenseGap && d<=ALERT_DAYS.licenseWarn; }).length;
   const total    = expired + critical;
   const totalAll = expired + critical + warning;
   if(totalAll === 0){ badge.style.display='none'; return; }
@@ -14642,7 +14653,7 @@ function renderDashExpiry(){
   const items = licenses
     .filter(l => l.ngayHetHan)
     .map(l => ({ ...l, diff: licDiff(l.ngayHetHan) }))
-    .filter(l => l.diff !== null && l.diff <= 90)
+    .filter(l => l.diff !== null && l.diff <= ALERT_DAYS.licenseWarn)
     .sort((a,b) => a.diff - b.diff);   // hết hạn sớm nhất lên đầu
 
   // Chỉ ẩn widget khi licenses đã load xong mà thực sự không có cảnh báo
@@ -14658,7 +14669,7 @@ function renderDashExpiry(){
 
   if(countEl){
     const exp = items.filter(l=>l.diff<0).length;
-    const crit= items.filter(l=>l.diff>=0&&l.diff<=15).length;
+    const crit= items.filter(l=>l.diff>=0&&l.diff<=ALERT_DAYS.licenseGap).length;
     const parts=[];
     if(exp)  parts.push(`${exp} đã hết hạn`);
     if(crit) parts.push(`${crit} sắp hết`);
@@ -14667,12 +14678,12 @@ function renderDashExpiry(){
 
   list.innerHTML = items.map(l => {
     const d = l.diff;
-    const cls   = d<0 ? 'expired' : d<=15 ? 'critical' : 'warning';
+    const cls   = d<0 ? 'expired' : d<=ALERT_DAYS.licenseGap ? 'critical' : 'warning';
     const badge = d<0
       ? `Hết hạn ${Math.abs(d)} ngày`
       : d===0 ? 'Hết hạn hôm nay!'
       : `Còn ${d} ngày`;
-    const icon  = d<0 ? '❌' : d<=15 ? '🔴' : '⚠️';
+    const icon  = d<0 ? '❌' : d<=ALERT_DAYS.licenseGap ? '🔴' : '⚠️';
     return `<div class="expiry-alert-item ${cls}" onclick="switchTab('license')" style="cursor:pointer;" title="Click để xem danh sách contracts">
       <span style="font-size:16px;flex-shrink:0;">${icon}</span>
       <div style="flex:1;min-width:0;">
@@ -16997,15 +17008,19 @@ function renderRepairs(){
       // Dùng _today (midnight) để nhất quán với card render bên dưới
       const _expDate = new Date(_r.bhExpiry); _expDate.setHours(0,0,0,0);
       const _days = Math.round((_expDate - _today)/86400000);
-      // Chỉ cảnh báo khi SẮP hết (0–30 ngày), đã hết rồi thì bỏ qua
-      if(_days>=0 && _days<=30) _bhAlerts.push({a:_a,r:_r,aid:_aid,days:_days});
+      // Sắp hết (0–30 ngày) VÀ vừa hết trong 30 ngày qua.
+      // Trước đây bỏ qua cái đã hết — nhưng đó đúng là lúc cần biết nhất:
+      // máy hỏng lại, gửi đi sửa, tới nơi mới phát hiện linh kiện hết bảo hành.
+      if(_days <= ALERT_DAYS.bhLinhKien && _days >= -ALERT_DAYS.bhLinhKienVua){
+        _bhAlerts.push({a:_a, r:_r, aid:_aid, days:_days});
+      }
     });
   }
   const _nExpired = _bhAlerts.filter(x=>x.days<0).length;
   const _nSoon    = _bhAlerts.filter(x=>x.days>=0).length;
-  const _bhTitle  = _nExpired && _nSoon ? `${_nExpired} đã hết · ${_nSoon} sắp hết bảo hành LK`
-                  : _nExpired           ? `${_nExpired} linh kiện đã hết bảo hành`
-                  :                       `${_nSoon} linh kiện sắp hết bảo hành (≤ 30 ngày)`;
+  const _bhTitle  = _nExpired && _nSoon ? `${_nExpired} vừa hết · ${_nSoon} sắp hết bảo hành LK`
+                  : _nExpired           ? `${_nExpired} linh kiện vừa hết bảo hành`
+                  :                       `${_nSoon} linh kiện sắp hết bảo hành (≤ ${ALERT_DAYS.bhLinhKien} ngày)`;
   const _alertEl = document.getElementById('rep-bh-alert');
   if(_alertEl){
     if(_bhAlerts.length){
