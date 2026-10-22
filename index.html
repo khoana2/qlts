@@ -16632,6 +16632,12 @@ async function loadRepairsSP(){
     repairs = newRepairs;
     saveRepairs();
     _updateRepairBadge();
+    // Vẽ lại danh sách — trước đây chỉ cập nhật badge, nên nếu người dùng đang
+    // đứng ở tab Sửa Chữa thì vẫn thấy dữ liệu cũ từ localStorage cho tới khi
+    // bấm lọc / chuyển tab mới chịu hiện đủ phiếu.
+    if(typeof renderRepairs === 'function' && document.getElementById('rep-list')) renderRepairs();
+    applyFilters();            // badge "có phiếu SC" trên bảng tài sản
+    updateDashboard();         // KPI "Đang sửa"
     console.log(`[SP Repair] Loaded ${items.length} phiếu từ SP`);
   } catch(e){
     console.warn('[SP Repair] loadRepairsSP error:', e);
